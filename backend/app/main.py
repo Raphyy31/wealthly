@@ -13,6 +13,7 @@ from sqlalchemy import text
 
 from app.config import settings
 from app.database import engine, Base
+from app.rate_limit import limiter, rate_limit_handler
 from app.routers import auth, members, accounts, transactions, wealth, other, categorize, banking, admin, quotes, fixed_charges
 
 logger = logging.getLogger("wealthly")
