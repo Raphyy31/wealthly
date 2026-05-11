@@ -39,7 +39,7 @@ import { useTheme, ThemeToggle } from './components/ui/ThemeToggle.jsx';
 
 const TaxSimulator = lazy(() => import('./TaxSimulator.jsx'));
 
-// Disable Recharts animations globally ”” they cause noticeable jank on iOS Safari
+// Disable Recharts animations globally — they cause noticeable jank on iOS Safari
 // (SVG <animate> on every render) and add no UX value for static financial data.
 [Line, Bar, Area, Pie, RadialBar, Sankey].forEach((C) => {
   if (C) C.defaultProps = { ...(C.defaultProps || {}), isAnimationActive: false };
@@ -86,7 +86,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo }) {
   const [baseCurrency, setBaseCurrency] = useBaseCurrency();
   const { rates, date: ratesDate } = useRates();
 
-  // Live investment quotes ”” derive the unique ticker list from assets and
+  // Live investment quotes — derive the unique ticker list from assets and
   // hand it to useQuotes. Yahoo Finance via /quotes endpoint (5-min cache).
   const tickerList = useMemo(
     () => assets.map(a => a.ticker).filter(Boolean),
@@ -107,7 +107,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo }) {
   const [importPreview, setImportPreview] = useState([]);
 
   // ============================================================================
-  // API â†” Frontend mapping helpers (snake_case â†” camelCase)
+  // API â†" Frontend mapping helpers (snake_case â†" camelCase)
   // ============================================================================
   // Convert an Account from API shape to frontend shape (memberIds, initialBalance...)
   const accountFromApi = (a) => ({
@@ -259,7 +259,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo }) {
     current_amount: parseFloat(g.current) || 0,
     deadline: g.deadline || null,
   });
-  // Categories from API have a different shape ”” flatten
+  // Categories from API have a different shape — flatten
   const categoryFromApi = (c) => ({
     id: c.slug, // we use slug as id throughout the frontend
     name: c.name,
@@ -334,19 +334,19 @@ export default function WealthlyApp({ demoMode = false, onExitDemo }) {
         storage.get(STORAGE_KEYS.ACTIVE_MEMBER, 'all'),
       ]);
       setRecurringOverrides(ov);
-      // In demo mode, force the family ("all") view ”” a stale per-member
+      // In demo mode, force the family ("all") view — a stale per-member
       // selection from a previous logged-in session would point to a member
       // that doesn't exist in the demo dataset, leaving every screen empty.
       setActiveMemberId(demoMode ? 'all' : am);
       setColumnMappings(await storage.get(STORAGE_KEYS.MAPPINGS, {}));
 
       if (demoMode) {
-        // Demo data is local ”” load synchronously then show.
+        // Demo data is local — load synchronously then show.
         await reloadAll();
         setOnboarded(true);
         setLoading(false);
       } else {
-        // Restore cache immediately (milliseconds ”” no network).
+        // Restore cache immediately (milliseconds — no network).
         try {
           const raw = localStorage.getItem(STORAGE_KEYS.DATA_CACHE);
           if (raw) {
@@ -364,7 +364,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo }) {
           }
         } catch {}
 
-        // Show the app NOW ”” don't gate on Railway cold-start (15-30s).
+        // Show the app NOW — don't gate on Railway cold-start (15-30s).
         // Empty states are fine; data fills in once the backend wakes up.
         setLoading(false);
 
@@ -481,7 +481,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo }) {
 
   // Auto-upsert the current month's snapshot whenever the net-worth math
   // resolves to a meaningful value. Gated by a ref so we don't spam the
-  // backend on every re-render ”” we only re-post if the month or the
+  // backend on every re-render — we only re-post if the month or the
   // computed totals changed materially.
   useEffect(() => {
     if (!Number.isFinite(netWorth)) return;
@@ -518,7 +518,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo }) {
           return [...others, row].sort((a, b) => a.month.localeCompare(b.month));
         });
       }).catch(() => {});
-    }, 1500); // debounce ”” wait for any settling re-renders before posting
+    }, 1500); // debounce — wait for any settling re-renders before posting
     return () => clearTimeout(handle);
   }, [netWorth, liquidWealth, assetsValue, liabilitiesValue, visibleAssets, visibleLiabilities, memberShare]);
 
@@ -531,7 +531,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo }) {
   // visible transaction set changes.
   // Effective set = auto-detected âˆª {override:true} âˆ’ {override:false}.
   // Override is the source of truth so the user can always correct a bad
-  // auto-classification. Pairs come from auto-detection only ”” manual
+  // auto-classification. Pairs come from auto-detection only — manual
   // overrides don't reconstruct a counterpart.
   const { transferIds, transferPairs } = useMemo(() => {
     const auto = detectInternalTransfers(visibleTransactions);
@@ -649,7 +649,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo }) {
     return result;
   }, [visibleTransactions, categories, currentMonth, monthlyEvolution, accounts, memberShare, transferIds]);
 
-  // Number of budget categories the user has overspent this month ”” drives
+  // Number of budget categories the user has overspent this month — drives
   // the red dot on the "Budgets" nav button so the user notices without
   // having to open the page.
   const budgetsOverCount = useMemo(() => {
@@ -698,7 +698,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo }) {
   }, [thisMonthStats, currentMonth]);
 
   // ============================================================================
-  // ACTIONS ”” all hit the API
+  // ACTIONS — all hit the API
   // ============================================================================
   const completeOnboarding = async (data) => {
     try {
@@ -772,7 +772,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo }) {
           showToast(`${aiCount} transaction${aiCount > 1 ? 's' : ''} catégorisée${aiCount > 1 ? 's' : ''} par IA.`, 'success');
         }
       } catch {
-        // AI unavailable ”” silent fallback, uncategorized stays as-is
+        // AI unavailable — silent fallback, uncategorized stays as-is
       }
       setImportPreview([...txs]);
     } else {
@@ -1098,7 +1098,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo }) {
     // Tell the backend to clear the HttpOnly auth cookie. We also wipe the
     // legacy localStorage token so users coming from before the cookie
     // migration get a clean slate.
-    try { await api.auth.logout(); } catch { /* ignore ”” we still wipe locally */ }
+    try { await api.auth.logout(); } catch { /* ignore — we still wipe locally */ }
     api.clearToken();
     // Navigate to root — the App.jsx auth check will see no cookie and
     // redirect to the landing page cleanly (avoids stale React state).
@@ -1116,7 +1116,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo }) {
   // and are cached for 1h; when rates aren't loaded yet we no-op the conversion.
   const fmt = useCallback(
     (v, opts = {}) => {
-      if (hideAmounts) return '”¢”¢”¢”¢';
+      if (hideAmounts) return '"¢"¢"¢"¢';
       const from = opts.from || opts.currency || 'EUR';
       const converted = convertCurrency(v, from, baseCurrency, rates);
       // Always display in the user's base currency, with the locale matching it.
@@ -1125,7 +1125,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo }) {
     [hideAmounts, baseCurrency, rates]
   );
 
-  if (loading) return <div className="loading-screen"><Styles theme={theme}/><div className="spinner"/><span>Chargement”¦</span></div>;
+  if (loading) return <div className="loading-screen"><Styles theme={theme}/><div className="spinner"/><span>Chargement…</span></div>;
 
   if (!onboarded) {
     return (
@@ -1147,7 +1147,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo }) {
         <div className="demo-banner">
           <span className="demo-banner-pill">DÉMO</span>
           <span className="demo-banner-text">
-            Données fictives ”” pour découvrir l'app sans inscription. Les modifications ne sont pas enregistrées.
+            Données fictives — pour découvrir l'app sans inscription. Les modifications ne sont pas enregistrées.
           </span>
           <button className="demo-banner-action" onClick={onExitDemo}>
             Quitter la démo
@@ -1156,7 +1156,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo }) {
       )}
 
       <div className="app-shell">
-        {/* Desktop sidebar (â‰¥1024px) ”” Wealthly v3 handoff spec */}
+        {/* Desktop sidebar (â‰¥1024px) — Wealthly v3 handoff spec */}
         <aside className="ws-sidebar">
           <div className="ws-brand" onClick={() => setView('dashboard')}>
             <div className="ws-brand-mark">W</div>
@@ -1243,7 +1243,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo }) {
                 <div className="ws-user-info">
                   <div className="ws-user-name">{currentUser.full_name || currentUser.email.split('@')[0]}</div>
                   <div className="ws-user-meta">
-                    {currentUser.plan || 'Gratuit'} · <span style={{ color: 'var(--positive)' }}>DSP2 âœ“</span>
+                    {currentUser.plan || 'Gratuit'} · <span style={{ color: 'var(--positive)' }}>DSP2 ✓</span>
                   </div>
                 </div>
                 <ChevronUp size={13} style={{ color: 'var(--ink-3)' }}/>
@@ -1351,7 +1351,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo }) {
           </div>
         )}
         {view === 'tax' && (
-          <Suspense fallback={<div className="chart-empty"><Calculator size={28}/><span>Chargement du simulateur”¦</span></div>}>
+          <Suspense fallback={<div className="chart-empty"><Calculator size={28}/><span>Chargement du simulateur…</span></div>}>
             <TaxSimulator transactions={visibleTransactions} />
           </Suspense>
         )}
@@ -1417,7 +1417,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo }) {
         </div>
       </div>
 
-      {/* Mobile nav drawer ”” slide in from left */}
+      {/* Mobile nav drawer — slide in from left */}
       {navOpen && (
         <div className="nav-drawer-overlay" onClick={() => setNavOpen(false)}>
           <aside className="nav-drawer" onClick={e => e.stopPropagation()}>
@@ -1465,7 +1465,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo }) {
         </div>
       )}
 
-      {/* Mobile bottom nav (<768px) ”” fixed bottom bar */}
+      {/* Mobile bottom nav (<768px) — fixed bottom bar */}
       <nav className="bottom-nav">
         <button onClick={() => setView('dashboard')} className={view === 'dashboard' ? 'active' : ''}><Activity size={18}/> <span>{t('nav.dashboard')}</span></button>
         <button onClick={() => setView('wealth')} className={view === 'wealth' ? 'active' : ''}><Landmark size={18}/> <span>{t('nav.wealth')}</span></button>
