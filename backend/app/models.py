@@ -80,6 +80,7 @@ class Household(Base):
     achievements = relationship("Achievement", back_populates="household", cascade="all, delete-orphan")
     rules = relationship("CategorisationRule", back_populates="household", cascade="all, delete-orphan")
     bank_connections = relationship("BankConnection", back_populates="household", cascade="all, delete-orphan")
+    fixed_charges = relationship("FixedCharge", back_populates="household", cascade="all, delete-orphan")
 
 
 class User(Base):
