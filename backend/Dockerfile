@@ -17,8 +17,11 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy app code
+# Copy app code + Alembic config (le startup hook _alembic_sync() les attend
+# à /app/alembic.ini et /app/alembic/ pour stamper/upgrader la DB en prod).
 COPY ./app ./app
+COPY ./alembic.ini ./alembic.ini
+COPY ./alembic ./alembic
 
 # Run as non-root user for safety
 RUN useradd --create-home --shell /bin/bash wealthly && chown -R wealthly:wealthly /app
