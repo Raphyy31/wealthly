@@ -96,7 +96,18 @@ def set_auth_cookie(response: Response, token: str) -> None:
 
 
 def clear_auth_cookie(response: Response) -> None:
-    response.delete_cookie(key=COOKIE_NAME, path="/")
+    """Clear the auth cookie. Must mirror set_auth_cookie's attributes exactly
+    (samesite, secure, httponly, path) so the browser matches and deletes it."""
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value="",
+        max_age=0,
+        expires=0,
+        httponly=True,
+        secure=True,
+        samesite="none",
+        path="/",
+    )
 
 
 def get_token_from_request(request: Request) -> Optional[str]:

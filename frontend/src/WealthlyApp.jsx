@@ -1107,7 +1107,9 @@ export default function WealthlyApp({ demoMode = false, onExitDemo }) {
     // migration get a clean slate.
     try { await api.auth.logout(); } catch { /* ignore â€” we still wipe locally */ }
     api.clearToken();
-    window.location.reload();
+    // Navigate to root — the App.jsx auth check will see no cookie and
+    // redirect to the landing page cleanly (avoids stale React state).
+    window.location.href = '/';
   };
 
   // ============================================================================
