@@ -5,11 +5,23 @@ Run locally: uvicorn app.main:app --reload --port 8000
 Docs available at http://localhost:8000/docs
 """
 import logging
+import sys
+import traceback
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy import text
+
+# Force logs uvicorn / app vers stdout en INFO. Sinon les exceptions
+# non gérées ne sortent pas dans Railway Deploy Logs.
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    stream=sys.stdout,
+    force=True,
+)
 
 from app.config import settings
 from app.database import engine, Base
@@ -224,6 +236,19 @@ async def security_headers_mw(request, call_next):
     response = await call_next(request)
     apply_security_headers(response)
     return response
+
+# Global exception handler — surface la stack trace dans les logs Railway
+# au lieu de la swallow silencieusement (par défaut FastAPI catch les
+# Exception non gérées et renvoie 500 sans logger). Aide à diagnostiquer.
+@app.exception_handler(Exception)
+async def _unhandled_exception_handler(request: Request, exc: Exception):
+    tb = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+    logger.error("[unhandled] %s %s\n%s", request.method, request.url.path, tb)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"{type(exc).__name__}: {exc}"},
+    )
+
 
 # Health check (used by Docker healthcheck)
 @app.get("/health", tags=["meta"])
