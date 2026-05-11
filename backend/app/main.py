@@ -157,15 +157,15 @@ def _alembic_sync() -> None:
 
 _alembic_sync()
 
-# Surface GoCardless config status at startup so Railway logs make it obvious
-# whether the env vars are loaded inside the container.
-if settings.GOCARDLESS_SECRET_ID and settings.GOCARDLESS_SECRET_KEY:
-    logger.warning("[gocardless] configured (id=%s…)", settings.GOCARDLESS_SECRET_ID[:8])
+# Surface Enable Banking config status at startup so Railway logs make
+# it obvious whether les env vars sont chargées dans le container.
+if settings.ENABLE_BANKING_APP_ID and settings.ENABLE_BANKING_PRIVATE_KEY_B64:
+    logger.warning("[enable_banking] configured (app_id=%s…)", settings.ENABLE_BANKING_APP_ID[:8])
 else:
     logger.warning(
-        "[gocardless] NOT configured — set GOCARDLESS_SECRET_ID and GOCARDLESS_SECRET_KEY (currently id=%r key=%r)",
-        bool(settings.GOCARDLESS_SECRET_ID),
-        bool(settings.GOCARDLESS_SECRET_KEY),
+        "[enable_banking] NOT configured — set ENABLE_BANKING_APP_ID + ENABLE_BANKING_PRIVATE_KEY_B64 (currently app_id=%r key=%r)",
+        bool(settings.ENABLE_BANKING_APP_ID),
+        bool(settings.ENABLE_BANKING_PRIVATE_KEY_B64),
     )
 
 app = FastAPI(
