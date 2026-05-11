@@ -98,6 +98,30 @@ def _run_lightweight_migrations() -> None:
             "ALTER TABLE assets ADD COLUMN IF NOT EXISTS ticker VARCHAR",
             "ALTER TABLE assets ADD COLUMN IF NOT EXISTS quantity DOUBLE PRECISION",
             "CREATE INDEX IF NOT EXISTS ix_assets_ticker ON assets (ticker)",
+            # Security Phase 1 — ces colonnes sont aussi ajoutées par la
+            # migration alembic 0002 mais on les duplique ici en safety net
+            # au cas où alembic_version a été stampée avant que 0002 existe
+            # (le pivot DB → alembic peut laisser ces colonnes manquantes).
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR NOT NULL DEFAULT ''",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT FALSE",
+            # auth_events — table créée par 0002, créée ici en filet si la
+            # migration ne s'est pas appliquée.
+            "CREATE TABLE IF NOT EXISTS auth_events ("
+            "  id VARCHAR PRIMARY KEY,"
+            "  user_id VARCHAR REFERENCES users(id) ON DELETE SET NULL,"
+            "  email VARCHAR,"
+            "  kind VARCHAR NOT NULL,"
+            "  success BOOLEAN NOT NULL DEFAULT TRUE,"
+            "  ip VARCHAR,"
+            "  user_agent TEXT,"
+            "  detail TEXT,"
+            "  created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()"
+            ")",
+            "CREATE INDEX IF NOT EXISTS ix_auth_events_kind       ON auth_events (kind)",
+            "CREATE INDEX IF NOT EXISTS ix_auth_events_email      ON auth_events (email)",
+            "CREATE INDEX IF NOT EXISTS ix_auth_events_ip         ON auth_events (ip)",
+            "CREATE INDEX IF NOT EXISTS ix_auth_events_created_at ON auth_events (created_at)",
         ]
     with engine.begin() as conn:
         for stmt in statements:
