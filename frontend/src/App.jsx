@@ -4,7 +4,6 @@ import AuthScreen from './AuthScreen.jsx';
 import WealthlyApp from './WealthlyApp.jsx';
 import { isDemoMode, disableDemoMode, enableDemoMode } from './demoData.js';
 
-const BankCallback = lazy(() => import('./BankCallback.jsx'));
 const Landing = lazy(() => import('./views/Landing.jsx'));
 
 export default function App() {
@@ -15,9 +14,6 @@ export default function App() {
   const [unauthedView, setUnauthedView] = useState('landing'); // landing | auth
   const [authInitialMode, setAuthInitialMode] = useState('login');
   const [refreshKey, setRefreshKey] = useState(0);
-  const [isBankCallback, setIsBankCallback] = useState(
-    typeof window !== 'undefined' && window.location.pathname === '/bank-callback'
-  );
 
   useEffect(() => {
     (async () => {
@@ -109,19 +105,6 @@ export default function App() {
         onAuth={() => setAuthState('authed')}
         onTryDemo={() => setAuthState('demo')}
       />
-    );
-  }
-
-  if (isBankCallback) {
-    return (
-      <Suspense fallback={<div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#151926',color:'#9ea3b3',fontFamily:"'Inter Tight', system-ui, sans-serif",fontSize:14}}>Chargement…</div>}>
-        <BankCallback
-          onDone={() => {
-            setIsBankCallback(false);
-            setRefreshKey((k) => k + 1);
-          }}
-        />
-      </Suspense>
     );
   }
 

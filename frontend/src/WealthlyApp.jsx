@@ -380,16 +380,9 @@ export default function WealthlyApp({ demoMode = false, onExitDemo }) {
             const hasMembers = memList && memList.length > 0;
             setOnboarded(hasMembers);
             try { localStorage.setItem(STORAGE_KEYS.ONBOARDED, hasMembers ? '1' : '0'); } catch {}
-            if (me && me.is_admin) {
-              const lastSyncKey = `wealthly:lastBankSync:${me.id}`;
-              const last = parseInt(localStorage.getItem(lastSyncKey) || '0', 10);
-              if (Date.now() - last > 86400000) {
-                localStorage.setItem(lastSyncKey, String(Date.now()));
-                api.banks.syncAll().then(async (res) => {
-                  if (res && res.inserted > 0) await reloadAll();
-                }).catch(() => {});
-              }
-            }
+            // Note : l'ancien hook auto-sync GoCardless `api.banks.syncAll()`
+            // a été retiré avec le pivot vers Enable Banking (api.banking.sync
+            // se déclenche manuellement depuis Settings).
           } catch {}
         }).catch(() => {});
       }
