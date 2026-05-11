@@ -46,13 +46,18 @@ export default function App() {
       // before the cookie migration — same /auth/me will succeed for them
       // because api.js still attaches it as a Bearer header.
       try {
-        const me = await auth.me();
+        // Race auth.me() against a 5s timeout — if backend is slow/redeploying
+        // we still land on the landing page rather than spinning forever.
+        const me = await Promise.race([
+          auth.me(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000)),
+        ]);
         if (me && me.id) {
           setAuthState('authed');
           return;
         }
       } catch (e) {
-        // 401 / network error → unauthed
+        // 401 / network error / timeout → unauthed
       }
       setAuthState('unauthed');
     })();
