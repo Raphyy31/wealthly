@@ -54,16 +54,22 @@ async function request(method, path, body = null) {
   }
 
   if (response.status === 401) {
-    // We're not authenticated. If we previously had a session, scrub the
-    // legacy token and reload so the user lands on the login screen cleanly.
-    if (legacyToken) {
-      clearToken();
-      window.location.reload();
-    }
-    // Otherwise this is a fresh credential failure (wrong password etc.) —
-    // let it bubble up so the form can show the error.
+    // Récupère le message d'erreur du backend AVANT toute autre logique
+    // — sinon une mauvaise tentative login afficherait jamais "mot de
+    // passe incorrect".
     let errMsg = 'Session expirée';
     try { const d = await response.clone().json(); errMsg = d?.detail || errMsg; } catch {}
+
+    // Si on a un vieux token legacy ET que ce n'est PAS un appel à
+    // /auth/login ou /auth/register (les "mauvaise saisie" ne sont
+    // jamais "session expirée"), on purge le token et on recharge.
+    const isAuthEndpoint = path.startsWith('/auth/login') || path.startsWith('/auth/register');
+    if (legacyToken && !isAuthEndpoint) {
+      clearToken();
+      window.location.reload();
+      return; // empêche le throw qui suit pendant le reload
+    }
+
     throw new Error(errMsg);
   }
 
