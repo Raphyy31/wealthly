@@ -41,6 +41,7 @@ import { DCAView } from './views/DCA.jsx';
 import { dcaApi } from './api.js';
 import { AccountDrawer } from './components/AccountDrawer.jsx';
 import { useTheme, ThemeToggle } from './components/ui/ThemeToggle.jsx';
+import Logo from './components/Logo.jsx';
 
 const TaxSimulator = lazy(() => import('./TaxSimulator.jsx'));
 
@@ -1252,12 +1253,8 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       <div className="app-shell">
         {/* Desktop sidebar (â‰¥1024px) — Wealthly v3 handoff spec */}
         <aside className="ws-sidebar">
-          <div className="ws-brand" onClick={() => setView('dashboard')}>
-            <div className="ws-brand-mark">W</div>
-            <div>
-              <div className="ws-brand-name">{APP_NAME}</div>
-              <div className="ws-brand-sub">Patrimoine personnel</div>
-            </div>
+          <div className="ws-brand" onClick={() => setView('dashboard')} style={{ cursor: 'pointer' }}>
+            <Logo size={24} wordmark wordmarkSize={15} />
           </div>
 
           <div className="ws-search">
@@ -1364,9 +1361,8 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             <button className="icon-btn hamburger-btn" onClick={() => setNavOpen(true)} title="Menu">
               <Menu size={20}/>
             </button>
-            <div className="brand" onClick={() => setView('dashboard')}>
-              <div className="brand-mark">W</div>
-              <div className="brand-name">{APP_NAME}</div>
+            <div className="brand" onClick={() => setView('dashboard')} style={{ cursor: 'pointer' }}>
+              <Logo size={22} wordmark wordmarkSize={14} />
             </div>
             <div className="header-actions">
               <button className="icon-btn" onClick={() => setHideAmounts(!hideAmounts)} title="Masquer/afficher">
@@ -1532,8 +1528,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
           <aside className="nav-drawer" onClick={e => e.stopPropagation()}>
             <div className="nav-drawer-header">
               <div className="sidebar-brand" style={{padding:'0 0 0 4px', cursor:'default'}}>
-                <div className="brand-mark">W</div>
-                <div className="brand-name">{APP_NAME}</div>
+                <Logo size={22} wordmark wordmarkSize={14} />
               </div>
               <button className="icon-btn" onClick={() => setNavOpen(false)}><X size={18}/></button>
             </div>
