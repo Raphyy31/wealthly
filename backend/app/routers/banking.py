@@ -294,6 +294,21 @@ async def complete_connection(
     accounts = data.get("accounts", [])
     session_status = data.get("status", "AUTHORIZED" if conn.session_id else "UNKNOWN")
 
+    logger.info("[banking] complete %s → raw EB: status=%s accounts=%d keys=%s",
+                conn.id, session_status, len(accounts), list(data.keys()))
+
+    # Fallback: some banks don't embed accounts in the session response.
+    if not accounts and session_status in ("AUTHORIZED", "READY") and conn.session_id:
+        try:
+            acc_data = await _eb("GET", f"/accounts?session_id={conn.session_id}")
+            logger.info("[banking] /accounts fallback (complete) → %s", acc_data)
+            if isinstance(acc_data, list):
+                accounts = acc_data
+            elif isinstance(acc_data, dict):
+                accounts = acc_data.get("accounts", acc_data.get("items", []))
+        except Exception as acc_err:
+            logger.warning("[banking] /accounts fallback failed: %s", acc_err)
+
     if session_status in ("AUTHORIZED", "READY"):
         conn.status = "authorized"
         conn.accounts_data = accounts
@@ -506,6 +521,22 @@ async def refresh_connection(
     accounts = data.get("accounts", [])
     session_status = data.get("status", "")
 
+    logger.info("[banking] refresh %s → raw EB session: status=%s accounts=%d keys=%s",
+                connection_id, session_status, len(accounts), list(data.keys()))
+
+    # Fallback: some banks (e.g. Boursorama) don't embed accounts in the
+    # session object — fetch them via the dedicated /accounts endpoint.
+    if not accounts and session_status in ("AUTHORIZED", "READY"):
+        try:
+            acc_data = await _eb("GET", f"/accounts?session_id={conn.session_id}")
+            logger.info("[banking] /accounts fallback → %s", acc_data)
+            if isinstance(acc_data, list):
+                accounts = acc_data
+            elif isinstance(acc_data, dict):
+                accounts = acc_data.get("accounts", acc_data.get("items", []))
+        except Exception as acc_err:
+            logger.warning("[banking] /accounts fallback failed: %s", acc_err)
+
     if session_status in ("AUTHORIZED", "READY"):
         conn.status = "authorized"
         conn.accounts_data = accounts
@@ -515,12 +546,13 @@ async def refresh_connection(
 
     db.commit()
     db.refresh(conn)
-    logger.info("[banking] refresh %s → status=%s accounts=%d", connection_id, conn.status, len(accounts))
+    logger.info("[banking] refresh %s → final status=%s accounts=%d", connection_id, conn.status, len(accounts))
 
     return {
         "status": conn.status,
         "accounts": conn.accounts_data or [],
         "session_status": session_status,
+        "debug_raw_keys": list(data.keys()),
     }
 
 

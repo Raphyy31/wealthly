@@ -414,9 +414,10 @@ function BankConnectionsSection() {
     try {
       const res = await api.banking.refreshConnection(id);
       if (res.accounts?.length > 0) {
-        setSyncMessage({ kind: 'ok', text: `✅ ${res.accounts.length} compte(s) récupéré(s) — lancez maintenant "Sync" pour importer les transactions.` });
+        setSyncMessage({ kind: 'ok', text: `✅ ${res.accounts.length} compte(s) récupéré(s). Cliquez sur "Sync" pour importer les transactions.` });
       } else {
-        setSyncMessage({ kind: 'warn', text: `Session EB status : ${res.session_status || '?'} — aucun compte retourné. Reconnectez la banque si le problème persiste.` });
+        const debugKeys = res.debug_raw_keys ? ` (clés EB : ${res.debug_raw_keys.join(', ')})` : '';
+        setSyncMessage({ kind: 'warn', text: `Session EB : ${res.session_status || '?'} — aucun compte retourné.${debugKeys} Contactez le support Enable Banking ou reconnectez la banque.` });
       }
       await reload();
     } catch (e) {
