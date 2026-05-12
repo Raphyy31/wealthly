@@ -97,7 +97,7 @@ export function SettingsView({ members, accounts, accountBalances, saveMember, d
                   <div className="member-card-name">{a.name}</div>
                   <div className="member-card-role">{a.bank} · {owners} · {fmt(accountBalances[a.id] || 0)}</div>
                   {showSuggestion && (
-                    <div style={{ marginTop: 6, fontSize: 11.5, color: 'var(--text-tertiary)', fontStyle: 'italic', fontFamily: "'Source Serif 4', Georgia, serif" }}>
+                    <div style={{ marginTop: 6, fontSize: 11.5, color: 'var(--text-tertiary)', fontStyle: 'italic', fontFamily: "'Newsreader', Georgia, serif" }}>
                       <span style={{ color: 'var(--primary)', fontStyle: 'normal', fontFamily: 'inherit' }}>↪ Suggéré : {ACCOUNT_ROLES[suggestion.role].label}</span> — {suggestion.reason}{' '}
                       <button
                         onClick={() => updateAccount(a.id, { role: suggestion.role })}

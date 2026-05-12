@@ -7,6 +7,40 @@ Notes for Claude (and any future AI tooling) picking the project back up.
 
 ---
 
+## Session 2026-05-12 — Raphyy31 + Claude (Opus 4.7) — design freeze + Monthly + GoCardless
+
+**Livré (gros chantier multi-heures, ~25 commits)** :
+
+| Domaine | Changement |
+|---|---|
+| Landing | Promu LandingC → Landing.jsx (figé). Texte simplifié style Finary/Lydia ("Votre patrimoine, *enfin clair.*"). Suppression LandingB.jsx, design-b/d/e.html, Dashboard.legacy.jsx, refs "Disponible/Fait/Hébergé en France". |
+| Brand | `components/Logo.jsx` unifié (auto-flip cream/ink selon `data-theme`). Utilisé partout : Landing, AuthScreen, sidebar desktop, mobile header, drawer mobile. Favicon + maskable SVG refaits (cream-on-ink "W"). PWA manifest Trove → Wealthly. Toutes les refs "Trove" dans le code remplacées. |
+| Typo site-wide | Newsreader italic accent sur tous les h1 des vues (`Votre <em>patrimoine.</em>`, `Vos <em>transactions.</em>`, `Bonjour <em>Raphaël</em>`, etc.). Source Serif 4 (non chargée) remplacée par Newsreader partout. |
+| Design tokens | Cobalt drop-shadow sur les .ds-btn.primary site-wide. Sidebar active nav : barre cobalt 3×18 à gauche. translateY hover banni. |
+| Mobile | Demo banner compact "Mode démo". Boutons Dashboard icon-only sur ≤640px (Bilan PDF + Sync). Role-badge "ENF" masqué sur les chips membre. Settings → Comptes bancaires : selects rôle/devise pleine largeur sur ligne 2. backdrop-blur des sticky chrome papier-chaud. |
+| PDF | `pdfReport.js` palette swappée vers v3 papier-chaud + cobalt + sage/terracotta + dataviz d1..d7. C.gold/C.goldDark mappés sur cobalt en alias (legacy callsites). |
+| **Suivi mensuel** | **Rewrite complet** : carrousel mois sticky (15 mois, cobalt sur courant) + card synthèse (Revenus reçus/prévus, Dépenses faites/budgétisé, Épargne estimée gros vert) + table à 4 colonnes (Catégorie/Budgétisé/Dépensé/Solde) groupée en 5 buckets pliables (Charges fixes / Abonnements / Dépenses variables / Opérations neutres / Revenus). Onglet Évolution embarque l'ancien chart 6 mois. **Cashflow retiré du nav sidebar** (route conservée en fallback). |
+| Fixed-incomes | Nouveau `fixed_charges.kind` column ('expense' default, 'income'). Toggle Dépense/Revenu dans `FixedChargeEditor`. Revenus fixes (salaire, APL…) sous le groupe Revenus avec budgétisé. Migration lightweight au boot. |
+| Budgets inline | `budgets` + `setBudget` passés à Monthly. Variable rows ont une cellule Budgétisé éditable inline (clic → input → Enter pour valider). Budgétisés et dépensés agrégés dans le head du groupe Variables. |
+| **GoCardless** | **Pivot complet Enable Banking → GoCardless Bank Account Data** (ex-Nordigen). config.py : ENABLE_BANKING_* → GOCARDLESS_SECRET_ID/SECRET_KEY/REDIRECT_URI. `routers/banking.py` rewrite complet (~400 lignes) avec token cache async, _gc() helper, flow /institutions → /agreements/enduser → /requisitions → callback ?ref= → /accounts/{id}/details → /transactions. Frontend api.js + WealthlyApp callback parser + Settings copy mise à jour ("GoCardless" partout). |
+| GoCardless fixes | Modal envoie bank.id (institution_id) au lieu de bank.name. max_historical_days/access_valid_for_days cap par institution (lit transaction_total_days). Account.external_id + Account.source columns + lightweight migration. Sync utilise initial_balance (vraie colonne), Transaction insert avec dedup_hash. Auto-attach household_members aux nouveaux comptes (visibilité). Type d'account heuristique (PEA / livret / assurance vie / credit / checking) depuis product + cashAccountType. Response inclut maintenant {imported, updated, skipped, errors[]}. |
+| Cleanup | Suppression `frontend/public/landing/*.png` (1 MB de PNGs orphelins). Commentaire "Hub tabs supprimées" supprimé (était juste de la doc d'absence). |
+| Docs | Section "Visual direction" de ce CLAUDE.md réécrite pour le système v3 papier-chaud + cobalt. |
+
+**Direction visuelle FIGÉE le 2026-05-12** — voir la section "Visual direction" plus bas. Ne plus revenir à : teal, or Méridien, Source Serif 4 (non chargée), `?design=b|c` query params.
+
+**État GoCardless** :
+- Connexions à banques françaises OK (BoursoBank, BNP, Crédit Agricole testés)
+- Sync importe les transactions + auto-crée le compte Wealthly avec heuristique de type
+- Reste à faire : auto-sync cron nightly, écran de re-consent quand session expire (90 j max).
+
+**Reste après cette session (pour la prochaine conversation)** :
+- Code cleanup plus profond : extract data layer hooks de WealthlyApp.jsx (1100 lignes), split Styles.jsx (1500 lignes) ou migration vers index.css
+- 2FA TOTP, fin de la migration JWT cookies (legacy localStorage encore)
+- Auto-sync cron Railway + email de renouvellement consentement GoCardless
+
+---
+
 ## Session 2026-05-10 — kdtheory + Claude (Sonnet 4.6) — round 2 : implémentation
 
 **Livré dans cette session** :

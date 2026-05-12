@@ -526,7 +526,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .card-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 0 0 16px; padding-bottom: 12px; border-bottom: 1px dotted var(--border); flex-wrap: wrap; }
 .card-header h3 { font-size: 10.5px; font-weight: 600; margin: 0; display: flex; align-items: center; gap: 7px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--primary); }
 .card-header h3 svg { color: var(--primary); opacity: 0.75; }
-.card-header .card-meta { font-family: 'Source Serif 4', 'Source Serif Pro', Georgia, serif; font-style: italic; font-size: 13px; color: var(--text-tertiary); letter-spacing: 0; text-transform: none; }
+.card-header .card-meta { font-family: 'Newsreader', Georgia, serif; font-style: italic; font-size: 13px; color: var(--text-tertiary); letter-spacing: 0; text-transform: none; }
 
 /* HealthScore card — gauge on the left, breakdown on the right. */
 .health-score-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px; transition: border-color .2s; }
@@ -1303,7 +1303,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 /* IMPORT */
 .import-flow { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 28px; box-shadow: var(--shadow-sm); }
 .import-header { margin-bottom: 24px; }
-.import-header h2 { font-family: 'Source Serif 4', 'Source Serif Pro', Georgia, serif; font-size: 28px; font-weight: 400; margin: 12px 0 4px; letter-spacing: -0.018em; line-height: 1.1; }
+.import-header h2 { font-family: 'Newsreader', Georgia, serif; font-style: italic; font-size: 28px; font-weight: 400; margin: 12px 0 4px; letter-spacing: -0.018em; line-height: 1.1; }
 .import-header h2 em { font-style: italic; color: var(--primary); font-weight: 400; }
 .import-header p { font-size: 13px; color: var(--text-tertiary); margin: 0; }
 .import-progress { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }

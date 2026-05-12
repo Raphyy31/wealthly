@@ -1415,8 +1415,6 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
         )}
         {['monthly','cashflow','budgets'].includes(view) && (
           <div className="monthly-hub">
-            {/* Hub tabs supprimées : la navigation Monthly / Cashflow / Budgets
-                vit déjà dans la sidebar (groupe Gestion), pas de doublon. */}
             {view === 'monthly' && (
               <Monthly
                 transactions={visibleTransactions} accounts={accounts} categories={categories} members={members}
