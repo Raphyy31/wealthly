@@ -48,7 +48,8 @@ const C = {
   ],
 };
 
-const FONT = 'helvetica';
+const FONT   = 'helvetica'; // body, captions, tables
+const SERIF  = 'times';     // titles + hero numbers — mirrors app's Source Serif 4 direction
 const PAGE_M = 42;          // page horizontal margin (pt)
 
 // ---------- helpers ----------
@@ -149,13 +150,13 @@ function drawSection(doc, y, title) {
 }
 
 function drawTitle(doc, y, title, sub) {
-  doc.setFont(FONT, 'bold');
-  doc.setFontSize(26);
+  doc.setFont(SERIF, 'bolditalic');
+  doc.setFontSize(28);
   doc.setTextColor(...C.ink);
   doc.text(title, PAGE_M, y);
   if (sub) {
     doc.setFont(FONT, 'normal');
-    doc.setFontSize(10.5);
+    doc.setFontSize(10);
     doc.setTextColor(...C.muted);
     doc.text(sub, PAGE_M, y + 20);
   }
@@ -168,7 +169,7 @@ function drawHero(doc, y, eyebrow, value, meta, color = C.ink) {
   doc.setTextColor(...C.gold);
   doc.text(eyebrow.toUpperCase(), PAGE_M, y, { charSpace: 2 });
 
-  doc.setFont(FONT, 'bold');
+  doc.setFont(SERIF, 'bold');
   doc.setFontSize(38);
   doc.setTextColor(...color);
   doc.text(value, PAGE_M, y + 38);
@@ -206,7 +207,7 @@ function drawKpiCards(doc, y, kpis) {
     doc.setTextColor(...C.muted);
     doc.text(kpi.label.toUpperCase(), x + 12, yy + 14, { charSpace: 1.4 });
 
-    doc.setFont(FONT, 'bold');
+    doc.setFont(SERIF, 'bold');
     doc.setFontSize(18);
     doc.setTextColor(...(kpi.color || C.ink));
     doc.text(kpi.value, x + 12, yy + 36);
@@ -515,10 +516,10 @@ export function generateBilanPdf({
   // W glyph inside the square
   doc.lines([[4, 11], [4, -8], [4, 8], [4, -11]], PAGE_M + 5, 64);
 
-  doc.setFont(FONT, 'bold');
-  doc.setFontSize(13);
+  doc.setFont(SERIF, 'bolditalic');
+  doc.setFontSize(14);
   doc.setTextColor(...C.ink);
-  doc.text('Wealthly', PAGE_M + 36, 74, { charSpace: 0.4 });
+  doc.text('Wealthly', PAGE_M + 36, 74, { charSpace: 0.2 });
 
   doc.setFont(FONT, 'normal');
   doc.setFontSize(8.5);
@@ -536,13 +537,13 @@ export function generateBilanPdf({
   doc.text('BILAN PATRIMONIAL  ·  CONFIDENTIEL', PAGE_M, 200, { charSpace: 2.4 });
 
   // === Title block — owner name oversized, date a tier below ===
-  doc.setFont(FONT, 'bold');
+  doc.setFont(SERIF, 'bolditalic');
   doc.setFontSize(58);
   doc.setTextColor(...C.ink);
   doc.text(ownerName, PAGE_M, 256);
 
   doc.setFont(FONT, 'normal');
-  doc.setFontSize(15);
+  doc.setFontSize(13);
   doc.setTextColor(...C.body);
   doc.text(`Synthèse arrêtée au ${todayLong()}`, PAGE_M, 286);
 
@@ -557,7 +558,7 @@ export function generateBilanPdf({
   doc.setTextColor(...C.muted);
   doc.text('PATRIMOINE NET CONSOLIDÉ', PAGE_M, 392, { charSpace: 2.4 });
 
-  doc.setFont(FONT, 'bold');
+  doc.setFont(SERIF, 'bold');
   doc.setFontSize(72);
   doc.setTextColor(...C.ink);
   doc.text(fmtEUR(netWorth), PAGE_M, 462);
@@ -599,7 +600,7 @@ export function generateBilanPdf({
     doc.setFontSize(7);
     doc.setTextColor(...C.muted);
     doc.text(s.label, x + 12, statY + 16, { charSpace: 1.6 });
-    doc.setFont(FONT, 'bold');
+    doc.setFont(SERIF, 'bold');
     doc.setFontSize(20);
     doc.setTextColor(...(s.valueColor || C.ink));
     doc.text(s.value, x + 12, statY + 40);
@@ -619,8 +620,8 @@ export function generateBilanPdf({
   doc.setFontSize(7);
   doc.setTextColor(...C.gold);
   doc.text('PRÉPARÉ POUR', PAGE_M, pageH - 60, { charSpace: 1.8 });
-  doc.setFont(FONT, 'bold');
-  doc.setFontSize(10);
+  doc.setFont(SERIF, 'bold');
+  doc.setFontSize(11);
   doc.setTextColor(...C.ink);
   doc.text(ownerName, PAGE_M, pageH - 46);
 
