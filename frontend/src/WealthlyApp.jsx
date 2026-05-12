@@ -1288,9 +1288,6 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             <button onClick={() => setView('budgets')} className={view === 'budgets' ? 'on' : ''}>
               <Target size={16}/> <span>{t('nav.goals')}</span>
             </button>
-            <button onClick={() => setView('cashflow')} className={view === 'cashflow' ? 'on' : ''}>
-              <ArrowUpDown size={16}/> <span>{t('nav.cashflow')}</span>
-            </button>
             <button onClick={() => setView('tax')} className={view === 'tax' ? 'on' : ''}>
               <Calculator size={16}/> <span>{t('nav.tax')}</span>
             </button>
