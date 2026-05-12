@@ -361,17 +361,17 @@ class Goal(Base):
 
 
 class BankConnection(Base):
-    """An Enable Banking connection for automatic transaction sync."""
+    """A GoCardless Bank Account Data connection for automatic tx sync."""
     __tablename__ = "bank_connections"
 
     id = Column(String, primary_key=True, default=_uuid)
     household_id = Column(String, ForeignKey("households.id", ondelete="CASCADE"), nullable=False, index=True)
-    session_id = Column(String, nullable=True)           # Enable Banking session ID
-    bank_name = Column(String, nullable=False)
+    session_id = Column(String, nullable=True)           # GoCardless requisition_id
+    bank_name = Column(String, nullable=False)           # GoCardless institution_id
     bank_country = Column(String, default="FR")
     status = Column(String, default="pending")           # pending | authorized | error
-    state = Column(String, nullable=True)                # CSRF state param
-    accounts_data = Column(JSON, nullable=True)          # raw EB accounts list
+    state = Column(String, nullable=True)                # CSRF / ?ref= reference
+    accounts_data = Column(JSON, nullable=True)          # enriched GoCardless accounts list
     error_message = Column(Text, nullable=True)
     last_synced_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)

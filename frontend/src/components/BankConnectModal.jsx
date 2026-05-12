@@ -1,10 +1,11 @@
 /**
- * BankConnectModal — Enable Banking open banking flow
+ * BankConnectModal — GoCardless Bank Account Data flow (open banking, PSD2)
  *
  * 1. User picks a country
  * 2. Component fetches the list of banks from /banking/banks
  * 3. User picks a bank → POST /banking/connect → redirected to bank login
- * 4. After bank OAuth, the app URL gets ?state=xxx and WealthlyApp detects it
+ * 4. After bank consent, the app URL gets ?ref={state} and WealthlyApp
+ *    detects it + calls /banking/complete to finalise.
  */
 import { useState } from 'react';
 import { Plus, X, ChevronRight } from 'lucide-react';
@@ -77,7 +78,7 @@ export function BankConnectModal({ onClose }) {
         {step === 'country' && (
           <div className="modal-body">
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>
-              Connexion sécurisée via <strong>Enable Banking</strong> (PSD2). Vos identifiants restent sur le site de votre banque — Wealthly ne les voit jamais.
+              Connexion sécurisée via <strong>GoCardless</strong> (PSD2). Vos identifiants restent sur le site de votre banque — Wealthly ne les voit jamais.
             </p>
             <label>
               <span>Pays de votre banque</span>

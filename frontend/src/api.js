@@ -261,29 +261,31 @@ export const migrate = {
 };
 
 // ============================================================================
-// ENABLE BANKING — open banking sync
+// GoCardless Bank Account Data — open banking sync
 // ============================================================================
 export const banking = {
-  /** List available banks in a country (default FR) */
+  /** List available banks in a country (default FR). Returns institutions
+   *  with their GoCardless id (used as bank_name in /connect). */
   listBanks: (country = 'FR') => get(`/banking/banks?country=${country}`),
 
-  /** Initiate connection → returns {redirect_url, connection_id, state} */
+  /** Initiate connection → returns {redirect_url, connection_id, state}.
+   *  The user is then sent to redirect_url to consent at their bank. */
   connect: (bankName, bankCountry = 'FR') =>
     post('/banking/connect', { bank_name: bankName, bank_country: bankCountry }),
 
-  /** Complete after OAuth callback — pass state param from URL */
-  complete: (state, code) => post('/banking/complete', { state, code }),
+  /** Complete after the bank redirects back with ?ref={state}. */
+  complete: (state) => post('/banking/complete', { state }),
 
   /** Sync transactions for a connection */
   sync: (connectionId, daysBack = 90) =>
     post(`/banking/sync/${connectionId}?days_back=${daysBack}`),
 
-  /** Re-fetch EB session to update accounts list */
+  /** Re-poll requisition status to update accounts list */
   refreshConnection: (id) => post(`/banking/refresh/${id}`),
 
   /** List all connections */
   listConnections: () => get('/banking/connections'),
 
-  /** Delete a connection */
+  /** Delete a connection (also revokes the GoCardless requisition) */
   deleteConnection: (id) => del(`/banking/connections/${id}`),
 };

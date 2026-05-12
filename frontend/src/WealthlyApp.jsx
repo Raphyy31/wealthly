@@ -403,20 +403,20 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             const hasMembers = memList && memList.length > 0;
             setOnboarded(hasMembers);
             try { localStorage.setItem(STORAGE_KEYS.ONBOARDED, hasMembers ? '1' : '0'); } catch {}
-            // Note : l'ancien hook auto-sync GoCardless `api.banks.syncAll()`
-            // a été retiré avec le pivot vers Enable Banking (api.banking.sync
-            // se déclenche manuellement depuis Settings).
+            // Note : la synchro bancaire GoCardless se déclenche manuellement
+            // depuis Settings ou via le bouton Synchroniser du Dashboard.
           } catch {}
         }).catch(() => {});
       }
       setLoading(false);
 
-      // Handle Enable Banking callback: URL contains ?code=xxx&state=yyy after bank OAuth
+      // Handle GoCardless callback: URL contains ?ref={requisition_reference}
+      // after the bank consent. Legacy ?state=&code= still accepted in case
+      // someone has an old half-completed redirect bookmarked.
       const urlParams = new URLSearchParams(window.location.search);
-      const stateParam = urlParams.get('state');
-      const codeParam = urlParams.get('code');
-      if (stateParam) {
-        setBankingPendingState({ state: stateParam, code: codeParam });
+      const refParam = urlParams.get('ref') || urlParams.get('state');
+      if (refParam) {
+        setBankingPendingState({ state: refParam });
         // Clean up URL without reload
         window.history.replaceState({}, '', window.location.pathname);
       }
@@ -944,10 +944,10 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     } catch {}
   };
 
-  // ===== Banking / Enable Banking =====
+  // ===== Banking / GoCardless =====
   const completeBankCallback = useCallback(async (pending) => {
     try {
-      const result = await api.banking.complete(pending.state, pending.code);
+      const result = await api.banking.complete(pending.state);
       setBankingPendingState(null);
       if (result.status === 'authorized') {
         showToast('🏦 Banque connectée ! Vous pouvez maintenant synchroniser vos transactions.', 'success');
@@ -1763,7 +1763,7 @@ function AddAccountModal({ members = [], onSave, onClose }) {
                   {loadingBanks ? 'Chargement des banques…' : 'Connecter ma banque'}
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                  Synchronisation automatique via Enable Banking (PSD2). Vos identifiants restent sur le site de votre banque.
+                  Synchronisation automatique via GoCardless (PSD2). Vos identifiants restent sur le site de votre banque.
                 </div>
               </div>
               {loadingBanks

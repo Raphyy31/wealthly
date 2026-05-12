@@ -417,7 +417,7 @@ function BankConnectionsSection() {
         setSyncMessage({ kind: 'ok', text: `✅ ${res.accounts.length} compte(s) récupéré(s). Cliquez sur "Sync" pour importer les transactions.` });
       } else {
         const debugKeys = res.debug_raw_keys ? ` (clés EB : ${res.debug_raw_keys.join(', ')})` : '';
-        setSyncMessage({ kind: 'warn', text: `Session EB : ${res.session_status || '?'} — aucun compte retourné.${debugKeys} Contactez le support Enable Banking ou reconnectez la banque.` });
+        setSyncMessage({ kind: 'warn', text: `Requisition GoCardless : ${res.session_status || '?'} — aucun compte retourné.${debugKeys} Reconnectez la banque pour relancer le consentement.` });
       }
       await reload();
     } catch (e) {
@@ -444,7 +444,7 @@ function BankConnectionsSection() {
   return (
     <section className="card">
       <div className="card-header">
-        <h3><Cloud size={16}/> Synchro bancaire (Enable Banking) {loading && <RefreshCw size={12} className="spin" style={{marginLeft:6,opacity:.5}}/>}</h3>
+        <h3><Cloud size={16}/> Synchro bancaire (GoCardless) {loading && <RefreshCw size={12} className="spin" style={{marginLeft:6,opacity:.5}}/>}</h3>
         <button className="primary-btn" style={{ fontSize: 12, padding: '6px 14px' }} onClick={() => setPicker(true)}>
           <Plus size={13}/> Connecter une banque
         </button>
@@ -493,7 +493,7 @@ function BankConnectionsSection() {
                 style={{ fontSize: 11, padding: '5px 12px', whiteSpace: 'nowrap' }}
                 onClick={() => handleRefresh(c.id)}
                 disabled={refreshingId === c.id}
-                title="Récupérer la liste des comptes depuis Enable Banking"
+                title="Récupérer la liste des comptes depuis GoCardless"
               >
                 <RefreshCw size={12} className={refreshingId === c.id ? 'spin' : ''}/> Récupérer les comptes
               </button>
@@ -544,7 +544,7 @@ function BankConnectionsSection() {
       <div className="settings-info" style={{ marginTop: 14 }}>
         <Lightbulb size={14}/>
         <span>
-          Connexion sécurisée via <strong>Enable Banking</strong> (PSD2 open banking). Vos identifiants bancaires ne transitent pas par Wealthly.
+          Connexion sécurisée via <strong>GoCardless</strong> (PSD2 open banking). Vos identifiants bancaires ne transitent pas par Wealthly.
         </span>
       </div>
 

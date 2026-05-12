@@ -134,9 +134,9 @@ def _run_lightweight_migrations() -> None:
             "CREATE INDEX IF NOT EXISTS ix_auth_events_email      ON auth_events (email)",
             "CREATE INDEX IF NOT EXISTS ix_auth_events_ip         ON auth_events (ip)",
             "CREATE INDEX IF NOT EXISTS ix_auth_events_created_at ON auth_events (created_at)",
-            # Enable Banking columns — added when GoCardless BankConnection model
-            # was replaced with Enable Banking model. The table may have been
-            # created with the old GoCardless schema and need these added.
+            # bank_connections columns — historically introduced for Enable
+            # Banking, kept as-is for the GoCardless integration that replaced
+            # it. session_id stores the GoCardless requisition_id now.
             "ALTER TABLE bank_connections ADD COLUMN IF NOT EXISTS session_id VARCHAR",
             "ALTER TABLE bank_connections ADD COLUMN IF NOT EXISTS bank_name VARCHAR NOT NULL DEFAULT ''",
             "ALTER TABLE bank_connections ADD COLUMN IF NOT EXISTS bank_country VARCHAR DEFAULT 'FR'",
@@ -208,15 +208,15 @@ def _alembic_sync() -> None:
 
 _alembic_sync()
 
-# Surface Enable Banking config status at startup so Railway logs make
-# it obvious whether les env vars sont chargées dans le container.
-if settings.ENABLE_BANKING_APP_ID and settings.ENABLE_BANKING_PRIVATE_KEY_B64:
-    logger.warning("[enable_banking] configured (app_id=%s…)", settings.ENABLE_BANKING_APP_ID[:8])
+# Surface GoCardless config status at startup so Railway logs make it
+# obvious whether the env vars are loaded in the container.
+if settings.GOCARDLESS_SECRET_ID and settings.GOCARDLESS_SECRET_KEY:
+    logger.warning("[gocardless] configured (secret_id=%s…)", settings.GOCARDLESS_SECRET_ID[:8])
 else:
     logger.warning(
-        "[enable_banking] NOT configured — set ENABLE_BANKING_APP_ID + ENABLE_BANKING_PRIVATE_KEY_B64 (currently app_id=%r key=%r)",
-        bool(settings.ENABLE_BANKING_APP_ID),
-        bool(settings.ENABLE_BANKING_PRIVATE_KEY_B64),
+        "[gocardless] NOT configured — set GOCARDLESS_SECRET_ID + GOCARDLESS_SECRET_KEY (currently id=%r key=%r)",
+        bool(settings.GOCARDLESS_SECRET_ID),
+        bool(settings.GOCARDLESS_SECRET_KEY),
     )
 
 app = FastAPI(

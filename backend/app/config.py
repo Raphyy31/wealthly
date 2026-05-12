@@ -41,15 +41,15 @@ class Settings:
     # Anthropic (optional — enables AI categorization)
     ANTHROPIC_API_KEY: str | None = os.getenv("ANTHROPIC_API_KEY")
 
-    # Enable Banking (open banking sync)
-    ENABLE_BANKING_APP_ID: str = os.getenv("ENABLE_BANKING_APP_ID", "")
-    # For production: base64-encoded private key in env var
-    ENABLE_BANKING_PRIVATE_KEY_B64: str = os.getenv("ENABLE_BANKING_PRIVATE_KEY_B64", "")
-    ENABLE_BANKING_REDIRECT_URI: str = os.getenv(
-        "ENABLE_BANKING_REDIRECT_URI",
+    # GoCardless Bank Account Data (open banking sync, ex-Nordigen)
+    # Get credentials at: https://bankaccountdata.gocardless.com/user/secrets/
+    GOCARDLESS_SECRET_ID: str = os.getenv("GOCARDLESS_SECRET_ID", "")
+    GOCARDLESS_SECRET_KEY: str = os.getenv("GOCARDLESS_SECRET_KEY", "")
+    GOCARDLESS_REDIRECT_URI: str = os.getenv(
+        "GOCARDLESS_REDIRECT_URI",
         "https://wealthly-six.vercel.app"
     )
-    ENABLE_BANKING_API_BASE: str = "https://api.enablebanking.com"
+    GOCARDLESS_API_BASE: str = "https://bankaccountdata.gocardless.com/api/v2"
 
     # App
     APP_NAME: str = "Wealthly API"
