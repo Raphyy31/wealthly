@@ -134,6 +134,16 @@ def _run_lightweight_migrations() -> None:
             "CREATE INDEX IF NOT EXISTS ix_auth_events_email      ON auth_events (email)",
             "CREATE INDEX IF NOT EXISTS ix_auth_events_ip         ON auth_events (ip)",
             "CREATE INDEX IF NOT EXISTS ix_auth_events_created_at ON auth_events (created_at)",
+            # Enable Banking columns — added when GoCardless BankConnection model
+            # was replaced with Enable Banking model. The table may have been
+            # created with the old GoCardless schema and need these added.
+            "ALTER TABLE bank_connections ADD COLUMN IF NOT EXISTS session_id VARCHAR",
+            "ALTER TABLE bank_connections ADD COLUMN IF NOT EXISTS bank_name VARCHAR NOT NULL DEFAULT ''",
+            "ALTER TABLE bank_connections ADD COLUMN IF NOT EXISTS bank_country VARCHAR DEFAULT 'FR'",
+            "ALTER TABLE bank_connections ADD COLUMN IF NOT EXISTS state VARCHAR",
+            "ALTER TABLE bank_connections ADD COLUMN IF NOT EXISTS accounts_data JSON",
+            "ALTER TABLE bank_connections ADD COLUMN IF NOT EXISTS error_message TEXT",
+            "ALTER TABLE bank_connections ADD COLUMN IF NOT EXISTS last_synced_at TIMESTAMP",
         ]
     with engine.begin() as conn:
         for stmt in statements:
