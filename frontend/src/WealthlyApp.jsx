@@ -1849,15 +1849,18 @@ function AddAccountModal({ members = [], onSave, onClose }) {
 
             <div style={{ maxHeight: 300, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
               {filteredBanks.map((bank, idx) => {
-                const bankName = bank.name || bank.full_name || `Banque ${idx + 1}`;
+                const bankLabel = bank.name || bank.full_name || `Banque ${idx + 1}`;
+                // GoCardless wants the institution_id (e.g. "BOURSORAMA_BOURFRPP"),
+                // not the display name. Fallback to label only as a last resort.
+                const bankId = bank.id || bank.institution_id || bankLabel;
                 return (
                   <button
-                    key={idx}
+                    key={bankId || idx}
                     className="bank-option-btn"
-                    onClick={() => connectBank(bankName)}
+                    onClick={() => connectBank(bankId)}
                     disabled={connecting}
                   >
-                    <span className="bank-option-name">{bankName}</span>
+                    <span className="bank-option-name">{bankLabel}</span>
                     {connecting
                       ? <RefreshCw size={13} className="spin" style={{ color: 'var(--text-tertiary)' }}/>
                       : <ChevronRight size={14}/>
