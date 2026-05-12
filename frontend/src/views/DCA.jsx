@@ -481,7 +481,7 @@ export function DCAView({ accounts = [], members = [], dcaPlans = [], onPlansCha
   const fmt0 = v => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v);
 
   return (
-    <div style={{ padding: '24px 28px', maxWidth: 1100, margin: '0 auto' }}>
+    <div className="dca-view">
       {/* Toast */}
       {toast && (
         <div style={{
@@ -491,70 +491,44 @@ export function DCAView({ accounts = [], members = [], dcaPlans = [], onPlansCha
         }}>{toast.msg}</div>
       )}
 
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, gap: 16 }}>
+      <div className="subview-header">
         <div>
-          <div style={{ fontSize: 11, color: 'var(--primary)', fontWeight: 700, letterSpacing: '0.12em', marginBottom: 4 }}>
-            GESTION · INVESTISSEMENT
-          </div>
-          <h1 style={{ fontSize: 22, fontWeight: 600, margin: 0, color: 'var(--text-primary)' }}>
-            Plans DCA programmés
-          </h1>
-          <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-secondary)' }}>
-            Versements automatiques · Projection par intérêts composés
-          </p>
+          <h1>Vos <em>plans DCA.</em></h1>
+          <p>Versements automatiques et projection par intérêts composés.</p>
         </div>
         <button className="primary-btn" onClick={() => setModal('new')} style={{ flexShrink: 0 }}>
           <Plus size={14}/> Nouveau plan
         </button>
       </div>
 
-      {/* KPI strip */}
       {activePlans.length > 0 && (
-        <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: 12, marginBottom: 24,
-        }}>
+        <div className="dca-kpis">
           {[
-            { label: 'Versement mensuel équiv.', value: fmt0(totalMonthly), icon: <Calendar size={14}/>, color: 'var(--primary)' },
-            { label: 'Capital investi à ce jour', value: fmt0(totalInvestedSoFar), icon: <BarChart2 size={14}/> },
-            { label: 'Projection 10 ans (composé)', value: fmt0(totalProjected10), icon: <TrendingUp size={14}/>, color: 'var(--primary)' },
-            { label: 'Plans actifs', value: activePlans.filter(p => p.status === 'active').length, icon: <Zap size={14}/>, color: 'var(--success)' },
+            { label: 'Versement mensuel équiv.', value: fmt0(totalMonthly), icon: <Calendar size={13}/> },
+            { label: 'Capital investi à ce jour', value: fmt0(totalInvestedSoFar), icon: <BarChart2 size={13}/> },
+            { label: 'Projection 10 ans (composé)', value: fmt0(totalProjected10), icon: <TrendingUp size={13}/>, accent: true },
+            { label: 'Plans actifs', value: activePlans.filter(p => p.status === 'active').length, icon: <Zap size={13}/> },
           ].map(k => (
-            <div key={k.label} style={{
-              background: 'var(--bg-card)', border: '1px solid var(--border)',
-              borderRadius: 10, padding: '14px 16px',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, color: 'var(--text-tertiary)', fontSize: 11 }}>
-                {k.icon} {k.label.toUpperCase()}
-              </div>
-              <div style={{ fontWeight: 700, fontSize: 18, fontVariantNumeric: 'tabular-nums', color: k.color || 'var(--text-primary)' }}>
-                {k.value}
-              </div>
+            <div key={k.label} className="dca-kpi">
+              <div className="dca-kpi-label">{k.icon} {k.label}</div>
+              <div className={`dca-kpi-value ${k.accent ? 'is-accent' : ''}`}>{k.value}</div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Plans list */}
-      <div style={{ marginBottom: 28 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--primary)', fontStyle: 'italic', fontFamily: 'Georgia, serif' }}>I</span>
-          <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)', letterSpacing: '0.12em' }}>— PLANS ACTIFS</span>
-          <div style={{ flex: 1, height: 1, background: 'var(--border)', marginLeft: 4 }}/>
+      <section className="card">
+        <div className="card-header">
+          <h3><TrendingUp size={14}/> Plans actifs</h3>
+          <span className="card-meta">{activePlans.length} plan{activePlans.length > 1 ? 's' : ''}</span>
         </div>
-
         {activePlans.length === 0 ? (
-          <div style={{
-            background: 'var(--bg-card)', border: '1px dashed var(--border)',
-            borderRadius: 12, padding: '48px 24px', textAlign: 'center',
-          }}>
-            <TrendingUp size={32} style={{ color: 'var(--text-tertiary)', marginBottom: 12 }}/>
-            <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 6 }}>Aucun plan DCA configuré</div>
-            <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>
-              Créez votre premier plan pour visualiser la projection de vos versements systématiques.
-            </div>
-            <button className="primary-btn" onClick={() => setModal('new')}><Plus size={14}/> Créer un plan</button>
+          <div className="empty-mini">
+            <TrendingUp size={24}/>
+            <p>Aucun plan DCA configuré. Créez votre premier plan pour visualiser la projection de vos versements.</p>
+            <button className="primary-btn" style={{ marginTop: 8 }} onClick={() => setModal('new')}>
+              <Plus size={14}/> Créer un plan
+            </button>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -564,31 +538,26 @@ export function DCAView({ accounts = [], members = [], dcaPlans = [], onPlansCha
             ))}
           </div>
         )}
-      </div>
+      </section>
 
-      {/* Prochains versements */}
       {nextDates.length > 0 && (
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--primary)', fontStyle: 'italic', fontFamily: 'Georgia, serif' }}>II</span>
-            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)', letterSpacing: '0.12em' }}>— PROCHAINS VERSEMENTS</span>
-            <div style={{ flex: 1, height: 1, background: 'var(--border)', marginLeft: 4 }}/>
+        <section className="card">
+          <div className="card-header">
+            <h3><Calendar size={14}/> Prochains versements</h3>
+            <span className="card-meta">{nextDates.length} à venir</span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10 }}>
+          <div className="dca-next-grid">
             {nextDates.map((nd, i) => (
-              <div key={i} style={{
-                background: 'var(--bg-card)', border: '1px solid var(--border)',
-                borderRadius: 10, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 4,
-              }}>
-                <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}><Calendar size={10}/> {nd.date}</div>
-                <div style={{ fontWeight: 600, fontSize: 13 }}>{nd.name}</div>
-                <div style={{ fontWeight: 700, color: 'var(--primary)', fontVariantNumeric: 'tabular-nums' }}>
+              <div key={i} className="dca-next-card">
+                <div className="dca-next-date"><Calendar size={10}/> {nd.date}</div>
+                <div className="dca-next-name">{nd.name}</div>
+                <div className="dca-next-amount">
                   {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: nd.currency || 'EUR' }).format(nd.amount)}
                 </div>
               </div>
             ))}
           </div>
-        </div>
+        </section>
       )}
 
       {/* Modal */}

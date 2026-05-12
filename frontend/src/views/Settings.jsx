@@ -9,7 +9,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   Plus, Trash2, Edit3, Check, Upload, Download, Users, Wallet,
-  Lightbulb, Sparkles, Activity, AlertCircle, RefreshCw, Link2, Unlink, X, Cloud,
+  Sparkles, Activity, AlertCircle, RefreshCw, Link2, Unlink, X, Cloud,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import * as api from '../api.js';
@@ -60,12 +60,9 @@ export function SettingsView({ members, accounts, accountBalances, saveMember, d
       <section className="card">
         <div className="card-header">
           <h3><Wallet size={16}/> Comptes bancaires</h3>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span className="card-meta">rôle = comment ce compte est compté dans les calculs</span>
-            {onImport && (
-              <button className="secondary-btn" onClick={onImport}><Upload size={14}/> Importer un CSV</button>
-            )}
-          </div>
+          {onImport && (
+            <button className="secondary-btn" onClick={onImport}><Upload size={14}/> Importer un CSV</button>
+          )}
         </div>
         <div className="member-list">
           {accounts.length === 0 && (
@@ -114,7 +111,6 @@ export function SettingsView({ members, accounts, accountBalances, saveMember, d
                       value={role}
                       onChange={(e) => updateAccount(a.id, { role: e.target.value })}
                       title={roleMeta.desc}
-                      style={{ fontSize: 12, padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg-subtle)', color: 'var(--text-primary)', cursor: 'pointer' }}
                     >
                       {ACCOUNT_ROLE_KEYS.map(k => (
                         <option key={k} value={k}>{ACCOUNT_ROLES[k].label}</option>
@@ -124,7 +120,6 @@ export function SettingsView({ members, accounts, accountBalances, saveMember, d
                       value={a.currency || 'EUR'}
                       onChange={(e) => updateAccount(a.id, { currency: e.target.value })}
                       title="Devise du compte"
-                      style={{ fontSize: 11.5, padding: '5px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg-subtle)', color: 'var(--text-secondary)', cursor: 'pointer' }}
                     >
                       {SUPPORTED_CURRENCIES.map(c => (
                         <option key={c} value={c}>{CURRENCY_FLAGS[c]} {c}</option>
@@ -137,14 +132,12 @@ export function SettingsView({ members, accounts, accountBalances, saveMember, d
             );
           })}
         </div>
-        <div className="settings-info" style={{ marginTop: 12 }}>
-          <Lightbulb size={14}/>
-          <span>
-            <strong>Principal</strong> : tout compte. <strong>Dépenses</strong> (Revolut, voyage) : seules les sorties comptent.
-            <strong> Épargne / Investissement</strong> : exclus du cashflow mensuel mais comptent dans le patrimoine.
-            <strong> Professionnel</strong> : exclu du patrimoine personnel.
-          </span>
-        </div>
+        <p className="settings-footnote">
+          <strong>Principal</strong> — tout compte.<span className="sep">·</span>
+          <strong>Dépenses</strong> (Revolut, voyage) — seules les sorties comptent.<span className="sep">·</span>
+          <strong>Épargne</strong> / <strong>Investissement</strong> — exclus du cashflow, comptent dans le patrimoine.<span className="sep">·</span>
+          <strong>Professionnel</strong> — exclu du patrimoine personnel.
+        </p>
       </section>
 
       <section className="card">
@@ -157,10 +150,9 @@ export function SettingsView({ members, accounts, accountBalances, saveMember, d
           </label>
           <button className="danger-btn" onClick={resetAllData}><Trash2 size={14}/> Réinitialiser tout</button>
         </div>
-        <div className="settings-info">
-          <Lightbulb size={14}/>
-          <span>Exportez un backup régulièrement. C'est votre filet de sécurité avant une migration ou un changement d'instance.</span>
-        </div>
+        <p className="settings-footnote">
+          Exportez un backup avant chaque migration ou changement d'instance.
+        </p>
       </section>
 
       <BankConnectionsSection />
@@ -248,8 +240,8 @@ function CustomRulesSection({ categories }) {
         <h3><Sparkles size={16}/> Règles de catégorisation</h3>
         <span className="card-meta">{rules.length} règle{rules.length > 1 ? 's' : ''}</span>
       </div>
-      <p style={{ fontSize: 12, color: 'var(--text-tertiary)', margin: '0 0 14px', lineHeight: 1.5 }}>
-        Apprenez au catégoriseur à reconnaître vos marchands habituels. Chaque règle est une expression régulière (insensible à la casse) testée sur le libellé de chaque transaction. Les règles personnalisées priment sur les règles par défaut.
+      <p style={{ fontSize: 12.5, color: 'var(--text-tertiary)', margin: '0 0 14px', lineHeight: 1.55, maxWidth: 640 }}>
+        Apprenez au catégoriseur à reconnaître vos marchands habituels. Chaque règle est une expression régulière insensible à la casse, testée sur le libellé.
       </p>
 
       {/* Add form */}
@@ -352,12 +344,9 @@ function CustomRulesSection({ categories }) {
         </div>
       )}
 
-      <div className="settings-info" style={{ marginTop: 14 }}>
-        <Lightbulb size={14}/>
-        <span>
-          <strong>Astuce :</strong> sépare plusieurs marchands avec le pipe <code>|</code>. Exemple : <code>amazon|amzn|amz</code> couvre les 3 variantes. Les règles s'appliquent aux nouvelles transactions importées, et au bouton "Recatégoriser" sur chaque transaction.
-        </span>
-      </div>
+      <p className="settings-footnote">
+        Sépare plusieurs marchands avec le pipe <code>|</code> — <code>amazon|amzn|amz</code> couvre les 3 variantes. Les règles s'appliquent à toute nouvelle transaction importée et au bouton « Recatégoriser ».
+      </p>
     </section>
   );
 }
@@ -541,12 +530,9 @@ function BankConnectionsSection() {
         ))}
       </div>
 
-      <div className="settings-info" style={{ marginTop: 14 }}>
-        <Lightbulb size={14}/>
-        <span>
-          Connexion sécurisée via <strong>GoCardless</strong> (PSD2 open banking). Vos identifiants bancaires ne transitent pas par Wealthly.
-        </span>
-      </div>
+      <p className="settings-footnote">
+        Connexion sécurisée via <strong>GoCardless</strong> (PSD2 open banking). Vos identifiants bancaires ne transitent pas par Wealthly.
+      </p>
 
       {picker && <BankConnectModal onClose={() => { setPicker(false); reload(); }}/>}
     </section>

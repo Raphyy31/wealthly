@@ -1,5 +1,5 @@
 /**
- * Wealthly — bilan PDF generator (rewrite, 2026-05-06).
+ * Wealthly — bilan PDF generator.
  *
  * Multi-page A4 report:
  *   1. Cover                — wordmark, big title, date, foyer, page count
@@ -10,9 +10,9 @@
  *
  * Pure function. Pass props in, get a downloaded file out.
  *
- * Style = sober black on cream, gold accent rules, signature gold strip on the
- * left of every KPI block. Mirrors the app's "private banking" direction so a
- * printed copy still feels brand.
+ * Style = sober cream-on-ink (dark mode), cobalt lifté accent rules, signature
+ * cobalt strip on the left of every KPI block. Mirrors the app's dark theme so
+ * a printed/exported copy reads as the same product.
  */
 
 import jsPDF from 'jspdf';
@@ -20,37 +20,38 @@ import autoTable from 'jspdf-autotable';
 import { buildAmortization } from './utils.js';
 
 // ---------- Palette (RGB tuples for jsPDF) ----------
-// Mirrors the app's v3 light theme — papier chaud + cobalt sobre.
-// Same hex roots as index.css so a printed page feels like the same product.
+// Mirrors the app's v3 dark theme — encre profonde + cobalt lifté.
+// Same hex roots as index.css [data-theme="dark"] so a printed page feels
+// like the same product as the in-app dark mode.
 const C = {
-  ink:        [22, 21, 15],      // --ink   #16150F
-  body:       [86, 84, 74],      // --ink-2 #56544A
-  muted:      [140, 137, 121],   // --ink-3 #8C8979
-  faint:      [181, 178, 164],   // --ink-mute #B5B2A4
-  rule:       [210, 206, 192],   // --border-strong #D2CEC0
-  hairline:   [228, 225, 216],   // --border #E4E1D8
-  paper:      [247, 246, 242],   // --bg page #F7F6F2
-  cream:      [255, 255, 255],   // --bg-elev card #FFFFFF
-  cardFill:   [239, 237, 230],   // --bg-sunk #EFEDE6
-  accent:     [37, 64, 217],     // --accent cobalt #2540D9
-  accentDark: [26, 47, 168],     // --accent-2 #1A2FA8
-  accentSoft: [231, 235, 255],   // --accent-soft #E7EBFF
-  sage:       [19, 109, 62],     // --positive #136D3E
-  terracotta: [176, 57, 43],     // --negative #B0392B
-  amber:      [142, 100, 26],    // --warning  #8E641A
-  // Dataviz v3 (light) — cobalt, sage, terracotta, mauve, pink, grey, ocre
+  ink:        [241, 238, 228],   // --ink   #F1EEE4 (cream — text primary on dark)
+  body:       [200, 196, 184],   // body text slightly dimmer than ink
+  muted:      [162, 158, 145],   // --ink-2 #A29E91
+  faint:      [117, 113, 106],   // --ink-3 #75716A
+  rule:       [58, 56, 47],      // --border-strong #3A382F
+  hairline:   [42, 40, 35],      // --border #2A2823
+  paper:      [15, 14, 12],      // --bg page #0F0E0C
+  cream:      [24, 23, 20],      // --bg-elev card #181714
+  cardFill:   [24, 23, 20],      // raised card surface (= bg-elev, contrast↑ vs page in dark)
+  accent:     [126, 146, 255],   // --accent cobalt lifté #7E92FF
+  accentDark: [166, 180, 255],   // --accent-2 #A6B4FF
+  accentSoft: [27, 33, 74],      // --accent-soft #1B214A
+  sage:       [79, 181, 122],    // --positive #4FB57A
+  terracotta: [224, 122, 110],   // --negative #E07A6E
+  amber:      [212, 167, 76],    // --warning  #D4A74C
+  // Dataviz v3 (dark) — cobalt lifté, sage, ocre, mauve, pink, grey, ocre clair
   pieClasses: [
-    [37, 64, 217],     // d1 cobalt
-    [31, 142, 110],    // d2 sage
-    [194, 115, 59],    // d3 terracotta
-    [123, 87, 198],    // d4 mauve
-    [184, 93, 122],    // d5 pink
-    [77, 77, 77],      // d6 grey
-    [224, 178, 62],    // d7 ocre
+    [126, 146, 255],   // d1 cobalt #7E92FF
+    [79, 181, 122],    // d2 sage   #4FB57A
+    [224, 151, 90],    // d3 ocre   #E0975A
+    [182, 155, 242],   // d4 mauve  #B69BF2
+    [218, 138, 161],   // d5 pink   #DA8AA1
+    [156, 152, 139],   // d6 grey   #9C988B
+    [229, 199, 94],    // d7 ocre   #E5C75E
   ],
   // Legacy aliases (kept so existing draw functions don't all need touching)
-  gold:       [37, 64, 217],     // map to cobalt (was the primary accent)
-  goldDark:   [26, 47, 168],
+  gold:       [126, 146, 255],   // map to cobalt lifté
+  goldDark:   [166, 180, 255],
 };
 
 const FONT   = 'helvetica'; // body, captions, tables (jsPDF default sans)

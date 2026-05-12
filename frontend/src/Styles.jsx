@@ -1042,19 +1042,55 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .member-list { display: flex; flex-direction: column; gap: 8px; }
 .member-card { display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--bg-subtle); border-radius: 10px; flex-wrap: wrap; }
 .member-card .member-card-info { flex: 1 1 0; min-width: 0; }
-.member-card-actions { display: flex; flex-direction: column; gap: 4px; }
+.member-card-actions { display: flex; flex-direction: row; align-items: center; gap: 6px; }
+.member-card-actions select { font-size: 11.5px; padding: 5px 9px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-elev); color: var(--text-primary); cursor: pointer; font-family: 'Geist Mono', ui-monospace, Menlo, monospace; letter-spacing: 0; transition: border-color .15s; }
+.member-card-actions select:hover { border-color: var(--border-strong); }
+.member-card-actions select:focus { outline: none; border-color: var(--accent); }
 @media (max-width: 640px) {
   .member-card { gap: 10px; padding: 10px; align-items: center !important; }
-  .member-card-actions { flex-basis: 100%; order: 3; flex-direction: row; gap: 6px; }
+  .member-card-actions { flex-basis: 100%; order: 3; gap: 6px; }
   .member-card-actions select { flex: 1 1 0; min-width: 0; max-width: none !important; }
 }
 .member-card:hover { background: var(--bg-card-hover); }
 .member-card-info { flex: 1; min-width: 0; }
-.member-card-name { font-size: 14px; font-weight: 700; }
-.member-card-role { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+.member-card-name { font-size: 14px; font-weight: 600; letter-spacing: -0.005em; }
+.member-card-role { font-size: 11.5px; color: var(--text-tertiary); margin-top: 3px; font-variant-numeric: tabular-nums; }
 .settings-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
-.settings-info { display: flex; gap: 10px; padding: 12px; background: var(--bg-subtle); border-radius: 10px; font-size: 12px; line-height: 1.5; color: var(--text-secondary); margin-top: 16px; font-weight: 400; }
-.settings-info svg { flex-shrink: 0; margin-top: 2px; color: var(--warning); }
+/* Sync/connection status banner — semantic, kept distinct from sober footnotes */
+.settings-info { display: flex; gap: 10px; padding: 10px 12px; background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 8px; font-size: 12px; line-height: 1.5; color: var(--text-secondary); margin-top: 14px; font-weight: 400; }
+.settings-info svg { flex-shrink: 0; margin-top: 2px; }
+/* Sober editorial footnote — Newsreader italic on a dotted top rule. Replaces
+   the old "💡 tip" boxes for a calmer fintech-grade information density. */
+.settings-footnote {
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px dotted var(--border);
+  font-family: 'Newsreader', Georgia, serif;
+  font-style: italic;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-tertiary);
+  letter-spacing: -0.005em;
+}
+.settings-footnote strong { color: var(--text-secondary); font-weight: 500; font-style: normal; }
+.settings-footnote code { font-family: 'Geist Mono', ui-monospace, Menlo, monospace; font-style: normal; font-size: 11.5px; padding: 1px 5px; background: var(--bg-subtle); border-radius: 4px; color: var(--text-secondary); }
+.settings-footnote .sep { display: inline-block; padding: 0 6px; color: var(--ink-mute); font-style: normal; }
+
+/* DCA — aligned with the canonical .card / .subview-header system */
+.dca-view { display: flex; flex-direction: column; gap: 20px; }
+.dca-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+@media (max-width: 900px) { .dca-kpis { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 520px) { .dca-kpis { grid-template-columns: 1fr; } }
+.dca-kpi { background: var(--bg-elev); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.dca-kpi-label { display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: var(--primary); }
+.dca-kpi-label svg { opacity: 0.75; }
+.dca-kpi-value { font-size: 20px; font-weight: 600; letter-spacing: -0.015em; color: var(--ink); font-variant-numeric: tabular-nums; }
+.dca-kpi-value.is-accent { color: var(--accent); }
+.dca-next-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.dca-next-card { background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+.dca-next-date { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
+.dca-next-name { font-size: 13px; font-weight: 500; color: var(--ink); letter-spacing: -0.005em; }
+.dca-next-amount { font-size: 15px; font-weight: 600; color: var(--accent); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
 
 /* MODAL */
 .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.62); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); animation: modalFadeIn .15s ease-out; }
