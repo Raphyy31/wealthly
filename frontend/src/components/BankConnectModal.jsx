@@ -120,7 +120,6 @@ export function BankConnectModal({ onClose }) {
                     onClick={() => connectBank(bankName)}
                     disabled={connecting}
                   >
-                    <span className="bank-initial">{bankName.charAt(0).toUpperCase()}</span>
                     <span className="bank-option-name">{bankName}</span>
                     {connecting ? <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>⏳</span> : <ChevronRight size={14}/>}
                   </button>
