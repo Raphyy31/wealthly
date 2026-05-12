@@ -196,31 +196,68 @@ QUICKSTART.md Outdated, kept for historical reference
 
 ---
 
-## Visual direction (CRITICAL — don't deviate without asking)
+## Visual direction (CRITICAL — figé 2026-05-12, don't deviate without asking)
 
-**"Encre profonde + or sobre + sage / terracotta sourds"**.
+**"Papier chaud + cobalt sobre"** (Wealthly v3 — Refonte Claude Design).
 
-The user explicitly rejected the earlier teal/emerald (#00d09c) direction on 2026-05-05 — said "fait plus sérieux". Direction settled on private banking (Pictet / Edmond de Rothschild mood), Finary-adjacent, Linear-craft.
+Lineage (do NOT roll back to any of these): teal/emerald `#00d09c` rejected 2026-05-05 ("fait plus sérieux"); Méridien gold `#c5a572` shipped briefly then abandoned because the dark-only direction was too narrow. The current cobalt + cream papier chaud system works in both light (app default) and dark (landing cover) modes and is the one to extend.
 
-Tokens live in two places that must stay in sync:
-1. `frontend/src/index.css` `@theme` block — used by Tailwind utilities (`bg-w-surface`, `text-w-muted`)
-2. `frontend/src/WealthlyApp.jsx` `Styles({ theme })` `:root` block — used by the monolith CSS-in-JS (`var(--bg-card)`, `var(--primary)`)
+### Source of truth
 
-Key colors (dark, the primary mode):
-- `--color-w-bg` / `--bg-page`: `#0a0b0e`
-- `--color-w-surface` / `--bg-card`: `#13151a`
-- `--color-w-text` / `--text-primary`: `#ebe8e3` (cream-tinted, NOT pure white — warmth matters)
-- `--color-w-accent` / `--primary`: **`#c5a572`** (the signature gold)
-- `--color-w-success` / `--success`: `#88a978` (muted sage)
-- `--color-w-danger` / `--danger`: `#c47158` (muted terracotta — never a fire-engine red)
-- `--color-w-warning` / `--warning`: `#d4a554`
+`frontend/src/index.css` is THE token file. Light by default, dark unlocked via `data-theme="dark"` on `<html>`.
 
-Rules:
-- **No translateY hover** — too startup-y. Hovers change colour, not position.
-- **No coloured glows** (no `rgba(59, 130, 246, …)` shadows). Borders + subtle bg shifts only.
-- **Tabular numerals everywhere** for monetary values (`.w-num` class or `font-variant-numeric: tabular-nums`).
-- **Sharper radii** (4 / 8 / 12 / 16) — architectural over playful.
-- **Single accent**: gold for CTAs and positive trends. Keep usage rare and load-bearing.
+`frontend/src/Styles.jsx` (~1500 lines of CSS-in-JS, paired with WealthlyApp) consumes the same vars. The `--color-w-*` Tailwind theme block at the top of index.css aliases the canonical tokens — do not introduce a new naming scheme.
+
+### Key tokens (light, app default)
+
+- `--bg` / `--bg-elev` / `--bg-sunk`: `#F7F6F2` / `#FFFFFF` / `#EFEDE6`
+- `--ink` / `--ink-2` / `--ink-3`: `#16150F` / `#56544A` / `#8C8979`
+- `--border` / `--border-strong`: `#E4E1D8` / `#D2CEC0`
+- `--accent` / `--accent-2` / `--accent-soft`: **`#2540D9`** (cobalt) / `#1A2FA8` / `#E7EBFF`
+- `--positive` / `--negative` / `--warning`: `#136D3E` / `#B0392B` / `#8E641A`
+- `--d1..d7` dataviz: cobalt, sage, terracotta, mauve, pink, grey, ocre — stable order for charts and bank dots
+
+### Key tokens (dark, used by Landing cover + opt-in user theme)
+
+- `--bg` / `--bg-elev` / `--bg-sunk`: `#0F0E0C` / `#181714` / `#0A0908`
+- `--ink` / `--ink-2` / `--ink-3`: `#F1EEE4` / `#A29E91` / `#75716A`
+- `--accent`: `#7E92FF` (lifted cobalt for dark)
+
+### Typography
+
+- **Geist** — sans-serif for 95% of the UI (Geist 400/500/600/700)
+- **Geist Mono** — IBAN, codes, axes, eyebrow Section labels (`§ 01`)
+- **Newsreader** — italic ONLY, for h1/h2 accents (the lead word stays in Geist 500, the noun italicises in Newsreader 400). Never use Newsreader roman.
+- Loaded in `frontend/index.html` Google Fonts link
+- `font-variant-numeric: tabular-nums` systematic on all monetary values — `.num` / `.amount` / `.w-num` classes
+
+### Brand mark
+
+Single source: `frontend/src/components/Logo.jsx`. Square (cream-on-ink in light, ink-on-cream in dark via MutationObserver on `data-theme`), letter "W" 700, optional wordmark "Wealthly" 500. Used by Landing strip, AuthScreen strip, WealthlyApp desktop sidebar, mobile header, mobile drawer. Favicon + maskable SVGs (`frontend/public/icon*.svg`) match the dark variant for tab/launcher recognition.
+
+### Page header pattern (extend if you add a view)
+
+```jsx
+<div className="subview-header">
+  <div>
+    <h1>Lead <em>noun.</em></h1>
+    <p>One-line subtitle.</p>
+  </div>
+  {/* optional action button */}
+</div>
+```
+
+The `em` inside an h1 inside `.subview-header` (or `.page-header`) automatically picks up Newsreader italic via index.css. Examples already deployed: "Votre *patrimoine.*", "Vos *transactions.*", "Bonjour *Raphaël*".
+
+### Rules
+
+- **No translateY hover** anywhere. Hovers change colour or background, not position. (`:active` jitter on buttons also banned.)
+- **Subtle cobalt drop-shadow** on primary CTAs only — `0 4px 14px -4px rgba(126,146,255,.25)` (dark) / `rgba(37,64,217,.25)` (light). Borders + bg shifts elsewhere.
+- **Sharper radii** — 4 / 6 / 8 / 12 / 16. No 20 / 24.
+- **Single accent**: cobalt for CTAs / data principale / interactive links. Sage for positive, terracotta for negative, ocre for warning. Use them sparingly.
+- **Landing is dark-only by force**. `Landing.jsx` forces `data-theme="dark"` on mount and restores on unmount.
+- **Drop chauvinism**: no "Hébergé en France" / "Fait en France" / "Disponible en France" on the landing — user finds it ridiculous.
+- **PDF export** (`pdfReport.js`) palette mirrors light mode papier chaud — see `C` table at the top of the file.
 
 ---
 
