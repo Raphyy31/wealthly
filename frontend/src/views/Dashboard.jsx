@@ -358,7 +358,9 @@ export function Dashboard({
                 <div className="num cell-r">{formatEUR(bal)}</div>
                 <div className="cell-r"><Sparkline data={spark}/></div>
                 <div className="cell-r" style={{ color: 'var(--ink-3)', fontSize: 12 }}>{prettyType(a.type)}</div>
-                <div className="cell-r" style={{ color: 'var(--positive)', fontSize: 11.5 }}>il y a 4&nbsp;min</div>
+                <div className="cell-r" style={{ color: a.lastSyncedAt ? 'var(--positive)' : 'var(--ink-3)', fontSize: 11.5 }}>
+                  {a.lastSyncedAt ? relTime(new Date(a.lastSyncedAt)) : (a.source === 'gocardless' ? 'En attente' : '—')}
+                </div>
                 <div className="cell-r"><span className="ds-icon-btn" style={{ width: 26, height: 26 }} onClick={(e) => e.stopPropagation()}><MoreHorizontal size={14}/></span></div>
               </button>
             );

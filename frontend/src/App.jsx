@@ -66,20 +66,9 @@ export default function App() {
   };
 
   if (authState === 'checking') {
-    return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: '#151926',
-        color: '#8c8a85',
-        fontFamily: "'Inter Tight', system-ui, sans-serif",
-        fontSize: 14,
-      }}>
-        Chargement…
-      </div>
-    );
+    // Empty div — index.html's #root:empty CSS already renders the cobalt
+    // spinner on a papier-chaud background. No duplicate "Chargement…" text.
+    return <div/>;
   }
 
   if (authState === 'demo') {
@@ -89,7 +78,7 @@ export default function App() {
   if (authState === 'unauthed') {
     if (unauthedView === 'landing') {
       return (
-        <Suspense fallback={<div style={{minHeight:'100vh',background:'#151926'}}/>}>
+        <Suspense fallback={<div style={{minHeight:'100vh'}}/>}>
           <Landing
             onSignIn={() => { setAuthInitialMode('login'); setUnauthedView('auth'); }}
             onSignUp={() => { setAuthInitialMode('register'); setUnauthedView('auth'); }}

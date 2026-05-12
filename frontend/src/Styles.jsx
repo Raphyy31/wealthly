@@ -485,9 +485,9 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .empty-state h1 { font-size: clamp(30px, 4vw, 42px); font-weight: 500; margin: 0 0 12px; letter-spacing: -0.035em; line-height: 1.1; }
 .empty-lead { font-size: 14px; color: var(--text-secondary); margin: 0 0 28px; line-height: 1.6; max-width: 440px; }
 .empty-actions { display: flex; gap: 12px; flex-wrap: wrap; }
-.empty-mini { padding: 32px 20px; text-align: center; color: var(--text-tertiary); display: flex; flex-direction: column; align-items: center; gap: 10px; }
-.empty-mini p { margin: 0; font-size: 13px; max-width: 320px; line-height: 1.5; }
-.empty-mini svg { color: var(--text-tertiary); opacity: 0.5; }
+.empty-mini { padding: 36px 24px; text-align: center; color: var(--text-tertiary); display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.empty-mini p { margin: 0; font-family: 'Newsreader', Georgia, serif; font-style: italic; font-size: 14px; max-width: 360px; line-height: 1.55; color: var(--text-secondary); letter-spacing: -0.005em; }
+.empty-mini svg { color: var(--primary); opacity: 0.55; }
 
 /* DASHBOARD */
 .dashboard { display: flex; flex-direction: column; gap: 24px; }
@@ -556,7 +556,8 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 }
 .card-meta { font-size: 11px; color: var(--text-tertiary); font-weight: 400; }
 .chart-card { padding: 22px 16px 16px 8px; }
-.chart-empty { padding: 60px 20px; text-align: center; color: var(--text-tertiary); display: flex; flex-direction: column; align-items: center; gap: 12px; font-size: 13px; }
+.chart-empty { padding: 60px 20px; text-align: center; color: var(--text-secondary); display: flex; flex-direction: column; align-items: center; gap: 12px; font-family: 'Newsreader', Georgia, serif; font-style: italic; font-size: 14px; letter-spacing: -0.005em; }
+.chart-empty svg { color: var(--primary); opacity: 0.5; }
 .alert-card { border-color: var(--warning); border-left: 2px solid var(--warning); background: ${dark ? 'rgba(212, 165, 84, 0.04)' : 'rgba(181, 135, 44, 0.04)'}; }
 .anomalies-list { display: flex; flex-direction: column; gap: 8px; }
 .anomaly-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: var(--bg-card); border-radius: 10px; }
