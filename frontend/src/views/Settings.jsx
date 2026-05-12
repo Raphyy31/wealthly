@@ -37,57 +37,6 @@ export function SettingsView({ members, accounts, accountBalances, saveMember, d
         </div>
       </div>
 
-      {/* === Devise d'affichage === */}
-      <section className="card">
-        <div className="card-header">
-          <h3>💱 Devise d'affichage</h3>
-          <span className="card-meta">les montants seront convertis en temps réel à partir des taux du jour</span>
-        </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', padding: '4px 0 8px' }}>
-          {SUPPORTED_CURRENCIES.map(c => {
-            const active = c === baseCurrency;
-            return (
-              <button
-                key={c}
-                onClick={() => setBaseCurrency && setBaseCurrency(c)}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 10,
-                  padding: '12px 18px',
-                  background: active ? 'var(--primary-soft)' : 'var(--bg-card)',
-                  border: `1px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
-                  borderRadius: 12,
-                  cursor: 'pointer',
-                  color: active ? 'var(--primary-text)' : 'var(--text-primary)',
-                  fontWeight: active ? 600 : 500,
-                  fontFamily: 'inherit', fontSize: 13.5,
-                  transition: 'all .12s',
-                  boxShadow: active ? '0 0 0 4px rgba(59,111,224,0.10)' : 'none',
-                }}
-              >
-                <span style={{ fontSize: 18 }}>{CURRENCY_FLAGS[c]}</span>
-                <span>
-                  <div style={{ fontWeight: 700, lineHeight: 1.1 }}>{c}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>{CURRENCY_NAMES[c]}</div>
-                </span>
-              </button>
-            );
-          })}
-        </div>
-        {rates && (
-          <div style={{ marginTop: 12, padding: '12px 14px', background: 'var(--bg-subtle)', borderRadius: 10, border: '1px solid var(--border-light)' }}>
-            <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 6 }}>
-              Taux du jour {ratesDate && `· ${ratesDate}`}
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 18, fontSize: 13, fontVariantNumeric: 'tabular-nums' }}>
-              <div><strong>1 €</strong> = {rates.USD?.toFixed(4)} $</div>
-              <div><strong>1 €</strong> = {rates.GBP?.toFixed(4)} £</div>
-              <div><strong>1 €</strong> = {rates.CHF?.toFixed(4)} CHF</div>
-            </div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>Source : Frankfurter (BCE) · cache 1h</div>
-          </div>
-        )}
-      </section>
-
       <section className="card">
         <div className="card-header">
           <h3><Users size={16}/> Membres du foyer</h3>
