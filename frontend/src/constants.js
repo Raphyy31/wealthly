@@ -155,6 +155,6 @@ export const LIABILITY_TYPES = [
 
 // Member avatar palette — harmonised with the private-banking tokens. Stable
 // order so the same person keeps the same colour across renders.
-// Trove member palette — vivid but cohesive, all in the same family as the
-// Trove brand gradient. Used for member dots / avatars across the app.
+// Wealthly member palette — vivid but cohesive, all in the same family as the
+// Wealthly brand gradient. Used for member dots / avatars across the app.
 export const MEMBER_PALETTE = ['#3b6fe0', '#a78bfa', '#34d399', '#fbbf24', '#ec5a13', '#f472b6', '#06b6d4', '#94a3b8'];

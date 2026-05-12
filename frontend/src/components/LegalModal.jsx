@@ -33,7 +33,7 @@ export function LegalModal({ section = 'cgu', onClose }) {
             <p>Les données affichées proviennent exclusivement de ce que l'utilisateur saisit ou importe. Wealthly ne se connecte à aucun établissement financier sans action explicite de l'utilisateur. L'opérateur décline toute responsabilité pour les décisions financières prises sur la base des informations affichées.</p>
 
             <h3>6. Résiliation</h3>
-            <p>L'utilisateur peut demander la suppression définitive de son compte et de l'ensemble de ses données à tout moment en écrivant à <a href="mailto:contact@trove.app">contact@trove.app</a>. La suppression est effective sous 30 jours.</p>
+            <p>L'utilisateur peut demander la suppression définitive de son compte et de l'ensemble de ses données à tout moment en écrivant à <a href="mailto:contact@wealthly.app">contact@wealthly.app</a>. La suppression est effective sous 30 jours.</p>
 
             <h3>7. Modifications</h3>
             <p>Ces CGU peuvent être mises à jour. La date en en-tête fait foi. L'usage continu du service après mise à jour vaut acceptation.</p>
@@ -46,7 +46,7 @@ export function LegalModal({ section = 'cgu', onClose }) {
             <p className="legal-date">En vigueur au 7 mai 2026 — conforme RGPD</p>
 
             <h3>1. Responsable du traitement</h3>
-            <p>Trove est opéré à titre personnel. Contact : <a href="mailto:contact@trove.app">contact@trove.app</a></p>
+            <p>Wealthly est opéré à titre personnel. Contact : <a href="mailto:contact@wealthly.app">contact@wealthly.app</a></p>
 
             <h3>2. Données collectées</h3>
             <p>Wealthly collecte uniquement les données que vous saisissez ou importez :</p>
@@ -83,7 +83,7 @@ export function LegalModal({ section = 'cgu', onClose }) {
               <li><strong>Portabilité</strong> : exporter vos données (format JSON disponible)</li>
               <li><strong>Opposition</strong> : s'opposer à un traitement</li>
             </ul>
-            <p>Pour exercer ces droits : <a href="mailto:contact@trove.app">contact@trove.app</a>. En cas de litige non résolu, vous pouvez saisir la CNIL (<a href="https://www.cnil.fr" target="_blank" rel="noopener noreferrer">cnil.fr</a>).</p>
+            <p>Pour exercer ces droits : <a href="mailto:contact@wealthly.app">contact@wealthly.app</a>. En cas de litige non résolu, vous pouvez saisir la CNIL (<a href="https://www.cnil.fr" target="_blank" rel="noopener noreferrer">cnil.fr</a>).</p>
 
             <h3>8. Cookies</h3>
             <p>Wealthly n'utilise pas de cookies publicitaires. Un token JWT est stocké dans <code>localStorage</code> pour maintenir votre session. Il expire automatiquement après 7 jours.</p>

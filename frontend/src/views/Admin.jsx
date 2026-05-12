@@ -243,7 +243,7 @@ export function Admin() {
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
           <div>
             <h1 style={{ fontSize:22, fontWeight:700, letterSpacing:'-0.02em', margin:0 }}>Administration</h1>
-            <p style={{ fontSize:13, color:'var(--text-muted)', margin:'4px 0 0' }}>Gestion de la plateforme Trove</p>
+            <p style={{ fontSize:13, color:'var(--text-muted)', margin:'4px 0 0' }}>Gestion de la plateforme Wealthly</p>
           </div>
           <button onClick={load} style={{ ...btnStyle, display:'flex', alignItems:'center', gap:6 }}>
             <RefreshCw size={13}/> Actualiser

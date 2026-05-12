@@ -1,7 +1,7 @@
 /**
- * API service: all HTTP calls to the Trove backend.
+ * API service: all HTTP calls to the Wealthly backend.
  *
- * Auth: HttpOnly Secure SameSite=None cookie `trove_session` set by the
+ * Auth: HttpOnly Secure SameSite=None cookie `wealthly_session` set by the
  * backend on login/register/reset. The browser auto-attaches it on every
  * request thanks to `credentials: 'include'`. JS cannot read it (XSS-safe).
  *

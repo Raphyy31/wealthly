@@ -1,13 +1,13 @@
 {
-  "name": "Trove — Patrimoine familial",
-  "short_name": "Trove",
-  "description": "Tous vos comptes, placements et biens dans un tableau de bord moderne. Pilotez le patrimoine de votre famille sans complexité.",
+  "name": "Wealthly — Patrimoine familial",
+  "short_name": "Wealthly",
+  "description": "Tous vos comptes, placements et biens dans un tableau de bord moderne. Pilotez votre patrimoine sans complexité.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#151926",
-  "theme_color": "#151926",
+  "background_color": "#0F0E0C",
+  "theme_color": "#0F0E0C",
   "lang": "fr",
   "categories": ["finance", "productivity"],
   "icons": [

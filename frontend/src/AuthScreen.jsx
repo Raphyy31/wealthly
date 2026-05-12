@@ -14,6 +14,7 @@ import { Mail, Lock, User, Home, Eye, EyeOff, AlertCircle, ArrowLeft, Check, Spa
 import { auth } from './api.js';
 import { enableDemoMode } from './demoData.js';
 import { LegalModal } from './components/LegalModal.jsx';
+import Logo from './components/Logo.jsx';
 
 function readResetTokenFromUrl() {
   const params = new URLSearchParams(window.location.search);
@@ -94,8 +95,7 @@ export default function AuthScreen({ onAuth, onTryDemo, onBackToLanding, initial
         {/* TOP STRIP — identique à la Landing */}
         <div className="auth-strip">
           <div className="auth-mark">
-            <span className="auth-logo">W</span>
-            <span>Wealthly Studio</span>
+            <Logo size={22} wordmark wordmarkSize={13} />
           </div>
           <div className="auth-strip-actions">
             {onBackToLanding && (
@@ -106,14 +106,8 @@ export default function AuthScreen({ onAuth, onTryDemo, onBackToLanding, initial
           </div>
         </div>
 
-        {/* MASTHEAD compact — eyebrow + titre serif + deck */}
+        {/* MASTHEAD compact — titre serif + deck */}
         <div className="auth-masthead">
-          <div className="auth-num-issue">
-            {mode === 'login'    && '01 — Espace personnel'}
-            {mode === 'register' && '02 — Création de compte'}
-            {mode === 'forgot'   && '03 — Mot de passe oublié'}
-            {mode === 'reset'    && '04 — Nouveau mot de passe'}
-          </div>
           <h1 className="auth-title">
             {mode === 'login'    && <>Bon <em>retour.</em></>}
             {mode === 'register' && <>Créer <em>votre compte.</em></>}
@@ -280,8 +274,7 @@ export default function AuthScreen({ onAuth, onTryDemo, onBackToLanding, initial
 
         {/* COLOPHON */}
         <div className="auth-colophon">
-          <span>WEALTHLY · v3 · {new Date().getFullYear()}</span>
-          <span className="auth-star">✦</span>
+          <span>© {new Date().getFullYear()} Wealthly</span>
           <span className="auth-legal">
             <button onClick={() => setLegal('cgu')}>CGU</button>
             <button onClick={() => setLegal('privacy')}>Confidentialité</button>

@@ -216,7 +216,7 @@ export const detectInternalTransfers = (transactions, options = {}) => {
 
 // ---- Formatting ------------------------------------------------------------
 
-// Supported display currencies for Trove. Adding more is a one-line addition
+// Supported display currencies for Wealthly. Adding more is a one-line addition
 // here + Frankfurter handles ~30 ISO codes natively.
 export const SUPPORTED_CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF'];
 
