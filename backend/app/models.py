@@ -492,3 +492,35 @@ class FixedCharge(Base):
     household_id = Column(String, ForeignKey("households.id", ondelete="CASCADE"), nullable=False, index=True)
     household = relationship("Household", back_populates="fixed_charges")
     members = relationship("Member", secondary=fixed_charge_members)
+
+
+class DcaPlan(Base):
+    """A systematic investment plan (Dollar Cost Averaging).
+
+    Represents a recurring buy order: e.g. 'invest 300€/month in CW8.PA
+    from my PEA account on the 1st of each month'.
+    The backend stores the plan; all projection math runs on the frontend.
+    """
+    __tablename__ = "dca_plans"
+
+    id           = Column(String, primary_key=True, default=_uuid)
+    household_id = Column(String, ForeignKey("households.id", ondelete="CASCADE"), nullable=False, index=True)
+    name         = Column(String, nullable=False)          # "DCA ETF Monde"
+    ticker       = Column(String, nullable=True)           # "CW8.PA"
+    asset_name   = Column(String, nullable=True)           # human label if no ticker
+    amount       = Column(Float, nullable=False)           # amount per period
+    currency     = Column(String, default="EUR")
+    frequency    = Column(String, default="monthly")       # monthly | quarterly | annual
+    day_of_month = Column(Integer, default=1)              # 1–28
+    account_id   = Column(String, ForeignKey("accounts.id", ondelete="SET NULL"), nullable=True)
+    start_date   = Column(String, nullable=True)           # "YYYY-MM-DD"
+    status       = Column(String, default="active")        # active | paused | stopped
+    target_years = Column(Integer, default=10)             # projection horizon
+    expected_return = Column(Float, default=7.0)           # annual % for projection
+    notes        = Column(Text, nullable=True)
+    member_ids   = Column(JSON, default=list)
+
+    created_at   = Column(DateTime, default=datetime.utcnow)
+    updated_at   = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    household    = relationship("Household")

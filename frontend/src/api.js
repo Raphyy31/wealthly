@@ -244,6 +244,16 @@ export const fixedCharges = {
 };
 
 // ============================================================================
+// DCA — systematic investment plans
+// ============================================================================
+export const dcaApi = {
+  list:   ()         => get('/dca'),
+  create: (body)     => post('/dca', body),
+  update: (id, body) => put(`/dca/${id}`, body),
+  remove: (id)       => del(`/dca/${id}`),
+};
+
+// ============================================================================
 // MIGRATION FROM v2 JSON BACKUP
 // ============================================================================
 export const migrate = {

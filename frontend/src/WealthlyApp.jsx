@@ -37,6 +37,8 @@ import { Wealth } from './views/Wealth.jsx';
 import { SettingsView } from './views/Settings.jsx';
 import { Admin } from './views/Admin.jsx';
 import { ImportFlow } from './views/ImportFlow.jsx';
+import { DCAView } from './views/DCA.jsx';
+import { dcaApi } from './api.js';
 import { AccountDrawer } from './components/AccountDrawer.jsx';
 import { useTheme, ThemeToggle } from './components/ui/ThemeToggle.jsx';
 
@@ -87,6 +89,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   const [goals, setGoals] = useState([]);
   const [achievements, setAchievements] = useState([]);
   const [fixedCharges, setFixedCharges] = useState([]);
+  const [dcaPlans, setDcaPlans] = useState([]);
   const [currentUser, setCurrentUser] = useState(() => {
     try { return JSON.parse(localStorage.getItem('w2:current_user') || 'null'); } catch { return null; }
   });
@@ -301,7 +304,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       return;
     }
     try {
-      const [memList, accList, txList, astList, liaList, catList, budList, goalList, achList, ruleList, connList] = await Promise.all([
+      const [memList, accList, txList, astList, liaList, catList, budList, goalList, achList, ruleList, connList, dcaList] = await Promise.all([
         api.members.list(),
         api.accounts.list(),
         api.transactions.list(),
@@ -313,6 +316,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
         api.achievements.list().catch(() => []),
         api.rules.list(),
         api.banking.listConnections().catch(() => []),
+        dcaApi.list().catch(() => []),
       ]);
       const mappedAccounts = accList.map(accountFromApi);
       const mappedTx = txList.map(txFromApi);
@@ -336,6 +340,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       // Custom rules
       setCustomRules((ruleList || []).map(r => ({ pattern: r.pattern, categoryId: r.category_slug, source: r.source, _id: r.id })));
       setBankConnections(connList || []);
+      setDcaPlans(dcaList || []);
     } catch (err) {
       showToast('Erreur de chargement : ' + err.message, 'error');
     }
@@ -1290,6 +1295,9 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             <button onClick={() => setView('tax')} className={view === 'tax' ? 'on' : ''}>
               <Calculator size={16}/> <span>{t('nav.tax')}</span>
             </button>
+            <button onClick={() => setView('dca')} className={view === 'dca' ? 'on' : ''}>
+              <TrendingUp size={16}/> <span>Invest. DCA</span>
+            </button>
 
             <div className="ws-nav-group">{t('nav.group_accounts')}</div>
             {(accounts || []).slice(0, 4).map(a => (
@@ -1447,6 +1455,12 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
           <Suspense fallback={<div className="chart-empty"><Calculator size={28}/><span>Chargement du simulateur…</span></div>}>
             <TaxSimulator transactions={visibleTransactions} />
           </Suspense>
+        )}
+        {view === 'dca' && (
+          <DCAView
+            accounts={accounts} members={members}
+            dcaPlans={dcaPlans} onPlansChange={setDcaPlans}
+          />
         )}
         {view === 'wealth' && (
           <Wealth
