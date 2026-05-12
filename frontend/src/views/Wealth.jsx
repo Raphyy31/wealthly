@@ -103,8 +103,8 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
     <div className="wealth-view">
       <div className="subview-header">
         <div>
-          <h1>Patrimoine</h1>
-          <p>Actifs, passifs et allocation de votre patrimoine — par classe d'actif.</p>
+          <h1>Votre <em>patrimoine.</em></h1>
+          <p>Actifs, passifs et allocation — par classe d'actif.</p>
         </div>
         <button className="primary-btn" onClick={() => setShowAddPicker(true)}><Plus size={14}/> Ajouter</button>
       </div>

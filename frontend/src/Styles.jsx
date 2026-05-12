@@ -399,10 +399,19 @@ export function Styles({ theme }) {
 .hub-tabs button.active svg { color: var(--primary); }
 @media (max-width: 760px) { .hub-tabs { width: 100%; align-self: stretch; } .hub-tabs button { flex: 1; justify-content: center; } }
 .page-header { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 28px; flex-wrap: wrap; }
-.page-title { font-family: 'Source Serif 4', 'Source Serif Pro', Georgia, serif; font-size: 44px; font-weight: 400; margin: 0 0 10px; letter-spacing: -0.02em; line-height: 1.04; }
-.page-title em { font-style: italic; color: var(--primary); font-weight: 400; }
-.page-subtitle { font-size: 13px; color: var(--text-tertiary); margin: 0; max-width: 580px; line-height: 1.5; }
-@media (max-width: 760px) { .page-title { font-size: 32px; letter-spacing: -0.018em; } }
+.page-header h1, .page-title {
+  font-family: 'Geist', system-ui, -apple-system, sans-serif;
+  font-size: 32px; font-weight: 500; margin: 0 0 8px;
+  letter-spacing: -0.025em; line-height: 1.05;
+  color: var(--text-primary);
+}
+.page-header h1 em, .page-title em {
+  font-family: 'Newsreader', Georgia, serif;
+  font-style: italic; font-weight: 400; color: var(--text-secondary);
+  letter-spacing: -0.035em;
+}
+.page-header p, .page-subtitle { font-size: 13px; color: var(--text-tertiary); margin: 0; max-width: 580px; line-height: 1.5; }
+@media (max-width: 760px) { .page-header h1, .page-title { font-size: 24px; letter-spacing: -0.022em; } }
 
 input, select, textarea { font-family: inherit; font-size: 13px; padding: 9px 12px; border-radius: 6px; border: 1px solid var(--border); background: ${dark ? 'var(--bg-subtle)' : 'var(--bg-card)'}; color: var(--text-primary); transition: border-color 0.15s, box-shadow 0.15s, background 0.15s; letter-spacing: -0.01em; }
 input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
@@ -835,7 +844,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .wealth-empty p { font-size: 13px; color: var(--text-secondary); margin: 0 0 16px; font-weight: 400; }
 .asset-types-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
 .asset-type-btn { display: flex; align-items: center; gap: 10px; padding: 12px; background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; transition: all 0.15s; text-align: left; font-family: inherit; }
-.asset-type-btn:hover { background: var(--bg-card-hover); border-color: var(--border-strong); transform: translateY(-1px); }
+.asset-type-btn:hover { background: var(--bg-card-hover); border-color: var(--border-strong); }
 .att-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .att-name { font-size: 13px; font-weight: 700; color: var(--text-primary); }
 .att-desc { font-size: 11px; color: var(--text-tertiary); line-height: 1.3; margin-top: 2px; }

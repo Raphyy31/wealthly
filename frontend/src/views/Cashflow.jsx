@@ -119,7 +119,7 @@ export function Cashflow({ transactions, categories, accounts, memberShare, fmt,
     <div className="cashflow-view">
       <div className="subview-header">
         <div>
-          <h1>Cashflow</h1>
+          <h1>Votre <em>cashflow.</em></h1>
           <p>Entrées, sorties et soldes nets — visualisés sur la période.</p>
         </div>
       </div>

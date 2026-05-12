@@ -113,7 +113,7 @@ export default function TaxSimulator({ transactions = [] }) {
       {/* Header */}
       <div className="subview-header mb-7">
         <div>
-          <h1>Simulateur d'impôt</h1>
+          <h1>Simulateur <em>d'impôt.</em></h1>
           <p>Revenus 2025 · barème déclaration 2026</p>
         </div>
       </div>

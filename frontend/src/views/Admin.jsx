@@ -242,8 +242,10 @@ export function Admin() {
       <div style={{ padding:'20px 28px 0', borderBottom:'1px solid var(--color-w-border)' }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
           <div>
-            <h1 style={{ fontSize:22, fontWeight:700, letterSpacing:'-0.02em', margin:0 }}>Administration</h1>
-            <p style={{ fontSize:13, color:'var(--text-muted)', margin:'4px 0 0' }}>Gestion de la plateforme Wealthly</p>
+            <h1 style={{ fontFamily: "'Geist', system-ui, sans-serif", fontSize:28, fontWeight:500, letterSpacing:'-0.025em', margin:0, color: 'var(--ink)' }}>
+              Espace <em style={{ fontFamily: "'Newsreader', Georgia, serif", fontStyle: 'italic', fontWeight: 400, color: 'var(--ink-2)', letterSpacing: '-0.035em' }}>admin.</em>
+            </h1>
+            <p style={{ fontSize:13, color:'var(--ink-3)', margin:'4px 0 0' }}>Gestion de la plateforme Wealthly</p>
           </div>
           <button onClick={load} style={{ ...btnStyle, display:'flex', alignItems:'center', gap:6 }}>
             <RefreshCw size={13}/> Actualiser

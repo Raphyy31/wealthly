@@ -127,7 +127,7 @@ export function Transactions({ transactions, accounts, categories, members = [],
     <div className="transactions-view">
       <div className="subview-header">
         <div>
-          <h1>Transactions</h1>
+          <h1>Vos <em>transactions.</em></h1>
           <p>Toutes vos opérations bancaires. Cliquez une catégorie pour la modifier.</p>
         </div>
       </div>

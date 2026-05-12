@@ -138,7 +138,7 @@ export function Monthly({ transactions, accounts, categories, members, recurring
     <div className="monthly-view">
       <div className="subview-header">
         <div>
-          <h1>Suivi mensuel</h1>
+          <h1>Suivi <em>mensuel.</em></h1>
           <p>Charges fixes, abonnements et dépenses variables — mois par mois.</p>
         </div>
         <select className="month-selector" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)}>

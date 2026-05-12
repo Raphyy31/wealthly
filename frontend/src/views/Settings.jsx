@@ -32,7 +32,7 @@ export function SettingsView({ members, accounts, accountBalances, saveMember, d
     <div className="settings-view">
       <div className="subview-header">
         <div>
-          <h1>{t('settings.title')}</h1>
+          <h1>Vos <em>{t('settings.title').toLowerCase()}.</em></h1>
           <p>{t('settings.subtitle')}</p>
         </div>
       </div>

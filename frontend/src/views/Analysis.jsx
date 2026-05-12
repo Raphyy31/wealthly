@@ -42,7 +42,7 @@ export function Analysis({ transactions, categories, recurringIds, recurringGrou
     <div className="analysis-view">
       <div className="subview-header">
         <div>
-          <h1>Analyse</h1>
+          <h1>Vos <em>analyses.</em></h1>
           <p>Marchands, catégories et tendances de vos dépenses sur la durée.</p>
         </div>
       </div>
