@@ -52,15 +52,15 @@ def test_snapshots_isolated_by_household(client):
     # Register two distinct users / households.
     client.post(
         "/auth/register",
-        json={"email": "alpha@x.com", "password": "longenough", "full_name": "Alpha"},
+        json={"email": "alpha@x.com", "password": "longenough1", "full_name": "Alpha"},
     )
-    a = client.post("/auth/login", json={"email": "alpha@x.com", "password": "longenough"}).json()["access_token"]
+    a = client.post("/auth/login", json={"email": "alpha@x.com", "password": "longenough1"}).json()["access_token"]
 
     client.post(
         "/auth/register",
-        json={"email": "beta@x.com", "password": "longenough", "full_name": "Beta"},
+        json={"email": "beta@x.com", "password": "longenough1", "full_name": "Beta"},
     )
-    b = client.post("/auth/login", json={"email": "beta@x.com", "password": "longenough"}).json()["access_token"]
+    b = client.post("/auth/login", json={"email": "beta@x.com", "password": "longenough1"}).json()["access_token"]
 
     client.post("/wealth/snapshots", json=_snapshot(net=999), headers={"Authorization": f"Bearer {a}"})
 

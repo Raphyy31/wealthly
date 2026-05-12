@@ -6,6 +6,7 @@ needed in CI. Email sending is mocked so password-reset tests don't rely
 on Resend.
 """
 import os
+from unittest.mock import patch
 
 # Force test settings BEFORE importing the app.
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
@@ -26,6 +27,20 @@ from app.rate_limit import limiter
 # Disable per-IP rate limiting in tests — multiple registers/logins from the
 # same TestClient would otherwise trip the auth limits.
 limiter.enabled = False
+
+# Disable HIBP breach check — no real HTTP calls to pwnedpasswords.com in CI.
+# Complexity rules (length, letters+digits) still run; only the external call
+# is skipped. The patch is started once for the whole session.
+def _validate_no_hibp(password: str, *, check_breach: bool = True) -> tuple:
+    if not password or len(password) < 10:
+        return False, "Le mot de passe doit faire au moins 10 caractères."
+    has_letter = any(c.isalpha() for c in password)
+    has_digit = any(c.isdigit() for c in password)
+    if not (has_letter and has_digit):
+        return False, "Le mot de passe doit contenir des lettres ET des chiffres."
+    return True, None
+
+patch("app.security.validate_password", side_effect=_validate_no_hibp).start()
 
 
 @pytest.fixture()

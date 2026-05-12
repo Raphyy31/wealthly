@@ -4,7 +4,7 @@
 def test_register_creates_user_and_returns_jwt(client):
     resp = client.post(
         "/auth/register",
-        json={"email": "bob@example.com", "password": "longenough", "full_name": "Bob", "household_name": "Foyer"},
+        json={"email": "bob@example.com", "password": "longenough1", "full_name": "Bob", "household_name": "Foyer"},
     )
     assert resp.status_code == 201, resp.text
     data = resp.json()
@@ -15,7 +15,7 @@ def test_register_creates_user_and_returns_jwt(client):
 def test_register_rejects_duplicate_email(client, registered_user):
     resp = client.post(
         "/auth/register",
-        json={"email": registered_user["email"], "password": "anotherlongpass", "full_name": "X"},
+        json={"email": registered_user["email"], "password": "anotherlongpass1", "full_name": "X"},
     )
     assert resp.status_code == 400
 
