@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { LangButton } from './components/LangButton.jsx';
 import { CurrencyButton } from './components/CurrencyButton.jsx';
 import { HideAmountsContext } from './contexts/HideAmounts.jsx';
+import { CurrencyContext } from './contexts/Currency.jsx';
 import { getDemoData } from './demoData.js';
 import {
   APP_NAME, STORAGE_KEYS, DEFAULT_CATEGORIES, DEFAULT_RULES, BANK_PROFILES,
@@ -1193,6 +1194,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   const activeMember = members.find(m => m.id === activeMemberId);
 
   return (
+    <CurrencyContext.Provider value={{ baseCurrency, rates }}>
     <HideAmountsContext.Provider value={hideAmounts}>
     <div className={`app theme-${theme}`}>
       <Styles theme={theme}/>
@@ -1562,6 +1564,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       )}
     </div>
     </HideAmountsContext.Provider>
+    </CurrencyContext.Provider>
   );
 }
 

@@ -1,56 +1,76 @@
-// Amount — affiche un nombre EUR en format FR strict avec décimales en --ink-3.
-// Hero : split décimales (cents class).
-// Variantes: hero (Newsreader 64px) | default (Geist tabular).
-//
-// Respecte HideAmountsContext : quand hideAmounts=true, affiche '•••' partout.
+// Amount — displays a monetary value, converting to the user's baseCurrency.
+// Reads baseCurrency + rates from CurrencyContext, hideAmounts from HideAmountsContext.
+// Hero variant: splits decimals into .cents span for large displays.
+// Pass `from="GBP"` etc. if the value is not EUR-denominated.
 
 import { useHideAmounts } from '../../contexts/HideAmounts.jsx';
+import { useCurrency } from '../../contexts/Currency.jsx';
+import { convertCurrency } from '../../utils.js';
 
 const MASK = '•••';
+const LOCALE = { EUR: 'fr-FR', USD: 'en-US', GBP: 'en-GB', CHF: 'de-CH' };
 
-const _fmt = (n, { abbr = false, decimals = 2 } = {}) => {
+const _fmt = (n, currency = 'EUR', { abbr = false, decimals = 2 } = {}) => {
+  const locale = LOCALE[currency] || 'fr-FR';
   if (abbr && Math.abs(n) >= 1000) {
-    return new Intl.NumberFormat('fr-FR', {
+    return new Intl.NumberFormat(locale, {
       notation: 'compact',
       maximumFractionDigits: 1,
-    }).format(n) + ' €';
+    }).format(n) + ' ' + (currency === 'EUR' ? '€' : currency);
   }
-  return new Intl.NumberFormat('fr-FR', {
+  return new Intl.NumberFormat(locale, {
     style: 'currency',
-    currency: 'EUR',
+    currency,
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   }).format(n);
 };
 
-/** Hook — retourne un formatter qui respecte hideAmounts. */
+/** Hook — returns a formatter that respects hideAmounts and converts to baseCurrency. */
 export function useFormatEUR() {
   const hidden = useHideAmounts();
-  return hidden ? () => MASK : _fmt;
+  const { baseCurrency, rates } = useCurrency();
+  if (hidden) return () => MASK;
+  return (n, opts = {}) => {
+    if (typeof n !== 'number' || Number.isNaN(n)) return '—';
+    const from = opts.from || 'EUR';
+    const converted = convertCurrency(n, from, baseCurrency, rates);
+    return _fmt(converted, baseCurrency, opts);
+  };
 }
 
-export function Amount({ value, hero = false, abbr = false, decimals = 2, className = '', style }) {
+export function Amount({ value, from = 'EUR', hero = false, abbr = false, decimals = 2, className = '', style }) {
   const hidden = useHideAmounts();
+  const { baseCurrency, rates } = useCurrency();
+
   if (hidden) {
     return <span className={`num ds-masked ${className}`} style={style}>{MASK}</span>;
   }
   if (typeof value !== 'number' || Number.isNaN(value)) {
     return <span className={className} style={style}>—</span>;
   }
-  const text = _fmt(value, { abbr, decimals });
+
+  const converted = convertCurrency(value, from, baseCurrency, rates);
+  const text = _fmt(converted, baseCurrency, { abbr, decimals });
+
   if (!hero || abbr) {
     return <span className={`num ${className}`} style={style}>{text}</span>;
   }
-  // Hero: split on the virgule to color decimals + symbol in --ink-3
-  const m = text.match(/^(.+),(\d+)\s*(€)$/);
-  if (!m) return <span className={`num ds-hero-num ${className}`} style={style}>{text}</span>;
+
+  // Hero: split on decimal separator (comma for EUR/fr-FR, dot for others)
+  const m = baseCurrency === 'EUR'
+    ? text.match(/^(.+),(\d+)\s*(€)$/)
+    : text.match(/^(.+)\.(\d+)\s*(.*)$/);
+  if (!m) return <span className={`ds-hero-num ${className}`} style={style}>{text}</span>;
   const [, integer, cents, sym] = m;
+  const sep = baseCurrency === 'EUR' ? ',' : '.';
   return (
     <span className={`ds-hero-num ${className}`} style={style}>
       {integer}
-      <span className="cents">,{cents}&nbsp;{sym}</span>
+      <span className="cents">{sep}{cents}{sym ? ' ' + sym : ''}</span>
     </span>
   );
 }
 
-export const formatEUR = _fmt;
+// Static EUR formatter (no context — for use outside React or in utils).
+export const formatEUR = (n, opts) => _fmt(n, 'EUR', opts);
