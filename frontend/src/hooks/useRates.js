@@ -75,7 +75,10 @@ export function useRates() {
     tryFetch(PRIMARY, (d) => {
       if (!d || d.result !== 'success' || !d.rates) throw new Error('bad payload');
       const rates = pickWanted(d.rates);
-      const date = (d.time_last_update_utc || '').split(' ').slice(1, 4).reverse().join('-') || null;
+      // time_last_update_unix is seconds; convert to ISO yyyy-mm-dd to match the previous shape
+      const date = d.time_last_update_unix
+        ? new Date(d.time_last_update_unix * 1000).toISOString().slice(0, 10)
+        : null;
       return { rates, date };
     })
       // Frankfurter → { date: "2026-05-08", rates: { USD, GBP, CHF } }
