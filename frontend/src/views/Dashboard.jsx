@@ -204,7 +204,10 @@ export function Dashboard({
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <header className="dash-head">
         <div>
-          <h1 className="dash-h1">{greeting(t)}{userFirstName ? ` ${userFirstName}` : ''}</h1>
+          <h1 className="dash-h1">
+            {greeting(t)}
+            {userFirstName && <em className="dash-h1-em">{` ${userFirstName}`}</em>}
+          </h1>
           <div className="dash-sub">
             {visibleAccounts?.length || 0}&nbsp;compte{(visibleAccounts?.length || 0) > 1 ? 's' : ''} connecté{(visibleAccounts?.length || 0) > 1 ? 's' : ''}
           </div>
@@ -677,7 +680,8 @@ function DashStyles() {
 
 /* Header */
 .dash-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 4px; flex-wrap: wrap; }
-.dash-h1 { font: 500 24px/1.15 var(--font-sans); letter-spacing: -0.02em; margin: 0 0 6px; color: var(--ink); }
+.dash-h1 { font: 500 26px/1.15 var(--font-sans); letter-spacing: -0.02em; margin: 0 0 6px; color: var(--ink); }
+.dash-h1-em { font-family: var(--font-serif); font-style: italic; font-weight: 400; letter-spacing: -0.03em; color: var(--ink); }
 .dash-sub { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-3); }
 .dash-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 

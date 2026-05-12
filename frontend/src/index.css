@@ -278,7 +278,6 @@ html, body {
   white-space: nowrap;
 }
 .ds-btn:hover { background: var(--bg-hover); border-color: var(--border-strong); }
-.ds-btn:active { transform: translateY(1px); }
 .ds-btn:focus-visible {
   outline: none;
   border-color: var(--accent);
@@ -287,8 +286,14 @@ html, body {
 .ds-btn.sm { height: 28px; padding: 0 10px; font-size: 12px; }
 .ds-btn.lg { height: 40px; padding: 0 18px; font-size: 14px; }
 
-.ds-btn.primary { background: var(--ink); color: var(--bg); border-color: transparent; }
-.ds-btn.primary:hover { background: var(--ink-2); }
+.ds-btn.primary {
+  background: var(--ink); color: var(--bg); border-color: transparent;
+  box-shadow: 0 1px 0 rgba(20,20,15,.04), 0 4px 14px -4px rgba(37,64,217,.25);
+}
+.ds-btn.primary:hover {
+  background: var(--ink-2);
+  box-shadow: 0 1px 0 rgba(20,20,15,.04), 0 8px 22px -6px rgba(37,64,217,.4);
+}
 .ds-btn.ghost { background: transparent; border-color: transparent; }
 .ds-btn.ghost:hover { background: var(--bg-hover); }
 .ds-btn.danger { background: var(--negative); color: #fff; border-color: transparent; }
