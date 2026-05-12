@@ -58,9 +58,16 @@ export function Styles({ theme }) {
 .demo-banner { display: flex; align-items: center; gap: 12px; padding: 9px 18px; background: var(--primary-soft); border-bottom: 1px solid var(--border); font-size: 12px; color: var(--text-secondary); flex-wrap: wrap; }
 .demo-banner-pill { display: inline-flex; align-items: center; padding: 2px 8px; background: var(--primary); color: ${dark ? '#0c0d10' : '#ffffff'}; font-size: 10px; font-weight: 600; letter-spacing: 0.12em; border-radius: 4px; }
 .demo-banner-text { flex: 1; min-width: 0; }
-.demo-banner-action { padding: 5px 12px; background: transparent; border: 1px solid var(--border-strong); border-radius: 4px; color: var(--text-primary); font-size: 11px; font-weight: 500; cursor: pointer; font-family: inherit; transition: background .15s, border-color .15s; }
+.demo-banner-text-short { display: none; }
+.demo-banner-text-long { display: inline; }
+.demo-banner-action { padding: 5px 12px; background: transparent; border: 1px solid var(--border-strong); border-radius: 4px; color: var(--text-primary); font-size: 11px; font-weight: 500; cursor: pointer; font-family: inherit; transition: background .15s, border-color .15s; flex-shrink: 0; }
 .demo-banner-action:hover { background: var(--bg-card); border-color: var(--text-tertiary); }
-@media (max-width: 640px) { .demo-banner { padding: 8px 14px; font-size: 11px; } .demo-banner-text { font-size: 11px; } }
+@media (max-width: 640px) {
+  .demo-banner { padding: 6px 12px; font-size: 11px; gap: 8px; flex-wrap: nowrap; }
+  .demo-banner-text { font-size: 11px; }
+  .demo-banner-text-long { display: none; }
+  .demo-banner-text-short { display: inline; }
+}
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* HEADER */
@@ -1032,7 +1039,14 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 /* SETTINGS */
 .settings-view { display: flex; flex-direction: column; gap: 20px; }
 .member-list { display: flex; flex-direction: column; gap: 8px; }
-.member-card { display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--bg-subtle); border-radius: 10px; }
+.member-card { display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--bg-subtle); border-radius: 10px; flex-wrap: wrap; }
+.member-card .member-card-info { flex: 1 1 0; min-width: 0; }
+.member-card-actions { display: flex; flex-direction: column; gap: 4px; }
+@media (max-width: 640px) {
+  .member-card { gap: 10px; padding: 10px; align-items: center !important; }
+  .member-card-actions { flex-basis: 100%; order: 3; flex-direction: row; gap: 6px; }
+  .member-card-actions select { flex: 1 1 0; min-width: 0; max-width: none !important; }
+}
 .member-card:hover { background: var(--bg-card-hover); }
 .member-card-info { flex: 1; min-width: 0; }
 .member-card-name { font-size: 14px; font-weight: 700; }
@@ -1358,7 +1372,8 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 
   /* Member bar shrinks */
   .member-bar { padding: 10px 14px 0; }
-  .member-tab { padding: 6px 12px; font-size: 12px; }
+  .member-tab { padding: 6px 10px 6px 6px; font-size: 12px; }
+  .member-tab .role-badge { display: none; }
   .member-context { font-size: 11px; padding: 8px 0; }
 
   /* Main nav becomes a fixed bottom tab bar (native-app feel) */
@@ -1368,8 +1383,8 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
     z-index: 90;
     display: flex;
     justify-content: space-around;
-    background: ${dark ? 'rgba(21, 23, 28, 0.94)' : 'rgba(255, 255, 255, 0.95)'};
-    backdrop-filter: blur(14px);
+    background: ${dark ? 'rgba(15, 14, 12, 0.92)' : 'rgba(247, 246, 242, 0.92)'};
+    backdrop-filter: blur(16px) saturate(180%); -webkit-backdrop-filter: blur(16px) saturate(180%);
     border-top: 1px solid var(--border);
     border-radius: 0;
     padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));

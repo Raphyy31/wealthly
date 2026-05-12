@@ -229,7 +229,7 @@ export function Dashboard({
               });
             }}
           >
-            <FileText size={14}/> {t('dashboard.pdf', 'Bilan PDF')}
+            <FileText size={14}/> <span className="dash-btn-label">{t('dashboard.pdf', 'Bilan PDF')}</span>
           </button>
           <button
             className="ds-btn"
@@ -243,11 +243,11 @@ export function Dashboard({
             style={{ opacity: syncing ? 0.6 : 1 }}
           >
             {syncing
-              ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }}/> Sync…</>
-              : <><RefreshCw size={14}/> {t('dashboard.sync')}</>
+              ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }}/> <span className="dash-btn-label">Sync…</span></>
+              : <><RefreshCw size={14}/> <span className="dash-btn-label">{t('dashboard.sync')}</span></>
             }
           </button>
-          <button className="ds-btn primary" onClick={onAddAccount}><Plus size={14}/> {t('dashboard.newAccount')}</button>
+          <button className="ds-btn primary" onClick={onAddAccount}><Plus size={14}/> <span className="dash-btn-label">{t('dashboard.newAccount')}</span></button>
         </div>
       </header>
 
@@ -684,6 +684,12 @@ function DashStyles() {
 .dash-h1-em { font-family: var(--font-serif); font-style: italic; font-weight: 400; letter-spacing: -0.03em; color: var(--ink); }
 .dash-sub { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-3); }
 .dash-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+@media (max-width: 640px) {
+  .dash-actions { gap: 6px; }
+  .dash-actions .ds-btn { padding: 0 10px; height: 34px; font-size: 12.5px; }
+  .dash-actions .ds-btn .dash-btn-label { display: none; }
+  .dash-actions .ds-btn.primary .dash-btn-label { display: inline; }
+}
 
 /* Hero row */
 .dash-hero-row { display: grid; grid-template-columns: 1.5fr 1fr; gap: 16px; }

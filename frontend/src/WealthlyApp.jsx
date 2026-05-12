@@ -1243,10 +1243,11 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
         <div className="demo-banner">
           <span className="demo-banner-pill">DÉMO</span>
           <span className="demo-banner-text">
-            Données fictives — pour découvrir l'app sans inscription. Les modifications ne sont pas enregistrées.
+            <span className="demo-banner-text-long">Données fictives — les modifications ne sont pas enregistrées.</span>
+            <span className="demo-banner-text-short">Mode démo</span>
           </span>
           <button className="demo-banner-action" onClick={onExitDemo}>
-            Quitter la démo
+            Quitter
           </button>
         </div>
       )}
