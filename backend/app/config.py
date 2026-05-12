@@ -47,7 +47,7 @@ class Settings:
     ENABLE_BANKING_PRIVATE_KEY_B64: str = os.getenv("ENABLE_BANKING_PRIVATE_KEY_B64", "")
     ENABLE_BANKING_REDIRECT_URI: str = os.getenv(
         "ENABLE_BANKING_REDIRECT_URI",
-        "https://wealthly-git-main-wealthly.vercel.app"
+        "https://wealthly-six.vercel.app"
     )
     ENABLE_BANKING_API_BASE: str = "https://api.enablebanking.com"
 

@@ -211,7 +211,11 @@ async def connect_bank(
     # with ?code=...&state=... and we exchange the code for a session in
     # /complete via POST /sessions.
     auth_body = {
-        "access": {"valid_until": valid_until},
+        "access": {
+            "valid_until": valid_until,
+            "balances": ["*"],      # request balance data for all accounts
+            "transactions": ["*"],  # request transaction data for all accounts
+        },
         "aspsp": {"name": body.bank_name, "country": body.bank_country},
         "state": state,
         "redirect_url": settings.ENABLE_BANKING_REDIRECT_URI,
