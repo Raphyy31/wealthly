@@ -45,6 +45,15 @@ const TaxSimulator = lazy(() => import('./TaxSimulator.jsx'));
   if (C) C.defaultProps = { ...(C.defaultProps || {}), isAnimationActive: false };
 });
 
+// Deterministic color from a bank name string (used in sidebar account dots)
+function bankColor(name) {
+  const colors = ['#c5a572','#88a978','#7b9bbf','#c47158','#a07ac5','#5ba8a0','#c5a03a','#7a9fbf'];
+  if (!name) return colors[0];
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return colors[h % colors.length];
+}
+
 // ============================================================================
 // MAIN APP
 // ============================================================================
