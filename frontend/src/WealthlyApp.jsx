@@ -874,6 +874,19 @@ export default function WealthlyApp({ demoMode = false, onExitDemo }) {
     } catch (err) { showToast('Erreur : ' + err.message, 'error'); }
   };
 
+  const updateAccount = async (accId, patch) => {
+    const fieldMap = { initialBalance: 'initial_balance', memberIds: 'member_ids' };
+    const apiPatch = {};
+    for (const [k, v] of Object.entries(patch)) {
+      apiPatch[fieldMap[k] || k] = k === 'initialBalance' ? (parseFloat(v) || 0) : v;
+    }
+    try {
+      const updated = await api.accounts.update(accId, apiPatch);
+      const mapped = accountFromApi(updated);
+      setAccounts(prev => prev.map(a => a.id === accId ? { ...a, ...mapped } : a));
+    } catch (err) { showToast('Erreur : ' + err.message, 'error'); }
+  };
+
   const deleteAccount = async (accId) => {
     if (!confirm('Supprimer ce compte et toutes ses transactions ?')) return;
     try {
