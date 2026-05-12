@@ -15,7 +15,7 @@
 import { useMemo, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Plus, Download, RefreshCw, ArrowUp, ArrowDown,
+  Plus, FileText, RefreshCw, ArrowUp, ArrowDown,
   TrendingUp, AlertTriangle, Sparkles, MoreHorizontal,
 } from 'lucide-react';
 import { ASSET_CLASS_MAP } from '../constants.js';
@@ -208,7 +208,24 @@ export function Dashboard({
           </div>
         </div>
         <div className="dash-actions">
-          <button className="ds-btn"><Download size={14}/> {t('dashboard.export')}</button>
+          <button
+            className="ds-btn"
+            title="Télécharger le bilan en PDF"
+            onClick={async () => {
+              const { generateBilanPdf } = await import('../pdfReport.js');
+              generateBilanPdf({
+                netWorth, liquidWealth, assetsValue, liabilitiesValue,
+                thisMonthStats, monthlyEvolution,
+                visibleAccounts, accountBalances, visibleAssets, visibleLiabilities,
+                members, activeMemberId,
+                recurringGroups, categoryAnalysis, categories,
+                memberShare, currentMonth,
+                ASSET_CLASS_MAP,
+              });
+            }}
+          >
+            <FileText size={14}/> {t('dashboard.pdf', 'Bilan PDF')}
+          </button>
           <button className="ds-btn"><RefreshCw size={14}/> {t('dashboard.sync')}</button>
           <button className="ds-btn primary" onClick={onAddAccount}><Plus size={14}/> {t('dashboard.newAccount')}</button>
         </div>
