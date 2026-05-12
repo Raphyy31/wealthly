@@ -482,11 +482,14 @@ const css = `
   border-radius: 8px;
   font-size: 14px; font-weight: 500; letter-spacing: -0.005em;
   margin-top: 4px;
-  transition: background 120ms;
+  transition: background .15s, box-shadow .2s;
+  box-shadow: 0 1px 0 rgba(0,0,0,.3), 0 4px 14px -4px rgba(126,146,255,.25);
 }
-.auth-submit:hover:not(:disabled) { background: #E5E2D8; }
-.auth-submit:active:not(:disabled) { transform: translateY(1px); }
-.auth-submit:disabled { opacity: 0.55; cursor: wait; }
+.auth-submit:hover:not(:disabled) {
+  background: #E5E2D8;
+  box-shadow: 0 1px 0 rgba(0,0,0,.3), 0 8px 22px -6px rgba(126,146,255,.4);
+}
+.auth-submit:disabled { opacity: 0.55; cursor: wait; box-shadow: none; }
 
 /* Error / info banners */
 .auth-error, .auth-info {
