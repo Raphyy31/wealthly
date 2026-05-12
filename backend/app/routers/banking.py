@@ -308,6 +308,7 @@ async def complete_connection(
                     "currency": acc_obj.get("currency") or "EUR",
                     "owner_name": acc_obj.get("ownerName") or "",
                     "product": acc_obj.get("product") or "",
+                    "cash_account_type": acc_obj.get("cashAccountType") or "",
                     "institution_id": meta.get("institution_id") or body_to_institution_id(conn),
                 })
             except Exception as e:
@@ -361,6 +362,16 @@ async def sync_transactions(
     date_from = (datetime.utcnow() - timedelta(days=days_back)).date().isoformat()
     total_new = 0
     total_updated = 0
+    total_skipped = 0
+    errors: list[str] = []
+
+    # Get all current household members so we auto-assign new accounts to
+    # everyone (otherwise the visibility filter hides them when the user
+    # switches to a member tab).
+    from app.models import Member  # local import to avoid circular at module load
+    household_members = db.query(Member).filter(
+        Member.household_id == current_user.household_id,
+    ).all()
 
     for acc_info in conn.accounts_data:
         gc_acc_id = acc_info.get("id")
@@ -387,15 +398,31 @@ async def sync_transactions(
             except Exception as e:
                 logger.warning("[banking] balance fetch failed for %s: %s", gc_acc_id, e)
 
+            # Heuristic account type from the bank's "product" string + cashAccountType.
+            # GoCardless returns these in the /accounts/{id}/details/ payload.
+            product = (acc_info.get("product") or "").lower()
+            cash_type = (acc_info.get("cash_account_type") or "").upper()
+            if "pea" in product:
+                acc_type = "pea"
+            elif "livret" in product or "epargne" in product or "saving" in product or cash_type == "SVGS":
+                acc_type = "savings"
+            elif "assurance vie" in product or "assurance-vie" in product:
+                acc_type = "life_insurance"
+            elif "credit" in product or "crédit" in product or cash_type == "CARD":
+                acc_type = "credit"
+            else:
+                acc_type = "checking"
+
             wl_acc = Account(
                 household_id=current_user.household_id,
                 name=acc_info.get("name") or "Compte",
                 bank=conn.bank_name,
-                type="checking",
+                type=acc_type,
                 currency=(acc_info.get("currency") or "EUR").upper(),
                 initial_balance=balance,
                 external_id=gc_acc_id,
                 source="gocardless",
+                members=household_members,  # visible to everyone in the household
             )
             db.add(wl_acc)
             db.flush()
@@ -405,6 +432,7 @@ async def sync_transactions(
             tx_data = await _gc("GET", f"/accounts/{gc_acc_id}/transactions/", params={"date_from": date_from})
         except Exception as e:
             logger.error("[banking] tx fetch failed for %s: %s", gc_acc_id, e)
+            errors.append(f"{(acc_info.get('name') or gc_acc_id)} : {str(e)[:60]}")
             continue
 
         booked = (tx_data.get("transactions") or {}).get("booked", []) or []
@@ -439,6 +467,8 @@ async def sync_transactions(
                     existing.label = label; changed = True
                 if changed:
                     total_updated += 1
+                else:
+                    total_skipped += 1
             else:
                 db.add(Transaction(
                     account_id=wl_acc.id,
@@ -459,6 +489,8 @@ async def sync_transactions(
         "connection_id": conn.id,
         "imported": total_new,
         "updated": total_updated,
+        "skipped": total_skipped,
+        "errors": errors,
         "last_synced_at": conn.last_synced_at.isoformat(),
     }
 
