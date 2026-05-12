@@ -139,14 +139,28 @@ function drawFooter(doc, page, total) {
   doc.text(`${page} / ${total}`, w - PAGE_M, h - 24, { align: 'right' });
 }
 
-function drawSection(doc, y, title) {
-  doc.setFont(FONT, 'bold');
-  doc.setFontSize(8);
-  doc.setTextColor(...C.gold);
-  doc.text(title.toUpperCase(), PAGE_M, y, { charSpace: 1.8 });
-  doc.setDrawColor(...C.gold);
-  doc.setLineWidth(0.5);
-  doc.line(PAGE_M, y + 4, PAGE_M + 18, y + 4);
+// roman: optional prefix like 'I', 'II', 'III'
+function drawSection(doc, y, title, roman) {
+  const w = doc.internal.pageSize.getWidth();
+  if (roman) {
+    doc.setFont(SERIF, 'italic');
+    doc.setFontSize(10);
+    doc.setTextColor(...C.gold);
+    doc.text(roman, PAGE_M, y, { charSpace: 0.3 });
+    const romanW = doc.getTextWidth(roman);
+    doc.setFont(FONT, 'bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(...C.muted);
+    doc.text('—  ' + title.toUpperCase(), PAGE_M + romanW + 6, y, { charSpace: 1.6 });
+  } else {
+    doc.setFont(FONT, 'bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(...C.gold);
+    doc.text(title.toUpperCase(), PAGE_M, y, { charSpace: 1.8 });
+  }
+  doc.setDrawColor(...C.hairline);
+  doc.setLineWidth(0.3);
+  doc.line(PAGE_M, y + 7, w - PAGE_M, y + 7);
 }
 
 function drawTitle(doc, y, title, sub) {
@@ -646,7 +660,7 @@ export function generateBilanPdf({
   drawTitle(doc, y, 'Synthèse', `Composition du patrimoine au ${todayLong()}`);
   y += 50;
 
-  drawSection(doc, y, 'Indicateurs clés'); y += 14;
+  drawSection(doc, y, 'Indicateurs clés', 'I'); y += 16;
   y = drawKpiCards(doc, y, [
     { label: 'Patrimoine net', value: fmtEUR(netWorth), hint: 'liquidités + actifs − dettes' },
     {
@@ -663,7 +677,7 @@ export function generateBilanPdf({
 
   // Allocation
   y += 6;
-  drawSection(doc, y, 'Allocation par classe'); y += 14;
+  drawSection(doc, y, 'Allocation par classe', 'II'); y += 16;
   const allocClasses = {};
   if (liquidWealth > 0) allocClasses['Liquidités'] = liquidWealth;
   visibleAssets.forEach((a) => {
@@ -691,13 +705,13 @@ export function generateBilanPdf({
   y += 50;
 
   // Sparkline
-  drawSection(doc, y, 'Patrimoine net mensuel'); y += 14;
+  drawSection(doc, y, 'Patrimoine net mensuel', 'I'); y += 16;
   const lastN = sorted.slice(-12);
   drawSparkline(doc, PAGE_M, y + 8, pageW - PAGE_M * 2, 80, lastN.map((m) => m.balance || 0), null);
   y += 100;
 
   // Table of monthly evolution
-  drawSection(doc, y, 'Détail mensuel'); y += 14;
+  drawSection(doc, y, 'Détail mensuel', 'II'); y += 16;
   if (lastN.length === 0) {
     doc.setFont(FONT, 'normal'); doc.setFontSize(9); doc.setTextColor(...C.faint);
     doc.text('Pas encore de données mensuelles.', PAGE_M, y + 10); y += 24;
@@ -728,7 +742,7 @@ export function generateBilanPdf({
   drawTitle(doc, y, 'Trésorerie', monthLong(currentMonth));
   y += 50;
 
-  drawSection(doc, y, 'Cashflow du mois'); y += 14;
+  drawSection(doc, y, 'Cashflow du mois', 'I'); y += 16;
   const savingsRate = thisMonthStats?.income > 0 ? (thisMonthStats.net / thisMonthStats.income) * 100 : null;
   y = drawKpiCards(doc, y, [
     { label: 'Revenus', value: fmtEUR(thisMonthStats?.income || 0), color: C.sage },
@@ -737,8 +751,44 @@ export function generateBilanPdf({
     { label: "Taux d'épargne", value: fmtPct(savingsRate, 0), color: savingsRate == null ? C.muted : savingsRate >= 20 ? C.sage : savingsRate >= 10 ? C.amber : C.terracotta, hint: 'sur revenus du mois' },
   ]);
 
+  // Monthly income vs expense grouped bars (last 6 months)
+  y += 6;
+  drawSection(doc, y, 'Évolution revenus / dépenses — 6 mois', 'II'); y += 16;
+  const last6 = sorted.slice(-6);
+  if (last6.length >= 2) {
+    const w = doc.internal.pageSize.getWidth();
+    const chartW = w - PAGE_M * 2;
+    const chartH = 72;
+    const barGroupW = chartW / last6.length;
+    const barW = (barGroupW - 8) / 2;
+    const maxVal = Math.max(...last6.map(m => Math.max(m.income || 0, m.expenses || 0)), 1);
+    last6.forEach((m, i) => {
+      const gx = PAGE_M + i * barGroupW + 4;
+      const incH = ((m.income || 0) / maxVal) * chartH;
+      const expH = ((m.expenses || 0) / maxVal) * chartH;
+      doc.setFillColor(...C.sage);
+      doc.rect(gx, y + chartH - incH, barW, incH, 'F');
+      doc.setFillColor(...C.terracotta);
+      doc.rect(gx + barW + 2, y + chartH - expH, barW, expH, 'F');
+      doc.setFont(FONT, 'normal'); doc.setFontSize(7); doc.setTextColor(...C.faint);
+      doc.text(monthShort(m.month), gx + barW / 2, y + chartH + 10, { align: 'center' });
+    });
+    // Legend
+    doc.setFillColor(...C.sage);
+    doc.rect(PAGE_M, y + chartH + 18, 8, 5, 'F');
+    doc.setFont(FONT, 'normal'); doc.setFontSize(8); doc.setTextColor(...C.body);
+    doc.text('Revenus', PAGE_M + 12, y + chartH + 22);
+    doc.setFillColor(...C.terracotta);
+    doc.rect(PAGE_M + 70, y + chartH + 18, 8, 5, 'F');
+    doc.text('Dépenses', PAGE_M + 82, y + chartH + 22);
+    y += chartH + 36;
+  } else {
+    doc.setFont(FONT, 'normal'); doc.setFontSize(9); doc.setTextColor(...C.faint);
+    doc.text('Pas encore assez d\'historique.', PAGE_M, y + 10); y += 24;
+  }
+
   y += 4;
-  drawSection(doc, y, 'Top dépenses du mois'); y += 14;
+  drawSection(doc, y, 'Top dépenses du mois', 'III'); y += 16;
   const topCats = Object.entries(categoryAnalysis || {})
     .filter(([, d]) => d.current > 0)
     .map(([catId, data]) => {
@@ -765,7 +815,7 @@ export function generateBilanPdf({
   });
 
   y += 6;
-  drawSection(doc, y, 'Charges fixes récurrentes'); y += 14;
+  drawSection(doc, y, 'Charges fixes récurrentes', 'IV'); y += 16;
   const recurringRows = (recurringGroups || [])
     .filter((rg) => {
       const lastDate = new Date(rg.lastDate);
@@ -803,7 +853,7 @@ export function generateBilanPdf({
   y += 50;
 
   // Comptes
-  drawSection(doc, y, 'Comptes bancaires'); y += 14;
+  drawSection(doc, y, 'Comptes bancaires', 'I'); y += 16;
   const accRows = visibleAccounts.length === 0
     ? [['—', '—', '—', '—']]
     : visibleAccounts.map((a) => {
@@ -827,7 +877,7 @@ export function generateBilanPdf({
 
   // Actifs avec PV latente si dispo
   y = ensureSpace(doc, y + 10);
-  drawSection(doc, y, 'Actifs détaillés'); y += 14;
+  drawSection(doc, y, 'Actifs détaillés', 'II'); y += 16;
   if (visibleAssets.length === 0) {
     doc.setFont(FONT, 'normal'); doc.setFontSize(9); doc.setTextColor(...C.faint);
     doc.text('Aucun actif renseigné.', PAGE_M, y + 10); y += 24;
@@ -861,7 +911,7 @@ export function generateBilanPdf({
   // Dettes
   if (visibleLiabilities.length > 0) {
     y = ensureSpace(doc, y + 10);
-    drawSection(doc, y, 'Dettes en cours'); y += 14;
+    drawSection(doc, y, 'Dettes en cours', 'III'); y += 16;
     const liaRows = visibleLiabilities.map((l) => {
       const share = memberShare(l);
       const remaining = (parseFloat(l.remainingCapital) || 0) * share;
@@ -887,10 +937,16 @@ export function generateBilanPdf({
 
   // ----- AMORTIZATION PAGES (one per liability) -----
   visibleLiabilities.forEach((l) => {
+    // Compute durationMonths from startDate+endDate when not explicitly set
+    let durationM = l.durationMonths;
+    if (!durationM && l.startDate && l.endDate) {
+      const s = new Date(l.startDate), e = new Date(l.endDate);
+      durationM = (e.getFullYear() - s.getFullYear()) * 12 + (e.getMonth() - s.getMonth());
+    }
     const schedule = buildAmortization({
       principal: l.initialCapital,
       annualRate: l.interestRate,
-      durationM: l.durationMonths,
+      durationM,
       insuranceRate: l.insuranceRate,
       startDate: l.startDate,
       paymentOverride: l.monthlyPayment,
@@ -918,7 +974,7 @@ export function generateBilanPdf({
     drawTitle(doc, yy, l.name || 'Emprunt', `${l.type || 'Crédit'} · taux ${l.interestRate ? parseFloat(l.interestRate).toFixed(2) + ' %' : '—'}`);
     yy += 50;
 
-    drawSection(doc, yy, "Caractéristiques de l'emprunt"); yy += 14;
+    drawSection(doc, yy, "Caractéristiques de l'emprunt", 'I'); yy += 16;
     yy = drawKpiCards(doc, yy, [
       { label: 'Capital emprunté', value: fmtEUR(principal) },
       { label: 'Capital restant dû', value: fmtEUR(remainingCap), color: C.terracotta },
@@ -929,13 +985,13 @@ export function generateBilanPdf({
     ]);
 
     yy += 4;
-    drawSection(doc, yy, "Capital restant mois par mois"); yy += 14;
+    drawSection(doc, yy, "Capital restant mois par mois", 'II'); yy += 16;
     drawBarSeries(doc, PAGE_M, yy + 6, pageW - PAGE_M * 2 - 60, 110, schedule.map((r) => r.remaining), {
       refValue: monthly, refMax: principal, refLabel: 'Mensualité',
     });
     yy += 130;
 
-    drawSection(doc, yy, 'Synthèse financière'); yy += 14;
+    drawSection(doc, yy, 'Synthèse financière', 'III'); yy += 16;
     const synthRows = [
       ["Capital remboursé à ce jour", fmtEUR(totalCapPaid)],
       ["Intérêts payés à ce jour", fmtEUR(totalIntPaid)],

@@ -195,6 +195,8 @@ const liabilities = [
     remainingCapital: 218500,
     monthlyPayment: 1150,
     interestRate: 1.65,
+    durationMonths: 240,
+    startDate: '2022-09-01',
     endDate: '2042-09-01',
     notes: '20 ans, taux fixe',
     memberIds: [M.alice, M.bob],
