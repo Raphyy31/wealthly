@@ -70,7 +70,17 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   const [onboarded, setOnboarded] = useState(() => {
     try { return localStorage.getItem(STORAGE_KEYS.ONBOARDED) === '1'; } catch { return false; }
   });
-  const [view, setView] = useState('dashboard');
+  // URL hash routing: #/<view>?m=<memberId>. Lets refresh / back-forward /
+  // bookmark / share links restore the exact view + active member.
+  const parseHash = () => {
+    if (typeof window === 'undefined') return { view: 'dashboard', memberId: 'all' };
+    const raw = (window.location.hash || '').replace(/^#\/?/, '');
+    const [path, query] = raw.split('?');
+    const params = new URLSearchParams(query || '');
+    return { view: path || 'dashboard', memberId: params.get('m') || 'all' };
+  };
+  const initialHash = parseHash();
+  const [view, setView] = useState(initialHash.view);
   // Account drawer + cross-view transaction filter (set when "voir toutes" is
   // clicked from the drawer, consumed by <Transactions> on mount).
   const [drawerAccount, setDrawerAccount] = useState(null);
@@ -78,7 +88,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   const [txInitialAccountFilter, setTxInitialAccountFilter] = useState(null);
   const [theme] = useTheme();
   const [members, setMembers] = useState([]);
-  const [activeMemberId, setActiveMemberId] = useState('all');
+  const [activeMemberId, setActiveMemberId] = useState(initialHash.memberId);
   const [accounts, setAccounts] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [assets, setAssets] = useState([]);
@@ -289,6 +299,36 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     kind: c.kind,
   });
 
+  // Sync view + activeMember → URL hash, so refresh / back / forward / share work.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = activeMemberId && activeMemberId !== 'all' ? `?m=${activeMemberId}` : '';
+    const next = `#/${view}${params}`;
+    if (window.location.hash !== next) {
+      window.history.replaceState(null, '', next);
+    }
+  }, [view, activeMemberId]);
+
+  // Reflect browser back/forward (hashchange) into React state.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onHash = () => {
+      const h = parseHash();
+      setView(h.view);
+      setActiveMemberId(h.memberId);
+    };
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+
+  // Drop a stale member id from the URL if the user is gone from the household
+  // (avoids a "no data" silent state after a refresh on a deleted member).
+  useEffect(() => {
+    if (activeMemberId === 'all') return;
+    if (members.length === 0) return; // not loaded yet
+    if (!members.find(m => m.id === activeMemberId)) setActiveMemberId('all');
+  }, [members, activeMemberId]);
+
   // Reload everything from the server (or from demoData.js in demo mode).
   const reloadAll = useCallback(async () => {
     if (demoMode) {
@@ -358,10 +398,13 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
         storage.get(STORAGE_KEYS.ACTIVE_MEMBER, 'all'),
       ]);
       setRecurringOverrides(ov);
-      // In demo mode, force the family ("all") view — a stale per-member
-      // selection from a previous logged-in session would point to a member
-      // that doesn't exist in the demo dataset, leaving every screen empty.
-      setActiveMemberId(demoMode ? 'all' : am);
+      // URL hash is the source of truth for activeMemberId (see parseHash).
+      // Only fall back to storage when the hash didn't specify one, so a
+      // bookmarked / refreshed per-member URL keeps winning over the prior
+      // session preference. Demo mode also falls back to 'all' if no hash.
+      if (initialHash.memberId === 'all') {
+        setActiveMemberId(demoMode ? 'all' : am);
+      }
       setColumnMappings(await storage.get(STORAGE_KEYS.MAPPINGS, {}));
 
       if (demoMode) {
