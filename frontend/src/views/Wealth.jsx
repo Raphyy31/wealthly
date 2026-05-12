@@ -468,11 +468,21 @@ function SimpleAssetEditor({ asset, members, onSave, onCancel }) {
           <button className="icon-btn-sm" onClick={onCancel}><X size={16}/></button>
         </div>
         <div className="modal-body">
-          <label><span>Type</span>
-            <select value={draft.type} onChange={(e) => setDraft({ ...draft, type: e.target.value })}>
-              {ASSET_TYPES.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
-          </label>
+          <div className="field-row">
+            <label><span>Type</span>
+              <select value={draft.type} onChange={(e) => setDraft({ ...draft, type: e.target.value })}>
+                {ASSET_TYPES.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            </label>
+            <label><span>Devise</span>
+              <select value={draft.currency || 'EUR'} onChange={(e) => setDraft({ ...draft, currency: e.target.value })}>
+                <option value="EUR">🇪🇺 EUR</option>
+                <option value="USD">🇺🇸 USD</option>
+                <option value="GBP">🇬🇧 GBP</option>
+                <option value="CHF">🇨🇭 CHF</option>
+              </select>
+            </label>
+          </div>
           {type && <div className="field-help">{type.description}</div>}
           <label><span>Nom</span>
             <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="ex: Appartement Paris 11e, AV Linxea Spirit"/>
@@ -830,16 +840,26 @@ function LiabilityEditor({ liability, members, assets = [], onSave, onCancel }) 
                 <label><span>Nom</span>
                   <input value={draft.name} onChange={(e) => set('name', e.target.value)} placeholder="Emprunt RP, Auto, …" autoFocus/>
                 </label>
-                <label><span>Type</span>
-                  <select value={draft.type} onChange={(e) => set('type', e.target.value)}>
-                    {LIABILITY_TYPES.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                  </select>
-                </label>
                 <div className="field-row">
-                  <label><span>Montant emprunté (€)</span>
+                  <label><span>Type</span>
+                    <select value={draft.type} onChange={(e) => set('type', e.target.value)}>
+                      {LIABILITY_TYPES.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                    </select>
+                  </label>
+                  <label><span>Devise</span>
+                    <select value={draft.currency || 'EUR'} onChange={(e) => set('currency', e.target.value)}>
+                      <option value="EUR">🇪🇺 EUR</option>
+                      <option value="USD">🇺🇸 USD</option>
+                      <option value="GBP">🇬🇧 GBP</option>
+                      <option value="CHF">🇨🇭 CHF</option>
+                    </select>
+                  </label>
+                </div>
+                <div className="field-row">
+                  <label><span>Montant emprunté ({draft.currency || 'EUR'})</span>
                     <input type="number" value={draft.initialCapital} onChange={(e) => set('initialCapital', e.target.value)} step="any"/>
                   </label>
-                  <label><span>Apport (€) <em>optionnel</em></span>
+                  <label><span>Apport ({draft.currency || 'EUR'}) <em>optionnel</em></span>
                     <input type="number" value={draft.downPayment} onChange={(e) => set('downPayment', e.target.value)} step="any"/>
                   </label>
                 </div>
@@ -860,7 +880,7 @@ function LiabilityEditor({ liability, members, assets = [], onSave, onCancel }) 
             {step === 'specs' && (
               <>
                 <div className="field-row">
-                  <label><span>Mensualité totale (€)</span>
+                  <label><span>Mensualité totale ({draft.currency || 'EUR'})</span>
                     <input type="number" value={draft.monthlyPayment} onChange={(e) => set('monthlyPayment', e.target.value)} step="any"/>
                   </label>
                   <label><span>Taux d'intérêt (%)</span>
@@ -870,7 +890,7 @@ function LiabilityEditor({ liability, members, assets = [], onSave, onCancel }) 
                 <label><span>Taux d'assurance (%) <em>optionnel</em></span>
                   <input type="number" value={draft.insuranceRate} onChange={(e) => set('insuranceRate', e.target.value)} step="0.01"/>
                 </label>
-                <label><span>Capital restant dû (€)</span>
+                <label><span>Capital restant dû ({draft.currency || 'EUR'})</span>
                   <input type="number" value={draft.remainingCapital} onChange={(e) => set('remainingCapital', e.target.value)} step="any"/>
                 </label>
               </>
