@@ -432,10 +432,10 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .progress-step.active .progress-dot { background: var(--primary); color: ${dark ? '#0c0d10' : '#ffffff'}; border-color: var(--primary); }
 .progress-step.done .progress-dot { background: var(--primary-soft); color: var(--primary); border-color: var(--primary); }
 .progress-line { flex: 1; height: 2px; background: var(--border); border-radius: 1px; }
-.onboarding-step-content h1 { font-family: 'Source Serif 4', 'Source Serif Pro', Georgia, serif; font-size: 38px; font-weight: 400; margin: 0 0 10px; letter-spacing: -0.02em; line-height: 1.05; }
-.onboarding-step-content h1 em { font-style: italic; color: var(--primary); font-weight: 400; }
-.onboarding-step-content h2 { font-family: 'Source Serif 4', 'Source Serif Pro', Georgia, serif; font-size: 28px; font-weight: 400; margin: 0 0 8px; letter-spacing: -0.018em; line-height: 1.1; }
-.onboarding-step-content h2 em { font-style: italic; color: var(--primary); font-weight: 400; }
+.onboarding-step-content h1 { font-family: 'Geist', system-ui, sans-serif; font-size: 38px; font-weight: 500; margin: 0 0 10px; letter-spacing: -0.025em; line-height: 1.05; color: var(--text-primary); }
+.onboarding-step-content h1 em { font-family: 'Newsreader', Georgia, serif; font-style: italic; color: var(--text-secondary); font-weight: 400; letter-spacing: -0.035em; }
+.onboarding-step-content h2 { font-family: 'Geist', system-ui, sans-serif; font-size: 28px; font-weight: 500; margin: 0 0 8px; letter-spacing: -0.025em; line-height: 1.1; color: var(--text-primary); }
+.onboarding-step-content h2 em { font-family: 'Newsreader', Georgia, serif; font-style: italic; color: var(--text-secondary); font-weight: 400; letter-spacing: -0.035em; }
 .onboarding-lead { font-size: 15px; color: var(--text-secondary); margin: 0 0 28px; line-height: 1.6; max-width: 460px; letter-spacing: -0.005em; }
 .onboarding-hero { text-align: center; margin-bottom: 32px; }
 .ob-mark-large { width: 64px; height: 64px; border-radius: 8px; background: var(--primary-soft); border: 1px solid ${dark ? 'rgba(91,141,239,0.32)' : 'rgba(40,85,200,0.18)'}; display: inline-flex; align-items: center; justify-content: center; color: var(--primary); margin-bottom: 20px; }

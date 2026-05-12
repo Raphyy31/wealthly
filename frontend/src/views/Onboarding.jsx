@@ -151,7 +151,7 @@ export function Onboarding({ onComplete }) {
                 <div className="summary-label">membre{(members.length || 1) > 1 ? 's' : ''} configuré{(members.length || 1) > 1 ? 's' : ''}</div>
               </div>
               <div className="summary-list">
-                {(members.length > 0 ? members : [{ name: 'Moi', role: 'adult', color: '#3b82f6' }]).map((m, i) => (
+                {(members.length > 0 ? members : [{ name: 'Moi', role: 'adult', color: 'var(--accent)' }]).map((m, i) => (
                   <div key={i} className="summary-member">
                     <span className="member-avatar" style={{ background: m.color }}>{m.name.charAt(0).toUpperCase()}</span>
                     <span>{m.name}</span> <span className="dimmed">· {m.role === 'adult' ? 'adulte' : 'enfant'}</span>
