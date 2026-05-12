@@ -80,7 +80,6 @@ class Household(Base):
     achievements = relationship("Achievement", back_populates="household", cascade="all, delete-orphan")
     rules = relationship("CategorisationRule", back_populates="household", cascade="all, delete-orphan")
     bank_connections = relationship("BankConnection", back_populates="household", cascade="all, delete-orphan")
-    fixed_charges = relationship("FixedCharge", back_populates="household", cascade="all, delete-orphan")
 
 
 class User(Base):
@@ -449,14 +448,6 @@ class WealthSnapshot(Base):
         UniqueConstraint("household_id", "month", name="uq_household_snapshot_month"),
     )
 
-
-# NOTE: Les anciens modèles GoCardless (BankConnection v2 + BankAccountLink)
-# ont été retirés le 2026-05-11 — ils créaient un doublon de __tablename__
-# "bank_connections" avec la nouvelle BankConnection (ligne ~362) introduite
-# par la migration vers Enable Banking, ce qui faisait crasher SQLAlchemy
-# au boot (502 Bad Gateway sur Railway). Les routers/banks.py et
-# services/gocardless.py qui les référencent ne sont plus inclus dans
-# main.py et seront supprimés dans un commit séparé.
 
 
 # Association table — FixedCharge can be assigned to specific household members
