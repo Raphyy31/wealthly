@@ -4,6 +4,7 @@ import { Upload, Plus, TrendingUp, TrendingDown, Wallet, Home, Coins, CreditCard
 import * as api from './api.js';
 import { useTranslation } from 'react-i18next';
 import { LangButton } from './components/LangButton.jsx';
+import { CurrencyButton } from './components/CurrencyButton.jsx';
 import { HideAmountsContext } from './contexts/HideAmounts.jsx';
 import { getDemoData } from './demoData.js';
 import {
@@ -16,7 +17,7 @@ import {
   parseCSV, detectBankProfile, autoDetectMapping, applyMapping,
   categorize, detectRecurring,
   accountIncludeInNetWorth, accountCountsAsIncome, accountCountsAsExpense,
-  detectInternalTransfers, convertCurrency, SUPPORTED_CURRENCIES,
+  detectInternalTransfers, convertCurrency,
 } from './utils.js';
 import { useRates } from './hooks/useRates.js';
 import { useBaseCurrency } from './hooks/useBaseCurrency.js';
@@ -1284,28 +1285,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             <div className="ws-foot-actions">
               <ThemeToggle/>
               <LangButton/>
-              {/* Compact currency switcher — symbols only, no rates */}
-              <div style={{ display: 'flex', gap: 2 }}>
-                {SUPPORTED_CURRENCIES.map(c => {
-                  const sym = { EUR: '€', USD: '$', GBP: '£', CHF: '₣' }[c] || c;
-                  const active = c === baseCurrency;
-                  return (
-                    <button
-                      key={c}
-                      onClick={() => setBaseCurrency(c)}
-                      title={c}
-                      style={{
-                        width: 24, height: 24, borderRadius: 6, border: 'none',
-                        background: active ? 'var(--primary)' : 'transparent',
-                        color: active ? '#fff' : 'var(--ink-3)',
-                        fontSize: 11, fontWeight: active ? 700 : 500,
-                        cursor: 'pointer', fontFamily: 'inherit',
-                        transition: 'background .12s, color .12s',
-                      }}
-                    >{sym}</button>
-                  );
-                })}
-              </div>
+              <CurrencyButton baseCurrency={baseCurrency} setBaseCurrency={setBaseCurrency}/>
               <button className="ds-icon-btn" onClick={() => setHideAmounts(!hideAmounts)}
                       title={hideAmounts ? 'Afficher les montants' : 'Masquer les montants'}>
                 {hideAmounts ? <EyeOff size={15}/> : <Eye size={15}/>}
