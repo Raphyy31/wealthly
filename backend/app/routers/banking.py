@@ -193,6 +193,21 @@ async def connect_bank(
     """
     state = str(uuid.uuid4())
 
+    # Each institution caps how far back we can pull transactions
+    # (transaction_total_days). Pulling more than that returns a 400. Read
+    # the institution's caps before creating the agreement so we always
+    # request a valid window.
+    try:
+        inst = await _gc("GET", f"/institutions/{body.bank_name}/")
+    except HTTPException as e:
+        if e.status_code == 502 and "404" in str(e.detail):
+            raise HTTPException(status_code=400, detail=f"Banque inconnue: {body.bank_name}")
+        raise
+    max_hist_cap = int(inst.get("transaction_total_days") or 90)
+    max_access_cap = int(inst.get("max_access_valid_for_days") or 90)
+    max_hist = min(180, max_hist_cap)
+    access_valid = min(90, max_access_cap)
+
     # 1) End-User Agreement — defines what we'll access (balances + transactions)
     # and for how long. max_historical_days asks for back-fill; access_valid_for_days
     # controls how long our session stays valid before the user has to re-consent.
@@ -201,8 +216,8 @@ async def connect_bank(
         "/agreements/enduser/",
         body={
             "institution_id": body.bank_name,
-            "max_historical_days": 180,
-            "access_valid_for_days": 90,
+            "max_historical_days": max_hist,
+            "access_valid_for_days": access_valid,
             "access_scope": ["balances", "details", "transactions"],
         },
     )
