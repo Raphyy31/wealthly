@@ -510,16 +510,43 @@ async def refresh_connection(
         db.commit()
         raise
 
-    # EB uses "accounts_data" key (not "accounts") in the session response
+    session_status = data.get("status", "")
+    # Log the FULL raw response (truncated) so we can see what EB actually sends
+    import json as _json
+    logger.info("[banking] refresh %s → FULL EB response: %s",
+                connection_id, _json.dumps(data)[:2000])
+
+    # Try every known key variant EB uses across API versions
     accounts = (
         data.get("accounts_data")
         or data.get("accounts")
+        or data.get("account_list")
         or []
     )
-    session_status = data.get("status", "")
 
-    logger.info("[banking] refresh %s → raw EB session: status=%s accounts=%d keys=%s",
-                connection_id, session_status, len(accounts), list(data.keys()))
+    # Fallback 1: GET /sessions/{id}/accounts (EB v2 sub-resource)
+    if not accounts and session_status in ("AUTHORIZED", "READY"):
+        for path in [
+            f"/sessions/{conn.session_id}/accounts",
+            f"/accounts?session_id={conn.session_id}",
+        ]:
+            try:
+                acc_data = await _eb("GET", path)
+                logger.info("[banking] fallback %s → %s", path, _json.dumps(acc_data)[:500])
+                if isinstance(acc_data, list) and acc_data:
+                    accounts = acc_data
+                    break
+                elif isinstance(acc_data, dict):
+                    for key in ("accounts", "accounts_data", "account_list", "items"):
+                        if acc_data.get(key):
+                            accounts = acc_data[key]
+                            break
+                if accounts:
+                    break
+            except Exception as e:
+                logger.warning("[banking] fallback %s failed: %s", path, e)
+
+    logger.info("[banking] refresh %s → status=%s final_accounts=%d", connection_id, session_status, len(accounts))
 
     if session_status in ("AUTHORIZED", "READY"):
         conn.status = "authorized"
@@ -530,7 +557,6 @@ async def refresh_connection(
 
     db.commit()
     db.refresh(conn)
-    logger.info("[banking] refresh %s → final status=%s accounts=%d", connection_id, conn.status, len(accounts))
 
     return {
         "status": conn.status,
