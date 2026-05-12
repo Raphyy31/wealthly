@@ -371,6 +371,8 @@ function BankConnectionsSection() {
   const [picker, setPicker] = useState(false);
   const [syncingId, setSyncingId] = useState(null);
   const [refreshingId, setRefreshingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [syncMessage, setSyncMessage] = useState(null);
 
   const reload = useCallback(async () => {
@@ -424,13 +426,17 @@ function BankConnectionsSection() {
     }
   };
 
-  const handleDelete = async (id, name) => {
-    if (!confirm(`Déconnecter ${name} ? Les transactions importées sont conservées.`)) return;
+  const handleDelete = async (id) => {
+    setDeletingId(id);
+    setConfirmDeleteId(null);
+    setSyncMessage(null);
     try {
       await api.banking.deleteConnection(id);
       await reload();
     } catch (e) {
       setSyncMessage({ kind: 'error', text: e.message });
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -501,9 +507,35 @@ function BankConnectionsSection() {
                 <RefreshCw size={12} className={syncingId === c.id ? 'spin' : ''}/> Sync
               </button>
             )}
-            <button className="icon-btn-sm" title="Déconnecter" onClick={() => handleDelete(c.id, c.bank_name)}>
-              <Unlink size={13}/>
-            </button>
+            {confirmDeleteId === c.id ? (
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Confirmer ?</span>
+                <button
+                  className="danger-btn"
+                  style={{ fontSize: 11, padding: '4px 10px' }}
+                  onClick={() => handleDelete(c.id)}
+                  disabled={deletingId === c.id}
+                >
+                  {deletingId === c.id ? <RefreshCw size={11} className="spin"/> : 'Oui'}
+                </button>
+                <button
+                  className="secondary-btn"
+                  style={{ fontSize: 11, padding: '4px 10px' }}
+                  onClick={() => setConfirmDeleteId(null)}
+                >
+                  Non
+                </button>
+              </div>
+            ) : (
+              <button
+                className="icon-btn-sm"
+                title="Déconnecter"
+                onClick={() => setConfirmDeleteId(c.id)}
+                disabled={deletingId === c.id}
+              >
+                <Unlink size={13}/>
+              </button>
+            )}
           </div>
         ))}
       </div>
