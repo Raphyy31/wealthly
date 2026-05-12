@@ -30,6 +30,7 @@ export function Monthly({
   transactions, accounts, categories, members, recurringIds, recurringGroups,
   monthlyEvolution, thisMonthStats, anomalies, categoryAnalysis,
   fixedCharges, saveFixedCharge, deleteFixedCharge,
+  budgets = {}, setBudget = () => {},
   memberShare, currentMonth, fmt, transferIds = new Set(),
 }) {
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
@@ -98,7 +99,8 @@ export function Monthly({
   const fixedByCategory = useMemo(() => groupByCategory(otherFixed, categories), [otherFixed, categories]);
 
   // Variable expenses: month transactions that are NOT transfers, NOT income,
-  // NOT covered by a recurring/fixed pattern. Roll up per category.
+  // NOT covered by a recurring/fixed pattern. Roll up per category. Merge
+  // budgeted categories (even with 0 spend) so users see what they planned.
   const variableByCategory = useMemo(() => {
     const map = new Map();
     monthTransactions.forEach(t => {
@@ -112,9 +114,18 @@ export function Monthly({
       entry.dépensé += Math.abs(t.sharedAmount);
       entry.items.push(t);
     });
-    return [...map.values()].sort((a, b) => b.dépensé - a.dépensé);
-  }, [monthTransactions, categories, recurringIds]);
+    // Add budgeted-but-not-spent categories so they appear with budget but 0 spend
+    Object.entries(budgets).forEach(([catId, amount]) => {
+      if (!amount || amount <= 0) return;
+      if (map.has(catId)) return;
+      const cat = categories.find(c => c.id === catId || c.slug === catId);
+      if (!cat || cat.type === 'income') return;
+      map.set(catId, { id: catId, name: cat.name, icon: cat.icon || '?', color: cat.color, dépensé: 0, items: [] });
+    });
+    return [...map.values()].sort((a, b) => (b.dépensé + (budgets[b.id] || 0) * 0.1) - (a.dépensé + (budgets[a.id] || 0) * 0.1));
+  }, [monthTransactions, categories, recurringIds, budgets]);
   const totalVariableSpent = variableByCategory.reduce((s, g) => s + g.dépensé, 0);
+  const totalVariableBudgeted = variableByCategory.reduce((s, g) => s + (budgets[g.id] || 0), 0);
 
   // Neutral operations: internal transfers (always 0 net but useful to surface)
   const neutralOps = useMemo(() => {
@@ -140,9 +151,12 @@ export function Monthly({
   const totalIncome = incomeByCategory.reduce((s, g) => s + g.reçu, 0);
 
   // Synthesise top summary
-  const totalBudgeted = totalFixedBudgeted;
+  const totalBudgeted = totalFixedBudgeted + totalVariableBudgeted;
   const totalSpent = monthData.expenses;
-  const estimatedSavings = totalIncome - totalSpent;
+  // Estimated savings prefers planned income (totalIncomeBudgeted) if set,
+  // otherwise actual received income.
+  const incomePlanned = totalIncomeBudgeted || totalIncome;
+  const estimatedSavings = incomePlanned - totalBudgeted;
 
   // Group budgétisé totals (subscriptions + other fixed = together they're "budgeted")
   const subsBudgeted = subsByCategory.reduce((s, g) => s + g.total, 0);
@@ -222,7 +236,7 @@ export function Monthly({
           <div className="mon-summary-cell">
             <div className="mon-summary-label">Revenus</div>
             <div className="mon-summary-value num">{fmt(totalIncome)}</div>
-            <div className="mon-summary-sub num">sur {fmt(monthData.income)} prévu</div>
+            <div className="mon-summary-sub num">sur {fmt(totalIncomeBudgeted || monthData.income)} prévu</div>
           </div>
           <div className="mon-summary-cell">
             <div className="mon-summary-label">Dépenses</div>
@@ -310,7 +324,7 @@ export function Monthly({
             id="variables"
             icon={<Coffee size={14}/>}
             name="Dépenses variables"
-            budgeted={null}
+            budgeted={totalVariableBudgeted || null}
             actual={totalVariableSpent}
             open={isGroupOpen('variables')}
             onToggle={() => toggleGroup('variables')}
@@ -320,10 +334,12 @@ export function Monthly({
               <BudgetRow
                 key={g.id}
                 name={g.name}
-                meta={g.items.length > 1 ? `${g.items.length} opérations` : null}
+                meta={g.items.length > 1 ? `${g.items.length} opérations` : (g.items.length === 1 ? '1 opération' : (budgets[g.id] > 0 ? 'Aucune dépense' : null))}
                 icon={g.icon}
                 color={g.color}
-                budgeted={null}
+                budgeted={budgets[g.id] || 0}
+                editableBudget
+                onBudgetChange={(v) => setBudget(g.id, v)}
                 actual={g.dépensé}
                 fmt={fmt}
               />
@@ -495,8 +511,15 @@ function BudgetGroup({ id, icon, name, budgeted, actual, actualLabel = 'dépens�
   );
 }
 
-function BudgetRow({ name, meta, icon, color, budgeted, actual, fmt, onEdit, onDelete, isNeutral, isIncome }) {
-  const balance = budgeted != null && actual != null ? budgeted - actual : null;
+function BudgetRow({ name, meta, icon, color, budgeted, actual, fmt, onEdit, onDelete, editableBudget, onBudgetChange, isNeutral, isIncome }) {
+  const balance = budgeted != null && budgeted > 0 && actual != null ? budgeted - actual : null;
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(budgeted || '');
+  const commit = () => {
+    const v = parseFloat(draft);
+    if (!isNaN(v) && v >= 0 && v !== budgeted) onBudgetChange(v);
+    setEditing(false);
+  };
   return (
     <div className="mon-row">
       <div className="mon-row-name">
@@ -506,7 +529,28 @@ function BudgetRow({ name, meta, icon, color, budgeted, actual, fmt, onEdit, onD
           {meta && <div className="mon-row-meta">{meta}</div>}
         </div>
       </div>
-      <div className="mon-row-val num">{budgeted != null ? fmt(budgeted) : '—'}</div>
+      <div className="mon-row-val num">
+        {editableBudget ? (
+          editing ? (
+            <input
+              type="number"
+              className="mon-budget-input"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onBlur={commit}
+              onKeyDown={(e) => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') { setDraft(budgeted || ''); setEditing(false); } }}
+              autoFocus
+              placeholder="0"
+            />
+          ) : (
+            <button
+              className="mon-budget-edit"
+              onClick={() => { setDraft(budgeted || ''); setEditing(true); }}
+              title="Cliquer pour définir un budget"
+            >{budgeted > 0 ? fmt(budgeted) : <span className="mon-budget-dash">+ budget</span>}</button>
+          )
+        ) : (budgeted != null ? fmt(budgeted) : '—')}
+      </div>
       <div className={`mon-row-val num ${isIncome ? 'pos' : isNeutral ? 'neutral' : ''}`}>
         {actual != null ? fmt(actual) : '—'}
       </div>
@@ -667,6 +711,12 @@ const css = `
 .mon-row-act:hover { background: var(--bg-sunk); color: var(--ink); }
 .mon-row-empty { color: var(--ink-3); font-size: 12.5px; font-style: italic; padding: 12px 16px; }
 .mon-row-empty .mon-row-name { font-family: var(--font-serif); }
+.mon-budget-edit { background: transparent; border: none; padding: 0; cursor: pointer; color: inherit; font: inherit; font-feature-settings: 'tnum'; transition: color var(--t-fast); }
+.mon-budget-edit:hover { color: var(--accent); }
+.mon-budget-dash { color: var(--ink-3); font-style: italic; font-size: 11px; opacity: 0.7; }
+.mon-budget-edit:hover .mon-budget-dash { color: var(--accent); opacity: 1; }
+.mon-budget-input { width: 90px; height: 26px; padding: 0 8px; background: var(--bg-elev); border: 1px solid var(--accent); border-radius: 5px; color: var(--ink); font-family: inherit; font-size: 13px; text-align: right; font-feature-settings: 'tnum'; outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+@media (max-width: 760px) { .mon-budget-input { width: 70px; } }
 
 /* Alert + tip */
 .mon-alert { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; background: var(--warning-soft); border: 1px solid var(--warning); border-radius: 12px; color: var(--warning); margin-top: 8px; }

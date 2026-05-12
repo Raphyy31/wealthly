@@ -1425,6 +1425,8 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
                 anomalies={anomalies}
                 categoryAnalysis={categoryAnalysis}
                 fixedCharges={fixedCharges} saveFixedCharge={saveFixedCharge} deleteFixedCharge={deleteFixedCharge}
+                budgets={budgets} setBudget={setBudget}
+                transferIds={transferIds}
                 memberShare={memberShare}
                 currentMonth={currentMonth} fmt={fmt}
               />
