@@ -4,7 +4,7 @@ from typing import Optional, List
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -29,6 +29,11 @@ class DcaPlanIn(BaseModel):
     expected_return: float = 7.0
     notes: Optional[str] = None
     member_ids: List[str] = []
+
+    @field_validator('account_id', 'ticker', 'asset_name', 'notes', 'start_date', mode='before')
+    @classmethod
+    def empty_str_to_none(cls, v):
+        return None if v == '' else v
 
 
 def _serialize(p: DcaPlan) -> dict:
