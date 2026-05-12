@@ -268,6 +268,9 @@ export const banking = {
   sync: (connectionId, daysBack = 90) =>
     post(`/banking/sync/${connectionId}?days_back=${daysBack}`),
 
+  /** Re-fetch EB session to update accounts list */
+  refreshConnection: (id) => post(`/banking/refresh/${id}`),
+
   /** List all connections */
   listConnections: () => get('/banking/connections'),
 

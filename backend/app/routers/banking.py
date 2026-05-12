@@ -276,6 +276,14 @@ async def complete_connection(
             session_id = data.get("session_id")
             if session_id:
                 conn.session_id = session_id
+                # Double-fetch: the POST response sometimes returns empty accounts;
+                # a subsequent GET reliably returns the full account list.
+                try:
+                    refreshed = await _eb("GET", f"/sessions/{session_id}")
+                    if refreshed.get("accounts"):
+                        data = refreshed
+                except Exception:
+                    pass  # keep original data if refresh fails
     except HTTPException as e:
         conn.status = "error"
         conn.error_message = str(e.detail)
@@ -466,6 +474,54 @@ def list_connections(
         }
         for c in conns
     ]
+
+
+@router.post("/refresh/{connection_id}")
+async def refresh_connection(
+    connection_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Re-fetch the Enable Banking session to update accounts_data.
+    Useful when complete_connection returned an empty accounts list.
+    """
+    conn = db.query(BankConnection).filter(
+        BankConnection.id == connection_id,
+        BankConnection.household_id == current_user.household_id,
+    ).first()
+    if not conn:
+        raise HTTPException(status_code=404, detail="Connexion introuvable")
+    if not conn.session_id:
+        raise HTTPException(status_code=400, detail="Session Enable Banking inconnue — reconnectez la banque")
+
+    try:
+        data = await _eb("GET", f"/sessions/{conn.session_id}")
+    except HTTPException as e:
+        conn.status = "error"
+        conn.error_message = str(e.detail)
+        db.commit()
+        raise
+
+    accounts = data.get("accounts", [])
+    session_status = data.get("status", "")
+
+    if session_status in ("AUTHORIZED", "READY"):
+        conn.status = "authorized"
+        conn.accounts_data = accounts
+    elif session_status in ("FAILED", "REJECTED", "REVOKED"):
+        conn.status = "error"
+        conn.error_message = f"Session EB : {session_status}"
+
+    db.commit()
+    db.refresh(conn)
+    logger.info("[banking] refresh %s → status=%s accounts=%d", connection_id, conn.status, len(accounts))
+
+    return {
+        "status": conn.status,
+        "accounts": conn.accounts_data or [],
+        "session_status": session_status,
+    }
 
 
 @router.delete("/connections/{connection_id}", status_code=204)

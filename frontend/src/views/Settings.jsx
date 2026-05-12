@@ -370,6 +370,7 @@ function BankConnectionsSection() {
   const [loading, setLoading] = useState(false);
   const [picker, setPicker] = useState(false);
   const [syncingId, setSyncingId] = useState(null);
+  const [refreshingId, setRefreshingId] = useState(null);
   const [syncMessage, setSyncMessage] = useState(null);
 
   const reload = useCallback(async () => {
@@ -402,6 +403,24 @@ function BankConnectionsSection() {
       setSyncMessage({ kind: 'error', text: e.message });
     } finally {
       setSyncingId(null);
+    }
+  };
+
+  const handleRefresh = async (id) => {
+    setRefreshingId(id);
+    setSyncMessage(null);
+    try {
+      const res = await api.banking.refreshConnection(id);
+      if (res.accounts?.length > 0) {
+        setSyncMessage({ kind: 'ok', text: `✅ ${res.accounts.length} compte(s) récupéré(s) — lancez maintenant "Sync" pour importer les transactions.` });
+      } else {
+        setSyncMessage({ kind: 'warn', text: `Session EB status : ${res.session_status || '?'} — aucun compte retourné. Reconnectez la banque si le problème persiste.` });
+      }
+      await reload();
+    } catch (e) {
+      setSyncMessage({ kind: 'error', text: e.message });
+    } finally {
+      setRefreshingId(null);
     }
   };
 
@@ -461,7 +480,18 @@ function BankConnectionsSection() {
                 <div style={{ fontSize: 11, color: 'var(--danger-text)', marginTop: 2 }}>{c.error_message}</div>
               )}
             </div>
-            {c.status === 'authorized' && (
+            {c.status === 'authorized' && (!c.accounts || c.accounts.length === 0) && (
+              <button
+                className="primary-btn"
+                style={{ fontSize: 11, padding: '5px 12px', whiteSpace: 'nowrap' }}
+                onClick={() => handleRefresh(c.id)}
+                disabled={refreshingId === c.id}
+                title="Récupérer la liste des comptes depuis Enable Banking"
+              >
+                <RefreshCw size={12} className={refreshingId === c.id ? 'spin' : ''}/> Récupérer les comptes
+              </button>
+            )}
+            {c.status === 'authorized' && c.accounts?.length > 0 && (
               <button
                 className="secondary-btn"
                 style={{ fontSize: 11, padding: '5px 10px', whiteSpace: 'nowrap' }}
