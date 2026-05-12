@@ -23,7 +23,7 @@ const CURRENCY_NAMES = { EUR: 'Euro', USD: 'Dollar US', GBP: 'Livre sterling', C
 // ============================================================================
 // SETTINGS
 // ============================================================================
-export function SettingsView({ members, accounts, accountBalances, saveMember, deleteMember, deleteAccount, updateAccount, transactions = [], exportData, importData, resetAllData, categories = [], fmt, baseCurrency = 'EUR', setBaseCurrency, rates, ratesDate }) {
+export function SettingsView({ members, accounts, accountBalances, saveMember, deleteMember, deleteAccount, updateAccount, transactions = [], exportData, importData, resetAllData, categories = [], fmt, baseCurrency = 'EUR', setBaseCurrency, rates, ratesDate, onImport }) {
   const { t } = useTranslation();
   const [editingMember, setEditingMember] = useState(null);
   const COLORS = MEMBER_PALETTE;
@@ -111,10 +111,25 @@ export function SettingsView({ members, accounts, accountBalances, saveMember, d
       <section className="card">
         <div className="card-header">
           <h3><Wallet size={16}/> Comptes bancaires</h3>
-          <span className="card-meta">rôle = comment ce compte est compté dans les calculs</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span className="card-meta">rôle = comment ce compte est compté dans les calculs</span>
+            {onImport && (
+              <button className="secondary-btn" onClick={onImport}><Upload size={14}/> Importer un CSV</button>
+            )}
+          </div>
         </div>
         <div className="member-list">
-          {accounts.length === 0 && <div className="empty-mini"><Wallet size={24}/><p>Aucun compte. Importez un CSV.</p></div>}
+          {accounts.length === 0 && (
+            <div className="empty-mini">
+              <Wallet size={24}/>
+              <p>Aucun compte pour le moment.</p>
+              {onImport && (
+                <button className="primary-btn" style={{ marginTop: 12 }} onClick={onImport}>
+                  <Upload size={14}/> Importer un CSV
+                </button>
+              )}
+            </div>
+          )}
           {accounts.map(a => {
             const owners = (a.memberIds || []).map(id => members.find(m => m.id === id)?.name).filter(Boolean).join(' & ');
             const role = a.role || 'principal';

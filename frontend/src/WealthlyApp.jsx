@@ -1410,6 +1410,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo }) {
             fmt={fmt}
             baseCurrency={baseCurrency} setBaseCurrency={setBaseCurrency}
             rates={rates} ratesDate={ratesDate}
+            onImport={() => { setView('import'); setImportStep('upload'); }}
           />
         )}
         {view === 'admin' && currentUser?.is_admin && (
