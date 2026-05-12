@@ -345,8 +345,8 @@ export function Styles({ theme }) {
   .app-header-mobile {
     display: flex; align-items: center; justify-content: space-between;
     padding: 10px 14px; gap: 8px; flex-wrap: nowrap;
-    background: ${dark ? 'rgba(21, 25, 38, 0.75)' : 'rgba(255, 255, 255, 0.75)'};
-    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    background: ${dark ? 'rgba(15, 14, 12, 0.78)' : 'rgba(247, 246, 242, 0.78)'};
+    backdrop-filter: blur(14px) saturate(150%); -webkit-backdrop-filter: blur(14px) saturate(150%);
     border-bottom: 1px solid var(--border);
     position: sticky; top: 0; z-index: 100;
   }
@@ -362,7 +362,7 @@ export function Styles({ theme }) {
     display: flex;
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 90;
     justify-content: space-around;
-    background: ${dark ? 'rgba(10, 11, 14, 0.92)' : 'rgba(255, 255, 255, 0.95)'};
+    background: ${dark ? 'rgba(15, 14, 12, 0.92)' : 'rgba(247, 246, 242, 0.92)'};
     backdrop-filter: blur(16px) saturate(180%); -webkit-backdrop-filter: blur(16px) saturate(180%);
     border-top: 1px solid var(--border);
     padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
