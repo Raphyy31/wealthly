@@ -48,7 +48,7 @@ const TaxSimulator = lazy(() => import('./TaxSimulator.jsx'));
 // ============================================================================
 // MAIN APP
 // ============================================================================
-export default function WealthlyApp({ demoMode = false, onExitDemo }) {
+export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [onboarded, setOnboarded] = useState(() => {
@@ -1136,15 +1136,16 @@ export default function WealthlyApp({ demoMode = false, onExitDemo }) {
   };
 
   const logout = async () => {
-    if (!confirm('Se déconnecter ?')) return;
-    // Tell the backend to clear the HttpOnly auth cookie. We also wipe the
-    // legacy localStorage token so users coming from before the cookie
-    // migration get a clean slate.
-    try { await api.auth.logout(); } catch { /* ignore — we still wipe locally */ }
+    // Fire-and-forget backend call to clear the HttpOnly cookie.
+    // We don't await it — transition the UI immediately so the user
+    // never sees a frozen screen. The cookie clear runs in the background.
+    api.auth.logout().catch(() => {});
     api.clearToken();
-    // Navigate to root — the App.jsx auth check will see no cookie and
-    // redirect to the landing page cleanly (avoids stale React state).
-    window.location.href = '/';
+    if (onLogout) {
+      onLogout();
+    } else {
+      window.location.href = '/';
+    }
   };
 
   // ============================================================================

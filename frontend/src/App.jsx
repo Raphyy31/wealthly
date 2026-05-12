@@ -108,5 +108,5 @@ export default function App() {
     );
   }
 
-  return <WealthlyApp />;
+  return <WealthlyApp onLogout={() => { setAuthState('unauthed'); setUnauthedView('landing'); }} />;
 }
