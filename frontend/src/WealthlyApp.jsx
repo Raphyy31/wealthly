@@ -1856,10 +1856,19 @@ function AddAccountModal({ members = [], onSave, onClose }) {
                   </select>
                 </div>
                 <div>
-                  <label className="form-label">Solde initial (€)</label>
-                  <input className="form-input" type="number" step="0.01" placeholder="0,00"
-                    value={form.initialBalance} onChange={e => setField('initialBalance', e.target.value)}/>
+                  <label className="form-label">Devise</label>
+                  <select className="form-input" value={form.currency} onChange={e => setField('currency', e.target.value)}>
+                    <option value="EUR">🇪🇺 EUR — Euro</option>
+                    <option value="USD">🇺🇸 USD — Dollar US</option>
+                    <option value="GBP">🇬🇧 GBP — Livre sterling</option>
+                    <option value="CHF">🇨🇭 CHF — Franc suisse</option>
+                  </select>
                 </div>
+              </div>
+              <div>
+                <label className="form-label">Solde initial ({form.currency})</label>
+                <input className="form-input" type="number" step="0.01" placeholder="0,00"
+                  value={form.initialBalance} onChange={e => setField('initialBalance', e.target.value)}/>
               </div>
               {members.length > 0 && (
                 <div>

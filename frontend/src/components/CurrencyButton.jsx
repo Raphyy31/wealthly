@@ -1,26 +1,62 @@
+import { useState, useRef, useEffect } from 'react';
 import { SUPPORTED_CURRENCIES } from '../utils.js';
 
-const SYMBOLS = { EUR: '€', USD: '$', GBP: '£', CHF: '₣' };
+const LABELS = { EUR: 'Euro', USD: 'Dollar US', GBP: 'Livre sterling', CHF: 'Franc suisse' };
+const FLAGS  = { EUR: '🇪🇺', USD: '🇺🇸', GBP: '🇬🇧', CHF: '🇨🇭' };
 
 export function CurrencyButton({ baseCurrency = 'EUR', setBaseCurrency }) {
-  const idx = SUPPORTED_CURRENCIES.indexOf(baseCurrency);
-  const next = SUPPORTED_CURRENCIES[(idx + 1) % SUPPORTED_CURRENCIES.length];
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
 
   return (
-    <button
-      className="lang-btn"
-      onClick={() => setBaseCurrency && setBaseCurrency(next)}
-      title={`Devise : ${baseCurrency} → cliquer pour changer`}
-      aria-label="Changer de devise"
-    >
-      {SUPPORTED_CURRENCIES.map((c, i) => (
-        <span key={c}>
-          {i > 0 && <span className="lang-btn-sep">·</span>}
-          <span className={`lang-btn-side ${c === baseCurrency ? 'on' : ''}`}>
-            {SYMBOLS[c] || c}
-          </span>
-        </span>
-      ))}
-    </button>
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button
+        className="lang-btn"
+        onClick={() => setOpen(o => !o)}
+        title="Changer de devise d'affichage"
+        aria-label="Devise"
+      >
+        <span className="lang-btn-side on">CCY</span>
+      </button>
+
+      {open && (
+        <div style={{
+          position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'var(--bg-card)', border: '1px solid var(--border)',
+          borderRadius: 10, padding: 6, minWidth: 160,
+          boxShadow: '0 8px 24px rgba(0,0,0,.18)',
+          zIndex: 200,
+          display: 'flex', flexDirection: 'column', gap: 2,
+        }}>
+          {SUPPORTED_CURRENCIES.map(c => (
+            <button
+              key={c}
+              onClick={() => { setBaseCurrency && setBaseCurrency(c); setOpen(false); }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '8px 12px', borderRadius: 7, border: 'none',
+                background: c === baseCurrency ? 'var(--primary-soft, rgba(197,165,114,.12))' : 'transparent',
+                color: c === baseCurrency ? 'var(--primary)' : 'var(--text-primary)',
+                fontWeight: c === baseCurrency ? 700 : 400,
+                fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
+                textAlign: 'left', width: '100%',
+              }}
+            >
+              <span style={{ fontSize: 16 }}>{FLAGS[c]}</span>
+              <span style={{ flex: 1 }}>{LABELS[c]}</span>
+              <span style={{ fontVariantNumeric: 'tabular-nums', fontSize: 12, opacity: .7 }}>{c}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
