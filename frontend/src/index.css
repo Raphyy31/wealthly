@@ -612,30 +612,6 @@ html, body {
   margin-top: 2px;
 }
 
-.ws-search {
-  display: flex; align-items: center; gap: 8px;
-  height: 36px;
-  padding: 0 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--bg-elev);
-  color: var(--ink-3);
-}
-.ws-search input {
-  flex: 1; min-width: 0;
-  border: none; background: transparent; outline: none;
-  font: 400 13px/1.2 var(--font-sans);
-  color: var(--ink);
-}
-.ws-search input::placeholder { color: var(--ink-3); }
-.ws-kbd {
-  font: 500 10px/1 var(--font-mono);
-  color: var(--ink-3);
-  background: var(--bg-sunk);
-  border-radius: 4px;
-  padding: 3px 5px;
-}
-
 .ws-nav {
   display: flex; flex-direction: column;
   gap: 1px;

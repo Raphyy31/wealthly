@@ -1,6 +1,6 @@
 ﻿import React, { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react';
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, RadialBarChart, RadialBar, ComposedChart, Sankey, Layer, Rectangle } from 'recharts';
-import { Upload, Plus, TrendingUp, TrendingDown, Wallet, Home, Coins, CreditCard, Users, Settings, Search, Download, Trash2, Edit3, Check, X, ChevronRight, ChevronLeft, ChevronDown, AlertCircle, AlertTriangle, Repeat, Calendar, ArrowUpDown, Eye, EyeOff, Sparkles, PiggyBank, Bitcoin, Banknote, Landmark, BarChart3, Target, Heart, Sun, Moon, Zap, Activity, ArrowUp, ArrowDown, Minus, PartyPopper, Lightbulb, Bell, ChevronUp, Play, Lock, Unlock, LogOut, Cloud, RefreshCw, FileText, Calculator, Link2, Unlink, Menu } from 'lucide-react';
+import { Upload, Plus, TrendingUp, TrendingDown, Wallet, Home, Coins, CreditCard, Users, Settings, Download, Trash2, Edit3, Check, X, ChevronRight, ChevronLeft, ChevronDown, AlertCircle, AlertTriangle, Repeat, Calendar, ArrowUpDown, Eye, EyeOff, Sparkles, PiggyBank, Bitcoin, Banknote, Landmark, BarChart3, Target, Heart, Sun, Moon, Zap, Activity, ArrowUp, ArrowDown, Minus, PartyPopper, Lightbulb, Bell, ChevronUp, Play, Lock, Unlock, LogOut, Cloud, RefreshCw, FileText, Calculator, Link2, Unlink, Menu } from 'lucide-react';
 import * as api from './api.js';
 import { useTranslation } from 'react-i18next';
 import { LangButton } from './components/LangButton.jsx';
@@ -1258,12 +1258,6 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
         <aside className="ws-sidebar">
           <div className="ws-brand" onClick={() => setView('dashboard')} style={{ cursor: 'pointer' }}>
             <Logo size={24} wordmark wordmarkSize={15} />
-          </div>
-
-          <div className="ws-search">
-            <Search size={14} />
-            <input placeholder="Rechercher" />
-            <kbd className="ws-kbd">⌘K</kbd>
           </div>
 
           <nav className="ws-nav">
