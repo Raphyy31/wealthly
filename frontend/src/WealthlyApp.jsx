@@ -303,6 +303,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       setGoals(d.goals);
       setFixedCharges([]);
       setCustomRules(d.customRules);
+      dcaApi.list().then(setDcaPlans).catch(() => {});
       return;
     }
     try {

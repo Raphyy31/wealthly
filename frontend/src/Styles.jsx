@@ -1078,14 +1078,42 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 
 /* DCA — aligned with the canonical .card / .subview-header system */
 .dca-view { display: flex; flex-direction: column; gap: 20px; }
-.dca-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-@media (max-width: 900px) { .dca-kpis { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 520px) { .dca-kpis { grid-template-columns: 1fr; } }
-.dca-kpi { background: var(--bg-elev); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
-.dca-kpi-label { display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: var(--primary); }
-.dca-kpi-label svg { opacity: 0.75; }
-.dca-kpi-value { font-size: 20px; font-weight: 600; letter-spacing: -0.015em; color: var(--ink); font-variant-numeric: tabular-nums; }
-.dca-kpi-value.is-accent { color: var(--accent); }
+
+/* Projection hero — la pièce centrale de la vue DCA. Courbe surface cobalt
+   (valeur projetée) + ligne pointillée (capital versé) sur un horizon réglable. */
+.dca-hero .card-header { align-items: center; }
+.dca-horizon { display: inline-flex; gap: 4px; padding: 3px; background: var(--bg-subtle); border-radius: 8px; border: 1px solid var(--border); }
+.dca-horizon-tab { padding: 4px 11px; border-radius: 5px; font-size: 11.5px; font-weight: 500; border: none; background: transparent; color: var(--text-tertiary); cursor: pointer; font-family: 'Geist Mono', ui-monospace, Menlo, monospace; letter-spacing: 0; font-variant-numeric: tabular-nums; transition: color .15s, background .15s; }
+.dca-horizon-tab:hover { color: var(--text-secondary); }
+.dca-horizon-tab.is-active { background: var(--bg-elev); color: var(--accent); box-shadow: 0 1px 0 rgba(0,0,0,.08); }
+.dca-chart-wrap { margin: 4px -8px 8px; }
+.dca-legend { display: flex; gap: 18px; padding: 0 8px 16px; font-size: 11.5px; color: var(--text-tertiary); }
+.dca-legend-item { display: inline-flex; align-items: center; gap: 7px; }
+.dca-legend-swatch { display: inline-block; width: 24px; height: 0; border-radius: 2px; }
+.dca-legend-swatch.is-accent { height: 8px; background: linear-gradient(180deg, var(--accent) 0%, transparent 100%); opacity: .85; border: 1px solid var(--accent); border-bottom: none; }
+.dca-legend-swatch.is-dashed { border-top: 1.5px dashed var(--text-tertiary); height: 1px; }
+/* Filter chips — multi-select to include/exclude plans from the projection */
+.dca-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 4px 0 14px; }
+.dca-filter-label { font-size: 11px; color: var(--text-tertiary); letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600; margin-right: 4px; }
+.dca-chip { padding: 5px 11px; border-radius: 6px; font-size: 12px; font-weight: 500; border: 1px solid var(--border); background: transparent; color: var(--text-tertiary); cursor: pointer; font-family: inherit; letter-spacing: -0.005em; transition: color .15s, border-color .15s, background .15s; }
+.dca-chip:hover { color: var(--text-secondary); border-color: var(--border-strong); }
+.dca-chip.is-active { color: var(--accent); border-color: var(--accent-line, var(--accent)); background: var(--accent-soft); }
+
+/* État actuel + projection — two columns separated by a dotted vertical rule */
+.dca-state-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 24px; padding: 4px 0 18px; border-bottom: 1px dotted var(--border); margin-bottom: 14px; }
+.dca-state-block + .dca-state-block { border-left: 1px dotted var(--border); padding-left: 24px; }
+.dca-state-eyebrow { font-family: 'Newsreader', Georgia, serif; font-style: italic; font-size: 12.5px; color: var(--text-tertiary); margin-bottom: 12px; letter-spacing: -0.005em; }
+.dca-state-row { display: flex; flex-wrap: wrap; gap: 24px; }
+.dca-state-kpi { min-width: 0; }
+.dca-state-kpi-label { font-size: 10.5px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 5px; white-space: nowrap; }
+.dca-state-kpi-value { font-size: 18px; font-weight: 600; letter-spacing: -0.015em; color: var(--ink); font-variant-numeric: tabular-nums; }
+.dca-state-kpi-value.is-accent { color: var(--accent); }
+.dca-state-kpi-value.is-positive { color: var(--positive); }
+.dca-state-kpi-value.is-negative { color: var(--negative); }
+@media (max-width: 820px) {
+  .dca-state-grid { grid-template-columns: 1fr; gap: 18px; }
+  .dca-state-block + .dca-state-block { border-left: none; border-top: 1px dotted var(--border); padding-left: 0; padding-top: 18px; }
+}
 .dca-next-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
 .dca-next-card { background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
 .dca-next-date { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; }

@@ -246,8 +246,33 @@ export const fixedCharges = {
 // ============================================================================
 // DCA — systematic investment plans
 // ============================================================================
+// Demo seed for the DCA view so the projection hero + plan cards have data
+// to render in demo mode. Real backend serves /dca normally.
+const DEMO_DCA_PLANS = [
+  {
+    id: 'demo-dca-1', name: 'ETF Monde (CW8)', ticker: 'CW8',
+    amount: 400, frequency: 'monthly', expected_return: 7, target_years: 20,
+    start_date: '2024-09-01', day_of_month: 5, status: 'active',
+    currency: 'EUR', account_id: null, notes: '',
+  },
+  {
+    id: 'demo-dca-2', name: 'S&P 500 (SPY)', ticker: 'SPY',
+    amount: 200, frequency: 'monthly', expected_return: 8, target_years: 15,
+    start_date: '2025-01-15', day_of_month: 15, status: 'active',
+    currency: 'EUR', account_id: null, notes: '',
+  },
+  {
+    id: 'demo-dca-3', name: 'Bitcoin DCA', ticker: 'BTC',
+    amount: 100, frequency: 'monthly', expected_return: 12, target_years: 10,
+    start_date: '2025-06-01', day_of_month: 1, status: 'paused',
+    currency: 'EUR', account_id: null, notes: '',
+  },
+];
+
+const isDemo = () => typeof window !== 'undefined' && window.localStorage.getItem('wealthly:demo') === '1';
+
 export const dcaApi = {
-  list:   ()         => get('/dca'),
+  list:   ()         => isDemo() ? Promise.resolve(DEMO_DCA_PLANS) : get('/dca'),
   create: (body)     => post('/dca', body),
   update: (id, body) => put(`/dca/${id}`, body),
   remove: (id)       => del(`/dca/${id}`),

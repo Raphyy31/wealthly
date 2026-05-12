@@ -8,7 +8,7 @@ import {
 } from 'recharts';
 import {
   Plus, TrendingUp, Pause, Play, Trash2, Edit2, X, Check,
-  Calendar, Zap, BarChart2, ChevronDown, ChevronUp,
+  Calendar, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import { dcaApi } from '../api.js';
 import { useQuotes } from '../hooks/useQuotes.js';
@@ -66,6 +66,22 @@ function buildProjection(plan, horizonYears) {
   return data;
 }
 
+/** Sum per-plan projections into one aggregated timeline. */
+function aggregateProjections(plans, horizonYears) {
+  if (!plans.length) return [];
+  const series = plans.map(p => buildProjection(p, horizonYears));
+  const out = [];
+  for (let y = 0; y < horizonYears; y++) {
+    let invested = 0, portfolio = 0;
+    series.forEach(s => {
+      const row = s[y];
+      if (row) { invested += row.invested; portfolio += row.portfolio; }
+    });
+    out.push({ year: y + 1, invested, portfolio, gains: portfolio - invested });
+  }
+  return out;
+}
+
 /** Months elapsed since start_date */
 function monthsElapsed(startDate) {
   if (!startDate) return 0;
@@ -85,6 +101,26 @@ function nextPaymentDate(dayOfMonth, frequency) {
 }
 
 /** Amount invested so far based on start_date + frequency */
+/** Estimated portfolio value as of today: project from start_date for the
+ *  number of months elapsed, applying compound returns each month. Returns
+ *  { invested, value, gain } based on what the user has actually paid in. */
+function currentState(plan) {
+  const months = monthsElapsed(plan.start_date);
+  const freqM = FREQ_MONTHS[plan.frequency] || 1;
+  const r = (plan.expected_return || 0) / 100 / 12;
+  let invested = 0;
+  let portfolio = 0;
+  for (let m = 1; m <= months; m++) {
+    if (m % freqM === 0) {
+      invested += plan.amount;
+      portfolio = r > 0 ? portfolio * (1 + r) + plan.amount : portfolio + plan.amount;
+    } else if (r > 0) {
+      portfolio *= (1 + r);
+    }
+  }
+  return { invested: Math.round(invested), value: Math.round(portfolio), gain: Math.round(portfolio - invested) };
+}
+
 function capitalInvested(plan) {
   const m = monthsElapsed(plan.start_date);
   const freqM = FREQ_MONTHS[plan.frequency] || 1;
@@ -410,6 +446,181 @@ function PlanCard({ plan, accounts, quotes, onEdit, onToggle, onDelete }) {
   );
 }
 
+// ── Aggregated projection hero ───────────────────────────────────────────────
+function ProjectionHero({ plans, fmt0 }) {
+  const [horizon, setHorizon] = useState(10);
+  // Plan filter: Set of plan IDs to include. null = all plans.
+  const [selectedIds, setSelectedIds] = useState(null);
+
+  const includedPlans = useMemo(
+    () => selectedIds === null ? plans : plans.filter(p => selectedIds.has(p.id)),
+    [plans, selectedIds]
+  );
+
+  const data = useMemo(() => aggregateProjections(includedPlans, horizon), [includedPlans, horizon]);
+  const last = data[data.length - 1] || { invested: 0, portfolio: 0, gains: 0 };
+
+  // Current state aggregated across included plans
+  const today = useMemo(() => {
+    return includedPlans.reduce(
+      (acc, p) => {
+        const s = currentState(p);
+        return { invested: acc.invested + s.invested, value: acc.value + s.value, gain: acc.gain + s.gain };
+      },
+      { invested: 0, value: 0, gain: 0 }
+    );
+  }, [includedPlans]);
+
+  // Aggregated monthly equivalent contribution for included plans
+  const monthlyEquiv = useMemo(
+    () => includedPlans.reduce((s, p) => s + p.amount / (FREQ_MONTHS[p.frequency] || 1), 0),
+    [includedPlans]
+  );
+
+  const togglePlan = (id) => {
+    setSelectedIds(prev => {
+      const current = prev === null ? new Set(plans.map(p => p.id)) : new Set(prev);
+      if (current.has(id)) current.delete(id);
+      else current.add(id);
+      // If all selected, collapse back to null (= "Tous")
+      if (current.size === plans.length) return null;
+      if (current.size === 0) return null; // never end on empty — fall back to all
+      return current;
+    });
+  };
+
+  const isAll = selectedIds === null;
+
+  return (
+    <section className="card dca-hero">
+      <div className="card-header">
+        <h3><TrendingUp size={14}/> Projection globale</h3>
+        <div className="dca-horizon">
+          {[5, 10, 20, 30].map(y => (
+            <button
+              key={y}
+              className={`dca-horizon-tab ${horizon === y ? 'is-active' : ''}`}
+              onClick={() => setHorizon(y)}
+            >
+              {y} ans
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {plans.length === 0 ? (
+        <div className="empty-mini">
+          <TrendingUp size={24}/>
+          <p>La courbe de projection apparaîtra dès que vous créerez un premier plan.</p>
+        </div>
+      ) : (
+        <>
+          {plans.length > 1 && (
+            <div className="dca-filter">
+              <span className="dca-filter-label">Plans inclus</span>
+              <button
+                className={`dca-chip ${isAll ? 'is-active' : ''}`}
+                onClick={() => setSelectedIds(null)}
+              >
+                Tous
+              </button>
+              {plans.map(p => {
+                const active = isAll || selectedIds.has(p.id);
+                return (
+                  <button
+                    key={p.id}
+                    className={`dca-chip ${active ? 'is-active' : ''}`}
+                    onClick={() => togglePlan(p.id)}
+                  >
+                    {p.name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Two-column KPI strip: today vs horizon */}
+          <div className="dca-state-grid">
+            <div className="dca-state-block">
+              <div className="dca-state-eyebrow">État au {new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}</div>
+              <div className="dca-state-row">
+                <div className="dca-state-kpi">
+                  <div className="dca-state-kpi-label">Versé à ce jour</div>
+                  <div className="dca-state-kpi-value">{fmt0(today.invested)}</div>
+                </div>
+                <div className="dca-state-kpi">
+                  <div className="dca-state-kpi-label">Valeur estimée</div>
+                  <div className="dca-state-kpi-value is-accent">{fmt0(today.value)}</div>
+                </div>
+                <div className="dca-state-kpi">
+                  <div className="dca-state-kpi-label">Plus-value latente</div>
+                  <div className={`dca-state-kpi-value ${today.gain >= 0 ? 'is-positive' : 'is-negative'}`}>
+                    {today.gain >= 0 ? '+' : ''}{fmt0(today.gain)}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="dca-state-block">
+              <div className="dca-state-eyebrow">Projection dans {horizon} ans</div>
+              <div className="dca-state-row">
+                <div className="dca-state-kpi">
+                  <div className="dca-state-kpi-label">Mensuel équiv.</div>
+                  <div className="dca-state-kpi-value">{fmt0(monthlyEquiv)}</div>
+                </div>
+                <div className="dca-state-kpi">
+                  <div className="dca-state-kpi-label">Capital versé</div>
+                  <div className="dca-state-kpi-value">{fmt0(last.invested)}</div>
+                </div>
+                <div className="dca-state-kpi">
+                  <div className="dca-state-kpi-label">Valeur projetée</div>
+                  <div className="dca-state-kpi-value is-accent">{fmt0(last.portfolio)}</div>
+                </div>
+                <div className="dca-state-kpi">
+                  <div className="dca-state-kpi-label">Gains composés</div>
+                  <div className="dca-state-kpi-value is-positive">+{fmt0(last.gains)}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="dca-chart-wrap">
+            <ResponsiveContainer width="100%" height={240}>
+              <AreaChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="gAggPort" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.28}/>
+                    <stop offset="100%" stopColor="var(--accent)" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="2 4" stroke="var(--border)" strokeOpacity={0.5} vertical={false}/>
+                <XAxis dataKey="year" tick={{ fontSize: 10.5, fill: 'var(--text-tertiary)' }}
+                  tickFormatter={v => `${v}a`} axisLine={false} tickLine={false}/>
+                <YAxis tick={{ fontSize: 10.5, fill: 'var(--text-tertiary)' }}
+                  tickFormatter={v => v >= 1000 ? `${(v/1000).toFixed(0)}k €` : `${v} €`}
+                  axisLine={false} tickLine={false} width={56}/>
+                <Tooltip content={<ProjTooltip/>}/>
+                <Area type="monotone" dataKey="invested" stroke="var(--text-tertiary)"
+                  strokeWidth={1.5} strokeDasharray="4 4" fill="transparent" name="Capital versé"/>
+                <Area type="monotone" dataKey="portfolio" stroke="var(--accent)"
+                  strokeWidth={2.5} fill="url(#gAggPort)" name="Valeur projetée"/>
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="dca-legend">
+            <span className="dca-legend-item">
+              <span className="dca-legend-swatch is-accent"/>Valeur projetée
+            </span>
+            <span className="dca-legend-item">
+              <span className="dca-legend-swatch is-dashed"/>Capital versé
+            </span>
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
 // ── Main view ────────────────────────────────────────────────────────────────
 export function DCAView({ accounts = [], members = [], dcaPlans = [], onPlansChange }) {
   const [modal, setModal] = useState(null); // null | 'new' | plan object
@@ -459,19 +670,7 @@ export function DCAView({ accounts = [], members = [], dcaPlans = [], onPlansCha
     } catch (e) { notify(e.message, false); }
   };
 
-  // Summary KPIs
-  const totalMonthly = activePlans
-    .filter(p => p.status === 'active')
-    .reduce((s, p) => {
-      const m = FREQ_MONTHS[p.frequency] || 1;
-      return s + p.amount / m;
-    }, 0);
-
-  const totalProjected10 = activePlans
-    .filter(p => p.status === 'active')
-    .reduce((s, p) => s + (buildProjection(p, 10).at(-1)?.portfolio ?? 0), 0);
-
-  const totalInvestedSoFar = activePlans.reduce((s, p) => s + capitalInvested(p), 0);
+  // KPIs are computed inside ProjectionHero from the (filtered) plan set.
 
   const nextDates = activePlans
     .filter(p => p.status === 'active')
@@ -501,21 +700,7 @@ export function DCAView({ accounts = [], members = [], dcaPlans = [], onPlansCha
         </button>
       </div>
 
-      {activePlans.length > 0 && (
-        <div className="dca-kpis">
-          {[
-            { label: 'Versement mensuel équiv.', value: fmt0(totalMonthly), icon: <Calendar size={13}/> },
-            { label: 'Capital investi à ce jour', value: fmt0(totalInvestedSoFar), icon: <BarChart2 size={13}/> },
-            { label: 'Projection 10 ans (composé)', value: fmt0(totalProjected10), icon: <TrendingUp size={13}/>, accent: true },
-            { label: 'Plans actifs', value: activePlans.filter(p => p.status === 'active').length, icon: <Zap size={13}/> },
-          ].map(k => (
-            <div key={k.label} className="dca-kpi">
-              <div className="dca-kpi-label">{k.icon} {k.label}</div>
-              <div className={`dca-kpi-value ${k.accent ? 'is-accent' : ''}`}>{k.value}</div>
-            </div>
-          ))}
-        </div>
-      )}
+      <ProjectionHero plans={activePlans.filter(p => p.status === 'active')} fmt0={fmt0}/>
 
       <section className="card">
         <div className="card-header">
