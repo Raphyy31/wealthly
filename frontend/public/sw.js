@@ -15,7 +15,7 @@
 // to be served (e.g. after a long broken-build streak that the SW cached). The
 // `activate` handler below deletes every cache that doesn't end with this
 // version, so users get a clean slate on the next page load.
-const SW_VERSION = 'wealthly-v2-2026-05';
+const SW_VERSION = 'wealthly-v3-2026-05-12';
 const RUNTIME = `wealthly-runtime-${SW_VERSION}`;
 const SHELL = `wealthly-shell-${SW_VERSION}`;
 const SHELL_ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/icon.svg', '/icon-maskable.svg'];
