@@ -168,6 +168,13 @@ class Account(Base):
     # Lets us aggregate multi-currency holdings: the frontend converts to the
     # user's display currency at render time using live ECB rates.
     currency = Column(String, nullable=False, default="EUR")
+    # Source of the account: manual | csv | gocardless. Lets us spot accounts
+    # auto-created by an open-banking sync vs ones the user entered themselves.
+    source = Column(String, nullable=False, default="manual", index=True, server_default="manual")
+    # Stable identifier from the aggregator (e.g. GoCardless account UUID).
+    # Together with source, it lets a sync re-find the same account across
+    # runs without creating duplicates.
+    external_id = Column(String, nullable=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     household_id = Column(String, ForeignKey("households.id", ondelete="CASCADE"), nullable=False)

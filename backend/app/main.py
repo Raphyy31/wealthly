@@ -148,6 +148,12 @@ def _run_lightweight_migrations() -> None:
             # plan recurring revenus alongside recurring charges in Suivi mensuel.
             "ALTER TABLE fixed_charges ADD COLUMN IF NOT EXISTS kind VARCHAR NOT NULL DEFAULT 'expense'",
             "CREATE INDEX IF NOT EXISTS ix_fixed_charges_kind ON fixed_charges (kind)",
+            # Account source + external_id — lets the GoCardless sync re-find
+            # the same Wealthly account on subsequent runs (avoid duplicates).
+            "ALTER TABLE accounts ADD COLUMN IF NOT EXISTS source VARCHAR NOT NULL DEFAULT 'manual'",
+            "ALTER TABLE accounts ADD COLUMN IF NOT EXISTS external_id VARCHAR",
+            "CREATE INDEX IF NOT EXISTS ix_accounts_source ON accounts (source)",
+            "CREATE INDEX IF NOT EXISTS ix_accounts_external_id ON accounts (external_id)",
         ]
     with engine.begin() as conn:
         for stmt in statements:

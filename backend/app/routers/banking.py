@@ -23,6 +23,7 @@ Tokens :
   simple module-global cache is enough.
 """
 import asyncio
+import hashlib
 import logging
 import uuid
 from datetime import datetime, timedelta
@@ -42,6 +43,13 @@ from app.models import Account, BankConnection, Transaction, User
 def parse_iso_date(s: str):
     """Parse a YYYY-MM-DD date string into a date object."""
     return datetime.strptime(s[:10], "%Y-%m-%d").date()
+
+
+def _dedup_hash(account_id: str, date: str, amount: float, label: str) -> str:
+    """Mirror the frontend hash used for CSV imports so synced + imported
+    transactions don't double up if both happen to flow through Wealthly."""
+    payload = f"{account_id}|{date}|{amount:.2f}|{(label or '')[:60].lower()}"
+    return hashlib.sha1(payload.encode("utf-8")).hexdigest()
 
 logger = logging.getLogger("wealthly.banking")
 router = APIRouter(prefix="/banking", tags=["banking"])
@@ -385,7 +393,7 @@ async def sync_transactions(
                 bank=conn.bank_name,
                 type="checking",
                 currency=(acc_info.get("currency") or "EUR").upper(),
-                balance=balance,
+                initial_balance=balance,
                 external_id=gc_acc_id,
                 source="gocardless",
             )
@@ -440,6 +448,7 @@ async def sync_transactions(
                     label=label,
                     source="gocardless",
                     external_id=ext_id,
+                    dedup_hash=_dedup_hash(wl_acc.id, tx_date.isoformat(), amount, label),
                 ))
                 total_new += 1
 
