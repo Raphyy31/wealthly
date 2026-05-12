@@ -388,11 +388,12 @@ export default function WealthlyApp({ demoMode = false, onExitDemo }) {
       }
       setLoading(false);
 
-      // Handle Enable Banking callback: URL contains ?state=xxx after bank OAuth
+      // Handle Enable Banking callback: URL contains ?code=xxx&state=yyy after bank OAuth
       const urlParams = new URLSearchParams(window.location.search);
       const stateParam = urlParams.get('state');
+      const codeParam = urlParams.get('code');
       if (stateParam) {
-        setBankingPendingState(stateParam);
+        setBankingPendingState({ state: stateParam, code: codeParam });
         // Clean up URL without reload
         window.history.replaceState({}, '', window.location.pathname);
       }
@@ -897,9 +898,9 @@ export default function WealthlyApp({ demoMode = false, onExitDemo }) {
   };
 
   // ===== Banking / Enable Banking =====
-  const completeBankCallback = useCallback(async (state) => {
+  const completeBankCallback = useCallback(async (pending) => {
     try {
-      const result = await api.banking.complete(state);
+      const result = await api.banking.complete(pending.state, pending.code);
       setBankingPendingState(null);
       if (result.status === 'authorized') {
         showToast('🏦 Banque connectée ! Vous pouvez maintenant synchroniser vos transactions.', 'success');

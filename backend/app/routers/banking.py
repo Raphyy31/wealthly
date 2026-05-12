@@ -149,6 +149,7 @@ class ConnectRequest(BaseModel):
 
 class CompleteRequest(BaseModel):
     state: str
+    code: str | None = None
 
 
 # ============================================================================
@@ -180,7 +181,11 @@ async def connect_bank(
     state = str(uuid.uuid4())
     valid_until = (datetime.utcnow() + timedelta(days=90)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
-    session_body = {
+    # Enable Banking flow: POST /auth returns a redirect URL where the user
+    # authorizes at their bank. After consent, the bank redirects back to us
+    # with ?code=...&state=... and we exchange the code for a session in
+    # /complete via POST /sessions.
+    auth_body = {
         "access": {"valid_until": valid_until},
         "aspsp": {"name": body.bank_name, "country": body.bank_country},
         "state": state,
@@ -188,16 +193,15 @@ async def connect_bank(
         "psu_type": "personal",
     }
 
-    data = await _eb("POST", "/sessions", session_body)
-    session_id = data.get("session_id")
+    data = await _eb("POST", "/auth", auth_body)
     redirect_url = data.get("url")
 
-    if not session_id or not redirect_url:
-        raise HTTPException(status_code=502, detail="Enable Banking did not return a valid session")
+    if not redirect_url:
+        raise HTTPException(status_code=502, detail="Enable Banking did not return a redirect URL")
 
     conn = BankConnection(
         household_id=current_user.household_id,
-        session_id=session_id,
+        session_id=None,  # set after /sessions exchange in /complete
         bank_name=body.bank_name,
         bank_country=body.bank_country,
         status="pending",
@@ -235,9 +239,18 @@ async def complete_connection(
     if conn.status == "authorized":
         return {"status": "authorized", "connection_id": conn.id, "accounts": conn.accounts_data or []}
 
-    # Fetch session from Enable Banking
+    # Exchange the OAuth code for an Enable Banking session, unless we already
+    # did it (session_id present) — then just refresh the session state.
     try:
-        data = await _eb("GET", f"/sessions/{conn.session_id}")
+        if conn.session_id:
+            data = await _eb("GET", f"/sessions/{conn.session_id}")
+        else:
+            if not body.code:
+                raise HTTPException(status_code=400, detail="Code OAuth manquant dans le retour de la banque")
+            data = await _eb("POST", "/sessions", {"code": body.code})
+            session_id = data.get("session_id")
+            if session_id:
+                conn.session_id = session_id
     except HTTPException as e:
         conn.status = "error"
         conn.error_message = str(e.detail)
@@ -246,7 +259,7 @@ async def complete_connection(
 
     # Extract accounts from session
     accounts = data.get("accounts", [])
-    session_status = data.get("status", "UNKNOWN")
+    session_status = data.get("status", "AUTHORIZED" if conn.session_id else "UNKNOWN")
 
     if session_status in ("AUTHORIZED", "READY"):
         conn.status = "authorized"

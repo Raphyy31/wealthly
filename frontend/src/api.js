@@ -262,7 +262,7 @@ export const banking = {
     post('/banking/connect', { bank_name: bankName, bank_country: bankCountry }),
 
   /** Complete after OAuth callback — pass state param from URL */
-  complete: (state) => post('/banking/complete', { state }),
+  complete: (state, code) => post('/banking/complete', { state, code }),
 
   /** Sync transactions for a connection */
   sync: (connectionId, daysBack = 90) =>
