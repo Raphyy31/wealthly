@@ -113,15 +113,18 @@ export function BankConnectModal({ onClose }) {
                 </div>
               )}
               {filteredBanks.map((bank, idx) => {
-                const bankName = bank.name || bank.full_name || `Banque ${idx}`;
+                const bankLabel = bank.name || bank.full_name || `Banque ${idx}`;
+                // GoCardless expects the institution_id (e.g. "BOURSORAMA_BOURFRPP"),
+                // not the display name. Fallback to label only as a last resort.
+                const bankId = bank.id || bank.institution_id || bankLabel;
                 return (
                   <button
-                    key={idx}
+                    key={bankId || idx}
                     className="bank-option-btn"
-                    onClick={() => connectBank(bankName)}
+                    onClick={() => connectBank(bankId)}
                     disabled={connecting}
                   >
-                    <span className="bank-option-name">{bankName}</span>
+                    <span className="bank-option-name">{bankLabel}</span>
                     {connecting ? <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>⏳</span> : <ChevronRight size={14}/>}
                   </button>
                 );
