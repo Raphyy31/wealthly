@@ -1551,7 +1551,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
 }
 
 // ============================================================================
-// AddAccountModal — lightweight inline form, no external deps
+// AddAccountModal — Finary-style multi-step: choice → bank flow OR manual form
 // ============================================================================
 const ACCOUNT_TYPES = [
   { value: 'checking',     label: 'Compte courant' },
@@ -1561,20 +1561,80 @@ const ACCOUNT_TYPES = [
   { value: 'professional', label: 'Professionnel' },
 ];
 
+const BANK_COUNTRIES = [
+  { code: 'FR', name: '🇫🇷 France' },
+  { code: 'DE', name: '🇩🇪 Allemagne' },
+  { code: 'ES', name: '🇪🇸 Espagne' },
+  { code: 'IT', name: '🇮🇹 Italie' },
+  { code: 'BE', name: '🇧🇪 Belgique' },
+  { code: 'NL', name: '🇳🇱 Pays-Bas' },
+  { code: 'PT', name: '🇵🇹 Portugal' },
+  { code: 'GB', name: '🇬🇧 Royaume-Uni' },
+];
+
 function AddAccountModal({ members = [], onSave, onClose }) {
+  // steps: 'choice' | 'bank-list' | 'manual'
+  const [step, setStep] = useState('choice');
+
+  // --- bank flow state ---
+  const [country, setCountry] = useState('FR');
+  const [banks, setBanks] = useState([]);
+  const [loadingBanks, setLoadingBanks] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+  const [bankError, setBankError] = useState(null);
+  const [search, setSearch] = useState('');
+
+  // --- manual form state ---
   const [form, setForm] = useState({
     name: '', bank: '', type: 'checking', initialBalance: '', memberIds: [], currency: 'EUR',
   });
   const [saving, setSaving] = useState(false);
 
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
-
+  const setField = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const toggleMember = (id) =>
     setForm(f => ({
       ...f,
       memberIds: f.memberIds.includes(id) ? f.memberIds.filter(x => x !== id) : [...f.memberIds, id],
     }));
 
+  // Bank flow
+  const loadBanks = async () => {
+    setLoadingBanks(true);
+    setBankError(null);
+    try {
+      const data = await api.banking.listBanks(country);
+      const list = data?.banks || data || [];
+      setBanks(Array.isArray(list) ? list : []);
+      setStep('bank-list');
+    } catch (err) {
+      setBankError(err.message);
+    } finally {
+      setLoadingBanks(false);
+    }
+  };
+
+  const connectBank = async (bankName) => {
+    setConnecting(true);
+    setBankError(null);
+    try {
+      const result = await api.banking.connect(bankName, country);
+      if (result?.redirect_url) {
+        window.location.href = result.redirect_url;
+      } else {
+        setBankError("Pas d'URL de redirection reçue");
+        setConnecting(false);
+      }
+    } catch (err) {
+      setBankError(err.message);
+      setConnecting(false);
+    }
+  };
+
+  const filteredBanks = banks.filter(b =>
+    (b.name || b.full_name || '').toLowerCase().includes(search.toLowerCase())
+  );
+
+  // Manual form submit
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name.trim()) return;
@@ -1583,66 +1643,237 @@ function AddAccountModal({ members = [], onSave, onClose }) {
     setSaving(false);
   };
 
+  const titles = {
+    'choice': 'Ajouter un compte',
+    'bank-list': 'Connecter ma banque',
+    'manual': 'Compte manuel',
+  };
+
+  const backStep = {
+    'bank-list': 'choice',
+    'manual': 'choice',
+  };
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" style={{ maxWidth: 440 }} onClick={e => e.stopPropagation()}>
+      <div className="modal" style={{ maxWidth: 480 }} onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Nouveau compte</h2>
+          {backStep[step] && (
+            <button className="icon-btn" onClick={() => setStep(backStep[step])} style={{ marginRight: 6 }}>
+              <ChevronLeft size={18}/>
+            </button>
+          )}
+          <h2 style={{ flex: 1 }}>{titles[step]}</h2>
           <button className="icon-btn" onClick={onClose}><X size={18}/></button>
         </div>
-        <form onSubmit={handleSubmit}>
-          <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div>
-              <label className="form-label">Nom du compte *</label>
-              <input className="form-input" placeholder="ex: Compte courant BNP" value={form.name}
-                onChange={e => set('name', e.target.value)} autoFocus required/>
-            </div>
-            <div>
-              <label className="form-label">Banque</label>
-              <input className="form-input" placeholder="ex: BNP Paribas" value={form.bank}
-                onChange={e => set('bank', e.target.value)}/>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <div>
-                <label className="form-label">Type</label>
-                <select className="form-input" value={form.type} onChange={e => set('type', e.target.value)}>
-                  {ACCOUNT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="form-label">Solde initial (€)</label>
-                <input className="form-input" type="number" step="0.01" placeholder="0,00"
-                  value={form.initialBalance} onChange={e => set('initialBalance', e.target.value)}/>
-              </div>
-            </div>
-            {members.length > 0 && (
-              <div>
-                <label className="form-label">Titulaire(s)</label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
-                  {members.map(m => (
-                    <button key={m.id} type="button"
-                      onClick={() => toggleMember(m.id)}
-                      style={{
-                        padding: '5px 12px', borderRadius: 20, fontSize: 13, cursor: 'pointer',
-                        border: `1px solid ${form.memberIds.includes(m.id) ? 'var(--primary)' : 'var(--border)'}`,
-                        background: form.memberIds.includes(m.id) ? 'var(--primary-soft)' : 'var(--bg-card)',
-                        color: form.memberIds.includes(m.id) ? 'var(--primary-text)' : 'var(--text-primary)',
-                        fontFamily: 'inherit',
-                      }}>
-                      {m.name}
-                    </button>
-                  ))}
+
+        {/* ── STEP 1: CHOICE ── */}
+        {step === 'choice' && (
+          <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 4px' }}>
+              Comment souhaitez-vous ajouter ce compte ?
+            </p>
+
+            {/* Bank connect card */}
+            <button
+              onClick={() => { setBankError(null); loadBanks(); }}
+              disabled={loadingBanks}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 16, padding: '18px 20px',
+                background: 'var(--bg-elevated, var(--bg-card))',
+                border: '1px solid var(--border)',
+                borderRadius: 12, cursor: 'pointer', textAlign: 'left', width: '100%',
+                transition: 'border-color .15s, background .15s', fontFamily: 'inherit',
+              }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
+              onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+            >
+              <span style={{
+                width: 44, height: 44, borderRadius: 10, flexShrink: 0,
+                background: 'var(--primary-soft, rgba(197,165,114,.12))',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'var(--primary)',
+              }}>
+                <Cloud size={22}/>
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-primary)', marginBottom: 3 }}>
+                  {loadingBanks ? 'Chargement des banques…' : 'Connecter ma banque'}
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                  Synchronisation automatique via Enable Banking (PSD2). Vos identifiants restent sur le site de votre banque.
                 </div>
               </div>
+              {loadingBanks
+                ? <RefreshCw size={16} className="spin" style={{ color: 'var(--text-tertiary)', flexShrink: 0 }}/>
+                : <ChevronRight size={16} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }}/>
+              }
+            </button>
+
+            {bankError && (
+              <div style={{ fontSize: 12, color: 'var(--danger)', padding: '8px 12px', background: 'rgba(196,113,88,.08)', borderRadius: 8 }}>
+                {bankError}
+              </div>
+            )}
+
+            {/* Manual card */}
+            <button
+              onClick={() => setStep('manual')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 16, padding: '18px 20px',
+                background: 'var(--bg-elevated, var(--bg-card))',
+                border: '1px solid var(--border)',
+                borderRadius: 12, cursor: 'pointer', textAlign: 'left', width: '100%',
+                transition: 'border-color .15s', fontFamily: 'inherit',
+              }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
+              onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+            >
+              <span style={{
+                width: 44, height: 44, borderRadius: 10, flexShrink: 0,
+                background: 'rgba(139,138,133,.10)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'var(--text-secondary)',
+              }}>
+                <Edit3 size={22}/>
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-primary)', marginBottom: 3 }}>
+                  Ajouter manuellement
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                  Saisissez le solde et les transactions à la main. Idéal pour les livrets, espèces ou comptes étrangers.
+                </div>
+              </div>
+              <ChevronRight size={16} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }}/>
+            </button>
+
+            <div style={{ marginTop: 4 }}>
+              <button className="secondary-btn" style={{ width: '100%' }} onClick={onClose}>Annuler</button>
+            </div>
+          </div>
+        )}
+
+        {/* ── STEP 2a: BANK LIST ── */}
+        {step === 'bank-list' && (
+          <div className="modal-body">
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center' }}>
+              <input
+                className="search-input"
+                placeholder="Chercher votre banque…"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                style={{ flex: 1 }}
+                autoFocus
+              />
+              <select
+                value={country}
+                onChange={e => { setCountry(e.target.value); setBanks([]); setSearch(''); }}
+                style={{
+                  background: 'var(--bg-input, var(--bg-card))', border: '1px solid var(--border)',
+                  borderRadius: 8, padding: '8px 10px', color: 'var(--text-primary)',
+                  fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                {BANK_COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
+              </select>
+            </div>
+
+            {banks.length === 0 && !loadingBanks && (
+              <div style={{ textAlign: 'center', padding: 24, color: 'var(--text-tertiary)', fontSize: 13 }}>
+                Sélectionnez un pays et cliquez sur "Charger les banques"
+              </div>
+            )}
+
+            <div style={{ maxHeight: 300, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {filteredBanks.map((bank, idx) => {
+                const bankName = bank.name || bank.full_name || `Banque ${idx + 1}`;
+                return (
+                  <button
+                    key={idx}
+                    className="bank-option-btn"
+                    onClick={() => connectBank(bankName)}
+                    disabled={connecting}
+                  >
+                    <span className="bank-option-name">{bankName}</span>
+                    {connecting
+                      ? <RefreshCw size={13} className="spin" style={{ color: 'var(--text-tertiary)' }}/>
+                      : <ChevronRight size={14}/>
+                    }
+                  </button>
+                );
+              })}
+            </div>
+
+            {bankError && (
+              <div style={{ fontSize: 12, color: 'var(--danger)', padding: '8px 12px', marginTop: 8, background: 'rgba(196,113,88,.08)', borderRadius: 8 }}>
+                {bankError}
+              </div>
+            )}
+
+            {country && banks.length === 0 && (
+              <button className="primary-btn" style={{ width: '100%', marginTop: 12 }} onClick={loadBanks} disabled={loadingBanks}>
+                {loadingBanks ? <><RefreshCw size={13} className="spin"/> Chargement…</> : 'Charger les banques'}
+              </button>
             )}
           </div>
-          <div className="modal-footer">
-            <button type="button" className="secondary-btn" onClick={onClose}>Annuler</button>
-            <button type="submit" className="primary-btn" disabled={saving || !form.name.trim()}>
-              {saving ? 'Enregistrement…' : 'Créer le compte'}
-            </button>
-          </div>
-        </form>
+        )}
+
+        {/* ── STEP 2b: MANUAL FORM ── */}
+        {step === 'manual' && (
+          <form onSubmit={handleSubmit}>
+            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <label className="form-label">Nom du compte *</label>
+                <input className="form-input" placeholder="ex: Compte courant BNP" value={form.name}
+                  onChange={e => setField('name', e.target.value)} autoFocus required/>
+              </div>
+              <div>
+                <label className="form-label">Banque</label>
+                <input className="form-input" placeholder="ex: BNP Paribas" value={form.bank}
+                  onChange={e => setField('bank', e.target.value)}/>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div>
+                  <label className="form-label">Type</label>
+                  <select className="form-input" value={form.type} onChange={e => setField('type', e.target.value)}>
+                    {ACCOUNT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="form-label">Solde initial (€)</label>
+                  <input className="form-input" type="number" step="0.01" placeholder="0,00"
+                    value={form.initialBalance} onChange={e => setField('initialBalance', e.target.value)}/>
+                </div>
+              </div>
+              {members.length > 0 && (
+                <div>
+                  <label className="form-label">Titulaire(s)</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                    {members.map(m => (
+                      <button key={m.id} type="button" onClick={() => toggleMember(m.id)}
+                        style={{
+                          padding: '5px 12px', borderRadius: 20, fontSize: 13, cursor: 'pointer',
+                          border: `1px solid ${form.memberIds.includes(m.id) ? 'var(--primary)' : 'var(--border)'}`,
+                          background: form.memberIds.includes(m.id) ? 'var(--primary-soft)' : 'var(--bg-card)',
+                          color: form.memberIds.includes(m.id) ? 'var(--primary-text)' : 'var(--text-primary)',
+                          fontFamily: 'inherit',
+                        }}>
+                        {m.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button type="button" className="secondary-btn" onClick={onClose}>Annuler</button>
+              <button type="submit" className="primary-btn" disabled={saving || !form.name.trim()}>
+                {saving ? 'Enregistrement…' : 'Créer le compte'}
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );
