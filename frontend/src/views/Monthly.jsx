@@ -64,15 +64,18 @@ export function Monthly({
   );
   const isCurrentMonth = selectedMonth === currentMonth;
 
-  // ── Active fixed charges for the selected month ────────────────────────
-  const activeFixedCharges = useMemo(() => {
+  // ── Active fixed charges + fixed incomes for the selected month ────────
+  const activeFixedAll = useMemo(() => {
     return (fixedCharges || []).filter(fc => {
       if (fc.start_month && selectedMonth < fc.start_month) return false;
       if (fc.end_month && selectedMonth > fc.end_month) return false;
       return true;
     });
   }, [fixedCharges, selectedMonth]);
+  const activeFixedCharges = activeFixedAll.filter(fc => (fc.kind || 'expense') === 'expense');
+  const activeFixedIncomes = activeFixedAll.filter(fc => fc.kind === 'income');
   const totalFixedBudgeted = activeFixedCharges.reduce((s, fc) => s + (fc.amount || 0), 0);
+  const totalIncomeBudgeted = activeFixedIncomes.reduce((s, fc) => s + (fc.amount || 0), 0);
 
   // ── Selected month transactions, with member share resolved ────────────
   const monthTransactions = useMemo(() => {
@@ -158,10 +161,20 @@ export function Monthly({
 
   const expenseCategories = categories.filter(c => c.type === 'expense');
 
-  const startEdit = (charge) => {
-    setEditingCharge(charge || {
-      name: '', amount: '', day_of_month: 1, category_slug: 'subscriptions',
+  const startEdit = (chargeOrPartial) => {
+    // If we get an existing charge (with an id), edit it as-is.
+    // If we get a "creation seed" partial (no id), merge it into the empty draft.
+    const isExisting = chargeOrPartial && chargeOrPartial.id;
+    if (isExisting) {
+      setEditingCharge(chargeOrPartial);
+      return;
+    }
+    setEditingCharge({
+      name: '', amount: '', day_of_month: 1,
+      category_slug: chargeOrPartial?.kind === 'income' ? 'income' : 'subscriptions',
       start_month: selectedMonth, end_month: null, member_ids: [], notes: '',
+      kind: 'expense',
+      ...(chargeOrPartial || {}),
     });
   };
 
@@ -351,19 +364,33 @@ export function Monthly({
             id="revenus"
             icon={<TrendingUp size={14}/>}
             name="Revenus"
-            budgeted={null}
+            budgeted={totalIncomeBudgeted || null}
             actual={totalIncome}
             actualLabel="reçu"
             open={isGroupOpen('revenus')}
             onToggle={() => toggleGroup('revenus')}
+            onAdd={() => startEdit({ kind: 'income' })}
             fmt={fmt}
             isIncome
           >
+            {activeFixedIncomes.map(it => (
+              <BudgetRow
+                key={it.id}
+                name={it.name}
+                meta={it.day_of_month ? `Prévu · J${it.day_of_month}` : 'Revenu fixe'}
+                budgeted={it.amount}
+                actual={null}
+                isIncome
+                fmt={fmt}
+                onEdit={() => startEdit(it)}
+                onDelete={() => deleteFixedCharge(it.id)}
+              />
+            ))}
             {incomeByCategory.length > 0 ? incomeByCategory.map(g => (
               <BudgetRow
                 key={g.id}
                 name={g.name}
-                meta={g.items.length > 1 ? `${g.items.length} opérations` : null}
+                meta={g.items.length > 1 ? `${g.items.length} opérations détectées` : 'Détecté ce mois'}
                 icon={g.icon}
                 color={g.color}
                 budgeted={null}
@@ -371,7 +398,7 @@ export function Monthly({
                 isIncome
                 fmt={fmt}
               />
-            )) : <EmptyRow label="Aucun revenu enregistré ce mois"/>}
+            )) : (activeFixedIncomes.length === 0 && <EmptyRow label="Aucun revenu enregistré ce mois"/>)}
           </BudgetGroup>
 
           {anomalies.length > 0 && isCurrentMonth && (
@@ -691,7 +718,9 @@ function FixedChargeEditor({ charge, categories, members, currentMonth, onSave, 
     end_month: charge.end_month || '',
     notes: charge.notes || '',
     member_ids: charge.member_ids || [],
+    kind: charge.kind || 'expense',
   });
+  const isIncome = draft.kind === 'income';
   const submit = () => {
     if (!draft.name.trim() || !draft.amount) return;
     onSave({
@@ -704,11 +733,18 @@ function FixedChargeEditor({ charge, categories, members, currentMonth, onSave, 
     <div className="modal-backdrop" onClick={onCancel}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>{draft.id ? 'Modifier la charge fixe' : 'Nouvelle charge fixe'}</h2>
+          <h2>{draft.id ? (isIncome ? 'Modifier le revenu fixe' : 'Modifier la charge fixe') : (isIncome ? 'Nouveau revenu fixe' : 'Nouvelle charge fixe')}</h2>
           <button className="icon-btn-sm" onClick={onCancel}><X size={16}/></button>
         </div>
         <div className="modal-body">
-          <label><span>Nom</span><input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Loyer, EDF, Netflix…"/></label>
+          <label>
+            <span>Type</span>
+            <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+              <button type="button" className={`secondary-btn ${!isIncome ? 'active' : ''}`} style={{ borderColor: !isIncome ? 'var(--primary)' : undefined, flex: 1 }} onClick={() => setDraft({ ...draft, kind: 'expense' })}>Dépense</button>
+              <button type="button" className={`secondary-btn ${isIncome ? 'active' : ''}`} style={{ borderColor: isIncome ? 'var(--success)' : undefined, color: isIncome ? 'var(--success)' : undefined, flex: 1 }} onClick={() => setDraft({ ...draft, kind: 'income' })}>Revenu</button>
+            </div>
+          </label>
+          <label><span>Nom</span><input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder={isIncome ? 'Salaire, APL, Allocation…' : 'Loyer, EDF, Netflix…'}/></label>
           <label><span>Montant mensuel (€)</span><input type="number" step="0.01" value={draft.amount} onChange={(e) => setDraft({ ...draft, amount: e.target.value })}/></label>
           <label><span>Jour du mois</span>
             <input type="number" min={1} max={31} value={draft.day_of_month} onChange={(e) => setDraft({ ...draft, day_of_month: parseInt(e.target.value, 10) || 1 })}/>

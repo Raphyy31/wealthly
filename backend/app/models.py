@@ -485,6 +485,10 @@ class FixedCharge(Base):
     start_month = Column(String, nullable=False)   # 'YYYY-MM'
     end_month = Column(String, nullable=True)      # 'YYYY-MM' or null
     notes = Column(Text, nullable=True, default="")
+    # 'expense' (default — loyer, abonnement…) or 'income' (salaire, rente…).
+    # Lets the Suivi mensuel Revenus group surface planned recurring income
+    # the same way it surfaces planned recurring charges.
+    kind = Column(String, nullable=False, default="expense", server_default="expense")
 
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

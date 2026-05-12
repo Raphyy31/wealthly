@@ -30,6 +30,7 @@ class FixedChargeIn(BaseModel):
     end_month: Optional[str] = Field(default=None, pattern=r"^\d{4}-\d{2}$")
     notes: Optional[str] = ""
     member_ids: Optional[list[str]] = None
+    kind: Optional[str] = Field(default="expense", pattern=r"^(expense|income)$")
 
 
 class FixedChargeOut(BaseModel):
@@ -42,6 +43,7 @@ class FixedChargeOut(BaseModel):
     end_month: Optional[str] = None
     notes: str = ""
     member_ids: list[str] = []
+    kind: str = "expense"
 
 
 def _to_out(fc: FixedCharge) -> FixedChargeOut:
@@ -55,6 +57,7 @@ def _to_out(fc: FixedCharge) -> FixedChargeOut:
         end_month=fc.end_month,
         notes=fc.notes or "",
         member_ids=[m.id for m in fc.members],
+        kind=getattr(fc, "kind", None) or "expense",
     )
 
 
@@ -87,6 +90,7 @@ def create_fixed_charge(payload: FixedChargeIn, db: Session = Depends(get_db), u
         start_month=start,
         end_month=payload.end_month,
         notes=(payload.notes or "")[:1000],
+        kind=payload.kind or "expense",
     )
     fc.members = _resolve_members(db, user.household_id, payload.member_ids)
     db.add(fc)
@@ -111,6 +115,8 @@ def update_fixed_charge(fc_id: str, payload: FixedChargeIn, db: Session = Depend
         fc.start_month = payload.start_month
     fc.end_month = payload.end_month
     fc.notes = (payload.notes or "")[:1000]
+    if payload.kind in ("expense", "income"):
+        fc.kind = payload.kind
     fc.members = _resolve_members(db, user.household_id, payload.member_ids)
     db.commit()
     db.refresh(fc)
