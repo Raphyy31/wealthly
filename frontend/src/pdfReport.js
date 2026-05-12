@@ -20,36 +20,41 @@ import autoTable from 'jspdf-autotable';
 import { buildAmortization } from './utils.js';
 
 // ---------- Palette (RGB tuples for jsPDF) ----------
-// Mirrors the app's dark "private banking" theme — encre profonde, or sobre.
-// Same hex roots as Styles.jsx so a printed page feels like the same product.
+// Mirrors the app's v3 light theme — papier chaud + cobalt sobre.
+// Same hex roots as index.css so a printed page feels like the same product.
 const C = {
-  ink:        [235, 232, 227],   // text-primary (cream)
-  body:       [200, 196, 188],   // text-secondary
-  muted:      [150, 145, 138],   // text-tertiary
-  faint:      [110, 106, 100],   // text-faint
-  rule:       [54, 56, 64],      // border-strong
-  hairline:   [38, 40, 46],      // border subtle
-  paper:      [10, 11, 14],      // bg-page #0a0b0e
-  cream:      [19, 21, 26],      // bg-card #13151a
-  cardFill:   [24, 26, 32],      // bg-card-hover (slightly lifted)
-  gold:       [197, 165, 114],   // primary
-  goldDark:   [157, 130, 88],    // primary-darker
-  sage:       [136, 169, 120],   // success
-  terracotta: [196, 113, 88],    // danger
-  amber:      [212, 165, 84],    // warning
+  ink:        [22, 21, 15],      // --ink   #16150F
+  body:       [86, 84, 74],      // --ink-2 #56544A
+  muted:      [140, 137, 121],   // --ink-3 #8C8979
+  faint:      [181, 178, 164],   // --ink-mute #B5B2A4
+  rule:       [210, 206, 192],   // --border-strong #D2CEC0
+  hairline:   [228, 225, 216],   // --border #E4E1D8
+  paper:      [247, 246, 242],   // --bg page #F7F6F2
+  cream:      [255, 255, 255],   // --bg-elev card #FFFFFF
+  cardFill:   [239, 237, 230],   // --bg-sunk #EFEDE6
+  accent:     [37, 64, 217],     // --accent cobalt #2540D9
+  accentDark: [26, 47, 168],     // --accent-2 #1A2FA8
+  accentSoft: [231, 235, 255],   // --accent-soft #E7EBFF
+  sage:       [19, 109, 62],     // --positive #136D3E
+  terracotta: [176, 57, 43],     // --negative #B0392B
+  amber:      [142, 100, 26],    // --warning  #8E641A
+  // Dataviz v3 (light) — cobalt, sage, terracotta, mauve, pink, grey, ocre
   pieClasses: [
-    [197, 165, 114],  // gold
-    [140, 158, 188],  // slate-blue (lifted for dark bg)
-    [196, 113, 88],   // terracotta
-    [136, 169, 120],  // sage
-    [177, 159, 201],  // mauve (lifted)
-    [212, 165, 84],   // amber
-    [168, 162, 158],  // warm gray (lifted)
+    [37, 64, 217],     // d1 cobalt
+    [31, 142, 110],    // d2 sage
+    [194, 115, 59],    // d3 terracotta
+    [123, 87, 198],    // d4 mauve
+    [184, 93, 122],    // d5 pink
+    [77, 77, 77],      // d6 grey
+    [224, 178, 62],    // d7 ocre
   ],
+  // Legacy aliases (kept so existing draw functions don't all need touching)
+  gold:       [37, 64, 217],     // map to cobalt (was the primary accent)
+  goldDark:   [26, 47, 168],
 };
 
-const FONT   = 'helvetica'; // body, captions, tables
-const SERIF  = 'times';     // titles + hero numbers — mirrors app's Source Serif 4 direction
+const FONT   = 'helvetica'; // body, captions, tables (jsPDF default sans)
+const SERIF  = 'times';     // hero numbers + h1 italic (jsPDF default serif, stand-in for Newsreader)
 const PAGE_M = 42;          // page horizontal margin (pt)
 
 // ---------- helpers ----------
