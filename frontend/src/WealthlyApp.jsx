@@ -4,6 +4,7 @@ import { Upload, Plus, TrendingUp, TrendingDown, Wallet, Home, Coins, CreditCard
 import * as api from './api.js';
 import { useTranslation } from 'react-i18next';
 import { LangButton } from './components/LangButton.jsx';
+import { HideAmountsContext } from './contexts/HideAmounts.jsx';
 import { getDemoData } from './demoData.js';
 import {
   APP_NAME, STORAGE_KEYS, DEFAULT_CATEGORIES, DEFAULT_RULES, BANK_PROFILES,
@@ -1191,6 +1192,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   const activeMember = members.find(m => m.id === activeMemberId);
 
   return (
+    <HideAmountsContext.Provider value={hideAmounts}>
     <div className={`app theme-${theme}`}>
       <Styles theme={theme}/>
       {toast && <Toast message={toast.message} type={toast.type}/>}
@@ -1556,6 +1558,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
         />
       )}
     </div>
+    </HideAmountsContext.Provider>
   );
 }
 

@@ -12,14 +12,14 @@
 //  fmt, memberShare, categoryAnalysis, budgets, transferIds, setView,
 //  onAccountClick)
 // ============================================================================
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Plus, Download, RefreshCw, ArrowUp, ArrowDown,
   TrendingUp, AlertTriangle, Sparkles, MoreHorizontal,
 } from 'lucide-react';
 import { ASSET_CLASS_MAP } from '../constants.js';
-import { Amount, formatEUR } from '../components/ui/Amount.jsx';
+import { Amount, useFormatEUR } from '../components/ui/Amount.jsx';
 import { BankMark } from '../components/ui/BankMark.jsx';
 import { Sparkline } from '../components/ui/Sparkline.jsx';
 import { Donut } from '../components/ui/Donut.jsx';
@@ -76,6 +76,7 @@ export function Dashboard({
   currentUser = null,
 }) {
   const { t } = useTranslation();
+  const formatEUR = useFormatEUR();
   const [period, setPeriod] = useState('6m');
   const [txFilter, setTxFilter] = useState('all'); // all | expense | income
   const [hover, setHover] = useState(null); // chart hover point

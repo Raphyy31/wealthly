@@ -2,10 +2,13 @@
 // Hero : split décimales (cents class).
 // Variantes: hero (Newsreader 64px) | default (Geist tabular).
 //
-// Format FR : espace fine insécable comme séparateur de milliers, virgule
-// décimale, € après le nombre.
+// Respecte HideAmountsContext : quand hideAmounts=true, affiche '•••' partout.
 
-const fmt = (n, { abbr = false, decimals = 2 } = {}) => {
+import { useHideAmounts } from '../../contexts/HideAmounts.jsx';
+
+const MASK = '•••';
+
+const _fmt = (n, { abbr = false, decimals = 2 } = {}) => {
   if (abbr && Math.abs(n) >= 1000) {
     return new Intl.NumberFormat('fr-FR', {
       notation: 'compact',
@@ -20,11 +23,21 @@ const fmt = (n, { abbr = false, decimals = 2 } = {}) => {
   }).format(n);
 };
 
+/** Hook — retourne un formatter qui respecte hideAmounts. */
+export function useFormatEUR() {
+  const hidden = useHideAmounts();
+  return hidden ? () => MASK : _fmt;
+}
+
 export function Amount({ value, hero = false, abbr = false, decimals = 2, className = '', style }) {
+  const hidden = useHideAmounts();
+  if (hidden) {
+    return <span className={`num ds-masked ${className}`} style={style}>{MASK}</span>;
+  }
   if (typeof value !== 'number' || Number.isNaN(value)) {
     return <span className={className} style={style}>—</span>;
   }
-  const text = fmt(value, { abbr, decimals });
+  const text = _fmt(value, { abbr, decimals });
   if (!hero || abbr) {
     return <span className={`num ${className}`} style={style}>{text}</span>;
   }
@@ -40,4 +53,4 @@ export function Amount({ value, hero = false, abbr = false, decimals = 2, classN
   );
 }
 
-export const formatEUR = fmt;
+export const formatEUR = _fmt;
