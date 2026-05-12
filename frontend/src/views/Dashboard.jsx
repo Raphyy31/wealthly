@@ -16,7 +16,7 @@ import { useMemo, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Plus, FileText, RefreshCw, ArrowUp, ArrowDown,
-  TrendingUp, AlertTriangle, Sparkles, MoreHorizontal,
+  TrendingUp, AlertTriangle, Sparkles, MoreHorizontal, Loader2,
 } from 'lucide-react';
 import { ASSET_CLASS_MAP } from '../constants.js';
 import { Amount, useFormatEUR } from '../components/ui/Amount.jsx';
@@ -72,6 +72,7 @@ export function Dashboard({
   recurringGroups, currentMonth,
   transferIds = new Set(), transferPairs = [],
   setView, onAccountClick, onAddAccount,
+  onSyncAll, hasConnections = false,
   baseCurrency = 'EUR', rates = null,
   currentUser = null,
 }) {
@@ -80,6 +81,7 @@ export function Dashboard({
   const [period, setPeriod] = useState('6m');
   const [txFilter, setTxFilter] = useState('all'); // all | expense | income
   const [hover, setHover] = useState(null); // chart hover point
+  const [syncing, setSyncing] = useState(false);
 
   // ── Allocation : liquidités + actifs par classe ─────────────────────────
   const allocationData = useMemo(() => {
@@ -226,7 +228,22 @@ export function Dashboard({
           >
             <FileText size={14}/> {t('dashboard.pdf', 'Bilan PDF')}
           </button>
-          <button className="ds-btn"><RefreshCw size={14}/> {t('dashboard.sync')}</button>
+          <button
+            className="ds-btn"
+            disabled={syncing}
+            onClick={async () => {
+              if (!onSyncAll) return;
+              setSyncing(true);
+              try { await onSyncAll(); } finally { setSyncing(false); }
+            }}
+            title={hasConnections ? 'Synchroniser toutes les banques' : 'Aucune banque connectée'}
+            style={{ opacity: syncing ? 0.6 : 1 }}
+          >
+            {syncing
+              ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }}/> Sync…</>
+              : <><RefreshCw size={14}/> {t('dashboard.sync')}</>
+            }
+          </button>
           <button className="ds-btn primary" onClick={onAddAccount}><Plus size={14}/> {t('dashboard.newAccount')}</button>
         </div>
       </header>
@@ -639,6 +656,7 @@ function buildSparkData(transactions, accountId, currentBalance) {
 // ────────────────────────────────────────────────────────────────────────
 function DashStyles() {
   const css = `
+@keyframes spin { to { transform: rotate(360deg); } }
 .dash-v3 {
   padding: 0;
   display: flex;

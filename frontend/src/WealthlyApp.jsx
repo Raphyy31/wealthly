@@ -974,6 +974,38 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     }
   };
 
+  const syncAllBankAccounts = async () => {
+    if (!bankConnections || bankConnections.length === 0) {
+      showToast('Aucune banque connectée — ajoutez un compte via Réglages.', 'info');
+      return;
+    }
+    showToast('Synchronisation en cours…', 'info');
+    let totalImported = 0;
+    let errors = 0;
+    for (const conn of bankConnections) {
+      try {
+        const result = await api.banking.sync(conn.id);
+        totalImported += result.imported || 0;
+      } catch {
+        errors++;
+      }
+    }
+    await reloadAll();
+    if (errors > 0 && totalImported === 0) {
+      showToast(`Échec de la synchronisation (${errors} erreur${errors > 1 ? 's' : ''})`, 'error');
+    } else if (errors > 0) {
+      showToast(`${totalImported} transactions importées · ${errors} compte${errors > 1 ? 's' : ''} en erreur`, 'info');
+    } else {
+      showToast(
+        totalImported > 0
+          ? `${totalImported} nouvelle${totalImported > 1 ? 's' : ''} transaction${totalImported > 1 ? 's' : ''} importée${totalImported > 1 ? 's' : ''}`
+          : 'Comptes synchronisés — déjà à jour',
+        'success'
+      );
+    }
+    if (totalImported > 0) unlockAchievement('first_import');
+  };
+
   const deleteBankConnection = async (connectionId) => {
     if (!confirm('Déconnecter cette banque ?')) return;
     try {
@@ -1372,6 +1404,8 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             setView={setView}
             onAccountClick={(a) => setDrawerAccount(a)}
             onAddAccount={() => setShowAddAccount(true)}
+            onSyncAll={syncAllBankAccounts}
+            hasConnections={bankConnections.length > 0}
             baseCurrency={baseCurrency} rates={rates}
             currentUser={currentUser}
           />
