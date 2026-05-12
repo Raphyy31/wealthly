@@ -73,6 +73,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo }) {
   const [budgets, setBudgets] = useState({});
   const [recurringOverrides, setRecurringOverrides] = useState({});
   const [goals, setGoals] = useState([]);
+  const [achievements, setAchievements] = useState([]);
   const [fixedCharges, setFixedCharges] = useState([]);
   const [currentUser, setCurrentUser] = useState(() => {
     try { return JSON.parse(localStorage.getItem('w2:current_user') || 'null'); } catch { return null; }
@@ -295,6 +296,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo }) {
         api.categories.list(),
         api.budgets.list(),
         api.goals.list(),
+        api.achievements.list().catch(() => []),
         api.rules.list(),
         api.banking.listConnections().catch(() => []),
       ]);
@@ -452,10 +454,18 @@ export default function WealthlyApp({ demoMode = false, onExitDemo }) {
   // ===== Computed values =====
   const accountBalances = useMemo(() => {
     const balances = {};
+    if (demoMode) {
+      // Demo accounts carry a pre-computed currentBalance — use it directly so
+      // displayed figures match the intended demo numbers instead of the raw
+      // transaction sum (which diverges because initialBalance is not set to
+      // match the 6-month transaction history).
+      accounts.forEach(a => { balances[a.id] = a.currentBalance ?? (a.initialBalance || 0); });
+      return balances;
+    }
     accounts.forEach(a => { balances[a.id] = a.initialBalance || 0; });
     transactions.forEach(t => { balances[t.accountId] = (balances[t.accountId] || 0) + t.amount; });
     return balances;
-  }, [accounts, transactions]);
+  }, [accounts, transactions, demoMode]);
 
   const liquidWealth = useMemo(
     () => visibleAccounts
@@ -897,6 +907,23 @@ export default function WealthlyApp({ demoMode = false, onExitDemo }) {
     } catch (err) { showToast('Erreur : ' + err.message, 'error'); }
   };
 
+  const updateAccount = async (accountId, updates) => {
+    try {
+      const existing = accounts.find(a => a.id === accountId);
+      if (!existing) return;
+      const merged = { ...existing, ...updates };
+      const saved = await api.accounts.update(accountId, accountToApi(merged));
+      setAccounts(prev => prev.map(a => a.id === accountId ? accountFromApi(saved) : a));
+    } catch (err) { showToast('Erreur : ' + err.message, 'error'); }
+  };
+
+  const unlockAchievement = async (slug) => {
+    try {
+      await api.achievements.unlock(slug);
+      setAchievements(prev => prev.includes(slug) ? prev : [...prev, slug]);
+    } catch {}
+  };
+
   // ===== Banking / Enable Banking =====
   const completeBankCallback = useCallback(async (pending) => {
     try {
@@ -1281,7 +1308,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo }) {
               <Menu size={20}/>
             </button>
             <div className="brand" onClick={() => setView('dashboard')}>
-              <div className="brand-mark">T</div>
+              <div className="brand-mark">W</div>
               <div className="brand-name">{APP_NAME}</div>
             </div>
             <div className="header-actions">
@@ -1438,7 +1465,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo }) {
           <aside className="nav-drawer" onClick={e => e.stopPropagation()}>
             <div className="nav-drawer-header">
               <div className="sidebar-brand" style={{padding:'0 0 0 4px', cursor:'default'}}>
-                <div className="brand-mark">T</div>
+                <div className="brand-mark">W</div>
                 <div className="brand-name">{APP_NAME}</div>
               </div>
               <button className="icon-btn" onClick={() => setNavOpen(false)}><X size={18}/></button>
