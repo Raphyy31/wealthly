@@ -13,9 +13,9 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine,
 } from 'recharts';
 import {
-  Plus, Trash2, Edit3, Check, ChevronLeft, ChevronRight, Home, Landmark,
+  Plus, Edit3, Check, ChevronLeft, ChevronRight, Home, Landmark,
   Wallet, CreditCard, Users, Sparkles, Lightbulb, BarChart3,
-  Bitcoin, PiggyBank, Target, Coins, Heart, X,
+  Bitcoin, TrendingUp, X,
 } from 'lucide-react';
 import {
   ASSET_TYPES, ASSET_CLASS_MAP, LIABILITY_TYPES,
@@ -24,54 +24,55 @@ import { formatCurrency, formatDate, buildAmortization } from '../utils.js';
 import { AnimatedNumber } from '../components/AnimatedNumber.jsx';
 import { NetWorthChart } from '../components/NetWorthChart.jsx';
 import { RegulatoryCaps } from '../components/RegulatoryCaps.jsx';
+import { CATEGORY_LABELS } from '../types/wealth.js';
+import { useWealthItems } from '../hooks/useWealthItems.js';
 
 // ============================================================================
 // WEALTH (Assets + Liabilities)
 // ============================================================================
-// Map of wealth sub-views to the asset types they include.
-// 'all' shows everything (the current Patrimoine page); others narrow the
-// view to a Finary-style class detail.
+// v6 unified subviews — driven by the canonical WealthCategory taxonomy
+// (types/wealth.js). 'all' shows everything; the others filter by category.
 const WEALTH_SUBVIEWS = [
-  { key: 'all',         label: 'Tout',         types: null,                                icon: BarChart3 },
-  { key: 'real_estate', label: 'Immobilier',   types: ['real_estate'],                     icon: Home },
-  { key: 'equities',    label: 'Actions & Fonds', types: ['pea', 'stocks'],                icon: Landmark },
-  { key: 'crypto',      label: 'Crypto',       types: ['crypto'],                          icon: Bitcoin },
-  { key: 'savings',     label: 'Épargne',      types: ['savings_account', 'life_insurance'], icon: PiggyBank },
-  { key: 'retirement',  label: 'Retraite',     types: ['per'],                             icon: Target },
-  { key: 'liabilities', label: 'Emprunts',     types: [],                                  icon: CreditCard },
-  { key: 'other',       label: 'Autres actifs', types: ['other_asset'],                    icon: Coins },
+  { key: 'all',             label: 'Tout',                          categories: null,                  icon: BarChart3 },
+  { key: 'liquidites',      label: CATEGORY_LABELS.liquidites,      categories: ['liquidites'],        icon: Wallet },
+  { key: 'investissements', label: CATEGORY_LABELS.investissements, categories: ['investissements'],   icon: TrendingUp },
+  { key: 'immobilier',      label: CATEGORY_LABELS.immobilier,      categories: ['immobilier'],        icon: Home },
+  { key: 'cryptos',         label: CATEGORY_LABELS.cryptos,         categories: ['cryptos'],           icon: Bitcoin },
+  { key: 'autres',          label: CATEGORY_LABELS.autres,          categories: ['autres'],            icon: Sparkles },
+  { key: 'emprunts',        label: CATEGORY_LABELS.emprunts,        categories: ['emprunts'],          icon: CreditCard },
 ];
 
-export function Wealth({ assets, liabilities, members, activeMemberId, visibleAssets, visibleLiabilities, saveAsset, deleteAsset, saveLiability, deleteLiability, memberShare, fmt, wealthHistory = [] }) {
+export function Wealth({ assets, liabilities, members, activeMemberId, visibleAssets, visibleLiabilities, saveAsset, deleteAsset, saveLiability, deleteLiability, memberShare, fmt, wealthHistory = [], accounts = [], accountBalances = {} }) {
   const [editingAsset, setEditingAsset] = useState(null);
   const [editingLia, setEditingLia] = useState(null);
   const [viewingLia, setViewingLia] = useState(null);
   const [subview, setSubview] = useState('all');
   const [showAddPicker, setShowAddPicker] = useState(false);
 
+  // Unified WealthItem stream — accounts + assets + liabilities normalised
+  const allItems = useWealthItems({ accounts, assets, liabilities, accountBalances });
+  const visibleItems = useMemo(() => (
+    activeMemberId === 'all'
+      ? allItems
+      : allItems.filter(i => i.memberIds.includes(activeMemberId))
+  ), [allItems, activeMemberId]);
+
   const currentSub = WEALTH_SUBVIEWS.find(s => s.key === subview) || WEALTH_SUBVIEWS[0];
   const isAll = subview === 'all';
-  const isLiabilitiesOnly = subview === 'liabilities';
+  const isLiabilitiesOnly = subview === 'emprunts';
 
-  // Apply the subview filter to assets
-  const filteredAssets = useMemo(() => {
-    if (isAll || isLiabilitiesOnly) return visibleAssets;
-    if (!currentSub.types) return visibleAssets;
-    return visibleAssets.filter(a => currentSub.types.includes(a.type));
-  }, [visibleAssets, currentSub.types, isAll, isLiabilitiesOnly]);
-  const filteredLiabilities = isAll || isLiabilitiesOnly ? visibleLiabilities : [];
+  const filteredItems = useMemo(() => (
+    currentSub.categories === null
+      ? visibleItems
+      : visibleItems.filter(i => currentSub.categories.includes(i.category))
+  ), [visibleItems, currentSub.categories]);
 
-  const assetsByType = useMemo(() => {
-    const groups = {};
-    filteredAssets.forEach(a => {
-      if (!groups[a.type]) groups[a.type] = [];
-      groups[a.type].push(a);
-    });
-    return groups;
-  }, [filteredAssets]);
-
-  const subviewTotal = filteredAssets.reduce((s, a) => s + (parseFloat(a.currentValue) || 0) * memberShare(a), 0);
-  const subviewLiabTotal = filteredLiabilities.reduce((s, l) => s + (parseFloat(l.remainingCapital) || 0) * memberShare(l), 0);
+  const subviewTotal = filteredItems
+    .filter(i => i.sourceTable !== 'liability')
+    .reduce((s, i) => s + (parseFloat(i.value) || 0) * memberShare(i), 0);
+  const subviewLiabTotal = filteredItems
+    .filter(i => i.sourceTable === 'liability')
+    .reduce((s, i) => s + (parseFloat(i.value) || 0) * memberShare(i), 0);
 
   const totalAssets = visibleAssets.reduce((s, a) => s + (parseFloat(a.currentValue) || 0) * memberShare(a), 0);
   const totalLiabilities = visibleLiabilities.reduce((s, l) => s + (parseFloat(l.remainingCapital) || 0) * memberShare(l), 0);
@@ -112,10 +113,9 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
       <nav className="wealth-subnav">
         {WEALTH_SUBVIEWS.map(s => {
           const Icon = s.icon;
-          let count = 0;
-          if (s.key === 'all') count = visibleAssets.length + visibleLiabilities.length;
-          else if (s.key === 'liabilities') count = visibleLiabilities.length;
-          else if (s.types) count = visibleAssets.filter(a => s.types.includes(a.type)).length;
+          const count = s.categories === null
+            ? visibleItems.length
+            : visibleItems.filter(i => s.categories.includes(i.category)).length;
           return (
             <button
               key={s.key}
@@ -138,8 +138,8 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
             <div className="subview-hero-value">{fmt(isLiabilitiesOnly ? subviewLiabTotal : subviewTotal)}</div>
             <div className="subview-hero-meta">
               {isLiabilitiesOnly
-                ? `${filteredLiabilities.length} prêt${filteredLiabilities.length > 1 ? 's' : ''} · ${fmt(visibleLiabilities.reduce((s, l) => s + (parseFloat(l.monthlyPayment) || 0) * memberShare(l), 0))} / mois`
-                : `${filteredAssets.length} actif${filteredAssets.length > 1 ? 's' : ''} · ${totalAssets > 0 ? ((subviewTotal / totalAssets) * 100).toFixed(0) : 0}% du patrimoine`}
+                ? `${filteredItems.length} prêt${filteredItems.length > 1 ? 's' : ''} · ${fmt(visibleLiabilities.reduce((s, l) => s + (parseFloat(l.monthlyPayment) || 0) * memberShare(l), 0))} / mois`
+                : `${filteredItems.length} actif${filteredItems.length > 1 ? 's' : ''} · ${totalAssets > 0 ? ((subviewTotal / totalAssets) * 100).toFixed(0) : 0}% du patrimoine`}
             </div>
           </div>
         </section>
@@ -244,140 +244,37 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
         </section>
       )}
 
-      {!isLiabilitiesOnly && (
+      {/* Unified WealthItem list (v6) — accounts + assets + liabilities */}
       <section className="card">
         <div className="card-header">
-          <h3><Wallet size={16}/> {isAll ? 'Actifs' : currentSub.label}</h3>
-          <button className="secondary-btn" onClick={() => setEditingAsset({ id: null, type: currentSub.types?.[0] || 'real_estate', name: '', currentValue: 0, memberIds: activeMemberId !== 'all' ? [activeMemberId] : [], notes: '', updatedAt: new Date().toISOString() })}>
+          <h3><Wallet size={16}/> {isAll ? 'Patrimoine' : currentSub.label}</h3>
+          <button className="secondary-btn" onClick={() => setShowAddPicker(true)}>
             <Plus size={14}/> Ajouter
           </button>
         </div>
 
-        {Object.keys(assetsByType).length === 0 ? (
-          <div className="wealth-empty">
-            <p>Aucun actif renseigné. Choisissez un type pour commencer :</p>
-            <div className="asset-types-grid">
-              {ASSET_TYPES.map(t => {
-                const Icon = t.icon;
-                return (
-                  <button key={t.id} className="asset-type-btn" onClick={() => setEditingAsset({ id: null, type: t.id, name: '', currentValue: 0, memberIds: activeMemberId !== 'all' ? [activeMemberId] : [], notes: '', updatedAt: new Date().toISOString() })}>
-                    <div className="att-icon" style={{ background: t.color + '22', color: t.color }}><Icon size={20}/></div>
-                    <div className="att-text">
-                      <div className="att-name">{t.name}</div>
-                      <div className="att-desc">{t.description}</div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+        {filteredItems.length === 0 ? (
+          <div className="wealth-empty"><p>Aucun élément dans cette catégorie.</p></div>
         ) : (
-          ASSET_TYPES.map(type => {
-            const list = assetsByType[type.id];
-            if (!list || list.length === 0) return null;
-            const Icon = type.icon;
-            const subtotal = list.reduce((s, a) => s + (parseFloat(a.currentValue) || 0) * memberShare(a), 0);
-            return (
-              <div key={type.id} className="asset-group">
-                <div className="asset-group-header">
-                  <div className="agh-icon" style={{ background: type.color + '22', color: type.color }}><Icon size={14}/></div>
-                  <span className="agh-name">{type.name}</span>
-                  <span className="agh-count">{list.length}</span>
-                  <span className="agh-total">{fmt(subtotal)}</span>
-                </div>
-                <div className="asset-list">
-                  {list.map(a => {
-                    const owners = (a.memberIds || []).map(id => members.find(m => m.id === id)?.name).filter(Boolean).join(' & ');
-                    const share = memberShare(a);
-                    const current = (parseFloat(a.currentValue) || 0) * share;
-                    const cost = (parseFloat(a.purchasePrice) || 0) * share;
-                    const hasCost = cost > 0;
-                    const gain = hasCost ? current - cost : null;
-                    const gainPct = hasCost ? (gain / cost) * 100 : null;
-                    const positive = gain != null && gain >= 0;
-                    return (
-                      <div key={a.id} className="asset-card-v2">
-                        <div className="asset-card-main">
-                          <div className="asset-card-name">{a.name}</div>
-                          <div className="asset-card-meta">{owners} · MAJ {formatDate(a.updatedAt)}</div>
-                          {a.notes && <div className="asset-card-notes">{a.notes}</div>}
-                        </div>
-                        <div className="asset-card-value-block">
-                          <div className="asset-card-value">{fmt(current)}</div>
-                          {gain != null && (
-                            <div
-                              className={`asset-card-pv w-num ${positive ? 'positive' : 'negative'}`}
-                              title={`Prix de revient : ${fmt(cost)}${a.purchaseDate ? ` (${formatDate(a.purchaseDate, { format: 'long' })})` : ''}`}
-                            >
-                              {positive ? '+' : ''}{fmt(gain)} <span className="asset-card-pv-pct">({positive ? '+' : ''}{gainPct.toFixed(1)}%)</span>
-                            </div>
-                          )}
-                        </div>
-                        <div className="asset-card-actions">
-                          <button className="icon-btn-sm" onClick={() => setEditingAsset(a)}><Edit3 size={13}/></button>
-                          <button className="icon-btn-sm" onClick={() => deleteAsset(a.id)}><Trash2 size={13}/></button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })
-        )}
-      </section>
-      )}
-
-      {(isAll || isLiabilitiesOnly) && (
-      <section className="card">
-        <div className="card-header">
-          <h3><CreditCard size={16}/> Prêts en cours</h3>
-          <button className="secondary-btn" onClick={() => setEditingLia({ id: null, type: 'mortgage', name: '', initialCapital: '', remainingCapital: '', monthlyPayment: '', interestRate: '', endDate: '', memberIds: activeMemberId !== 'all' ? [activeMemberId] : [], notes: '', downPayment: '', insuranceRate: '', applicationFees: '', ownershipPct: 100, durationMonths: '', startDate: '', linkedAssetId: '' })}>
-            <Plus size={14}/> Ajouter
-          </button>
-        </div>
-        {visibleLiabilities.length === 0 ? (
-          <div className="wealth-empty"><p>Aucun prêt renseigné.</p></div>
-        ) : (
-          <div className="liability-list">
-            {visibleLiabilities.map(l => {
-              const type = LIABILITY_TYPES.find(t => t.id === l.type) || LIABILITY_TYPES[0];
-              const Icon = type.icon;
-              const owners = (l.memberIds || []).map(id => members.find(m => m.id === id)?.name).filter(Boolean).join(' & ');
-              const progress = l.initialCapital > 0 ? ((l.initialCapital - l.remainingCapital) / l.initialCapital) * 100 : 0;
-              return (
-                <div key={l.id} className="liability-card-v2 clickable" onClick={() => setViewingLia(l)}>
-                  <div className="lia-header">
-                    <div className="lia-icon" style={{ background: type.color + '22', color: type.color }}><Icon size={14}/></div>
-                    <div className="lia-name-block">
-                      <span className="lia-name">{l.name}</span>
-                      <span className="lia-type">{type.name}</span>
-                    </div>
-                    <div className="lia-actions" onClick={(e) => e.stopPropagation()}>
-                      <button className="icon-btn-sm" onClick={() => setEditingLia(l)}><Edit3 size={13}/></button>
-                      <button className="icon-btn-sm" onClick={() => deleteLiability(l.id)}><Trash2 size={13}/></button>
-                    </div>
-                  </div>
-                  <div className="lia-stats">
-                    <div className="lia-stat"><span className="lia-label">Restant dû</span><span className="lia-value">{fmt((parseFloat(l.remainingCapital) || 0) * memberShare(l))}</span></div>
-                    <div className="lia-stat"><span className="lia-label">Mensualité</span><span className="lia-value">{fmt((parseFloat(l.monthlyPayment) || 0) * memberShare(l))}</span></div>
-                    <div className="lia-stat"><span className="lia-label">Taux</span><span className="lia-value">{l.interestRate}%</span></div>
-                    {l.endDate && <div className="lia-stat"><span className="lia-label">Fin</span><span className="lia-value">{formatDate(l.endDate, { format: 'monthYear' })}</span></div>}
-                  </div>
-                  <div className="lia-progress">
-                    <div className="lia-progress-bar"><div className="lia-progress-fill" style={{ width: `${progress}%` }}/></div>
-                    <div className="lia-progress-info">
-                      <span>{progress.toFixed(0)}% remboursé</span>
-                      <span className="lia-owners">{owners}</span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+          <div className="wealth-items-list">
+            {filteredItems.map(item => (
+              <WealthItemRow
+                key={item.id}
+                item={item}
+                fmt={fmt}
+                onClick={(it) => {
+                  if (it.sourceTable === 'asset') {
+                    setEditingAsset(assets.find(a => a.id === it.sourceId));
+                  } else if (it.sourceTable === 'liability') {
+                    setViewingLia(liabilities.find(l => l.id === it.sourceId));
+                  }
+                  // 'account' items currently have no detail drawer — Tasks 14-16 add the unified drawer
+                }}
+              />
+            ))}
           </div>
         )}
       </section>
-      )}
 
       {editingAsset && <AssetEditor asset={editingAsset} members={members} liabilities={visibleLiabilities} onSave={(a) => { saveAsset(a); setEditingAsset(null); }} onCancel={() => setEditingAsset(null)}/>}
       {editingLia && <LiabilityEditor liability={editingLia} members={members} assets={assets} onSave={(l) => { saveLiability(l); setEditingLia(null); }} onCancel={() => setEditingLia(null)}/>}
@@ -1215,6 +1112,46 @@ function LiabilityDetail({ liability, assets, members, memberShare, fmt, onEdit,
             </div>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// WealthItemRow — unified row for accounts + assets + liabilities (v6)
+// ============================================================================
+function WealthItemRow({ item, fmt, onClick }) {
+  const positive = (item.plLatente || 0) >= 0;
+  return (
+    <div
+      className="wealth-item-row"
+      onClick={() => onClick && onClick(item)}
+      role={onClick ? 'button' : undefined}
+      style={{ cursor: onClick ? 'pointer' : 'default' }}
+    >
+      <div className="wealth-item-row-left">
+        <div className="wealth-item-icon">{(item.name || '?').charAt(0).toUpperCase()}</div>
+        <div>
+          <div className="wealth-item-name">{item.name}</div>
+          <div className="wealth-item-meta">
+            <span className={`badge badge-${item.syncMode}`}>
+              {item.syncMode === 'synced' ? 'Synchronisé' : 'Manuel'}
+            </span>
+            {item.positions && item.positions.length > 0 && (
+              <span className="wealth-item-meta-muted"> · {item.positions.length} positions</span>
+            )}
+          </div>
+        </div>
+      </div>
+      <div className="wealth-item-row-right">
+        <div className="wealth-item-value w-num">{fmt(item.value)}</div>
+        {item.plLatente !== null && item.plLatente !== undefined && (
+          <div className={`wealth-item-delta ${positive ? 'up' : 'down'}`}>
+            {positive ? '+' : ''}{fmt(item.plLatente)}
+            {item.plLatentePct !== null && item.plLatentePct !== undefined &&
+              ` · ${positive ? '+' : ''}${item.plLatentePct.toFixed(1)}%`}
+          </div>
+        )}
       </div>
     </div>
   );

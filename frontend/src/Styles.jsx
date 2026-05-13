@@ -1586,6 +1586,53 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
   .wealth-kpis { grid-template-columns: 1fr; }
   .cashflow-kpi-row { grid-template-columns: 1fr; }
 }
+
+/* ============================================================================
+   WealthItemRow (v6 unified patrimoine list)
+   ============================================================================ */
+.wealth-items-list { display: flex; flex-direction: column; }
+.wealth-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 8px;
+  transition: border-color .15s;
+}
+.wealth-item-row[role="button"]:hover { border-color: var(--accent); }
+.wealth-item-row-left { display: flex; gap: 12px; align-items: center; }
+.wealth-item-icon {
+  width: 36px; height: 36px; border-radius: 8px;
+  background: var(--bg-sunk); color: var(--ink-2);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 600; font-size: 13px;
+}
+.wealth-item-name { font-weight: 600; font-size: 14px; color: var(--ink); }
+.wealth-item-meta { font-size: 11px; color: var(--ink-2); margin-top: 2px; }
+.wealth-item-meta-muted { color: var(--ink-3); }
+.badge {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10.5px;
+  font-weight: 500;
+  display: inline-block;
+}
+.badge-synced { background: var(--accent-soft); color: var(--accent); }
+.badge-manual { background: var(--bg-sunk); color: var(--ink-2); }
+.wealth-item-row-right { text-align: right; }
+.wealth-item-value {
+  font-family: 'Newsreader', Georgia, serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 18px;
+  color: var(--ink);
+}
+.wealth-item-delta { font-size: 11px; margin-top: 2px; }
+.wealth-item-delta.up { color: var(--positive); }
+.wealth-item-delta.down { color: var(--negative); }
 `;
   return <style>{css}</style>;
 }

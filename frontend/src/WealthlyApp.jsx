@@ -1503,6 +1503,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
           <Wealth
             assets={assets} liabilities={liabilities} members={members} activeMemberId={activeMemberId}
             visibleAssets={visibleAssets} visibleLiabilities={visibleLiabilities}
+            accounts={accounts} accountBalances={accountBalances}
             saveAsset={saveAsset} deleteAsset={deleteAsset}
             saveLiability={saveLiability} deleteLiability={deleteLiability}
             memberShare={memberShare} fmt={fmt}
