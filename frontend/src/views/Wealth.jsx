@@ -254,7 +254,12 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
         </div>
 
         {filteredItems.length === 0 ? (
-          <div className="wealth-empty"><p>Aucun élément dans cette catégorie.</p></div>
+          <div className="wealth-empty-state">
+            <p>Aucun élément dans <em>{currentSub.label.toLowerCase()}</em>.</p>
+            <button className="primary-btn" onClick={() => setShowAddPicker(true)}>
+              <Plus size={14}/> Ajouter
+            </button>
+          </div>
         ) : (
           <div className="wealth-items-list">
             {filteredItems.map(item => (

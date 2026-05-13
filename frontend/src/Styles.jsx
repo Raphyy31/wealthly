@@ -1633,6 +1633,31 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .wealth-item-delta { font-size: 11px; margin-top: 2px; }
 .wealth-item-delta.up { color: var(--positive); }
 .wealth-item-delta.down { color: var(--negative); }
+.wealth-empty-state {
+  text-align: center;
+  padding: 60px 24px;
+  background: var(--bg-elev);
+  border: 1px dashed var(--border-strong);
+  border-radius: 12px;
+  margin: 16px 0;
+}
+.wealth-empty-state p {
+  font-family: 'Geist', sans-serif;
+  font-size: 14px;
+  color: var(--ink-2);
+  margin: 0 0 14px;
+}
+.wealth-empty-state p em {
+  font-family: 'Newsreader', Georgia, serif;
+  font-style: italic;
+  font-weight: 400;
+  color: var(--ink);
+}
+.wealth-empty-state .primary-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
 `;
   return <style>{css}</style>;
 }
