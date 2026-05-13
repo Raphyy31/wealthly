@@ -253,15 +253,13 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
       <section className="card">
         <div className="card-header">
           <h3><Wallet size={16}/> {isAll ? 'Patrimoine' : currentSub.label}</h3>
-          <button className="secondary-btn" onClick={() => setShowAddPicker(true)}>
-            <Plus size={14}/> Ajouter
-          </button>
+          {/* The header CTA is canonical (subview-header, top of page). No duplicate here. */}
         </div>
 
         {filteredItems.length === 0 ? (
           <div className="wealth-empty-state">
             <p>Aucun élément dans <em>{currentSub.label.toLowerCase()}</em>.</p>
-            <button className="primary-btn" onClick={() => setShowAddPicker(true)}>
+            <button className="primary-btn" onClick={() => (onOpenAddWizard ? onOpenAddWizard() : setShowAddPicker(true))}>
               <Plus size={14}/> Ajouter
             </button>
           </div>
