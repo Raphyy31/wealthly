@@ -42,7 +42,7 @@ const WEALTH_SUBVIEWS = [
   { key: 'emprunts',        label: CATEGORY_LABELS.emprunts,        categories: ['emprunts'],          icon: CreditCard },
 ];
 
-export function Wealth({ assets, liabilities, members, activeMemberId, visibleAssets, visibleLiabilities, saveAsset, deleteAsset, saveLiability, deleteLiability, memberShare, fmt, wealthHistory = [], accounts = [], accountBalances = {} }) {
+export function Wealth({ assets, liabilities, members, activeMemberId, visibleAssets, visibleLiabilities, saveAsset, deleteAsset, saveLiability, deleteLiability, memberShare, fmt, wealthHistory = [], accounts = [], accountBalances = {}, onOpenAddWizard }) {
   const [editingAsset, setEditingAsset] = useState(null);
   const [editingLia, setEditingLia] = useState(null);
   const [viewingLia, setViewingLia] = useState(null);
@@ -107,7 +107,7 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
           <h1>Votre <em>patrimoine.</em></h1>
           <p>Actifs, passifs et allocation — par classe d'actif.</p>
         </div>
-        <button className="primary-btn" onClick={() => setShowAddPicker(true)}><Plus size={14}/> Ajouter</button>
+        <button className="primary-btn" onClick={() => (onOpenAddWizard ? onOpenAddWizard() : setShowAddPicker(true))}><Plus size={14}/> Ajouter</button>
       </div>
 
       <nav className="wealth-subnav">

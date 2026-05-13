@@ -42,6 +42,7 @@ import { dcaApi } from './api.js';
 import { AccountDrawer } from './components/AccountDrawer.jsx';
 import { useTheme, ThemeToggle } from './components/ui/ThemeToggle.jsx';
 import Logo from './components/Logo.jsx';
+import { AddWealthModal } from './components/AddWealthModal.jsx';
 
 const TaxSimulator = lazy(() => import('./TaxSimulator.jsx'));
 
@@ -131,6 +132,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   const [bankingPendingState, setBankingPendingState] = useState(null); // state param from callback URL
 
   const [showAddAccount, setShowAddAccount] = useState(false);
+  const [showBankConnect, setShowBankConnect] = useState(false);
 
   const [importFile, setImportFile] = useState(null);
   const [importStep, setImportStep] = useState('upload');
@@ -1346,10 +1348,6 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
                 <span>{a.bank || a.name}</span>
               </button>
             ))}
-            <button onClick={() => setShowAddAccount(true)} className="ws-add-btn">
-              <Plus size={14}/> <span>{t('nav.add')}</span>
-            </button>
-
             <div className="ws-nav-group">{t('nav.group_config')}</div>
             <button onClick={() => setView('settings')} className={view === 'settings' ? 'on' : ''}>
               <Settings size={16}/> <span>{t('nav.settings')}</span>
@@ -1508,6 +1506,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             saveLiability={saveLiability} deleteLiability={deleteLiability}
             memberShare={memberShare} fmt={fmt}
             wealthHistory={wealthHistory}
+            onOpenAddWizard={() => setShowAddAccount(true)}
           />
         )}
         {view === 'transactions' && (
@@ -1641,10 +1640,31 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       )}
 
       {showAddAccount && (
+        <AddWealthModal
+          members={members}
+          onSave={async (payload) => {
+            try {
+              await api.wealth.create(payload);
+              await reloadAll();
+              setShowAddAccount(false);
+            } catch (err) {
+              console.error('Failed to create wealth item:', err);
+            }
+          }}
+          onConnectBank={() => {
+            setShowAddAccount(false);
+            setShowBankConnect(true);
+          }}
+          onClose={() => setShowAddAccount(false)}
+        />
+      )}
+
+      {showBankConnect && (
         <AddAccountModal
           members={members}
           onSave={createAccount}
-          onClose={() => setShowAddAccount(false)}
+          onClose={() => setShowBankConnect(false)}
+          initialStep="bank-list"
         />
       )}
     </div>
@@ -1675,9 +1695,9 @@ const BANK_COUNTRIES = [
   { code: 'GB', name: '🇬🇧 Royaume-Uni' },
 ];
 
-function AddAccountModal({ members = [], onSave, onClose }) {
+function AddAccountModal({ members = [], onSave, onClose, initialStep = 'choice' }) {
   // steps: 'choice' | 'bank-list' | 'manual'
-  const [step, setStep] = useState('choice');
+  const [step, setStep] = useState(initialStep);
 
   // --- bank flow state ---
   const [country, setCountry] = useState('FR');
