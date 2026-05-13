@@ -42,6 +42,7 @@ def _asset_to_out(a: Asset) -> dict:
         "construction_year": a.construction_year,
         "ownership_pct": a.ownership_pct,
         "address": a.address,
+        "parent_asset_id": a.parent_asset_id,
     }
 
 

@@ -33,7 +33,7 @@ const accountToWealthItem = (a, accountBalances = {}) => {
   };
 };
 
-const assetToWealthItem = (a) => {
+const assetToWealthItem = (a, childAssets = []) => {
   let subtype = BACKEND_TO_SUBTYPE[a.type] || 'autre';
   // Real-estate subtype refinement using Asset.subtype field
   if (a.type === 'real_estate' && a.subtype) {
@@ -41,8 +41,28 @@ const assetToWealthItem = (a) => {
     subtype = refined[a.subtype] || 'rp';
   }
 
-  const value = parseFloat(a.currentValue ?? 0);
-  const costBasis = a.purchasePrice != null ? parseFloat(a.purchasePrice) : null;
+  // If this asset has imported child positions, derive its value/cost
+  // basis from the children. Otherwise fall back to its own fields.
+  let value, costBasis, positions = null;
+  if (childAssets.length > 0) {
+    positions = childAssets.map(c => ({
+      id: c.id,
+      name: c.name,
+      isin: c.ticker || '',
+      ticker: c.ticker || '',
+      quantity: c.quantity,
+      costBasis: c.purchasePrice != null ? parseFloat(c.purchasePrice) : null,
+      lastPrice: (c.quantity && c.currentValue) ? parseFloat(c.currentValue) / parseFloat(c.quantity) : null,
+      value: parseFloat(c.currentValue ?? 0),
+    }));
+    value = positions.reduce((s, p) => s + (p.value || 0), 0);
+    const cbSum = childAssets.reduce((s, c) => s + (c.purchasePrice != null && c.quantity != null
+      ? parseFloat(c.purchasePrice) * parseFloat(c.quantity) : 0), 0);
+    costBasis = cbSum > 0 ? cbSum : null;
+  } else {
+    value = parseFloat(a.currentValue ?? 0);
+    costBasis = a.purchasePrice != null ? parseFloat(a.purchasePrice) : null;
+  }
   const plLatente = costBasis != null ? value - costBasis : null;
   const plLatentePct = costBasis != null && costBasis > 0 ? (plLatente / costBasis) * 100 : null;
 
@@ -58,6 +78,7 @@ const assetToWealthItem = (a) => {
     costBasis,
     plLatente,
     plLatentePct,
+    positions,
     syncMode: 'manual',
     memberIds: a.memberIds || [],
     meta: {
@@ -101,7 +122,21 @@ export function useWealthItems({ accounts, assets, liabilities, accountBalances 
   return useMemo(() => {
     const out = [];
     (accounts || []).forEach(a => out.push(accountToWealthItem(a, accountBalances)));
-    (assets || []).forEach(a => out.push(assetToWealthItem(a)));
+
+    // Group child assets by parent_asset_id so the parent can render its
+    // imported positions and we skip the children at the top level (no
+    // double-counting). Children appear only inside the parent drawer.
+    const childrenByParent = {};
+    (assets || []).forEach(a => {
+      if (a.parentAssetId) {
+        (childrenByParent[a.parentAssetId] = childrenByParent[a.parentAssetId] || []).push(a);
+      }
+    });
+    (assets || []).forEach(a => {
+      if (a.parentAssetId) return; // skip — surfaced inside the parent
+      out.push(assetToWealthItem(a, childrenByParent[a.id] || []));
+    });
+
     (liabilities || []).forEach(l => out.push(liabilityToWealthItem(l)));
     return out;
   }, [accounts, assets, liabilities, accountBalances]);

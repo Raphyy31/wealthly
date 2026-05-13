@@ -27,6 +27,7 @@ import { RegulatoryCaps } from '../components/RegulatoryCaps.jsx';
 import { CATEGORY_LABELS } from '../types/wealth.js';
 import { useWealthItems } from '../hooks/useWealthItems.js';
 import { WealthItemDrawer } from '../components/WealthItemDrawer.jsx';
+import { ImportPositionsModal } from '../components/ImportPositionsModal.jsx';
 import * as api from '../api.js';
 
 // ============================================================================
@@ -51,6 +52,7 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
   const [subview, setSubview] = useState('all');
   const [showAddPicker, setShowAddPicker] = useState(false);
   const [drawerItem, setDrawerItem] = useState(null);
+  const [importingTo, setImportingTo] = useState(null);
 
   // Unified WealthItem stream — accounts + assets + liabilities normalised
   const allItems = useWealthItems({ accounts, assets, liabilities, accountBalances });
@@ -318,6 +320,29 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
             } catch (err) {
               console.error('Failed to delete wealth item:', err);
             }
+          }}
+          onImportCSV={(it) => setImportingTo(it)}
+        />
+      )}
+      {importingTo && (
+        <ImportPositionsModal
+          parentAsset={importingTo}
+          fmt={fmt}
+          onClose={() => setImportingTo(null)}
+          onConfirm={async (positions) => {
+            for (const p of positions) {
+              await api.assets.create({
+                type: 'stocks',
+                name: p.name,
+                current_value: p.quantity * p.lastPrice,
+                currency: importingTo.currency || 'EUR',
+                quantity: p.quantity,
+                purchase_price: p.buyingPrice,
+                parent_asset_id: importingTo.sourceId,
+                member_ids: importingTo.memberIds || [],
+              });
+            }
+            if (reload) await reload();
           }}
         />
       )}

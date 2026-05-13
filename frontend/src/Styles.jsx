@@ -1893,6 +1893,13 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
   font-family: 'Newsreader', Georgia, serif; font-style: italic;
   font-size: 13px; color: var(--ink-3);
 }
+.csv-drop {
+  border: 1px dashed var(--border-strong); border-radius: 12px;
+  padding: 36px 24px; text-align: center; color: var(--ink-2);
+  cursor: pointer; transition: border-color .15s, background .15s;
+}
+.csv-drop:hover { border-color: var(--accent); background: var(--bg-sunk); }
+.csv-drop p { margin: 10px 0 0; font-size: 13px; }
 
 .fiscal-insight { padding: 4px 0; }
 .fiscal-bar {

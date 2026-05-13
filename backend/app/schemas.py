@@ -174,6 +174,9 @@ class AssetBase(BaseModel):
     construction_year: Optional[int] = None
     ownership_pct: Optional[float] = 100.0
     address: Optional[str] = None
+    # Parent envelope (PEA/CTO/AV/crypto) when this asset is an
+    # imported position. Null for top-level assets.
+    parent_asset_id: Optional[str] = None
 
 
 class AssetCreate(AssetBase):
@@ -200,6 +203,7 @@ class AssetUpdate(BaseModel):
     construction_year: Optional[int] = None
     ownership_pct: Optional[float] = None
     address: Optional[str] = None
+    parent_asset_id: Optional[str] = None
 
 
 class AssetOut(AssetBase):

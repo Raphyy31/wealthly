@@ -27,7 +27,8 @@ function Section({ label, title, meta, children }) {
   );
 }
 
-function PositionsSection({ item, fmt }) {
+function PositionsSection({ item, fmt, onImportCSV }) {
+  const canImport = item.sourceTable === 'asset';
   if (!item.positions || item.positions.length === 0) {
     return (
       <Section label="§ 01" title={<>Vos <em>positions</em></>}>
@@ -35,7 +36,13 @@ function PositionsSection({ item, fmt }) {
           Aucune position renseignée.{' '}
           <button className="link-btn" disabled>Ajouter une position</button>
           {' · '}
-          <span className="csv-link-disabled">…ou <em>importer un CSV</em> (à venir)</span>
+          {canImport && onImportCSV ? (
+            <button className="link-btn" onClick={() => onImportCSV(item)}>
+              …ou <em>importer un CSV</em>
+            </button>
+          ) : (
+            <span className="csv-link-disabled">…ou <em>importer un CSV</em> (à venir)</span>
+          )}
         </div>
       </Section>
     );
@@ -141,7 +148,7 @@ function ConfigSection({ item, fmt, members = [], onEdit, onDelete }) {
   );
 }
 
-export function WealthItemDrawer({ item, fmt, members = [], onClose, onEdit, onDelete }) {
+export function WealthItemDrawer({ item, fmt, members = [], onClose, onEdit, onDelete, onImportCSV }) {
   if (!item) return null;
 
   const positive = (item.plLatente || 0) >= 0;
@@ -210,7 +217,7 @@ export function WealthItemDrawer({ item, fmt, members = [], onClose, onEdit, onD
         </div>
 
         <div className="drawer-body">
-          <PositionsSection item={item} fmt={fmt}/>
+          <PositionsSection item={item} fmt={fmt} onImportCSV={onImportCSV}/>
           <FiscalInsightSection item={item} fmt={fmt}/>
           <ConfigSection item={item} fmt={fmt} members={members} onEdit={onEdit} onDelete={onDelete}/>
         </div>

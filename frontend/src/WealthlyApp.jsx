@@ -216,6 +216,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     constructionYear: a.construction_year ?? null,
     ownershipPct: a.ownership_pct ?? 100,
     address: a.address || '',
+    parentAssetId: a.parent_asset_id || null,
   });
   const assetToApi = (a) => {
     const numOrNull = (v) => (v === '' || v == null) ? null : parseFloat(v);
@@ -240,6 +241,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       construction_year: intOrNull(a.constructionYear),
       ownership_pct: numOrNull(a.ownershipPct) ?? 100,
       address: a.address || null,
+      parent_asset_id: a.parentAssetId || null,
     };
   };
   // Liabilities

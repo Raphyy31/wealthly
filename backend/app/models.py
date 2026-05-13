@@ -266,6 +266,12 @@ class Asset(Base):
     # preparation (2026-05-13). See Account.wealth_item_uuid.
     wealth_item_uuid = Column(String, nullable=True)
 
+    # Child positions reference the parent envelope (PEA/CTO/AV/crypto).
+    # Nullable: top-level assets keep parent_asset_id = NULL. v1 of the
+    # Boursorama CSV import (2026-05-13) creates child rows with
+    # type='stocks' and parent_asset_id = the open envelope's id.
+    parent_asset_id = Column(String, ForeignKey("assets.id", ondelete="CASCADE"), nullable=True, index=True)
+
     household_id = Column(String, ForeignKey("households.id", ondelete="CASCADE"), nullable=False)
     household = relationship("Household", back_populates="assets")
     members = relationship("Member", secondary=asset_members, back_populates="assets")

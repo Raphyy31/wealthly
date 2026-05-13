@@ -110,6 +110,10 @@ def _run_lightweight_migrations() -> None:
             "ALTER TABLE assets ADD COLUMN IF NOT EXISTS ticker VARCHAR",
             "ALTER TABLE assets ADD COLUMN IF NOT EXISTS quantity DOUBLE PRECISION",
             "CREATE INDEX IF NOT EXISTS ix_assets_ticker ON assets (ticker)",
+            # Positions belonging to a parent envelope (PEA/CTO/AV/crypto).
+            # Child rows have parent_asset_id = parent.id and type='stocks'.
+            "ALTER TABLE assets ADD COLUMN IF NOT EXISTS parent_asset_id VARCHAR",
+            "CREATE INDEX IF NOT EXISTS ix_assets_parent_asset_id ON assets (parent_asset_id)",
             # Security Phase 1 — ces colonnes sont aussi ajoutées par la
             # migration alembic 0002 mais on les duplique ici en safety net
             # au cas où alembic_version a été stampée avant que 0002 existe
