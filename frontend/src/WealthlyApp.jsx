@@ -106,6 +106,10 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     try { return JSON.parse(localStorage.getItem('w2:current_user') || 'null'); } catch { return null; }
   });
   const [hideAmounts, setHideAmounts] = useState(false);
+  useEffect(() => {
+    if (hideAmounts) document.documentElement.setAttribute('data-hide-amounts', '1');
+    else document.documentElement.removeAttribute('data-hide-amounts');
+  }, [hideAmounts]);
   const [toast, setToast] = useState(null);
   const [sidebarMenuOpen, setSidebarMenuOpen] = useState(false);
 
@@ -1254,7 +1258,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   // and are cached for 1h; when rates aren't loaded yet we no-op the conversion.
   const fmt = useCallback(
     (v, opts = {}) => {
-      if (hideAmounts) return '"¢"¢"¢"¢';
+      if (hideAmounts) return formatCurrency(v, { currency: baseCurrency });
       const from = opts.from || opts.currency || 'EUR';
       const converted = convertCurrency(v, from, baseCurrency, rates);
       // Always display in the user's base currency, with the locale matching it.
@@ -1737,7 +1741,12 @@ function AddAccountModal({ members = [], onSave, onClose }) {
     e.preventDefault();
     if (!form.name.trim()) return;
     setSaving(true);
-    await onSave({ ...form, initialBalance: parseFloat(form.initialBalance) || 0 });
+    const typeToRole = {
+      checking: 'principal', savings: 'epargne', investment: 'investissement',
+      joint: 'principal', professional: 'professionnel',
+    };
+    const role = typeToRole[form.type] || 'principal';
+    await onSave({ ...form, role, initialBalance: parseFloat(form.initialBalance) || 0 });
     setSaving(false);
   };
 
