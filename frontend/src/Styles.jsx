@@ -1301,6 +1301,26 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .dot-ocre   { background: var(--d7, #8E641A); }
 .dot-mauve  { background: var(--d4, #8B6E9E); }
 
+/* Investment allocation donut + list (InvestmentDetail) */
+.invest-allocation { margin-top: 24px; }
+.invest-allocation-list {
+  display: flex; flex-direction: column; gap: 6px;
+  margin-top: 12px; font-size: 13px;
+}
+.invest-allocation-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 6px 0; border-bottom: 1px dotted var(--border-strong, var(--border));
+}
+.invest-allocation-row:last-child { border-bottom: none; }
+.invest-allocation-dot {
+  display: inline-block; width: 10px; height: 10px;
+  border-radius: 50%; margin-right: 8px; vertical-align: middle;
+}
+.crypto-ticker {
+  font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px;
+  color: var(--ink-3, var(--text-tertiary)); text-transform: uppercase; letter-spacing: .05em;
+}
+
 /* Language switcher — small inline FR · EN toggle in sidebar utilities + mobile header */
 .lang-btn { display: inline-flex; align-items: center; gap: 4px; height: 36px; padding: 0 10px; border-radius: 10px; background: var(--bg-subtle); border: 1px solid var(--border); color: var(--text-tertiary); font-family: 'DM Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.06em; cursor: pointer; transition: background .15s, color .15s, border-color .15s; }
 .lang-btn:hover { background: var(--bg-card-hover); border-color: var(--border-strong, var(--border)); }

@@ -45,11 +45,15 @@ const WEALTH_SUBVIEWS = [
   { key: 'emprunts',        label: CATEGORY_LABELS.emprunts,        categories: ['emprunts'],          icon: CreditCard },
 ];
 
-export function Wealth({ assets, liabilities, members, activeMemberId, visibleAssets, visibleLiabilities, saveAsset, deleteAsset, saveLiability, deleteLiability, memberShare, fmt, wealthHistory = [], accounts = [], accountBalances = {}, onOpenAddWizard, reload }) {
+export function Wealth({ assets, liabilities, members, activeMemberId, visibleAssets, visibleLiabilities, saveAsset, deleteAsset, saveLiability, deleteLiability, memberShare, fmt, wealthHistory = [], accounts = [], accountBalances = {}, transactions = [], onOpenAddWizard, reload }) {
   const [editingAsset, setEditingAsset] = useState(null);
   const [editingLia, setEditingLia] = useState(null);
   const [viewingLia, setViewingLia] = useState(null);
   const [viewingRE, setViewingRE] = useState(null);
+  const [viewingLiq, setViewingLiq] = useState(null);
+  const [viewingInv, setViewingInv] = useState(null);
+  const [viewingCrypto, setViewingCrypto] = useState(null);
+  const [viewingOther, setViewingOther] = useState(null);
   const [subview, setSubview] = useState('all');
   const [showAddPicker, setShowAddPicker] = useState(false);
   const [drawerItem, setDrawerItem] = useState(null);
@@ -276,9 +280,19 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
                     const l = liabilities.find(x => x.id === it.sourceId);
                     if (l) { setViewingLia(l); return; }
                   }
-                  if (it.sourceTable === 'asset' && it.category === 'immobilier') {
+                  if (it.sourceTable === 'asset') {
                     const a = assets.find(x => x.id === it.sourceId);
-                    if (a) { setViewingRE(a); return; }
+                    if (a) {
+                      if (it.category === 'immobilier')      { setViewingRE(a); return; }
+                      if (it.category === 'liquidites')      { setViewingLiq({ ...a, _item: it, isAccount: false }); return; }
+                      if (it.category === 'investissements') { setViewingInv(a); return; }
+                      if (it.category === 'cryptos')         { setViewingCrypto(a); return; }
+                      if (it.category === 'autres')          { setViewingOther(a); return; }
+                    }
+                  }
+                  if (it.sourceTable === 'account') {
+                    setViewingLiq({ ...it, isAccount: true });
+                    return;
                   }
                   setDrawerItem(it);
                 }}
@@ -292,6 +306,51 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
       {editingLia && <LiabilityEditor liability={editingLia} members={members} assets={assets} onSave={(l) => { saveLiability(l); setEditingLia(null); }} onCancel={() => setEditingLia(null)}/>}
       {viewingLia && <LiabilityDetail liability={viewingLia} assets={assets} members={members} memberShare={memberShare} fmt={fmt} onEdit={() => { setEditingLia(viewingLia); setViewingLia(null); }} onClose={() => setViewingLia(null)}/>}
       {viewingRE && <RealEstateDetail asset={viewingRE} liabilities={liabilities} members={members} memberShare={memberShare} fmt={fmt} onEdit={() => { setEditingAsset(viewingRE); setViewingRE(null); }} onClose={() => setViewingRE(null)}/>}
+      {viewingLiq && (
+        <LiquidityDetail
+          item={viewingLiq}
+          accounts={accounts}
+          accountBalances={accountBalances}
+          transactions={transactions || []}
+          members={members}
+          fmt={fmt}
+          onEdit={() => {
+            if (!viewingLiq.isAccount && viewingLiq.id) {
+              setEditingAsset(viewingLiq);
+            }
+            setViewingLiq(null);
+          }}
+          onClose={() => setViewingLiq(null)}
+        />
+      )}
+      {viewingInv && (
+        <InvestmentDetail
+          asset={viewingInv}
+          assets={assets}
+          members={members}
+          fmt={fmt}
+          onEdit={() => { setEditingAsset(viewingInv); setViewingInv(null); }}
+          onClose={() => setViewingInv(null)}
+        />
+      )}
+      {viewingCrypto && (
+        <CryptoDetail
+          asset={viewingCrypto}
+          members={members}
+          fmt={fmt}
+          onEdit={() => { setEditingAsset(viewingCrypto); setViewingCrypto(null); }}
+          onClose={() => setViewingCrypto(null)}
+        />
+      )}
+      {viewingOther && (
+        <OtherAssetDetail
+          asset={viewingOther}
+          members={members}
+          fmt={fmt}
+          onEdit={() => { setEditingAsset(viewingOther); setViewingOther(null); }}
+          onClose={() => setViewingOther(null)}
+        />
+      )}
       {showAddPicker && (
         <CompletePatrimoinePicker
           onClose={() => setShowAddPicker(false)}
@@ -1515,6 +1574,897 @@ function RealEstateDetail({ asset, liabilities = [], members = [], memberShare, 
 
           <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
             <button className="secondary-btn" onClick={() => onEdit && onEdit(asset)}>
+              <Edit3 size={14}/> Modifier
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Shared helper — owners string
+// ============================================================================
+function ownersList(memberIds = [], members = []) {
+  return (memberIds || [])
+    .map(id => members.find(m => m.id === id)?.name)
+    .filter(Boolean)
+    .join(' & ') || '—';
+}
+
+// ============================================================================
+// LiquidityDetail — Compte courant + Livret (Account OR Asset savings_account)
+// ============================================================================
+function LiquidityDetail({ item, accounts = [], accountBalances = {}, transactions = [], members = [], fmt, onEdit, onClose }) {
+  const isAccount = !!item.isAccount;
+  const accountId = isAccount ? item.sourceId : null;
+  const balance = isAccount
+    ? (accountBalances[accountId] ?? (parseFloat(item.value) || 0))
+    : (parseFloat(item.currentValue) || 0);
+
+  const name = item.name || '—';
+  const syncMode = isAccount ? (item.syncMode || 'manual') : 'manual';
+  const memberIds = item.memberIds || [];
+  const owners = ownersList(memberIds, members);
+
+  const subtype = isAccount
+    ? item.subtype
+    : (item.type === 'savings_account' ? 'livret' : 'compte_courant');
+  const isLivret = subtype === 'livret';
+
+  let livretCap = 22950;
+  let livretRate = 0.03;
+  let livretLabel = 'Plafond Livret A';
+  const lowerName = (name || '').toLowerCase();
+  if (lowerName.includes('ldds')) { livretCap = 12000; livretRate = 0.03; livretLabel = 'Plafond LDDS'; }
+  else if (lowerName.includes('lep')) { livretCap = 10000; livretRate = 0.06; livretLabel = 'Plafond LEP'; }
+  else if (lowerName.includes('pel')) { livretCap = 61200; livretRate = 0.025; livretLabel = 'Plafond PEL'; }
+
+  const interests = isLivret ? balance * livretRate : 0;
+  const fiscalRatio = isLivret && livretCap > 0 ? Math.min(100, (balance / livretCap) * 100) : 0;
+
+  const accountTx = useMemo(() => {
+    if (!isAccount || !accountId) return [];
+    return transactions.filter(t => t.accountId === accountId);
+  }, [transactions, accountId, isAccount]);
+
+  const today = new Date();
+  const cutoff30 = new Date(today.getTime() - 30 * 86400000).toISOString().slice(0, 10);
+
+  const last30 = accountTx.filter(t => t.date >= cutoff30);
+  const inflows30 = last30.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0);
+  const outflows30 = last30.filter(t => t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0);
+  const net30 = inflows30 - outflows30;
+
+  const yearStart = `${today.getFullYear()}-01-01`;
+  const ytdTx = accountTx.filter(t => t.date >= yearStart);
+  const inflowsYTD = ytdTx.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0);
+  const outflowsYTD = ytdTx.filter(t => t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0);
+  const netYTD = inflowsYTD - outflowsYTD;
+
+  const monthStart = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
+  const monthTx = accountTx.filter(t => t.date >= monthStart);
+  const inflowsMonth = monthTx.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0);
+  const outflowsMonth = monthTx.filter(t => t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0);
+  const netMonth = inflowsMonth - outflowsMonth;
+
+  const chartData = useMemo(() => {
+    if (!isAccount || accountTx.length === 0) return [];
+    const sorted = [...accountTx].sort((a, b) => b.date.localeCompare(a.date));
+    let running = balance;
+    const points = [];
+    const cutoff = new Date(today.getTime() - 90 * 86400000).toISOString().slice(0, 10);
+    points.push({ date: today.toISOString().slice(0, 10), balance: Math.round(balance) });
+    for (const t of sorted) {
+      if (t.date < cutoff) break;
+      running -= (parseFloat(t.amount) || 0);
+      points.push({ date: t.date, balance: Math.round(running) });
+    }
+    return points.reverse();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accountTx, balance, isAccount]);
+
+  const sixMonthAvg = useMemo(() => {
+    if (!isAccount || accountTx.length === 0) return null;
+    const monthly = {};
+    accountTx.forEach(t => {
+      const key = t.date.slice(0, 7);
+      monthly[key] = (monthly[key] || 0) + (parseFloat(t.amount) || 0);
+    });
+    const last6Keys = Object.keys(monthly).sort().slice(-6);
+    if (last6Keys.length === 0) return null;
+    const sum = last6Keys.reduce((s, k) => s + monthly[k], 0);
+    return sum / last6Keys.length;
+  }, [accountTx, isAccount]);
+
+  const trendDir = sixMonthAvg === null ? '→'
+    : sixMonthAvg > 50 ? '↑'
+    : sixMonthAvg < -50 ? '↓'
+    : '→';
+  const trendLabel = sixMonthAvg === null ? 'Insuffisant'
+    : sixMonthAvg > 50 ? 'Croissant'
+    : sixMonthAvg < -50 ? 'Décroissant'
+    : 'Stable';
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal loan-finary-page" onClick={e => e.stopPropagation()}>
+        <div className="loan-finary-head">
+          <button className="drawer-back" onClick={onClose}>
+            <ChevronLeft size={14}/> Patrimoine · Liquidités
+          </button>
+          <button className="drawer-close" onClick={onClose} aria-label="Fermer">
+            <X size={18}/>
+          </button>
+
+          <div className="drawer-title-row">
+            <div>
+              <h2 className="drawer-title">
+                {isLivret ? 'Livret' : 'Compte'} <em>{name}.</em>
+              </h2>
+              <div className="drawer-meta">
+                <span className={`badge badge-${syncMode}`}>
+                  {syncMode === 'synced' ? 'Synchronisé' : 'Manuel'}
+                </span>
+              </div>
+            </div>
+            <div className="drawer-total">
+              <div className="drawer-total-val w-num">{fmt(balance)}</div>
+              {isAccount && last30.length > 0 && (
+                <div className={`drawer-total-delta ${net30 >= 0 ? 'up' : 'down'}`}>
+                  {net30 >= 0 ? '+' : ''}{fmt(net30)} <em>· 30 j</em>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="re-kpi-strip">
+            <div className="loan-monthly-panel">
+              <div className="loan-monthly-label">SOLDE ACTUEL</div>
+              <div className="loan-monthly-val w-num"><em>{fmt(balance)}</em></div>
+              <p className="loan-progress-text">
+                {isAccount ? 'Solde courant du compte' : 'Valeur actuelle du livret'}
+              </p>
+            </div>
+
+            <div className="loan-monthly-panel">
+              <div className="loan-monthly-label">MOUVEMENTS · 30 J</div>
+              <div className="loan-monthly-breakdown">
+                <div><span className="dot dot-sage"/>Entrées <span className="w-num pl-up">+{fmt(inflows30)}</span></div>
+                <div><span className="dot dot-terra"/>Sorties <span className="w-num pl-down">−{fmt(outflows30)}</span></div>
+                <div><span className="dot dot-cobalt"/>Net <span className={`w-num ${net30 >= 0 ? 'pl-up' : 'pl-down'}`}>{net30 >= 0 ? '+' : ''}{fmt(net30)}</span></div>
+              </div>
+              {!isAccount && (
+                <p className="loan-progress-text"><em>Pas de transactions liées à cet actif manuel</em></p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="loan-finary-body">
+          <div className="loan-finary-grid">
+            <div className="loan-finary-chart">
+              {chartData.length >= 2 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <AreaChart data={chartData} margin={{ left: 0, right: 24, top: 10, bottom: 8 }}>
+                    <defs>
+                      <linearGradient id="liqBalanceFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.3}/>
+                        <stop offset="100%" stopColor="var(--accent)" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" vertical={false}/>
+                    <XAxis dataKey="date" tickFormatter={(d) => d.slice(5)} stroke="var(--text-tertiary)" fontSize={11} tickLine={false} axisLine={false} interval={Math.max(0, Math.floor(chartData.length / 6))}/>
+                    <YAxis tickFormatter={(v) => formatCurrency(v, { compact: true })} stroke="var(--text-tertiary)" fontSize={11} tickLine={false} axisLine={false} width={56}/>
+                    <Tooltip
+                      formatter={(v) => [fmt(v), 'Solde']}
+                      labelFormatter={(d) => formatDate(d)}
+                      contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-strong)', borderRadius: 8, fontSize: 12 }}
+                    />
+                    <Area type="monotone" dataKey="balance" stroke="var(--accent)" strokeWidth={2} fill="url(#liqBalanceFill)" dot={false}/>
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="empty-mini" style={{ padding: '60px 0' }}>
+                  <BarChart3 size={24}/>
+                  <p>{isAccount ? "Pas assez de transactions pour tracer l'évolution du solde." : "Connecte ton compte ou ajoute des transactions pour voir l'évolution."}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="loan-finary-details">
+              <div className="loan-finary-detail-block">
+                <div className="loan-finary-detail-head">
+                  <span>Solde courant</span>
+                  <span className="loan-finary-detail-value w-num">{fmt(balance)}</span>
+                </div>
+              </div>
+
+              {isLivret && (
+                <div className="loan-finary-detail-block">
+                  <div className="loan-finary-detail-head">
+                    <span>{livretLabel}</span>
+                    <span className="loan-finary-detail-value w-num">{fmt(balance)} / {fmt(livretCap)}</span>
+                  </div>
+                  <div className="fiscal-bar"><div className="fiscal-bar-fill" style={{ width: `${fiscalRatio}%` }}/></div>
+                  <ul className="loan-finary-sub">
+                    <li><span>Atteint</span><span className="w-num">{fiscalRatio.toFixed(0)} %</span></li>
+                  </ul>
+                </div>
+              )}
+
+              {isLivret && (
+                <div className="loan-finary-detail-block">
+                  <div className="loan-finary-detail-head">
+                    <span>Intérêts annuels estimés</span>
+                    <span className="loan-finary-detail-value w-num pl-up">+{fmt(interests)}</span>
+                  </div>
+                  <ul className="loan-finary-sub">
+                    <li><span>Taux nominal</span><span className="w-num">{(livretRate * 100).toFixed(2)} %</span></li>
+                  </ul>
+                </div>
+              )}
+
+              <div className="loan-finary-detail-block">
+                <div className="loan-finary-detail-head">
+                  <span>Détenteur·s</span>
+                  <span className="loan-finary-detail-value">{owners}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="loan-synth-cards">
+            <div className="card loan-synth-card">
+              <div className="loan-synth-eyebrow">CETTE ANNÉE</div>
+              <div className="loan-synth-value w-num"><em>{netYTD >= 0 ? '+' : ''}{fmt(netYTD)}</em></div>
+              <ul className="loan-synth-sub">
+                <li><span>Entrées</span><span className="w-num pl-up">+{fmt(inflowsYTD)}</span></li>
+                <li><span>Sorties</span><span className="w-num pl-down">−{fmt(outflowsYTD)}</span></li>
+              </ul>
+            </div>
+
+            <div className="card loan-synth-card">
+              <div className="loan-synth-eyebrow">MOIS COURANT</div>
+              <div className="loan-synth-value w-num"><em>{netMonth >= 0 ? '+' : ''}{fmt(netMonth)}</em></div>
+              <ul className="loan-synth-sub">
+                <li><span>Entrées</span><span className="w-num pl-up">+{fmt(inflowsMonth)}</span></li>
+                <li><span>Sorties</span><span className="w-num pl-down">−{fmt(outflowsMonth)}</span></li>
+              </ul>
+            </div>
+
+            <div className="card loan-synth-card">
+              <div className="loan-synth-eyebrow">TENDANCE 6 MOIS</div>
+              <div className="loan-synth-value w-num"><em>{trendDir} {trendLabel}</em></div>
+              <ul className="loan-synth-sub">
+                <li><span>Évolution mensuelle moyenne</span><span className={`w-num ${(sixMonthAvg || 0) >= 0 ? 'pl-up' : 'pl-down'}`}>{sixMonthAvg === null ? '—' : ((sixMonthAvg >= 0 ? '+' : '') + fmt(sixMonthAvg))}</span></li>
+              </ul>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+            <button className="secondary-btn" onClick={() => onEdit && onEdit()}>
+              <Edit3 size={14}/> Modifier
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// InvestmentDetail — PEA / CTO / AV / PER
+// ============================================================================
+function InvestmentDetail({ asset, assets = [], members = [], fmt, onEdit, onClose }) {
+  const positions = useMemo(
+    () => assets.filter(a => a.parentAssetId === asset.id || a.parent_asset_id === asset.id),
+    [assets, asset.id]
+  );
+  const hasPositions = positions.length > 0;
+
+  const currentValue = parseFloat(asset.currentValue) || 0;
+  const positionsValue = positions.reduce((s, p) => s + (parseFloat(p.currentValue) || 0), 0);
+  const cashAvailable = Math.max(0, currentValue - positionsValue);
+
+  const invested = hasPositions
+    ? positions.reduce((s, p) => s + (parseFloat(p.purchasePrice) || 0) * (parseFloat(p.quantity) || 0), 0)
+    : (parseFloat(asset.purchasePrice) || 0);
+
+  const plLatente = currentValue - invested;
+  const plLatentePct = invested > 0 ? (plLatente / invested) * 100 : 0;
+
+  const subtype = asset.type;
+  const subtypeLabel = ({ pea: 'PEA', life_insurance: 'Assurance-vie', per: 'PER', stocks: 'CTO' })[subtype] || "Compte d'investissement";
+  const isPEA = subtype === 'pea';
+
+  const owners = ownersList(asset.memberIds, members);
+
+  const topPosition = useMemo(() => {
+    if (!hasPositions) return null;
+    const sorted = [...positions].sort((a, b) => (parseFloat(b.currentValue) || 0) - (parseFloat(a.currentValue) || 0));
+    const top = sorted[0];
+    const v = parseFloat(top.currentValue) || 0;
+    return { name: top.name, value: v, pct: currentValue > 0 ? (v / currentValue) * 100 : 0 };
+  }, [positions, currentValue, hasPositions]);
+
+  const allocData = useMemo(() => {
+    if (positions.length < 2) return [];
+    const colors = ['var(--d1)', 'var(--d2)', 'var(--d3)', 'var(--d4)', 'var(--d5)', 'var(--d6)', 'var(--d7)'];
+    return positions
+      .map((p, i) => ({
+        name: p.name,
+        value: parseFloat(p.currentValue) || 0,
+        color: colors[i % colors.length],
+        pct: currentValue > 0 ? ((parseFloat(p.currentValue) || 0) / currentValue) * 100 : 0,
+      }))
+      .filter(p => p.value > 0)
+      .sort((a, b) => b.value - a.value);
+  }, [positions, currentValue]);
+
+  const chartData = useMemo(() => {
+    if (!asset.purchaseDate || invested <= 0) return [];
+    const startYear = new Date(asset.purchaseDate).getFullYear();
+    const endYear = new Date().getFullYear();
+    const years = Math.max(1, endYear - startYear);
+    const pts = [];
+    for (let i = 0; i <= years; i++) {
+      const ratio = i / years;
+      pts.push({ year: String(startYear + i), value: Math.round(invested + (currentValue - invested) * ratio) });
+    }
+    return pts;
+  }, [asset.purchaseDate, invested, currentValue]);
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal loan-finary-page" onClick={e => e.stopPropagation()}>
+        <div className="loan-finary-head">
+          <button className="drawer-back" onClick={onClose}>
+            <ChevronLeft size={14}/> Patrimoine · Investissements
+          </button>
+          <button className="drawer-close" onClick={onClose} aria-label="Fermer">
+            <X size={18}/>
+          </button>
+
+          <div className="drawer-title-row">
+            <div>
+              <h2 className="drawer-title">
+                {subtypeLabel} <em>{asset.name}.</em>
+              </h2>
+              <div className="drawer-meta">
+                <span className="badge badge-manual"><Edit3 size={11}/> Manuel</span>
+                {hasPositions && <span style={{ marginLeft: 8 }}>{positions.length} positions</span>}
+              </div>
+            </div>
+            <div className="drawer-total">
+              <div className="drawer-total-val w-num">{fmt(currentValue)}</div>
+              {invested > 0 && (
+                <div className={`drawer-total-delta ${plLatente >= 0 ? 'up' : 'down'}`}>
+                  {plLatente >= 0 ? '+' : ''}{fmt(plLatente)} · {plLatente >= 0 ? '+' : ''}{plLatentePct.toFixed(1)}%
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="re-kpi-strip">
+            <div className="loan-monthly-panel">
+              <div className="loan-monthly-label">PERFORMANCE</div>
+              <div className="loan-monthly-val w-num">
+                <em className={plLatente >= 0 ? 'pl-up' : 'pl-down'}>{plLatente >= 0 ? '+' : ''}{fmt(plLatente)}</em>
+              </div>
+              <div className="loan-monthly-breakdown">
+                <div><span className="dot dot-cobalt"/>Investi <span className="w-num">{fmt(invested)}</span></div>
+                <div><span className="dot dot-sage"/>Valeur actuelle <span className="w-num">{fmt(currentValue)}</span></div>
+                <div><span className={`dot ${plLatente >= 0 ? 'dot-sage' : 'dot-terra'}`}/>Performance <span className={`w-num ${plLatente >= 0 ? 'pl-up' : 'pl-down'}`}>{plLatente >= 0 ? '+' : ''}{plLatentePct.toFixed(1)}%</span></div>
+              </div>
+            </div>
+
+            <div className="loan-monthly-panel">
+              <div className="loan-monthly-label">COMPOSITION</div>
+              <div className="loan-monthly-val w-num"><em>{positions.length} position{positions.length > 1 ? 's' : ''}</em></div>
+              <div className="loan-monthly-breakdown">
+                <div><span className="dot dot-cobalt"/>Titres <span className="w-num">{fmt(positionsValue)}</span></div>
+                <div><span className="dot dot-ocre"/>Cash disponible <span className="w-num">{fmt(cashAvailable)}</span></div>
+                {topPosition && (
+                  <div><span className="dot dot-mauve"/>Top : {topPosition.name} <span className="w-num">{topPosition.pct.toFixed(0)} %</span></div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="loan-finary-body">
+          <div className="loan-finary-grid">
+            <div className="loan-finary-chart">
+              {chartData.length >= 2 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <AreaChart data={chartData} margin={{ left: 0, right: 24, top: 10, bottom: 8 }}>
+                    <defs>
+                      <linearGradient id="invValueFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.3}/>
+                        <stop offset="100%" stopColor="var(--accent)" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" vertical={false}/>
+                    <XAxis dataKey="year" stroke="var(--text-tertiary)" fontSize={11} tickLine={false} axisLine={false}/>
+                    <YAxis tickFormatter={(v) => formatCurrency(v, { compact: true })} stroke="var(--text-tertiary)" fontSize={11} tickLine={false} axisLine={false} width={56}/>
+                    <Tooltip
+                      formatter={(v) => [fmt(v), 'Valeur']}
+                      contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-strong)', borderRadius: 8, fontSize: 12 }}
+                    />
+                    <Area type="monotone" dataKey="value" stroke="var(--accent)" strokeWidth={2} fill="url(#invValueFill)"/>
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="empty-mini" style={{ padding: '60px 0' }}>
+                  <BarChart3 size={24}/>
+                  <p>Renseigne la date d'achat et le prix de revient pour voir la courbe.</p>
+                </div>
+              )}
+            </div>
+
+            <div className="loan-finary-details">
+              <div className="loan-finary-detail-block">
+                <div className="loan-finary-detail-head">
+                  <span>Valeur actuelle</span>
+                  <span className="loan-finary-detail-value w-num">{fmt(currentValue)}</span>
+                </div>
+              </div>
+
+              {invested > 0 && (
+                <div className="loan-finary-detail-block">
+                  <div className="loan-finary-detail-head">
+                    <span>Plus-value latente</span>
+                    <span className={`loan-finary-detail-value w-num ${plLatente >= 0 ? 'pl-up' : 'pl-down'}`}>
+                      {plLatente >= 0 ? '+' : ''}{fmt(plLatente)}
+                    </span>
+                  </div>
+                  <ul className="loan-finary-sub">
+                    <li><span>Performance</span><span className={`w-num ${plLatente >= 0 ? 'pl-up' : 'pl-down'}`}>{plLatente >= 0 ? '+' : ''}{plLatentePct.toFixed(1)} %</span></li>
+                    <li><span>Capital investi</span><span className="w-num">{fmt(invested)}</span></li>
+                  </ul>
+                </div>
+              )}
+
+              {isPEA && (
+                <div className="loan-finary-detail-block">
+                  <div className="loan-finary-detail-head">
+                    <span>Plafond PEA</span>
+                    <span className="loan-finary-detail-value w-num">{fmt(invested)} / {fmt(150000)}</span>
+                  </div>
+                  <div className="fiscal-bar"><div className="fiscal-bar-fill" style={{ width: `${Math.min(100, (invested / 150000) * 100)}%` }}/></div>
+                  <ul className="loan-finary-sub">
+                    <li><span>Versements cumulés</span><span className="w-num">{((invested / 150000) * 100).toFixed(0)} %</span></li>
+                  </ul>
+                </div>
+              )}
+
+              <div className="loan-finary-detail-block">
+                <div className="loan-finary-detail-head">
+                  <span>Détenteur·s</span>
+                  <span className="loan-finary-detail-value">{owners}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {allocData.length >= 2 && (
+            <div className="card invest-allocation">
+              <div className="loan-synth-eyebrow">RÉPARTITION DES POSITIONS</div>
+              <div className="allocation-body" style={{ marginTop: 12 }}>
+                <ResponsiveContainer width={200} height={200}>
+                  <PieChart>
+                    <Pie data={allocData} dataKey="value" cx="50%" cy="50%" innerRadius={55} outerRadius={88} paddingAngle={2}>
+                      {allocData.map((entry, i) => <Cell key={i} fill={entry.color}/>)}
+                    </Pie>
+                    <Tooltip formatter={(v) => fmt(v)} contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}/>
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="invest-allocation-list">
+                  {allocData.map((p, i) => (
+                    <div key={i} className="invest-allocation-row">
+                      <span><span className="invest-allocation-dot" style={{ background: p.color }}/>{p.name}</span>
+                      <span><span className="w-num">{fmt(p.value)}</span> · <span className="w-num">{p.pct.toFixed(1)} %</span></span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="loan-synth-cards">
+            <div className="card loan-synth-card">
+              <div className="loan-synth-eyebrow">INVESTI</div>
+              <div className="loan-synth-value w-num"><em>{fmt(invested)}</em></div>
+              <ul className="loan-synth-sub">
+                <li><span>Capital placé</span><span className="w-num">{fmt(invested)}</span></li>
+                <li><span>Nombre de positions</span><span className="w-num">{positions.length}</span></li>
+              </ul>
+            </div>
+
+            <div className="card loan-synth-card">
+              <div className="loan-synth-eyebrow">VALORISATION ACTUELLE</div>
+              <div className="loan-synth-value w-num"><em>{fmt(currentValue)}</em></div>
+              <ul className="loan-synth-sub">
+                <li><span>Performance globale</span><span className={`w-num ${plLatente >= 0 ? 'pl-up' : 'pl-down'}`}>{plLatente >= 0 ? '+' : ''}{plLatentePct.toFixed(1)} %</span></li>
+                <li><span>Cash disponible</span><span className="w-num">{fmt(cashAvailable)}</span></li>
+              </ul>
+            </div>
+
+            <div className="card loan-synth-card">
+              <div className="loan-synth-eyebrow">PLUS-VALUE LATENTE</div>
+              <div className="loan-synth-value w-num"><em className={plLatente >= 0 ? 'pl-up' : 'pl-down'}>{plLatente >= 0 ? '+' : ''}{fmt(plLatente)}</em></div>
+              <ul className="loan-synth-sub">
+                <li><span>%</span><span className={`w-num ${plLatente >= 0 ? 'pl-up' : 'pl-down'}`}>{plLatente >= 0 ? '+' : ''}{plLatentePct.toFixed(1)} %</span></li>
+                <li><span><em>Avant fiscalité</em></span><span/></li>
+              </ul>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+            <button className="secondary-btn" onClick={() => onEdit && onEdit()}>
+              <Edit3 size={14}/> Modifier
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// CryptoDetail — Single crypto asset
+// ============================================================================
+function CryptoDetail({ asset, members = [], fmt, onEdit, onClose }) {
+  const currentValue = parseFloat(asset.currentValue) || 0;
+  const quantity = parseFloat(asset.quantity) || 0;
+  const purchasePrice = parseFloat(asset.purchasePrice) || 0;
+  const ticker = asset.ticker || '';
+
+  const invested = purchasePrice * quantity;
+  const plLatente = currentValue - invested;
+  const plLatentePct = invested > 0 ? (plLatente / invested) * 100 : 0;
+
+  const unitPrice = quantity > 0 ? currentValue / quantity : 0;
+  const owners = ownersList(asset.memberIds, members);
+
+  const chartData = useMemo(() => {
+    if (!asset.purchaseDate || invested <= 0) return [];
+    const startYear = new Date(asset.purchaseDate).getFullYear();
+    const endYear = new Date().getFullYear();
+    const years = Math.max(1, endYear - startYear);
+    const pts = [];
+    for (let i = 0; i <= years; i++) {
+      const ratio = i / years;
+      pts.push({ year: String(startYear + i), value: Math.round(invested + (currentValue - invested) * ratio) });
+    }
+    return pts;
+  }, [asset.purchaseDate, invested, currentValue]);
+
+  const formatQty = (q) => {
+    if (q === 0) return '0';
+    if (Math.abs(q) >= 1) return q.toFixed(4).replace(/\.?0+$/, '');
+    return q.toFixed(8).replace(/\.?0+$/, '');
+  };
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal loan-finary-page" onClick={e => e.stopPropagation()}>
+        <div className="loan-finary-head">
+          <button className="drawer-back" onClick={onClose}>
+            <ChevronLeft size={14}/> Patrimoine · Cryptos
+          </button>
+          <button className="drawer-close" onClick={onClose} aria-label="Fermer">
+            <X size={18}/>
+          </button>
+
+          <div className="drawer-title-row">
+            <div>
+              <h2 className="drawer-title">
+                Crypto <em>{asset.name}.</em>
+              </h2>
+              <div className="drawer-meta">
+                <span className="badge badge-manual"><Edit3 size={11}/> Manuel</span>
+                {ticker && <span className="crypto-ticker" style={{ marginLeft: 8 }}>{ticker}</span>}
+              </div>
+            </div>
+            <div className="drawer-total">
+              <div className="drawer-total-val w-num">{fmt(currentValue)}</div>
+              {invested > 0 && (
+                <div className={`drawer-total-delta ${plLatente >= 0 ? 'up' : 'down'}`}>
+                  {plLatente >= 0 ? '+' : ''}{fmt(plLatente)} · {plLatente >= 0 ? '+' : ''}{plLatentePct.toFixed(1)}%
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="re-kpi-strip">
+            <div className="loan-monthly-panel">
+              <div className="loan-monthly-label">VALEUR ACTUELLE</div>
+              <div className="loan-monthly-val w-num"><em>{fmt(currentValue)}</em></div>
+              <div className="loan-monthly-breakdown">
+                <div><span className="dot dot-cobalt"/>Quantité <span className="w-num">{formatQty(quantity)} {ticker}</span></div>
+                <div><span className="dot dot-ocre"/>Cours unitaire <span className="w-num">{fmt(unitPrice)}</span></div>
+              </div>
+            </div>
+
+            <div className="loan-monthly-panel">
+              <div className="loan-monthly-label">PERFORMANCE</div>
+              <div className="loan-monthly-val w-num">
+                <em className={plLatente >= 0 ? 'pl-up' : 'pl-down'}>{plLatente >= 0 ? '+' : ''}{fmt(plLatente)}</em>
+              </div>
+              <div className="loan-monthly-breakdown">
+                <div><span className="dot dot-cobalt"/>Investi <span className="w-num">{fmt(invested)}</span></div>
+                <div>
+                  <span className={`dot ${plLatente >= 0 ? 'dot-sage' : 'dot-terra'}`}/>%
+                  <span className={`w-num ${plLatente >= 0 ? 'pl-up' : 'pl-down'}`}>{plLatente >= 0 ? '+' : ''}{plLatentePct.toFixed(1)} %</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="loan-finary-body">
+          <div className="loan-finary-grid">
+            <div className="loan-finary-chart">
+              {chartData.length >= 2 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <AreaChart data={chartData} margin={{ left: 0, right: 24, top: 10, bottom: 8 }}>
+                    <defs>
+                      <linearGradient id="cryptoValueFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.3}/>
+                        <stop offset="100%" stopColor="var(--accent)" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" vertical={false}/>
+                    <XAxis dataKey="year" stroke="var(--text-tertiary)" fontSize={11} tickLine={false} axisLine={false}/>
+                    <YAxis tickFormatter={(v) => formatCurrency(v, { compact: true })} stroke="var(--text-tertiary)" fontSize={11} tickLine={false} axisLine={false} width={56}/>
+                    <Tooltip
+                      formatter={(v) => [fmt(v), 'Valeur']}
+                      contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-strong)', borderRadius: 8, fontSize: 12 }}
+                    />
+                    <Area type="monotone" dataKey="value" stroke="var(--accent)" strokeWidth={2} fill="url(#cryptoValueFill)"/>
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="empty-mini" style={{ padding: '60px 0' }}>
+                  <Bitcoin size={24}/>
+                  <p>Renseigne la date d'achat et le prix de revient pour voir l'évolution.</p>
+                </div>
+              )}
+            </div>
+
+            <div className="loan-finary-details">
+              <div className="loan-finary-detail-block">
+                <div className="loan-finary-detail-head">
+                  <span>Quantité détenue</span>
+                  <span className="loan-finary-detail-value w-num">{formatQty(quantity)} {ticker}</span>
+                </div>
+              </div>
+
+              <div className="loan-finary-detail-block">
+                <div className="loan-finary-detail-head">
+                  <span>Prix de revient moyen</span>
+                  <span className="loan-finary-detail-value w-num">{fmt(purchasePrice)}</span>
+                </div>
+              </div>
+
+              <div className="loan-finary-detail-block">
+                <div className="loan-finary-detail-head">
+                  <span>Plus-value latente</span>
+                  <span className={`loan-finary-detail-value w-num ${plLatente >= 0 ? 'pl-up' : 'pl-down'}`}>
+                    {plLatente >= 0 ? '+' : ''}{fmt(plLatente)}
+                  </span>
+                </div>
+                {invested > 0 && (
+                  <ul className="loan-finary-sub">
+                    <li><span>Performance</span><span className={`w-num ${plLatente >= 0 ? 'pl-up' : 'pl-down'}`}>{plLatente >= 0 ? '+' : ''}{plLatentePct.toFixed(1)} %</span></li>
+                  </ul>
+                )}
+              </div>
+
+              <div className="loan-finary-detail-block">
+                <div className="loan-finary-detail-head">
+                  <span>Détenteur·s</span>
+                  <span className="loan-finary-detail-value">{owners}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="loan-synth-cards">
+            <div className="card loan-synth-card">
+              <div className="loan-synth-eyebrow">DÉTENU</div>
+              <div className="loan-synth-value w-num"><em>{formatQty(quantity)} {ticker}</em></div>
+              <ul className="loan-synth-sub">
+                <li><span>Cours moyen d'achat</span><span className="w-num">{fmt(purchasePrice)}</span></li>
+              </ul>
+            </div>
+
+            <div className="card loan-synth-card">
+              <div className="loan-synth-eyebrow">VALEUR ACTUELLE</div>
+              <div className="loan-synth-value w-num"><em>{fmt(currentValue)}</em></div>
+              <ul className="loan-synth-sub">
+                <li><span>Cours actuel</span><span className="w-num">{fmt(unitPrice)}</span></li>
+              </ul>
+            </div>
+
+            <div className="card loan-synth-card">
+              <div className="loan-synth-eyebrow">PLUS-VALUE</div>
+              <div className="loan-synth-value w-num"><em className={plLatente >= 0 ? 'pl-up' : 'pl-down'}>{plLatente >= 0 ? '+' : ''}{fmt(plLatente)}</em></div>
+              <ul className="loan-synth-sub">
+                <li><span>%</span><span className={`w-num ${plLatente >= 0 ? 'pl-up' : 'pl-down'}`}>{plLatente >= 0 ? '+' : ''}{plLatentePct.toFixed(1)} %</span></li>
+              </ul>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+            <button className="secondary-btn" onClick={() => onEdit && onEdit()}>
+              <Edit3 size={14}/> Modifier
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// OtherAssetDetail — Or, montres, collectibles, autres
+// ============================================================================
+function OtherAssetDetail({ asset, members = [], fmt, onEdit, onClose }) {
+  const currentValue = parseFloat(asset.currentValue) || 0;
+  const purchasePrice = parseFloat(asset.purchasePrice) || 0;
+  const plLatente = currentValue - purchasePrice;
+  const plLatentePct = purchasePrice > 0 ? (plLatente / purchasePrice) * 100 : 0;
+
+  const subtypeLabel = asset.subtype || 'Autre actif';
+  const owners = ownersList(asset.memberIds, members);
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal loan-finary-page" onClick={e => e.stopPropagation()}>
+        <div className="loan-finary-head">
+          <button className="drawer-back" onClick={onClose}>
+            <ChevronLeft size={14}/> Patrimoine · Autres
+          </button>
+          <button className="drawer-close" onClick={onClose} aria-label="Fermer">
+            <X size={18}/>
+          </button>
+
+          <div className="drawer-title-row">
+            <div>
+              <h2 className="drawer-title">
+                <Sparkles size={16} style={{ display: 'inline', marginRight: 6, verticalAlign: '-2px' }}/>
+                Autre actif <em>{asset.name}.</em>
+              </h2>
+              <div className="drawer-meta">
+                <span className="badge badge-manual"><Edit3 size={11}/> Manuel</span>
+                {asset.subtype && <span style={{ marginLeft: 8 }}>{subtypeLabel}</span>}
+              </div>
+            </div>
+            <div className="drawer-total">
+              <div className="drawer-total-val w-num">{fmt(currentValue)}</div>
+              {purchasePrice > 0 && (
+                <div className={`drawer-total-delta ${plLatente >= 0 ? 'up' : 'down'}`}>
+                  {plLatente >= 0 ? '+' : ''}{fmt(plLatente)} · {plLatente >= 0 ? '+' : ''}{plLatentePct.toFixed(1)}%
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="re-kpi-strip" style={{ gridTemplateColumns: '1fr' }}>
+            <div className="loan-monthly-panel">
+              <div className="loan-monthly-label">VALORISATION</div>
+              <div className="loan-monthly-val w-num"><em>{fmt(currentValue)}</em></div>
+              <div className="loan-monthly-breakdown">
+                <div><span className="dot dot-cobalt"/>Prix d'achat <span className="w-num">{fmt(purchasePrice)}</span></div>
+                {purchasePrice > 0 && (
+                  <div>
+                    <span className={`dot ${plLatente >= 0 ? 'dot-sage' : 'dot-terra'}`}/>
+                    Plus-value latente
+                    <span className={`w-num ${plLatente >= 0 ? 'pl-up' : 'pl-down'}`}>{plLatente >= 0 ? '+' : ''}{fmt(plLatente)}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="loan-finary-body">
+          <div className="loan-finary-details" style={{ marginTop: 4 }}>
+            {asset.subtype && (
+              <div className="loan-finary-detail-block">
+                <div className="loan-finary-detail-head">
+                  <span>Type / Sous-catégorie</span>
+                  <span className="loan-finary-detail-value">{subtypeLabel}</span>
+                </div>
+              </div>
+            )}
+
+            {asset.purchaseDate && (
+              <div className="loan-finary-detail-block">
+                <div className="loan-finary-detail-head">
+                  <span>Date d'acquisition</span>
+                  <span className="loan-finary-detail-value w-num">{formatDate(asset.purchaseDate)}</span>
+                </div>
+              </div>
+            )}
+
+            <div className="loan-finary-detail-block">
+              <div className="loan-finary-detail-head">
+                <span>Valeur actuelle</span>
+                <span className="loan-finary-detail-value w-num">{fmt(currentValue)}</span>
+              </div>
+            </div>
+
+            <div className="loan-finary-detail-block">
+              <div className="loan-finary-detail-head">
+                <span>Prix d'achat</span>
+                <span className="loan-finary-detail-value w-num">{fmt(purchasePrice)}</span>
+              </div>
+            </div>
+
+            {purchasePrice > 0 && (
+              <div className="loan-finary-detail-block">
+                <div className="loan-finary-detail-head">
+                  <span>Plus-value latente</span>
+                  <span className={`loan-finary-detail-value w-num ${plLatente >= 0 ? 'pl-up' : 'pl-down'}`}>
+                    {plLatente >= 0 ? '+' : ''}{fmt(plLatente)}
+                  </span>
+                </div>
+                <ul className="loan-finary-sub">
+                  <li><span>Performance</span><span className={`w-num ${plLatente >= 0 ? 'pl-up' : 'pl-down'}`}>{plLatente >= 0 ? '+' : ''}{plLatentePct.toFixed(1)} %</span></li>
+                </ul>
+              </div>
+            )}
+
+            {asset.notes && (
+              <div className="loan-finary-detail-block">
+                <div className="loan-finary-detail-head">
+                  <span>Notes</span>
+                </div>
+                <p style={{ margin: '6px 0 0', fontFamily: 'Newsreader, serif', fontStyle: 'italic', color: 'var(--ink-2)', fontSize: 14 }}>
+                  {asset.notes}
+                </p>
+              </div>
+            )}
+
+            <div className="loan-finary-detail-block">
+              <div className="loan-finary-detail-head">
+                <span>Détenteur·s</span>
+                <span className="loan-finary-detail-value">{owners}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="loan-synth-cards" style={{ gridTemplateColumns: 'repeat(2, 1fr)', marginTop: 24 }}>
+            <div className="card loan-synth-card">
+              <div className="loan-synth-eyebrow">ACHAT</div>
+              <div className="loan-synth-value w-num"><em>{fmt(purchasePrice)}</em></div>
+              <ul className="loan-synth-sub">
+                <li><span>Date</span><span className="w-num">{asset.purchaseDate ? formatDate(asset.purchaseDate) : '—'}</span></li>
+              </ul>
+            </div>
+
+            <div className="card loan-synth-card">
+              <div className="loan-synth-eyebrow">VALEUR ACTUELLE</div>
+              <div className="loan-synth-value w-num"><em>{fmt(currentValue)}</em></div>
+              <ul className="loan-synth-sub">
+                <li>
+                  <span>vs achat</span>
+                  <span className={`w-num ${plLatente >= 0 ? 'pl-up' : 'pl-down'}`}>
+                    {plLatente >= 0 ? '+' : ''}{fmt(plLatente)}
+                    {purchasePrice > 0 && ` · ${plLatente >= 0 ? '+' : ''}${plLatentePct.toFixed(1)} %`}
+                  </span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+            <button className="secondary-btn" onClick={() => onEdit && onEdit()}>
               <Edit3 size={14}/> Modifier
             </button>
           </div>
