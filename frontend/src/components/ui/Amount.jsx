@@ -3,11 +3,9 @@
 // Hero variant: splits decimals into .cents span for large displays.
 // Pass `from="GBP"` etc. if the value is not EUR-denominated.
 
-import { useHideAmounts } from '../../contexts/HideAmounts.jsx';
 import { useCurrency } from '../../contexts/Currency.jsx';
 import { convertCurrency } from '../../utils.js';
 
-const MASK = '•••';
 const LOCALE = { EUR: 'fr-FR', USD: 'en-US', GBP: 'en-GB', CHF: 'de-CH' };
 
 const _fmt = (n, currency = 'EUR', { abbr = false, decimals = 2 } = {}) => {
@@ -26,11 +24,10 @@ const _fmt = (n, currency = 'EUR', { abbr = false, decimals = 2 } = {}) => {
   }).format(n);
 };
 
-/** Hook — returns a formatter that respects hideAmounts and converts to baseCurrency. */
+/** Hook — returns a formatter that converts to baseCurrency.
+ *  Hiding is handled globally via CSS [data-hide-amounts] blur on .num. */
 export function useFormatEUR() {
-  const hidden = useHideAmounts();
   const { baseCurrency, rates } = useCurrency();
-  if (hidden) return () => MASK;
   return (n, opts = {}) => {
     if (typeof n !== 'number' || Number.isNaN(n)) return '—';
     const from = opts.from || 'EUR';
@@ -40,12 +37,8 @@ export function useFormatEUR() {
 }
 
 export function Amount({ value, from = 'EUR', hero = false, abbr = false, decimals = 2, className = '', style }) {
-  const hidden = useHideAmounts();
   const { baseCurrency, rates } = useCurrency();
 
-  if (hidden) {
-    return <span className={`num ds-masked ${className}`} style={style}>{MASK}</span>;
-  }
   if (typeof value !== 'number' || Number.isNaN(value)) {
     return <span className={className} style={style}>—</span>;
   }

@@ -255,6 +255,18 @@ html, body {
   font-feature-settings: 'tnum';
 }
 
+/* Hide-amounts mode: blur all monetary values in-place so layout is preserved */
+[data-hide-amounts] .num,
+[data-hide-amounts] .amount,
+[data-hide-amounts] .w-num,
+[data-hide-amounts] [data-financial],
+[data-hide-amounts] .ds-masked,
+[data-hide-amounts] .ds-hero-num {
+  filter: blur(6px);
+  user-select: none;
+  pointer-events: none;
+}
+
 /* ─────────────────────────────────────────────────────────────────────────
    4. Composants — Système nouveau (classes ds-*)
    ───────────────────────────────────────────────────────────────────────── */
