@@ -1,6 +1,46 @@
-# Trove — Roadmap
+# Wealthly — Roadmap
 
-État au **2026-05-10** — refonte complète Wealthly → Trove (design, landing, rebrand, admin panel v1, security toolbox).
+État au **2026-05-13** — session unification Account/Asset + refonte Settings + polish Emprunt + import CSV Boursorama.
+
+---
+
+## 🆕 Session 2026-05-13 — Raphyy31 + Claude (Opus 4.7)
+
+**Chantier 1 — Unification Account/Asset (18 tâches, brainstorm complet)**
+- [x] Bug PEA invisible résolu (root cause : dualité Account vs Asset)
+- [x] Migration DB `wealth_item_uuid` (préparation Option B) + `Asset.parent_asset_id`
+- [x] Types canoniques `WealthItem` + hook `useWealthItems` (normalisation accounts+assets+liabilities)
+- [x] API facade `api.wealth.*` (route create/update/delete vers la bonne table)
+- [x] Vue Patrimoine v6 — 7 onglets alignés Finary (Tout · Liquidités · Comptes d'investissement · Immobilier · Cryptos · Autres · Emprunts)
+- [x] Wizard "+ Ajouter" unifié 3 étapes (catégorie → sous-catégorie + mode → form / bank flow)
+- [x] Drawer détail unifié 880px — § 01 Positions · § 03 Insight fiscal · § 04 Configuration
+- [x] Détection doublons stricte (boolean, member-aware) + banner + modal de fusion
+- [x] Mapping legacy `investment`/`joint`/`professional` → bons subtypes (fix PEA → Liquidités)
+- [x] Suppression du bouton "+ Ajouter" doublon dans le card-header (canonique = subview-header)
+- [x] Tests pytest backend (wealth_item_uuid nullable)
+- [x] Spec + plan complets dans `docs/superpowers/{specs,plans}/2026-05-13-*`
+
+**Chantier 2 — Polish vue Emprunt (Finary-style)**
+- [x] AreaChart lisse (vs BarChart en escaliers)
+- [x] Panneau Mensualité Newsreader italic + breakdown Capital/Intérêts/Assurance (dots colorés)
+- [x] Stats échéances payées/restantes/date de fin
+- [x] Phrase humaine "Vous avez remboursé X % du capital"
+- [x] 3 cards Synthèse horizontales (Coût total / Total remboursé / Capital restant dû)
+
+**Chantier 3 — Refonte Settings UX (Monarch-style)**
+- [x] Nav latérale sticky 240px + 7 sections (Profil · Foyer · Comptes & sync · Sécurité · Catégories & règles · Devises & langue · Données)
+- [x] URL hash sync (`#settings/securite`)
+- [x] Section Profil : base currency + langue surfacés (étaient dead props !)
+- [x] Section Sécurité : placeholder 2FA + activity feed (degrade gracieusement si pas admin)
+- [x] Section Données : Danger Zone séparée pour Reset (bordure terracotta)
+- [x] Mobile (<900px) : nav latérale → strip horizontal scrollable
+
+**Chantier 4 — Import CSV positions Boursorama**
+- [x] `Asset.parent_asset_id` (migration + ORM + schema + router)
+- [x] Parser CSV Boursorama (semicolon + virgule décimale + BOM-safe + noms quotés)
+- [x] `ImportPositionsModal` (upload → preview → done)
+- [x] Hook `useWealthItems` agrège enfants en `positions[]` du parent (auto-grouping)
+- [x] Drawer affiche table positions inline après import
 
 ---
 
@@ -41,9 +81,9 @@
 
 ---
 
-## 🐛 Bugs connus — corriger avant toute demo externe
+## 🐛 Bugs connus
 
-> Identifiés le 2026-05-10 par navigation directe sur la démo live.
+> ⚠️ Section partiellement stale — les bugs ci-dessous datent de la démo 2026-05-10 (avant rollback Trove → Wealthly). Validation en cours sur Vercel après push du 2026-05-13. À retrier prochaine session.
 
 ### Demo data — incohérences critiques
 
