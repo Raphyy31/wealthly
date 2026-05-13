@@ -1244,6 +1244,41 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .loan-finary-status.paid { background: var(--success-soft); color: var(--success); }
 .loan-finary-status.pending { background: var(--bg-subtle); color: var(--text-tertiary); }
 
+/* Loan — Mensualité panel (right side of synth grid) */
+.loan-monthly-panel { display: flex; flex-direction: column; gap: 10px; padding: 22px 22px 20px; background: var(--bg-card, var(--bg-elev)); border: 1px solid var(--border); border-radius: 16px; }
+.loan-monthly-eyebrow { font-size: 10px; text-transform: uppercase; letter-spacing: 0.18em; color: var(--text-tertiary); font-weight: 500; }
+.loan-monthly-amount { font-family: 'Newsreader', Georgia, serif; font-style: italic; font-weight: 400; font-size: 38px; line-height: 1.05; letter-spacing: -0.02em; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.loan-monthly-amount em { font-style: italic; }
+.loan-monthly-sub { font-size: 12px; color: var(--text-tertiary); margin-top: -4px; }
+
+.loan-monthly-breakdown { list-style: none; margin: 12px 0 0; padding: 14px 0 0; border-top: 1px solid var(--border-light); display: flex; flex-direction: column; gap: 8px; }
+.loan-monthly-breakdown li { display: grid; grid-template-columns: 8px 1fr auto; align-items: center; gap: 10px; }
+.loan-monthly-dot { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+.loan-monthly-label { font-size: 13px; color: var(--text-secondary); }
+.loan-monthly-value { font-size: 13px; color: var(--text-primary); font-weight: 500; font-variant-numeric: tabular-nums; }
+
+.loan-monthly-stats { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border-light); }
+.loan-monthly-stat { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.loan-monthly-stat-label { font-size: 12.5px; color: var(--text-tertiary); }
+.loan-monthly-stat-value { font-size: 13px; color: var(--text-primary); font-weight: 500; font-variant-numeric: tabular-nums; text-transform: capitalize; }
+
+.loan-progress-text { margin: 14px 0 0; padding-top: 14px; border-top: 1px solid var(--border-light); font-size: 13.5px; color: var(--text-secondary); line-height: 1.5; }
+.loan-progress-text em { font-family: 'Newsreader', Georgia, serif; font-style: italic; color: var(--text-secondary); }
+.loan-progress-text strong { color: var(--accent); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* Loan — 3 synth cards horizontaux */
+.loan-synth-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.loan-synth-card { display: flex; flex-direction: column; gap: 10px; padding: 18px 20px; border-radius: 12px; }
+.loan-synth-eyebrow { font-size: 10px; text-transform: uppercase; letter-spacing: 0.18em; color: var(--text-tertiary); font-weight: 500; }
+.loan-synth-value { font-size: 22px; font-weight: 500; letter-spacing: -0.02em; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.loan-synth-sub { list-style: none; margin: 6px 0 0; padding: 10px 0 0; border-top: 1px solid var(--border-light); display: flex; flex-direction: column; gap: 6px; }
+.loan-synth-sub li { display: flex; justify-content: space-between; gap: 12px; font-size: 12.5px; color: var(--text-tertiary); }
+.loan-synth-sub li > span:last-child { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+
+@media (max-width: 900px) {
+  .loan-synth-cards { grid-template-columns: 1fr; }
+}
+
 /* Language switcher — small inline FR · EN toggle in sidebar utilities + mobile header */
 .lang-btn { display: inline-flex; align-items: center; gap: 4px; height: 36px; padding: 0 10px; border-radius: 10px; background: var(--bg-subtle); border: 1px solid var(--border); color: var(--text-tertiary); font-family: 'DM Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.06em; cursor: pointer; transition: background .15s, color .15s, border-color .15s; }
 .lang-btn:hover { background: var(--bg-card-hover); border-color: var(--border-strong, var(--border)); }

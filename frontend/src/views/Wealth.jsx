@@ -947,6 +947,14 @@ function LiabilityDetail({ liability, assets, members, memberShare, fmt, onEdit,
     payment: Math.round(r.payment),
   }));
 
+  // Current/next monthly breakdown — find first unpaid row (or fallback to first row)
+  const currentRow = remainingRows[0] || schedule[0] || null;
+  const breakdownCapital = currentRow ? currentRow.capital : 0;
+  const breakdownInterest = currentRow ? currentRow.interest : 0;
+  const breakdownInsurance = currentRow ? currentRow.insurance : 0;
+  const breakdownTotal = breakdownCapital + breakdownInterest + breakdownInsurance;
+  const endDate = schedule.length > 0 ? schedule[schedule.length - 1].date : null;
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal modal--detail loan-finary" onClick={(e) => e.stopPropagation()}>
@@ -1000,24 +1008,28 @@ function LiabilityDetail({ liability, assets, members, memberShare, fmt, onEdit,
           {activeTab === 'synthese' && (
             <>
               <div className="loan-finary-grid">
-                {/* Bar chart — capital remaining over time + monthly payment line */}
+                {/* Area chart — capital remaining over time, smooth cobalt line + subtle fill */}
                 <div className="loan-finary-chart">
                   {schedule.length > 0 ? (
                     <ResponsiveContainer width="100%" height={300}>
-                      <BarChart data={chartData} margin={{ left: 0, right: 24, top: 10, bottom: 8 }}>
+                      <AreaChart data={chartData} margin={{ left: 0, right: 24, top: 10, bottom: 8 }}>
+                        <defs>
+                          <linearGradient id="loanRemainingFill" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.22}/>
+                            <stop offset="100%" stopColor="var(--accent)" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" vertical={false}/>
                         <XAxis dataKey="date" tickFormatter={(d) => d.slice(0, 4)} stroke="var(--text-tertiary)" fontSize={11} tickLine={false} axisLine={false} interval={Math.max(0, Math.floor(schedule.length / 8))}/>
-                        <YAxis yAxisId="left" tickFormatter={(v) => formatCurrency(v, { compact: true })} stroke="var(--text-tertiary)" fontSize={11} tickLine={false} axisLine={false} width={56}/>
-                        <YAxis yAxisId="right" orientation="right" tickFormatter={(v) => formatCurrency(v, { compact: true })} stroke="var(--text-tertiary)" fontSize={11} tickLine={false} axisLine={false} width={56} domain={[0, monthlyPayment * 2.5]}/>
+                        <YAxis tickFormatter={(v) => formatCurrency(v, { compact: true })} stroke="var(--text-tertiary)" fontSize={11} tickLine={false} axisLine={false} width={56}/>
                         <Tooltip
-                          formatter={(v, name) => [fmt(v), name === 'remaining' ? 'Capital restant' : 'Mensualité']}
+                          formatter={(v) => [fmt(v), 'Capital restant']}
                           labelFormatter={(d) => formatDate(d, { format: 'monthYear' })}
                           contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-strong)', borderRadius: 8, fontSize: 12 }}
-                          cursor={{ fill: 'var(--bg-subtle)' }}
+                          cursor={{ stroke: 'var(--border-strong)', strokeWidth: 1 }}
                         />
-                        <Bar yAxisId="left" dataKey="remaining" fill="var(--primary)" fillOpacity={0.85} maxBarSize={6} radius={[1, 1, 0, 0]}/>
-                        <ReferenceLine yAxisId="right" y={monthlyPayment} stroke="var(--primary)" strokeWidth={1} strokeDasharray="0" label={{ value: 'Mensualité', position: 'insideRight', fill: 'var(--text-secondary)', fontSize: 11 }}/>
-                      </BarChart>
+                        <Area type="monotone" dataKey="remaining" stroke="var(--accent)" strokeWidth={2} fill="url(#loanRemainingFill)" dot={false} activeDot={{ r: 4, fill: 'var(--accent)', stroke: 'var(--bg-elev, var(--bg-card))', strokeWidth: 2 }}/>
+                      </AreaChart>
                     </ResponsiveContainer>
                   ) : (
                     <div className="empty-mini" style={{ padding: '60px 0' }}>
@@ -1027,48 +1039,82 @@ function LiabilityDetail({ liability, assets, members, memberShare, fmt, onEdit,
                   )}
                 </div>
 
-                {/* Right detail list — Finary-style hierarchy */}
-                <div className="loan-finary-details">
-                  <div className="loan-finary-detail-block">
-                    <div className="loan-finary-detail-head">
-                      <span>Coût de l'emprunt</span>
-                      <span className="loan-finary-detail-value w-num">{fmt(totalCost)}</span>
+                {/* Right monthly panel — big amount + breakdown + stats + progress */}
+                <div className="loan-monthly-panel">
+                  <div className="loan-monthly-eyebrow">Mensualité</div>
+                  <div className="loan-monthly-amount">
+                    <em>{fmt(breakdownTotal || monthlyPayment)}</em>
+                  </div>
+                  <div className="loan-monthly-sub">par mois</div>
+
+                  <ul className="loan-monthly-breakdown">
+                    <li>
+                      <span className="loan-monthly-dot" style={{ background: 'var(--accent)' }}/>
+                      <span className="loan-monthly-label">Capital</span>
+                      <span className="loan-monthly-value w-num">{fmt(breakdownCapital)}</span>
+                    </li>
+                    <li>
+                      <span className="loan-monthly-dot" style={{ background: 'var(--positive)' }}/>
+                      <span className="loan-monthly-label">Intérêts</span>
+                      <span className="loan-monthly-value w-num">{fmt(breakdownInterest)}</span>
+                    </li>
+                    <li>
+                      <span className="loan-monthly-dot" style={{ background: 'var(--negative)' }}/>
+                      <span className="loan-monthly-label">Assurance</span>
+                      <span className="loan-monthly-value w-num">{fmt(breakdownInsurance)}</span>
+                    </li>
+                  </ul>
+
+                  <div className="loan-monthly-stats">
+                    <div className="loan-monthly-stat">
+                      <span className="loan-monthly-stat-label">Échéances payées</span>
+                      <span className="loan-monthly-stat-value w-num">{paidRows.length}</span>
                     </div>
-                    <ul className="loan-finary-sub">
-                      <li><span>Capital</span><span className="w-num">{fmt(principal)}</span></li>
-                      <li><span>Intérêts et assurances</span><span className="w-num">{fmt(Math.max(0, totalCost - principal - (parseFloat(l.applicationFees) || 0)))}</span></li>
-                      <li><span>Frais de dossier</span><span className="w-num">{l.applicationFees ? fmt(parseFloat(l.applicationFees)) : '—'}</span></li>
-                    </ul>
+                    <div className="loan-monthly-stat">
+                      <span className="loan-monthly-stat-label">Échéances restantes</span>
+                      <span className="loan-monthly-stat-value w-num">{remainingRows.length}</span>
+                    </div>
+                    <div className="loan-monthly-stat">
+                      <span className="loan-monthly-stat-label">Date de fin</span>
+                      <span className="loan-monthly-stat-value">{endDate ? formatDate(endDate, { format: 'monthLong' }) : '—'}</span>
+                    </div>
                   </div>
 
-                  <div className="loan-finary-detail-block">
-                    <div className="loan-finary-detail-head">
-                      <span>Total remboursé</span>
-                      <span className="loan-finary-detail-value w-num">{fmt(totalPaid)}</span>
-                    </div>
-                    <ul className="loan-finary-sub">
-                      <li><span>Dont capital</span><span className="w-num">{fmt(totalCapitalPaid)}</span></li>
-                      <li><span>Dont intérêts</span><span className="w-num">{fmt(totalInterestPaid)}</span></li>
-                      <li><span>Dont assurances</span><span className="w-num">{fmt(totalInsurancePaid)}</span></li>
-                    </ul>
-                  </div>
+                  <p className="loan-progress-text">
+                    Vous avez remboursé <strong className="w-num">{pctRepaid.toFixed(0)} %</strong> <em>du capital du prêt</em>
+                  </p>
+                </div>
+              </div>
 
-                  <div className="loan-finary-detail-block">
-                    <div className="loan-finary-detail-head">
-                      <span>Capital restant dû</span>
-                      <span className="loan-finary-detail-value w-num">{fmt(remainingCapital)}</span>
-                    </div>
-                  </div>
+              {/* Synthèse — 3 cards horizontales */}
+              <div className="loan-synth-cards">
+                <div className="card loan-synth-card">
+                  <div className="loan-synth-eyebrow">Coût total de l'emprunt</div>
+                  <div className="loan-synth-value w-num">{fmt(totalCost)}</div>
+                  <ul className="loan-synth-sub">
+                    <li><span>Capital</span><span className="w-num">{fmt(principal)}</span></li>
+                    <li><span>Intérêts &amp; assurances</span><span className="w-num">{fmt(Math.max(0, totalCost - principal - (parseFloat(l.applicationFees) || 0)))}</span></li>
+                    <li><span>Frais de dossier</span><span className="w-num">{l.applicationFees ? fmt(parseFloat(l.applicationFees)) : '—'}</span></li>
+                  </ul>
+                </div>
 
-                  <div className="loan-finary-detail-block">
-                    <div className="loan-finary-detail-head">
-                      <span>Restant à rembourser</span>
-                      <span className="loan-finary-detail-value w-num">{fmt(totalRemaining)}</span>
-                    </div>
-                    <ul className="loan-finary-sub">
-                      <li><span>Reste à rembourser (%)</span><span className="w-num">{(100 - pctRepaid).toFixed(0)} %</span></li>
-                    </ul>
-                  </div>
+                <div className="card loan-synth-card">
+                  <div className="loan-synth-eyebrow">Total remboursé</div>
+                  <div className="loan-synth-value w-num">{fmt(totalPaid)}</div>
+                  <ul className="loan-synth-sub">
+                    <li><span>Dont capital</span><span className="w-num">{fmt(totalCapitalPaid)}</span></li>
+                    <li><span>Dont intérêts</span><span className="w-num">{fmt(totalInterestPaid)}</span></li>
+                    <li><span>Dont assurances</span><span className="w-num">{fmt(totalInsurancePaid)}</span></li>
+                  </ul>
+                </div>
+
+                <div className="card loan-synth-card">
+                  <div className="loan-synth-eyebrow">Capital restant dû</div>
+                  <div className="loan-synth-value w-num">{fmt(remainingCapital)}</div>
+                  <ul className="loan-synth-sub">
+                    <li><span>Restant à rembourser</span><span className="w-num">{fmt(totalRemaining)}</span></li>
+                    <li><span>Reste à rembourser (%)</span><span className="w-num">{(100 - pctRepaid).toFixed(0)} %</span></li>
+                  </ul>
                 </div>
               </div>
 
