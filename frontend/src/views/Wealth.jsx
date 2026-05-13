@@ -49,6 +49,7 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
   const [editingAsset, setEditingAsset] = useState(null);
   const [editingLia, setEditingLia] = useState(null);
   const [viewingLia, setViewingLia] = useState(null);
+  const [viewingRE, setViewingRE] = useState(null);
   const [subview, setSubview] = useState('all');
   const [showAddPicker, setShowAddPicker] = useState(false);
   const [drawerItem, setDrawerItem] = useState(null);
@@ -275,6 +276,10 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
                     const l = liabilities.find(x => x.id === it.sourceId);
                     if (l) { setViewingLia(l); return; }
                   }
+                  if (it.sourceTable === 'asset' && it.category === 'immobilier') {
+                    const a = assets.find(x => x.id === it.sourceId);
+                    if (a) { setViewingRE(a); return; }
+                  }
                   setDrawerItem(it);
                 }}
               />
@@ -286,6 +291,7 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
       {editingAsset && <AssetEditor asset={editingAsset} members={members} liabilities={visibleLiabilities} onSave={(a) => { saveAsset(a); setEditingAsset(null); }} onCancel={() => setEditingAsset(null)}/>}
       {editingLia && <LiabilityEditor liability={editingLia} members={members} assets={assets} onSave={(l) => { saveLiability(l); setEditingLia(null); }} onCancel={() => setEditingLia(null)}/>}
       {viewingLia && <LiabilityDetail liability={viewingLia} assets={assets} members={members} memberShare={memberShare} fmt={fmt} onEdit={() => { setEditingLia(viewingLia); setViewingLia(null); }} onClose={() => setViewingLia(null)}/>}
+      {viewingRE && <RealEstateDetail asset={viewingRE} liabilities={liabilities} members={members} memberShare={memberShare} fmt={fmt} onEdit={() => { setEditingAsset(viewingRE); setViewingRE(null); }} onClose={() => setViewingRE(null)}/>}
       {showAddPicker && (
         <CompletePatrimoinePicker
           onClose={() => setShowAddPicker(false)}
@@ -1257,6 +1263,262 @@ function WealthItemRow({ item, fmt, onClick }) {
               ` · ${positive ? '+' : ''}${item.plLatentePct.toFixed(1)}%`}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// RealEstateDetail — Finary-style rich detail view for real-estate assets.
+// Mirrors LiabilityDetail's polish (KPI strip + AreaChart + 3 synth cards).
+// ============================================================================
+function RealEstateDetail({ asset, liabilities = [], members = [], memberShare, fmt, onEdit, onClose }) {
+  const subtypeLabel = {
+    RP: 'Résidence principale',
+    locative: 'Locatif',
+    secondaire: 'Résidence secondaire',
+    scpi: 'SCPI',
+    other: 'Autre',
+  }[asset.subtype] || 'Bien immobilier';
+
+  const purchasePrice = parseFloat(asset.purchasePrice) || 0;
+  const notaryFees = parseFloat(asset.notaryFees) || 0;
+  const agencyFees = parseFloat(asset.agencyFees) || 0;
+  const worksFees = parseFloat(asset.worksFees) || 0;
+  const furnitureFees = parseFloat(asset.furnitureFees) || 0;
+  const totalAcquisitionCost = purchasePrice + notaryFees + agencyFees + worksFees + furnitureFees;
+
+  const currentValue = parseFloat(asset.currentValue) || 0;
+  const plLatente = currentValue - totalAcquisitionCost;
+  const plLatentePct = totalAcquisitionCost > 0 ? (plLatente / totalAcquisitionCost) * 100 : 0;
+
+  const surface = parseFloat(asset.surfaceM2) || 0;
+  const pricePerM2 = surface > 0 ? currentValue / surface : 0;
+  const purchasePricePerM2 = surface > 0 && purchasePrice > 0 ? purchasePrice / surface : 0;
+
+  const ownershipPct = parseFloat(asset.ownershipPct) || 100;
+  const yearsSincePurchase = asset.purchaseDate
+    ? (new Date() - new Date(asset.purchaseDate)) / (1000 * 60 * 60 * 24 * 365)
+    : 0;
+  const yieldAnnual = totalAcquisitionCost > 0 && yearsSincePurchase > 0
+    ? (plLatente / totalAcquisitionCost / yearsSincePurchase) * 100
+    : 0;
+
+  const linkedLoan = liabilities.find(l => l.linkedAssetId === asset.id);
+  const remainingCapital = linkedLoan ? parseFloat(linkedLoan.remainingCapital) || 0 : 0;
+  const monthlyPayment = linkedLoan ? parseFloat(linkedLoan.monthlyPayment) || 0 : 0;
+  const initialCapital = linkedLoan ? parseFloat(linkedLoan.initialCapital) || 0 : 0;
+  const netValue = currentValue - remainingCapital;
+
+  // Linear interpolation purchase → current value (v1)
+  const chartData = [];
+  if (asset.purchaseDate && purchasePrice > 0) {
+    const startYear = new Date(asset.purchaseDate).getFullYear();
+    const endYear = new Date().getFullYear();
+    const years = Math.max(1, endYear - startYear);
+    for (let i = 0; i <= years; i++) {
+      const year = startYear + i;
+      const ratio = i / years;
+      const interpolated = purchasePrice + (currentValue - purchasePrice) * ratio;
+      chartData.push({ year: String(year), value: Math.round(interpolated) });
+    }
+  }
+
+  const owners = (asset.memberIds || [])
+    .map(id => members.find(m => m.id === id)?.name)
+    .filter(Boolean)
+    .join(' & ') || '—';
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal loan-finary-page re-finary-page" onClick={e => e.stopPropagation()}>
+        <div className="loan-finary-head">
+          <button className="drawer-back" onClick={onClose}>
+            <ChevronLeft size={14}/> Patrimoine · Immobilier
+          </button>
+          <button className="drawer-close" onClick={onClose} aria-label="Fermer">
+            <X size={18}/>
+          </button>
+
+          <div className="drawer-title-row">
+            <div>
+              <h2 className="drawer-title">
+                {subtypeLabel} <em>{asset.name}.</em>
+              </h2>
+              <div className="drawer-meta">
+                <span className="badge badge-manual"><Edit3 size={11}/> Manuel</span>
+                {asset.address && <span style={{ marginLeft: 8 }}>{asset.address}</span>}
+              </div>
+            </div>
+            <div className="drawer-total">
+              <div className="drawer-total-val w-num">{fmt(currentValue)}</div>
+              {totalAcquisitionCost > 0 && (
+                <div className={`drawer-total-delta ${plLatente >= 0 ? 'up' : 'down'}`}>
+                  {plLatente >= 0 ? '+' : ''}{fmt(plLatente)} · {plLatente >= 0 ? '+' : ''}{plLatentePct.toFixed(1)}%
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* KPI strip — Prix d'acquisition + Caractéristiques */}
+          <div className="re-kpi-strip">
+            <div className="loan-monthly-panel">
+              <div className="loan-monthly-label">PRIX D'ACQUISITION</div>
+              <div className="loan-monthly-val w-num">
+                <em>{fmt(totalAcquisitionCost)}</em>
+              </div>
+              <div className="loan-monthly-breakdown">
+                <div><span className="dot dot-cobalt"/>Prix d'achat <span className="w-num">{fmt(purchasePrice)}</span></div>
+                {notaryFees > 0 && <div><span className="dot dot-sage"/>Frais notaire <span className="w-num">{fmt(notaryFees)}</span></div>}
+                {agencyFees > 0 && <div><span className="dot dot-terra"/>Agence <span className="w-num">{fmt(agencyFees)}</span></div>}
+                {worksFees > 0 && <div><span className="dot dot-ocre"/>Travaux <span className="w-num">{fmt(worksFees)}</span></div>}
+                {furnitureFees > 0 && <div><span className="dot dot-mauve"/>Mobilier <span className="w-num">{fmt(furnitureFees)}</span></div>}
+              </div>
+            </div>
+
+            <div className="loan-monthly-panel">
+              <div className="loan-monthly-label">CARACTÉRISTIQUES</div>
+              <div className="re-stats">
+                {surface > 0 && <div className="re-stat-row"><span>Surface</span><span className="w-num">{surface} m²</span></div>}
+                {pricePerM2 > 0 && <div className="re-stat-row"><span>Prix au m²</span><span className="w-num">{fmt(pricePerM2)} /m²</span></div>}
+                {purchasePricePerM2 > 0 && <div className="re-stat-row"><span>Prix d'achat au m²</span><span className="w-num">{fmt(purchasePricePerM2)} /m²</span></div>}
+                {asset.constructionYear && <div className="re-stat-row"><span>Année construction</span><span className="w-num">{asset.constructionYear}</span></div>}
+                {ownershipPct !== 100 && <div className="re-stat-row"><span>Quote-part</span><span className="w-num">{ownershipPct} %</span></div>}
+              </div>
+              {asset.purchaseDate && (
+                <p className="loan-progress-text">
+                  Acheté en <strong className="w-num">{new Date(asset.purchaseDate).getFullYear()}</strong>
+                  {yearsSincePurchase >= 1 && <> · il y a <strong className="w-num">{Math.round(yearsSincePurchase)} ans</strong></>}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="loan-finary-body">
+          <div className="loan-finary-grid">
+            <div className="loan-finary-chart">
+              {chartData.length >= 2 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <AreaChart data={chartData} margin={{ left: 0, right: 24, top: 10, bottom: 8 }}>
+                    <defs>
+                      <linearGradient id="reValueFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.3}/>
+                        <stop offset="100%" stopColor="var(--accent)" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" vertical={false}/>
+                    <XAxis dataKey="year" stroke="var(--text-tertiary)" fontSize={11} tickLine={false} axisLine={false}/>
+                    <YAxis tickFormatter={(v) => formatCurrency(v, { compact: true })} stroke="var(--text-tertiary)" fontSize={11} tickLine={false} axisLine={false} width={56}/>
+                    <Tooltip
+                      formatter={(v) => [fmt(v), 'Valeur estimée']}
+                      contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-strong)', borderRadius: 8, fontSize: 12 }}
+                    />
+                    <Area type="monotone" dataKey="value" stroke="var(--accent)" strokeWidth={2} fill="url(#reValueFill)"/>
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="empty-mini" style={{ padding: '60px 0' }}>
+                  <BarChart3 size={24}/>
+                  <p>Renseigne le prix d'achat et la date pour voir l'évolution de la valeur.</p>
+                </div>
+              )}
+            </div>
+
+            <div className="loan-finary-details">
+              <div className="loan-finary-detail-block">
+                <div className="loan-finary-detail-head">
+                  <span>Valeur actuelle</span>
+                  <span className="loan-finary-detail-value w-num">{fmt(currentValue)}</span>
+                </div>
+                {surface > 0 && (
+                  <ul className="loan-finary-sub">
+                    <li><span>Prix au m²</span><span className="w-num">{fmt(pricePerM2)} /m²</span></li>
+                  </ul>
+                )}
+              </div>
+
+              {totalAcquisitionCost > 0 && (
+                <div className="loan-finary-detail-block">
+                  <div className="loan-finary-detail-head">
+                    <span>Plus-value latente</span>
+                    <span className={`loan-finary-detail-value w-num ${plLatente >= 0 ? 'pl-up' : 'pl-down'}`}>
+                      {plLatente >= 0 ? '+' : ''}{fmt(plLatente)}
+                    </span>
+                  </div>
+                  <ul className="loan-finary-sub">
+                    <li><span>Performance</span><span className="w-num">{plLatente >= 0 ? '+' : ''}{plLatentePct.toFixed(1)} %</span></li>
+                    {yieldAnnual !== 0 && (
+                      <li><span>Rendement annualisé</span><span className="w-num">{yieldAnnual >= 0 ? '+' : ''}{yieldAnnual.toFixed(1)} %/an</span></li>
+                    )}
+                  </ul>
+                </div>
+              )}
+
+              {linkedLoan && (
+                <div className="loan-finary-detail-block">
+                  <div className="loan-finary-detail-head">
+                    <span>Patrimoine net du bien</span>
+                    <span className="loan-finary-detail-value w-num">{fmt(netValue)}</span>
+                  </div>
+                  <ul className="loan-finary-sub">
+                    <li><span>Capital restant dû</span><span className="w-num">{fmt(remainingCapital)}</span></li>
+                    <li><span>Mensualité</span><span className="w-num">{fmt(monthlyPayment)}</span></li>
+                  </ul>
+                </div>
+              )}
+
+              <div className="loan-finary-detail-block">
+                <div className="loan-finary-detail-head">
+                  <span>Détenteur·s</span>
+                  <span className="loan-finary-detail-value">{owners}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 3 Synthèse cards */}
+          <div className="loan-synth-cards">
+            <div className="card loan-synth-card">
+              <div className="loan-synth-eyebrow">COÛT TOTAL D'ACQUISITION</div>
+              <div className="loan-synth-value w-num"><em>{fmt(totalAcquisitionCost)}</em></div>
+              <ul className="loan-synth-sub">
+                <li><span>Prix d'achat</span><span className="w-num">{fmt(purchasePrice)}</span></li>
+                <li><span>Frais d'acquisition</span><span className="w-num">{fmt(notaryFees + agencyFees + worksFees + furnitureFees)}</span></li>
+              </ul>
+            </div>
+
+            <div className="card loan-synth-card">
+              <div className="loan-synth-eyebrow">VALEUR ACTUELLE</div>
+              <div className="loan-synth-value w-num"><em>{fmt(currentValue)}</em></div>
+              <ul className="loan-synth-sub">
+                <li><span>Plus-value latente</span><span className={`w-num ${plLatente >= 0 ? 'pl-up' : 'pl-down'}`}>{plLatente >= 0 ? '+' : ''}{fmt(plLatente)}</span></li>
+                <li><span>Performance</span><span className={`w-num ${plLatente >= 0 ? 'pl-up' : 'pl-down'}`}>{plLatente >= 0 ? '+' : ''}{plLatentePct.toFixed(1)} %</span></li>
+              </ul>
+            </div>
+
+            <div className="card loan-synth-card">
+              <div className="loan-synth-eyebrow">{linkedLoan ? 'PATRIMOINE NET DU BIEN' : 'STATUT FINANCIER'}</div>
+              <div className="loan-synth-value w-num"><em>{fmt(netValue)}</em></div>
+              <ul className="loan-synth-sub">
+                {linkedLoan ? (
+                  <>
+                    <li><span>Reste à rembourser</span><span className="w-num">{fmt(remainingCapital)}</span></li>
+                    <li><span>% remboursé</span><span className="w-num">{initialCapital > 0 ? Math.round((1 - remainingCapital / initialCapital) * 100) : 0} %</span></li>
+                  </>
+                ) : (
+                  <li><span>Statut</span><span>Propriété acquittée</span></li>
+                )}
+              </ul>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+            <button className="secondary-btn" onClick={() => onEdit && onEdit(asset)}>
+              <Edit3 size={14}/> Modifier
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

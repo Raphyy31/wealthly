@@ -1279,6 +1279,28 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
   .loan-synth-cards { grid-template-columns: 1fr; }
 }
 
+/* RealEstateDetail — Finary-style rich view (mirrors LiabilityDetail polish) */
+.re-finary-page { max-width: 1100px; }
+.re-kpi-strip {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 18px;
+}
+.re-stats { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.re-stat-row {
+  display: flex; justify-content: space-between;
+  font-size: 13px; color: var(--ink); padding: 4px 0;
+}
+.re-stat-row span:first-child { color: var(--ink-2); }
+@media (max-width: 900px) {
+  .re-kpi-strip { grid-template-columns: 1fr; }
+}
+
+/* Dot palette swatches for KPI breakdown rows (acquisition cost split) */
+.dot-cobalt { background: var(--accent, #2540D9); }
+.dot-sage   { background: var(--d2, #6B8E7A); }
+.dot-terra  { background: var(--d3, #B0392B); }
+.dot-ocre   { background: var(--d7, #8E641A); }
+.dot-mauve  { background: var(--d4, #8B6E9E); }
+
 /* Language switcher — small inline FR · EN toggle in sidebar utilities + mobile header */
 .lang-btn { display: inline-flex; align-items: center; gap: 4px; height: 36px; padding: 0 10px; border-radius: 10px; background: var(--bg-subtle); border: 1px solid var(--border); color: var(--text-tertiary); font-family: 'DM Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: 0.06em; cursor: pointer; transition: background .15s, color .15s, border-color .15s; }
 .lang-btn:hover { background: var(--bg-card-hover); border-color: var(--border-strong, var(--border)); }
