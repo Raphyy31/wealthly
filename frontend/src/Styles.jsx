@@ -1952,6 +1952,108 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .duplicates-banner > div { display: flex; gap: 8px; align-items: center; }
 .duplicates-banner .primary-btn { padding: 6px 14px; font-size: 12px; }
 .duplicates-banner .link-btn { color: var(--accent); }
+
+/* ============================================================================
+   Settings — Monarch-style multi-section layout with sticky left rail
+   ============================================================================ */
+.settings-layout {
+  display: grid; grid-template-columns: 240px 1fr; gap: 32px;
+  align-items: start; padding: 0 0 80px;
+}
+.settings-rail {
+  position: sticky; top: 24px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.settings-rail-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; border-radius: 6px;
+  font-size: 13px; color: var(--ink-2); cursor: pointer;
+  background: transparent; border: none; font-family: inherit;
+  text-align: left; width: 100%; position: relative;
+  transition: background .15s, color .15s;
+}
+.settings-rail-item:hover { background: var(--bg-sunk); color: var(--ink); }
+.settings-rail-item.active {
+  background: var(--accent-soft); color: var(--accent); font-weight: 500;
+}
+.settings-rail-item.active::before {
+  content: ''; position: absolute; left: 0; top: 8px; bottom: 8px;
+  width: 3px; background: var(--accent); border-radius: 2px;
+}
+.settings-panel { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.settings-panel h2 {
+  font-family: 'Geist', sans-serif; font-weight: 500; font-size: 22px;
+  margin: 0 0 4px; color: var(--ink); letter-spacing: -0.01em;
+}
+.settings-panel h2 em {
+  font-family: 'Newsreader', Georgia, serif; font-style: italic; font-weight: 400;
+}
+.settings-panel-intro {
+  font-size: 13px; color: var(--ink-2); margin: 0 0 4px; line-height: 1.55;
+}
+.settings-profile-card {
+  display: flex; align-items: center; gap: 16px;
+  padding: 4px 0 4px;
+}
+.settings-profile-avatar {
+  width: 56px; height: 56px; border-radius: 12px;
+  background: var(--accent); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 600;
+  font-family: 'Geist', sans-serif;
+}
+.settings-profile-meta { display: flex; flex-direction: column; gap: 2px; }
+.settings-profile-name { font-size: 16px; font-weight: 500; color: var(--ink); }
+.settings-profile-email { font-size: 12.5px; color: var(--ink-2); }
+.settings-field-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.settings-field-row:last-child { border-bottom: none; }
+.settings-field-label { font-size: 13px; color: var(--ink); font-weight: 500; }
+.settings-field-hint { font-size: 11.5px; color: var(--ink-3); margin-top: 2px; }
+.settings-field-control { display: flex; align-items: center; gap: 10px; }
+.settings-coming-soon-badge {
+  font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 3px 8px; border-radius: 4px;
+  background: var(--bg-sunk); color: var(--ink-3);
+  border: 1px solid var(--border);
+}
+.settings-danger-zone {
+  border: 1px solid var(--negative); border-radius: 12px;
+  padding: 18px; background: rgba(176, 57, 43, .04);
+  margin-top: 12px;
+}
+.settings-danger-zone h3 {
+  color: var(--negative); margin: 0 0 6px;
+  font-size: 14px; font-weight: 600;
+}
+.settings-danger-zone p {
+  font-size: 12.5px; color: var(--ink-2); margin: 0 0 12px; line-height: 1.5;
+}
+.settings-auth-events {
+  display: flex; flex-direction: column; gap: 8px;
+  font-size: 12.5px;
+}
+.settings-auth-event-row {
+  display: flex; justify-content: space-between; gap: 12px;
+  padding: 8px 12px; border-radius: 6px; background: var(--bg-sunk);
+  border: 1px solid var(--border);
+}
+.settings-auth-event-kind { font-weight: 500; color: var(--ink); }
+.settings-auth-event-time { color: var(--ink-3); font-variant-numeric: tabular-nums; }
+@media (max-width: 900px) {
+  .settings-layout { grid-template-columns: 1fr; gap: 16px; }
+  .settings-rail {
+    position: static; flex-direction: row; overflow-x: auto; gap: 4px;
+    padding-bottom: 8px;
+    margin: 0 -20px; padding-left: 20px; padding-right: 20px;
+  }
+  .settings-rail-item { flex-shrink: 0; padding: 8px 12px; }
+  .settings-rail-item.active::before { display: none; }
+}
 `;
   return <style>{css}</style>;
 }

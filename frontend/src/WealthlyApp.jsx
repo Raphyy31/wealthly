@@ -1572,6 +1572,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             fmt={fmt}
             baseCurrency={baseCurrency} setBaseCurrency={setBaseCurrency}
             rates={rates} ratesDate={ratesDate}
+            currentUser={currentUser}
             onImport={() => { setView('import'); setImportStep('upload'); }}
           />
         )}

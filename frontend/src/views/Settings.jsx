@@ -10,6 +10,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   Plus, Trash2, Edit3, Check, Upload, Download, Users, Wallet,
   Sparkles, Activity, AlertCircle, RefreshCw, Link2, Unlink, X, Cloud,
+  User, Shield, DollarSign, Database, Globe,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import * as api from '../api.js';
@@ -23,10 +24,46 @@ const CURRENCY_NAMES = { EUR: 'Euro', USD: 'Dollar US', GBP: 'Livre sterling', C
 // ============================================================================
 // SETTINGS
 // ============================================================================
-export function SettingsView({ members, accounts, accountBalances, saveMember, deleteMember, deleteAccount, updateAccount, transactions = [], exportData, importData, resetAllData, categories = [], fmt, baseCurrency = 'EUR', setBaseCurrency, rates, ratesDate, onImport }) {
+const SETTINGS_SECTIONS = [
+  { id: 'profil',     icon: User,     label: 'Profil' },
+  { id: 'foyer',      icon: Users,    label: 'Foyer' },
+  { id: 'comptes',    icon: Wallet,   label: 'Comptes & synchronisation' },
+  { id: 'securite',   icon: Shield,   label: 'Sécurité' },
+  { id: 'regles',     icon: Sparkles, label: 'Catégories & règles' },
+  { id: 'devises',    icon: Globe,    label: 'Devises & langue' },
+  { id: 'donnees',    icon: Database, label: 'Données' },
+];
+
+function readHashSection() {
+  if (typeof window === 'undefined') return null;
+  const m = window.location.hash.match(/^#settings\/([a-z]+)/);
+  if (m && SETTINGS_SECTIONS.some(s => s.id === m[1])) return m[1];
+  return null;
+}
+
+export function SettingsView({ members, accounts, accountBalances, saveMember, deleteMember, deleteAccount, updateAccount, transactions = [], exportData, importData, resetAllData, categories = [], fmt, baseCurrency = 'EUR', setBaseCurrency, rates, ratesDate, currentUser, onImport }) {
   const { t } = useTranslation();
   const [editingMember, setEditingMember] = useState(null);
+  const [activeSection, setActiveSection] = useState(() => readHashSection() || 'profil');
   const COLORS = MEMBER_PALETTE;
+
+  // Two-way sync with URL hash (#settings/securite etc.) — gives copy-pasteable deep links
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onHash = () => {
+      const s = readHashSection();
+      if (s && s !== activeSection) setActiveSection(s);
+    };
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, [activeSection]);
+
+  const goTo = (id) => {
+    setActiveSection(id);
+    if (typeof window !== 'undefined') {
+      try { window.history.replaceState(null, '', `#settings/${id}`); } catch { /* ignore */ }
+    }
+  };
 
   return (
     <div className="settings-view">
@@ -37,12 +74,200 @@ export function SettingsView({ members, accounts, accountBalances, saveMember, d
         </div>
       </div>
 
-      <section className="card">
+      <div className="settings-layout">
+        <nav className="settings-rail" aria-label="Sections des réglages">
+          {SETTINGS_SECTIONS.map(s => {
+            const Icon = s.icon;
+            return (
+              <button
+                key={s.id}
+                type="button"
+                className={`settings-rail-item${activeSection === s.id ? ' active' : ''}`}
+                onClick={() => goTo(s.id)}
+              >
+                <Icon size={15}/> <span>{s.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="settings-panel">
+          {activeSection === 'profil' && (
+            <ProfilSection
+              currentUser={currentUser}
+              baseCurrency={baseCurrency}
+              setBaseCurrency={setBaseCurrency}
+            />
+          )}
+
+          {activeSection === 'foyer' && (
+            <FoyerSection
+              members={members}
+              setEditingMember={setEditingMember}
+              deleteMember={deleteMember}
+              COLORS={COLORS}
+            />
+          )}
+
+          {activeSection === 'comptes' && (
+            <ComptesSection
+              accounts={accounts}
+              accountBalances={accountBalances}
+              members={members}
+              transactions={transactions}
+              updateAccount={updateAccount}
+              deleteAccount={deleteAccount}
+              fmt={fmt}
+              onImport={onImport}
+            />
+          )}
+
+          {activeSection === 'securite' && (
+            <SecuriteSection currentUser={currentUser} />
+          )}
+
+          {activeSection === 'regles' && (
+            <section className="settings-panel">
+              <header>
+                <h2>Catégories & <em>règles.</em></h2>
+                <p className="settings-panel-intro">
+                  Définis des règles de catégorisation pour tes transactions. Chaque règle est une regex insensible à la casse, testée sur le libellé.
+                </p>
+              </header>
+              <CustomRulesSection categories={categories} />
+            </section>
+          )}
+
+          {activeSection === 'devises' && (
+            <DevisesSection
+              baseCurrency={baseCurrency}
+              setBaseCurrency={setBaseCurrency}
+              ratesDate={ratesDate}
+            />
+          )}
+
+          {activeSection === 'donnees' && (
+            <DonneesSection
+              exportData={exportData}
+              importData={importData}
+              resetAllData={resetAllData}
+            />
+          )}
+        </div>
+      </div>
+
+      {editingMember && <MemberEditor member={editingMember} onSave={(m) => { saveMember(m); setEditingMember(null); }} onCancel={() => setEditingMember(null)}/>}
+    </div>
+  );
+}
+
+// ============================================================================
+// SECTION : PROFIL
+// ============================================================================
+function ProfilSection({ currentUser, baseCurrency, setBaseCurrency }) {
+  const { i18n: i18nHook } = useTranslation();
+  const initials = (currentUser?.full_name || currentUser?.email || '?')
+    .split(/\s+/).map(s => s[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
+  const currentLang = (i18nHook.resolvedLanguage || i18nHook.language || 'fr').slice(0, 2);
+
+  return (
+    <section className="settings-panel">
+      <header>
+        <h2>Votre <em>profil.</em></h2>
+        <p className="settings-panel-intro">Les informations qui identifient votre compte Wealthly.</p>
+      </header>
+
+      <div className="card">
+        <div className="settings-profile-card">
+          <span className="settings-profile-avatar">{initials}</span>
+          <div className="settings-profile-meta">
+            <div className="settings-profile-name">
+              {currentUser?.full_name || (currentUser?.email ? currentUser.email.split('@')[0] : 'Utilisateur')}
+            </div>
+            <div className="settings-profile-email">{currentUser?.email || 'Mode démo'}</div>
+          </div>
+        </div>
+
+        <div className="settings-field-row">
+          <div>
+            <div className="settings-field-label">Nom complet</div>
+            <div className="settings-field-hint">Bientôt modifiable depuis cette page.</div>
+          </div>
+          <div className="settings-field-control">
+            <button className="secondary-btn" disabled>
+              <Edit3 size={13}/> Changer mon nom
+            </button>
+          </div>
+        </div>
+
+        <div className="settings-field-row">
+          <div>
+            <div className="settings-field-label">Langue de l'interface</div>
+            <div className="settings-field-hint">Affecte les libellés et formats de date.</div>
+          </div>
+          <div className="settings-field-control">
+            <select
+              value={currentLang}
+              onChange={(e) => i18nHook.changeLanguage(e.target.value)}
+            >
+              <option value="fr">Français</option>
+              <option value="en">English</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="settings-field-row">
+          <div>
+            <div className="settings-field-label">Devise de référence</div>
+            <div className="settings-field-hint">Convertit l'ensemble du patrimoine et du cashflow.</div>
+          </div>
+          <div className="settings-field-control">
+            <select
+              value={baseCurrency}
+              onChange={(e) => setBaseCurrency && setBaseCurrency(e.target.value)}
+              disabled={!setBaseCurrency}
+            >
+              {SUPPORTED_CURRENCIES.map(c => (
+                <option key={c} value={c}>{CURRENCY_FLAGS[c]} {c} — {CURRENCY_NAMES[c]}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ============================================================================
+// SECTION : FOYER
+// ============================================================================
+function FoyerSection({ members, setEditingMember, deleteMember, COLORS }) {
+  return (
+    <section className="settings-panel">
+      <header>
+        <h2>Votre <em>foyer.</em></h2>
+        <p className="settings-panel-intro">
+          Ajoute les adultes et enfants qui partagent ton patrimoine — utilisé pour répartir transactions et budgets.
+        </p>
+      </header>
+
+      <div className="card">
         <div className="card-header">
           <h3><Users size={16}/> Membres du foyer</h3>
-          <button className="secondary-btn" onClick={() => setEditingMember({ id: null, name: '', role: 'adult', color: COLORS[members.length % COLORS.length] })}><Plus size={14}/> Ajouter</button>
+          <button
+            className="secondary-btn"
+            onClick={() => setEditingMember({ id: null, name: '', role: 'adult', color: COLORS[members.length % COLORS.length] })}
+          >
+            <Plus size={14}/> Ajouter
+          </button>
         </div>
         <div className="member-list">
+          {members.length === 0 && (
+            <div className="empty-mini">
+              <Users size={24}/>
+              <p>Aucun membre encore. Ajoute-toi pour commencer.</p>
+            </div>
+          )}
           {members.map(m => (
             <div key={m.id} className="member-card">
               <span className="member-avatar large" style={{ background: m.color }}>{m.name.charAt(0).toUpperCase()}</span>
@@ -55,9 +280,25 @@ export function SettingsView({ members, accounts, accountBalances, saveMember, d
             </div>
           ))}
         </div>
-      </section>
+      </div>
+    </section>
+  );
+}
 
-      <section className="card">
+// ============================================================================
+// SECTION : COMPTES & SYNCHRONISATION (merged accounts + GoCardless)
+// ============================================================================
+function ComptesSection({ accounts, accountBalances, members, transactions, updateAccount, deleteAccount, fmt, onImport }) {
+  return (
+    <section className="settings-panel">
+      <header>
+        <h2>Comptes & <em>synchronisation.</em></h2>
+        <p className="settings-panel-intro">
+          Tes comptes bancaires et leurs connexions automatiques via GoCardless. Connecte une banque, ou importe un CSV pour démarrer.
+        </p>
+      </header>
+
+      <div className="card">
         <div className="card-header">
           <h3><Wallet size={16}/> Comptes bancaires</h3>
           {onImport && (
@@ -68,7 +309,7 @@ export function SettingsView({ members, accounts, accountBalances, saveMember, d
           {accounts.length === 0 && (
             <div className="empty-mini">
               <Wallet size={24}/>
-              <p>Aucun compte pour le moment.</p>
+              <p>Aucun compte pour le moment. Connecte une banque ci-dessous ou importe un CSV.</p>
               {onImport && (
                 <button className="primary-btn" style={{ marginTop: 12 }} onClick={onImport}>
                   <Upload size={14}/> Importer un CSV
@@ -80,9 +321,6 @@ export function SettingsView({ members, accounts, accountBalances, saveMember, d
             const owners = (a.memberIds || []).map(id => members.find(m => m.id === id)?.name).filter(Boolean).join(' & ');
             const role = a.role || 'principal';
             const roleMeta = ACCOUNT_ROLES[role] || ACCOUNT_ROLES.principal;
-            // Compute a role suggestion only when the user hasn't already
-            // picked something other than the default 'principal'. Otherwise
-            // we trust their explicit choice.
             const accTx = role === 'principal' ? transactions.filter(t => t.accountId === a.id) : [];
             const otherIds = accounts.filter(x => x.id !== a.id).map(x => x.id);
             const suggestion = role === 'principal' ? suggestAccountRole(accTx, otherIds) : null;
@@ -138,29 +376,195 @@ export function SettingsView({ members, accounts, accountBalances, saveMember, d
           <strong>Épargne</strong> / <strong>Investissement</strong> — exclus du cashflow, comptent dans le patrimoine.<span className="sep">·</span>
           <strong>Professionnel</strong> — exclu du patrimoine personnel.
         </p>
-      </section>
+      </div>
 
-      <section className="card">
-        <div className="card-header"><h3>Données</h3></div>
+      <BankConnectionsSection />
+    </section>
+  );
+}
+
+// ============================================================================
+// SECTION : SÉCURITÉ (placeholder + best-effort recent activity)
+// ============================================================================
+function SecuriteSection({ currentUser }) {
+  const [events, setEvents] = useState(null);  // null = not loaded, [] = loaded empty, [...] = data
+  const [eventsError, setEventsError] = useState(false);
+
+  useEffect(() => {
+    if (!currentUser?.is_admin) return;  // admin-only endpoint; skip otherwise
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await api.admin.authEvents(20);
+        if (cancelled) return;
+        // Filter to current user's events only if email matches
+        const mine = Array.isArray(data)
+          ? data.filter(e => !currentUser?.email || e.email === currentUser.email).slice(0, 5)
+          : [];
+        setEvents(mine);
+      } catch {
+        if (!cancelled) setEventsError(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [currentUser]);
+
+  return (
+    <section className="settings-panel">
+      <header>
+        <h2>Votre <em>sécurité.</em></h2>
+        <p className="settings-panel-intro">
+          Gère l'accès à ton compte et surveille les connexions récentes.
+        </p>
+      </header>
+
+      <div className="card">
+        <div className="settings-field-row">
+          <div>
+            <div className="settings-field-label">Mot de passe</div>
+            <div className="settings-field-hint">Change ton mot de passe régulièrement pour rester en sécurité.</div>
+          </div>
+          <div className="settings-field-control">
+            <button className="secondary-btn" disabled>Changer mon mot de passe</button>
+          </div>
+        </div>
+
+        <div className="settings-field-row">
+          <div>
+            <div className="settings-field-label">Authentification à 2 facteurs (2FA)</div>
+            <div className="settings-field-hint">Une couche de sécurité supplémentaire via une app TOTP.</div>
+          </div>
+          <div className="settings-field-control">
+            <span className="settings-coming-soon-badge">Bientôt</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <h3><Activity size={16}/> Activité de connexion récente</h3>
+        </div>
+        {!currentUser?.is_admin || eventsError ? (
+          <p className="settings-panel-intro" style={{ margin: 0 }}>À venir — l'historique de tes connexions sera bientôt disponible ici.</p>
+        ) : events === null ? (
+          <p className="settings-panel-intro" style={{ margin: 0 }}>Chargement…</p>
+        ) : events.length === 0 ? (
+          <p className="settings-panel-intro" style={{ margin: 0 }}>Aucune activité récente détectée.</p>
+        ) : (
+          <div className="settings-auth-events">
+            {events.map(ev => (
+              <div key={ev.id} className="settings-auth-event-row">
+                <span className="settings-auth-event-kind">{ev.kind || '—'} {ev.ip ? `· ${ev.ip}` : ''}</span>
+                <span className="settings-auth-event-time">
+                  {ev.created_at ? new Date(ev.created_at).toLocaleString('fr-FR') : '—'}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+// ============================================================================
+// SECTION : DEVISES & LANGUE
+// ============================================================================
+function DevisesSection({ baseCurrency, setBaseCurrency, ratesDate }) {
+  const { i18n: i18nHook } = useTranslation();
+  const currentLang = (i18nHook.resolvedLanguage || i18nHook.language || 'fr').slice(0, 2);
+  return (
+    <section className="settings-panel">
+      <header>
+        <h2>Devises & <em>langue.</em></h2>
+        <p className="settings-panel-intro">
+          La devise de référence pilote tout le patrimoine et le cashflow. La langue change les libellés de l'interface.
+        </p>
+      </header>
+
+      <div className="card">
+        <div className="settings-field-row">
+          <div>
+            <div className="settings-field-label">Devise de référence</div>
+            <div className="settings-field-hint">
+              {ratesDate ? `Taux EUR/USD/GBP/CHF mis à jour le ${new Date(ratesDate).toLocaleDateString('fr-FR')}.` : 'Tous les comptes seront convertis dans cette devise.'}
+            </div>
+          </div>
+          <div className="settings-field-control">
+            <select
+              value={baseCurrency}
+              onChange={(e) => setBaseCurrency && setBaseCurrency(e.target.value)}
+              disabled={!setBaseCurrency}
+            >
+              {SUPPORTED_CURRENCIES.map(c => (
+                <option key={c} value={c}>{CURRENCY_FLAGS[c]} {c} — {CURRENCY_NAMES[c]}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="settings-field-row">
+          <div>
+            <div className="settings-field-label">Langue de l'interface</div>
+            <div className="settings-field-hint">Bascule l'application en français ou en anglais.</div>
+          </div>
+          <div className="settings-field-control">
+            <select
+              value={currentLang}
+              onChange={(e) => i18nHook.changeLanguage(e.target.value)}
+            >
+              <option value="fr">Français</option>
+              <option value="en">English</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ============================================================================
+// SECTION : DONNÉES (export / import / danger zone)
+// ============================================================================
+function DonneesSection({ exportData, importData, resetAllData }) {
+  const onReset = () => {
+    if (!window.confirm('Réinitialiser TOUTES tes données ? Cette action est irréversible. Pense à exporter un backup avant.')) return;
+    if (!window.confirm('Dernière confirmation — toutes tes transactions, comptes, patrimoine et règles vont être effacés. Continuer ?')) return;
+    resetAllData && resetAllData();
+  };
+  return (
+    <section className="settings-panel">
+      <header>
+        <h2>Vos <em>données.</em></h2>
+        <p className="settings-panel-intro">
+          Exporte un backup avant chaque migration ou changement d'instance. Tu peux ré-importer un fichier JSON à tout moment.
+        </p>
+      </header>
+
+      <div className="card">
+        <div className="card-header"><h3><Database size={16}/> Sauvegarde & restauration</h3></div>
         <div className="settings-buttons">
           <button className="secondary-btn" onClick={exportData}><Download size={14}/> Exporter (backup JSON)</button>
           <label className="secondary-btn" style={{ cursor: 'pointer' }}>
             <Upload size={14}/> Importer un backup
             <input type="file" accept=".json" onChange={importData} style={{ display: 'none' }}/>
           </label>
-          <button className="danger-btn" onClick={resetAllData}><Trash2 size={14}/> Réinitialiser tout</button>
         </div>
         <p className="settings-footnote">
-          Exportez un backup avant chaque migration ou changement d'instance.
+          Le backup contient tes comptes, transactions, patrimoine, budgets, règles et préférences. Aucun mot de passe.
         </p>
-      </section>
+      </div>
 
-      <BankConnectionsSection />
-
-      <CustomRulesSection categories={categories} />
-
-      {editingMember && <MemberEditor member={editingMember} onSave={(m) => { saveMember(m); setEditingMember(null); }} onCancel={() => setEditingMember(null)}/>}
-    </div>
+      <div className="settings-danger-zone">
+        <h3>Zone dangereuse</h3>
+        <p>
+          Réinitialise complètement Wealthly. Cette action efface tous tes comptes, transactions, actifs, dettes, règles et budgets. Elle est <strong>irréversible</strong>.
+        </p>
+        <button className="danger-btn" onClick={onReset}>
+          <Trash2 size={14}/> Réinitialiser toutes mes données
+        </button>
+      </div>
+    </section>
   );
 }
 
