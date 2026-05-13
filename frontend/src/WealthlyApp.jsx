@@ -43,6 +43,9 @@ import { AccountDrawer } from './components/AccountDrawer.jsx';
 import { useTheme, ThemeToggle } from './components/ui/ThemeToggle.jsx';
 import Logo from './components/Logo.jsx';
 import { AddWealthModal } from './components/AddWealthModal.jsx';
+import { detectDuplicates } from './utils/duplicateDetector.js';
+import { DuplicateMergeModal } from './components/DuplicateMergeModal.jsx';
+import { useWealthItems } from './hooks/useWealthItems.js';
 
 const TaxSimulator = lazy(() => import('./TaxSimulator.jsx'));
 
@@ -537,6 +540,20 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     transactions.forEach(t => { balances[t.accountId] = (balances[t.accountId] || 0) + t.amount; });
     return balances;
   }, [accounts, transactions, demoMode]);
+
+  // ---- Duplicate detection (Account vs Asset legacy duplicates) ----
+  const [duplicatePairs, setDuplicatePairs] = useState([]);
+  const [showDuplicates, setShowDuplicates] = useState(false);
+  const [duplicatesDismissed, setDuplicatesDismissed] = useState(false);
+
+  const allWealthItems = useWealthItems({ accounts, assets, liabilities, accountBalances });
+
+  useEffect(() => {
+    if (duplicatesDismissed) return;
+    if (!accounts.length || !assets.length) return;
+    const pairs = detectDuplicates(allWealthItems);
+    setDuplicatePairs(pairs);
+  }, [allWealthItems, accounts.length, assets.length, duplicatesDismissed]);
 
   const liquidWealth = useMemo(
     () => visibleAccounts
@@ -1430,6 +1447,18 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             </div>
           )}
 
+          {duplicatePairs.length > 0 && !showDuplicates && !duplicatesDismissed && (
+            <div className="duplicates-banner">
+              <span>
+                <strong>{duplicatePairs.length}</strong> doublon{duplicatePairs.length > 1 ? 's' : ''} détecté{duplicatePairs.length > 1 ? 's' : ''} dans votre patrimoine.
+              </span>
+              <div>
+                <button className="primary-btn" onClick={() => setShowDuplicates(true)}>Examiner</button>
+                <button className="link-btn" onClick={() => setDuplicatesDismissed(true)}>Ignorer</button>
+              </div>
+            </div>
+          )}
+
           <main className="content">
         {view === 'dashboard' && (
           <Dashboard
@@ -1637,6 +1666,24 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             setTxInitialAccountFilter(accountId);
             setView('transactions');
           }}
+        />
+      )}
+
+      {showDuplicates && (
+        <DuplicateMergeModal
+          pairs={duplicatePairs}
+          fmt={fmt}
+          onMerge={async (pair, keep) => {
+            const toDelete = keep === 'keep-account' ? pair.assetItem : pair.accountItem;
+            try {
+              await api.wealth.delete(toDelete);
+              await reloadAll();
+            } catch (err) {
+              console.error('Failed to merge duplicate:', err);
+            }
+          }}
+          onSkip={(_pair) => { /* placeholder — could persist a "skip" marker later */ }}
+          onClose={() => { setShowDuplicates(false); setDuplicatesDismissed(true); }}
         />
       )}
 

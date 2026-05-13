@@ -1888,6 +1888,35 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
   border-top: 1px solid var(--border);
 }
 .drawer-danger { color: var(--negative); }
+
+.merge-pair {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  margin-top: 12px; margin-bottom: 18px;
+}
+.merge-card {
+  border: 1px solid var(--border); border-radius: 10px;
+  padding: 16px; text-align: center; background: var(--bg-elev);
+}
+.merge-card h4 {
+  margin: 10px 0 6px; font-size: 14px; font-weight: 600; color: var(--ink);
+}
+.merge-card p {
+  font-family: 'Newsreader', Georgia, serif; font-style: italic;
+  font-size: 20px; margin: 0 0 12px; color: var(--ink);
+}
+.merge-card .primary-btn { width: 100%; }
+
+.duplicates-banner {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 12px; padding: 10px 16px;
+  background: var(--accent-soft); color: var(--accent);
+  border-radius: 8px; margin: 12px 16px;
+  font-size: 13px;
+}
+.duplicates-banner strong { font-weight: 600; }
+.duplicates-banner > div { display: flex; gap: 8px; align-items: center; }
+.duplicates-banner .primary-btn { padding: 6px 14px; font-size: 12px; }
+.duplicates-banner .link-btn { color: var(--accent); }
 `;
   return <style>{css}</style>;
 }
