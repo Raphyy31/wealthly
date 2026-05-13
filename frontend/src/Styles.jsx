@@ -1901,6 +1901,32 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .csv-drop:hover { border-color: var(--accent); background: var(--bg-sunk); }
 .csv-drop p { margin: 10px 0 0; font-size: 13px; }
 
+.re-details { display: flex; flex-direction: column; }
+.re-detail-row {
+  display: flex; justify-content: space-between;
+  padding: 8px 0; border-bottom: 1px dotted var(--border-strong);
+  font-size: 13px;
+}
+.re-detail-row:last-child { border-bottom: none; }
+.re-detail-row span:first-child { color: var(--ink-2); }
+.re-detail-sep {
+  font-family: 'Geist Mono', monospace; font-size: 10.5px;
+  text-transform: uppercase; letter-spacing: .04em;
+  color: var(--ink-3); padding-top: 14px; border-bottom: none;
+}
+.re-sub { padding-left: 16px; font-size: 12.5px; }
+.re-sub span:first-child { color: var(--ink-3); }
+.re-linked-loan {
+  margin-top: 14px; padding: 12px 14px;
+  background: var(--bg-sunk); border-radius: 8px;
+}
+.re-linked-eyebrow {
+  font-family: 'Geist Mono', monospace; font-size: 10.5px;
+  text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3);
+}
+.re-linked-name { font-weight: 600; font-size: 14px; margin-top: 4px; }
+.re-linked-amount { font-size: 12px; color: var(--ink-2); margin-top: 2px; }
+
 .fiscal-insight { padding: 4px 0; }
 .fiscal-bar {
   height: 6px; background: var(--bg-sunk);

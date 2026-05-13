@@ -84,9 +84,15 @@ const assetToWealthItem = (a, childAssets = []) => {
     meta: {
       ticker: a.ticker,
       quantity: a.quantity,
-      surface_m2: a.surfaceM2,
+      surface_m2: a.surfaceM2 != null && a.surfaceM2 !== '' ? parseFloat(a.surfaceM2) : null,
       address: a.address,
-      ownership_pct: a.ownershipPct,
+      ownership_pct: a.ownershipPct != null && a.ownershipPct !== '' ? parseFloat(a.ownershipPct) : null,
+      purchase_price: a.purchasePrice != null && a.purchasePrice !== '' ? parseFloat(a.purchasePrice) : null,
+      construction_year: a.constructionYear != null && a.constructionYear !== '' ? parseInt(a.constructionYear, 10) : null,
+      notary_fees: a.notaryFees != null && a.notaryFees !== '' ? parseFloat(a.notaryFees) : 0,
+      agency_fees: a.agencyFees != null && a.agencyFees !== '' ? parseFloat(a.agencyFees) : 0,
+      works_fees: a.worksFees != null && a.worksFees !== '' ? parseFloat(a.worksFees) : 0,
+      furniture_fees: a.furnitureFees != null && a.furnitureFees !== '' ? parseFloat(a.furnitureFees) : 0,
     },
   };
 };

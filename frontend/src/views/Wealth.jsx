@@ -270,7 +270,13 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
                 key={item.id}
                 item={item}
                 fmt={fmt}
-                onClick={(it) => setDrawerItem(it)}
+                onClick={(it) => {
+                  if (it.sourceTable === 'liability') {
+                    const l = liabilities.find(x => x.id === it.sourceId);
+                    if (l) { setViewingLia(l); return; }
+                  }
+                  setDrawerItem(it);
+                }}
               />
             ))}
           </div>
@@ -298,6 +304,7 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
           item={drawerItem}
           fmt={fmt}
           members={members}
+          liabilities={liabilities}
           onClose={() => setDrawerItem(null)}
           onEdit={(it) => {
             if (it.sourceTable === 'asset') {

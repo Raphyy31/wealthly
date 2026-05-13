@@ -90,6 +90,55 @@ function PositionsSection({ item, fmt, onImportCSV }) {
   );
 }
 
+function RealEstateSection({ item, fmt, liabilities = [] }) {
+  if (!['rp', 'locatif', 'scpi'].includes(item.subtype)) return null;
+  const meta = item.meta || {};
+  const linkedLoan = liabilities.find(l => l.linkedAssetId === item.sourceId);
+
+  return (
+    <Section label="§ 01" title={<>Détails <em>du bien</em></>}>
+      <div className="re-details">
+        {meta.address && (
+          <div className="re-detail-row"><span>Adresse</span><span>{meta.address}</span></div>
+        )}
+        {meta.surface_m2 && (
+          <div className="re-detail-row"><span>Surface</span><span className="w-num">{meta.surface_m2} m²</span></div>
+        )}
+        {meta.purchase_price && (
+          <div className="re-detail-row"><span>Prix d'achat</span><span className="w-num">{fmt(meta.purchase_price)}</span></div>
+        )}
+        {meta.construction_year && (
+          <div className="re-detail-row"><span>Année de construction</span><span className="w-num">{meta.construction_year}</span></div>
+        )}
+        {meta.ownership_pct && meta.ownership_pct !== 100 && (
+          <div className="re-detail-row"><span>Quote-part</span><span className="w-num">{meta.ownership_pct} %</span></div>
+        )}
+        {(meta.notary_fees || meta.agency_fees || meta.works_fees || meta.furniture_fees) && (
+          <>
+            <div className="re-detail-row re-detail-sep"><span>Frais d'acquisition</span><span/></div>
+            {meta.notary_fees > 0 && <div className="re-detail-row re-sub"><span>Frais de notaire</span><span className="w-num">{fmt(meta.notary_fees)}</span></div>}
+            {meta.agency_fees > 0 && <div className="re-detail-row re-sub"><span>Frais d'agence</span><span className="w-num">{fmt(meta.agency_fees)}</span></div>}
+            {meta.works_fees > 0 && <div className="re-detail-row re-sub"><span>Travaux</span><span className="w-num">{fmt(meta.works_fees)}</span></div>}
+            {meta.furniture_fees > 0 && <div className="re-detail-row re-sub"><span>Mobilier</span><span className="w-num">{fmt(meta.furniture_fees)}</span></div>}
+          </>
+        )}
+        {linkedLoan && (
+          <div className="re-linked-loan">
+            <span className="re-linked-eyebrow">Emprunt lié</span>
+            <div className="re-linked-name">{linkedLoan.name}</div>
+            <div className="re-linked-amount w-num">Capital restant : {fmt(linkedLoan.remainingCapital || 0)}</div>
+          </div>
+        )}
+        {!meta.address && !meta.surface_m2 && !meta.purchase_price && (
+          <p className="drawer-empty-inline">
+            Aucun détail renseigné pour ce bien.
+          </p>
+        )}
+      </div>
+    </Section>
+  );
+}
+
 function FiscalInsightSection({ item, fmt }) {
   const cap = FISCAL_CAPS[item.subtype];
   if (!cap) return null;
@@ -148,7 +197,7 @@ function ConfigSection({ item, fmt, members = [], onEdit, onDelete }) {
   );
 }
 
-export function WealthItemDrawer({ item, fmt, members = [], onClose, onEdit, onDelete, onImportCSV }) {
+export function WealthItemDrawer({ item, fmt, members = [], liabilities = [], onClose, onEdit, onDelete, onImportCSV }) {
   if (!item) return null;
 
   const positive = (item.plLatente || 0) >= 0;
@@ -217,7 +266,8 @@ export function WealthItemDrawer({ item, fmt, members = [], onClose, onEdit, onD
         </div>
 
         <div className="drawer-body">
-          <PositionsSection item={item} fmt={fmt} onImportCSV={onImportCSV}/>
+          <RealEstateSection item={item} fmt={fmt} liabilities={liabilities}/>
+          {item.category !== 'immobilier' && <PositionsSection item={item} fmt={fmt} onImportCSV={onImportCSV}/>}
           <FiscalInsightSection item={item} fmt={fmt}/>
           <ConfigSection item={item} fmt={fmt} members={members} onEdit={onEdit} onDelete={onDelete}/>
         </div>
