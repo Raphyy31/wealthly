@@ -40,6 +40,11 @@ export function Monthly({
   const [tab, setTab] = useState('budget'); // budget | evolution
   const [collapsedGroups, setCollapsedGroups] = useState({});
   const monthBarRef = useRef(null);
+  const [fluxMode, setFluxMode] = useState('reel'); // 'reel' | 'type'
+  const [refMonth, setRefMonth] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('wealthly:ref_month') || 'null') || { lines: [] }; }
+    catch { return { lines: [] }; }
+  });
 
   // ── Available months (last 12 + future 3, current in middle) ───────────
   const availableMonths = useMemo(() => {
@@ -60,6 +65,10 @@ export function Monthly({
       active.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'auto' });
     }
   }, [selectedMonth]);
+
+  useEffect(() => {
+    localStorage.setItem('wealthly:ref_month', JSON.stringify(refMonth));
+  }, [refMonth]);
 
   const monthData = useMemo(
     () => monthlyEvolution.find(m => m.month === selectedMonth) || { income: 0, expenses: 0, net: 0, fixed: 0, variable: 0, savings: 0 },
@@ -142,6 +151,76 @@ export function Monthly({
 
     return { nodes, links, totalIncome, totalExpense, available, incomeEntries, expenseEntries, catFor, hasData: totalIncome > 0 || totalExpense > 0 };
   }, [transactions, selectedMonth, transferIds, accounts, memberShare, categories]);
+
+  // ── Average per category over the last 6 complete months ──────────────────
+  const avgByCat = useMemo(() => {
+    const [cy, cm] = currentMonth.split('-').map(Number);
+    const pastMonths = [];
+    for (let i = 1; i <= 6; i++) {
+      const d = new Date(cy, cm - 1 - i, 1);
+      pastMonths.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    }
+    const N = pastMonths.length;
+    const incomeSum = {}, expenseSum = {};
+    transactions.forEach(t => {
+      if (!pastMonths.includes(monthKey(t.date))) return;
+      if (transferIds.has(t.id)) return;
+      const acc = accounts.find(a => a.id === t.accountId);
+      const share = acc ? memberShare(acc) : 1;
+      const amt = t.amount * share;
+      const slug = t.categoryId || 'uncategorized';
+      if (amt >= 0) incomeSum[slug] = (incomeSum[slug] || 0) + amt;
+      else expenseSum[slug] = (expenseSum[slug] || 0) + Math.abs(amt);
+    });
+    const income = {}, expense = {};
+    Object.entries(incomeSum).forEach(([s, v]) => { income[s] = v / N; });
+    Object.entries(expenseSum).forEach(([s, v]) => { expense[s] = v / N; });
+    return { income, expense };
+  }, [transactions, currentMonth, transferIds, accounts, memberShare]);
+
+  // ── Merge auto averages with manual overrides ─────────────────────────────
+  const refMonthLines = useMemo(() => {
+    const allSlugs = new Set([...Object.keys(avgByCat.income), ...Object.keys(avgByCat.expense)]);
+    return [...allSlugs].map(slug => {
+      const override = refMonth.lines.find(l => l.slug === slug);
+      const avgIncome = avgByCat.income[slug] || 0;
+      const avgExpense = avgByCat.expense[slug] || 0;
+      const isIncome = avgIncome >= avgExpense;
+      const avgVal = isIncome ? avgIncome : avgExpense;
+      const mode = override?.mode || 'auto';
+      const manualAmount = override?.amount ?? avgVal;
+      const effectiveAmount = mode === 'manuel' ? manualAmount : avgVal;
+      return { slug, isIncome, mode, manualAmount, avgVal, effectiveAmount };
+    });
+  }, [avgByCat, refMonth]);
+
+  // ── Sankey data for the mois type view ────────────────────────────────────
+  const refMonthCashflow = useMemo(() => {
+    const catFor = slug => categories.find(c => c.slug === slug || c.id === slug);
+    const incomeLines = refMonthLines.filter(l => l.isIncome && l.effectiveAmount > 0).sort((a, b) => b.effectiveAmount - a.effectiveAmount);
+    const expenseLines = refMonthLines.filter(l => !l.isIncome && l.effectiveAmount > 0).sort((a, b) => b.effectiveAmount - a.effectiveAmount);
+    const totalIncome = incomeLines.reduce((s, l) => s + l.effectiveAmount, 0);
+    const totalExpense = expenseLines.reduce((s, l) => s + l.effectiveAmount, 0);
+    const available = totalIncome - totalExpense;
+    const nodes = [], links = [];
+    incomeLines.forEach(l => {
+      const cat = catFor(l.slug);
+      nodes.push({ name: cat?.name || l.slug, kind: 'income', value: l.effectiveAmount, color: cat?.color || 'var(--positive)' });
+    });
+    const hubIdx = nodes.length;
+    nodes.push({ name: 'Disponible', kind: 'hub' });
+    expenseLines.forEach(l => {
+      const cat = catFor(l.slug);
+      nodes.push({ name: cat?.name || l.slug, kind: 'expense', value: l.effectiveAmount, color: cat?.color || 'var(--negative)' });
+    });
+    if (available > 0) {
+      nodes.push({ name: 'Épargne', kind: 'savings', value: available, color: 'var(--accent)' });
+      links.push({ source: hubIdx, target: nodes.length - 1, value: available });
+    }
+    incomeLines.forEach((_, i) => links.push({ source: i, target: hubIdx, value: incomeLines[i].effectiveAmount }));
+    expenseLines.forEach((_, i) => links.push({ source: hubIdx, target: hubIdx + 1 + i, value: expenseLines[i].effectiveAmount }));
+    return { nodes, links, totalIncome, totalExpense, available, incomeLines, expenseLines, catFor, hasData: totalIncome > 0 || totalExpense > 0 };
+  }, [refMonthLines, categories]);
 
   const isNarrow = useIsNarrow(760);
 
@@ -250,6 +329,12 @@ export function Monthly({
 
   const toggleGroup = (key) => setCollapsedGroups(g => ({ ...g, [key]: !g[key] }));
   const isGroupOpen = (key) => !collapsedGroups[key];
+  const updateRefLine = (slug, updates) =>
+    setRefMonth(prev => {
+      const existing = prev.lines.find(l => l.slug === slug) || { slug, mode: 'auto', amount: 0 };
+      return { ...prev, lines: [...prev.lines.filter(l => l.slug !== slug), { ...existing, ...updates }] };
+    });
+  const resetRefMonth = () => setRefMonth({ lines: [] });
 
   return (
     <div className="monthly-view">
@@ -524,91 +609,192 @@ export function Monthly({
 
       {tab === 'cashflow' && (
         <section className="mon-cashflow">
-          {cashflowData.hasData ? (
-            <div className="mon-card" style={{ overflowX: 'auto' }}>
-              <div className="mon-card-head">
-                <h3>Flux du mois</h3>
-                <span className="mon-card-meta">{cashflowData.incomeEntries.length} source{cashflowData.incomeEntries.length > 1 ? 's' : ''} · {cashflowData.expenseEntries.length} catégorie{cashflowData.expenseEntries.length > 1 ? 's' : ''}</span>
-              </div>
-              <ResponsiveContainer width="100%" height={isNarrow ? 480 : 380}>
-                <Sankey
-                  data={{ nodes: cashflowData.nodes, links: cashflowData.links }}
-                  nodePadding={isNarrow ? 14 : 22}
-                  nodeWidth={isNarrow ? 8 : 10}
-                  linkCurvature={0.5}
-                  iterations={64}
-                  node={<MonthlySankeyNode narrow={isNarrow}/>}
-                  link={{ stroke: 'var(--border)', strokeOpacity: 0.45, fill: 'var(--accent-soft)' }}
-                  margin={isNarrow ? { top: 8, right: 80, bottom: 8, left: 80 } : { top: 12, right: 160, bottom: 12, left: 160 }}
-                >
-                  <Tooltip
-                    formatter={v => fmt(v)}
-                    contentStyle={{ background: 'var(--bg-elev)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
-                  />
-                </Sankey>
-              </ResponsiveContainer>
-              <div className="cashflow-kpi-row" style={{ marginTop: 8 }}>
-                <div className="cashflow-kpi">
-                  <div className="cashflow-kpi-label">Entrées</div>
-                  <div className="cashflow-kpi-value positive">+{fmt(cashflowData.totalIncome)}</div>
-                </div>
-                <div className="cashflow-kpi">
-                  <div className="cashflow-kpi-label">Sorties</div>
-                  <div className="cashflow-kpi-value negative">−{fmt(cashflowData.totalExpense)}</div>
-                </div>
-                <div className="cashflow-kpi">
-                  <div className="cashflow-kpi-label">Disponible</div>
-                  <div className={`cashflow-kpi-value ${cashflowData.available >= 0 ? 'positive' : 'negative'}`}>
-                    {cashflowData.available >= 0 ? '+' : ''}{fmt(cashflowData.available)}
+          {/* Sub-toggle Mois réel / Mois type */}
+          <div className="flux-mode-bar">
+            <div className="flux-mode-toggle">
+              <button className={fluxMode === 'reel' ? 'on' : ''} onClick={() => setFluxMode('reel')}>Mois réel</button>
+              <button className={`type ${fluxMode === 'type' ? 'on' : ''}`} onClick={() => setFluxMode('type')}>Mois type</button>
+            </div>
+            <span className="flux-mode-hint">
+              {fluxMode === 'reel'
+                ? formatDate(selectedMonth + '-01', { format: 'monthLong' })
+                : 'Mois de référence — modifiable'}
+            </span>
+          </div>
+
+          {fluxMode === 'reel' && (
+            <>
+              {cashflowData.hasData ? (
+                <div className="mon-card" style={{ overflowX: 'auto' }}>
+                  <div className="mon-card-head">
+                    <h3>Flux du mois</h3>
+                    <span className="mon-card-meta">{cashflowData.incomeEntries.length} source{cashflowData.incomeEntries.length > 1 ? 's' : ''} · {cashflowData.expenseEntries.length} catégorie{cashflowData.expenseEntries.length > 1 ? 's' : ''}</span>
+                  </div>
+                  <ResponsiveContainer width="100%" height={isNarrow ? 480 : 380}>
+                    <Sankey
+                      data={{ nodes: cashflowData.nodes, links: cashflowData.links }}
+                      nodePadding={isNarrow ? 14 : 22}
+                      nodeWidth={isNarrow ? 8 : 10}
+                      linkCurvature={0.5}
+                      iterations={64}
+                      node={<MonthlySankeyNode narrow={isNarrow}/>}
+                      link={{ stroke: 'var(--border)', strokeOpacity: 0.45, fill: 'var(--accent-soft)' }}
+                      margin={isNarrow ? { top: 8, right: 80, bottom: 8, left: 80 } : { top: 12, right: 160, bottom: 12, left: 160 }}
+                    >
+                      <Tooltip
+                        formatter={v => fmt(v)}
+                        contentStyle={{ background: 'var(--bg-elev)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
+                      />
+                    </Sankey>
+                  </ResponsiveContainer>
+                  <div className="cashflow-kpi-row" style={{ marginTop: 8 }}>
+                    <div className="cashflow-kpi">
+                      <div className="cashflow-kpi-label">Entrées</div>
+                      <div className="cashflow-kpi-value positive">+{fmt(cashflowData.totalIncome)}</div>
+                    </div>
+                    <div className="cashflow-kpi">
+                      <div className="cashflow-kpi-label">Sorties</div>
+                      <div className="cashflow-kpi-value negative">−{fmt(cashflowData.totalExpense)}</div>
+                    </div>
+                    <div className="cashflow-kpi">
+                      <div className="cashflow-kpi-label">Disponible</div>
+                      <div className={`cashflow-kpi-value ${cashflowData.available >= 0 ? 'positive' : 'negative'}`}>
+                        {cashflowData.available >= 0 ? '+' : ''}{fmt(cashflowData.available)}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          ) : (
-            <div className="mon-empty"><Activity size={28}/><span>Aucune transaction ce mois-ci.</span></div>
+              ) : (
+                <div className="mon-empty"><Activity size={28}/><span>Aucune transaction ce mois-ci.</span></div>
+              )}
+              {cashflowData.hasData && (
+                <div className="cashflow-cats-grid">
+                  <div className="mon-card">
+                    <div className="mon-card-head"><h3>Entrées</h3></div>
+                    <div className="cashflow-cat-list">
+                      {cashflowData.incomeEntries.map(([slug, value]) => {
+                        const cat = cashflowData.catFor(slug);
+                        const pct = cashflowData.totalIncome > 0 ? (value / cashflowData.totalIncome * 100).toFixed(0) : 0;
+                        return (
+                          <div key={slug} className="cashflow-cat-row">
+                            <span className="cashflow-cat-icon" style={{ background: (cat?.color || '#999') + '22', color: cat?.color || 'var(--positive)' }}>{cat?.icon || '💰'}</span>
+                            <div className="cashflow-cat-info">
+                              <div className="cashflow-cat-name">{cat?.name || slug}</div>
+                              <div className="cashflow-cat-meta">{pct} % des entrées</div>
+                            </div>
+                            <div className="cashflow-cat-amount positive">+{fmt(value)}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="mon-card">
+                    <div className="mon-card-head"><h3>Sorties</h3></div>
+                    <div className="cashflow-cat-list">
+                      {cashflowData.expenseEntries.map(([slug, value]) => {
+                        const cat = cashflowData.catFor(slug);
+                        const pct = cashflowData.totalExpense > 0 ? (value / cashflowData.totalExpense * 100).toFixed(0) : 0;
+                        return (
+                          <div key={slug} className="cashflow-cat-row">
+                            <span className="cashflow-cat-icon" style={{ background: (cat?.color || '#999') + '22', color: cat?.color || 'var(--negative)' }}>{cat?.icon || '💸'}</span>
+                            <div className="cashflow-cat-info">
+                              <div className="cashflow-cat-name">{cat?.name || slug}</div>
+                              <div className="cashflow-cat-meta">{pct} % des sorties</div>
+                            </div>
+                            <div className="cashflow-cat-amount negative">−{fmt(value)}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
-          {cashflowData.hasData && (
-            <div className="cashflow-cats-grid" style={{ marginTop: 16 }}>
-              <div className="mon-card">
-                <div className="mon-card-head"><h3>Entrées</h3></div>
-                <div className="cashflow-cat-list">
-                  {cashflowData.incomeEntries.map(([slug, value]) => {
-                    const cat = cashflowData.catFor(slug);
-                    const pct = cashflowData.totalIncome > 0 ? (value / cashflowData.totalIncome * 100).toFixed(0) : 0;
-                    return (
-                      <div key={slug} className="cashflow-cat-row">
-                        <span className="cashflow-cat-icon" style={{ background: (cat?.color || '#999') + '22', color: cat?.color || 'var(--positive)' }}>{cat?.icon || '💰'}</span>
-                        <div className="cashflow-cat-info">
-                          <div className="cashflow-cat-name">{cat?.name || slug}</div>
-                          <div className="cashflow-cat-meta">{pct} % des entrées</div>
-                        </div>
-                        <div className="cashflow-cat-amount positive">+{fmt(value)}</div>
+          {fluxMode === 'type' && (
+            <>
+              {refMonthCashflow.hasData ? (
+                <div className="mon-card" style={{ overflowX: 'auto' }}>
+                  <div className="mon-card-head">
+                    <h3>Flux type</h3>
+                    <span className="mon-card-meta">Moyenne 6 mois · avec ajustements manuels</span>
+                  </div>
+                  <ResponsiveContainer width="100%" height={isNarrow ? 480 : 380}>
+                    <Sankey
+                      data={{ nodes: refMonthCashflow.nodes, links: refMonthCashflow.links }}
+                      nodePadding={isNarrow ? 14 : 22}
+                      nodeWidth={isNarrow ? 8 : 10}
+                      linkCurvature={0.5}
+                      iterations={64}
+                      node={<MonthlySankeyNode narrow={isNarrow}/>}
+                      link={{ stroke: 'var(--border)', strokeOpacity: 0.45, fill: 'var(--accent-soft)' }}
+                      margin={isNarrow ? { top: 8, right: 80, bottom: 8, left: 80 } : { top: 12, right: 160, bottom: 12, left: 160 }}
+                    >
+                      <Tooltip
+                        formatter={v => fmt(v)}
+                        contentStyle={{ background: 'var(--bg-elev)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
+                      />
+                    </Sankey>
+                  </ResponsiveContainer>
+                  <div className="cashflow-kpi-row" style={{ marginTop: 8 }}>
+                    <div className="cashflow-kpi">
+                      <div className="cashflow-kpi-label">Entrées types</div>
+                      <div className="cashflow-kpi-value positive">+{fmt(refMonthCashflow.totalIncome)}</div>
+                    </div>
+                    <div className="cashflow-kpi">
+                      <div className="cashflow-kpi-label">Sorties types</div>
+                      <div className="cashflow-kpi-value negative">−{fmt(refMonthCashflow.totalExpense)}</div>
+                    </div>
+                    <div className="cashflow-kpi">
+                      <div className="cashflow-kpi-label">Épargne cible</div>
+                      <div className={`cashflow-kpi-value ${refMonthCashflow.available >= 0 ? 'positive' : 'negative'}`}>
+                        {refMonthCashflow.available >= 0 ? '+' : ''}{fmt(refMonthCashflow.available)}
                       </div>
-                    );
-                  })}
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div className="mon-card">
-                <div className="mon-card-head"><h3>Sorties</h3></div>
-                <div className="cashflow-cat-list">
-                  {cashflowData.expenseEntries.map(([slug, value]) => {
-                    const cat = cashflowData.catFor(slug);
-                    const pct = cashflowData.totalExpense > 0 ? (value / cashflowData.totalExpense * 100).toFixed(0) : 0;
-                    return (
-                      <div key={slug} className="cashflow-cat-row">
-                        <span className="cashflow-cat-icon" style={{ background: (cat?.color || '#999') + '22', color: cat?.color || 'var(--negative)' }}>{cat?.icon || '💸'}</span>
-                        <div className="cashflow-cat-info">
-                          <div className="cashflow-cat-name">{cat?.name || slug}</div>
-                          <div className="cashflow-cat-meta">{pct} % des sorties</div>
-                        </div>
-                        <div className="cashflow-cat-amount negative">−{fmt(value)}</div>
-                      </div>
-                    );
-                  })}
+              ) : (
+                <div className="mon-empty"><Activity size={28}/><span>Pas assez de données pour calculer un mois type.</span></div>
+              )}
+
+              <div className="refmonth-section">
+                <div className="refmonth-header">
+                  <span className="refmonth-title">Définir le mois type</span>
+                  <button className="refmonth-reset-btn" onClick={resetRefMonth}>
+                    ↺ Initialiser depuis la moyenne
+                  </button>
                 </div>
+
+                {refMonthCashflow.incomeLines.length > 0 && (
+                  <div className="refmonth-group">
+                    <div className="refmonth-group-head income-head">
+                      <ArrowUp size={12}/> Revenus
+                      <span className="refmonth-group-total">{fmt(refMonthCashflow.totalIncome)}</span>
+                    </div>
+                    {refMonthCashflow.incomeLines.map(line => (
+                      <RefMonthLine key={line.slug} line={line} categories={categories} fmt={fmt} onUpdate={u => updateRefLine(line.slug, u)}/>
+                    ))}
+                  </div>
+                )}
+
+                {refMonthCashflow.expenseLines.length > 0 && (
+                  <div className="refmonth-group">
+                    <div className="refmonth-group-head expense-head">
+                      <ArrowDown size={12}/> Dépenses
+                      <span className="refmonth-group-total">{fmt(refMonthCashflow.totalExpense)}</span>
+                    </div>
+                    {refMonthCashflow.expenseLines.map(line => (
+                      <RefMonthLine key={line.slug} line={line} categories={categories} fmt={fmt} onUpdate={u => updateRefLine(line.slug, u)}/>
+                    ))}
+                  </div>
+                )}
+
+                {refMonthLines.length === 0 && (
+                  <div className="mon-empty"><Lightbulb size={24}/><span>Connectez des comptes et importez des transactions pour calculer un mois type.</span></div>
+                )}
               </div>
-            </div>
+            </>
           )}
         </section>
       )}
@@ -708,6 +894,63 @@ function BudgetRow({ name, meta, icon, color, budgeted, actual, fmt, onEdit, onD
       <div className="mon-row-actions">
         {onEdit && <button className="mon-row-act" onClick={onEdit} title="Modifier"><Edit3 size={12}/></button>}
         {onDelete && <button className="mon-row-act" onClick={onDelete} title="Supprimer"><Trash2 size={12}/></button>}
+      </div>
+    </div>
+  );
+}
+
+function RefMonthLine({ line, categories, fmt, onUpdate }) {
+  const cat = categories.find(c => c.slug === line.slug || c.id === line.slug);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(line.manualAmount);
+  const isManuel = line.mode === 'manuel';
+  const commit = () => {
+    const v = parseFloat(draft);
+    if (!isNaN(v) && v >= 0) onUpdate({ mode: 'manuel', amount: v });
+    setEditing(false);
+  };
+  return (
+    <div className="refmonth-row">
+      <span className="refmonth-cat-icon" style={{ background: (cat?.color || '#999') + '22', color: cat?.color || (line.isIncome ? 'var(--positive)' : 'var(--negative)') }}>
+        {cat?.icon || '?'}
+      </span>
+      <div className="refmonth-cat-info">
+        <div className="refmonth-cat-name">{cat?.name || line.slug}</div>
+        <div className="refmonth-cat-sub">
+          {isManuel
+            ? <span className="refmonth-badge-manual">manuel</span>
+            : <><span className="refmonth-badge-auto">moy.</span> {fmt(line.avgVal)}/mois · 6 mois</>
+          }
+        </div>
+      </div>
+      <div className="refmonth-mode-badge">
+        <button
+          className={`refmonth-mode-btn ${!isManuel ? 'on-auto' : ''}`}
+          onClick={() => onUpdate({ mode: 'auto' })}
+        >Auto</button>
+        <button
+          className={`refmonth-mode-btn ${isManuel ? 'on-manual' : ''}`}
+          onClick={() => { if (!isManuel) { onUpdate({ mode: 'manuel', amount: line.avgVal }); setDraft(line.avgVal); setEditing(true); } }}
+        >Manuel</button>
+      </div>
+      <div className="refmonth-amount">
+        {isManuel && editing ? (
+          <input
+            className="refmonth-input"
+            type="number"
+            value={draft}
+            onChange={e => setDraft(e.target.value)}
+            onBlur={commit}
+            onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') setEditing(false); }}
+            autoFocus
+          />
+        ) : (
+          <button
+            className={`refmonth-amount-btn ${!isManuel ? 'is-auto' : ''}`}
+            onClick={() => { if (isManuel) { setDraft(line.manualAmount); setEditing(true); } }}
+            disabled={!isManuel}
+          >{fmt(line.effectiveAmount)}</button>
+        )}
       </div>
     </div>
   );
@@ -888,6 +1131,57 @@ const css = `
 .mon-budget-edit:hover .mon-budget-dash { color: var(--accent); opacity: 1; }
 .mon-budget-input { width: 90px; height: 26px; padding: 0 8px; background: var(--bg-elev); border: 1px solid var(--accent); border-radius: 5px; color: var(--ink); font-family: inherit; font-size: 13px; text-align: right; font-feature-settings: 'tnum'; outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
 @media (max-width: 760px) { .mon-budget-input { width: 70px; } }
+
+/* Flux mode sub-toggle */
+.mon-cashflow { display: flex; flex-direction: column; gap: 16px; }
+.flux-mode-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.flux-mode-toggle { display: inline-flex; gap: 2px; padding: 2px; background: var(--bg-sunk); border: 1px solid var(--border); border-radius: 8px; }
+.flux-mode-toggle button { background: transparent; border: none; padding: 5px 12px; border-radius: 6px; font: 500 12px/1 var(--font-sans); color: var(--ink-3); cursor: pointer; transition: background var(--t-fast), color var(--t-fast); }
+.flux-mode-toggle button:hover { color: var(--ink); }
+.flux-mode-toggle button.on { background: var(--bg-elev); color: var(--ink); box-shadow: var(--shadow-sm); }
+.flux-mode-toggle button.type.on { color: var(--accent); }
+.flux-mode-hint { font-size: 12px; color: var(--ink-3); font-style: italic; }
+
+/* Mois type: editable reference month */
+.refmonth-section { display: flex; flex-direction: column; gap: 12px; }
+.refmonth-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.refmonth-title { font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-3); }
+.refmonth-reset-btn { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; background: transparent; border: 1px solid var(--border); border-radius: 7px; font: 500 12px/1 var(--font-sans); color: var(--ink-2); cursor: pointer; transition: border-color var(--t-fast), color var(--t-fast); }
+.refmonth-reset-btn:hover { border-color: var(--accent-line); color: var(--accent); }
+
+.refmonth-group { background: var(--bg-elev); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.refmonth-group-head { display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--bg-sunk); border-bottom: 1px solid var(--border); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-3); }
+.refmonth-group-head.income-head { color: var(--positive); }
+.refmonth-group-head.expense-head { color: var(--negative); }
+.refmonth-group-total { margin-left: auto; font-family: var(--font-mono); font-size: 13px; font-weight: 500; color: var(--ink); }
+
+.refmonth-row { display: grid; grid-template-columns: 28px 1fr auto auto; gap: 12px; align-items: center; padding: 10px 16px; border-top: 1px dashed var(--border); transition: background var(--t-fast); }
+.refmonth-row:first-child { border-top: none; }
+.refmonth-row:hover { background: var(--bg-hover); }
+.refmonth-cat-icon { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; font-size: 13px; flex-shrink: 0; }
+.refmonth-cat-info { min-width: 0; }
+.refmonth-cat-name { font-size: 13.5px; font-weight: 500; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.refmonth-cat-sub { font-size: 11px; color: var(--ink-3); margin-top: 1px; display: flex; align-items: center; gap: 4px; }
+.refmonth-badge-auto { display: inline-block; padding: 1px 5px; background: var(--bg-sunk); border-radius: 3px; font-size: 10px; color: var(--ink-3); font-family: var(--font-mono); }
+.refmonth-badge-manual { display: inline-block; padding: 1px 5px; background: var(--accent-soft); border-radius: 3px; font-size: 10px; color: var(--accent-2); font-family: var(--font-mono); }
+
+.refmonth-mode-badge { display: inline-flex; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); flex-shrink: 0; }
+.refmonth-mode-btn { padding: 4px 9px; font: 500 11px/1 var(--font-sans); border: none; background: transparent; cursor: pointer; transition: background var(--t-fast), color var(--t-fast); color: var(--ink-3); }
+.refmonth-mode-btn + .refmonth-mode-btn { border-left: 1px solid var(--border); }
+.refmonth-mode-btn.on-auto { background: var(--bg-sunk); color: var(--ink-2); }
+.refmonth-mode-btn.on-manual { background: var(--accent-soft); color: var(--accent-2); }
+
+.refmonth-amount { text-align: right; min-width: 90px; }
+.refmonth-amount-btn { background: transparent; border: none; padding: 0; font: 500 14px/1 var(--font-mono); color: var(--ink); cursor: default; font-feature-settings: 'tnum'; }
+.refmonth-amount-btn.is-auto { color: var(--ink-2); font-weight: 400; }
+.refmonth-amount-btn:not([disabled]):hover { color: var(--accent); cursor: pointer; }
+.refmonth-input { width: 90px; height: 28px; padding: 0 8px; text-align: right; background: var(--bg-elev); border: 1.5px solid var(--accent); border-radius: 6px; color: var(--ink); font: 500 13px/1 var(--font-mono); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); font-feature-settings: 'tnum'; }
+
+@media (max-width: 760px) {
+  .refmonth-row { grid-template-columns: 26px 1fr auto; gap: 8px; padding: 9px 12px; }
+  .refmonth-amount { display: none; }
+  .refmonth-mode-badge { display: none; }
+}
 
 /* Alert + tip */
 .mon-alert { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; background: var(--warning-soft); border: 1px solid var(--warning); border-radius: 12px; color: var(--warning); margin-top: 8px; }
