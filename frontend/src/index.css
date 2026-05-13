@@ -255,16 +255,22 @@ html, body {
   font-feature-settings: 'tnum';
 }
 
-/* Hide-amounts mode: blur all monetary values in-place so layout is preserved */
+/* Hide-amounts mode: solid redaction bar — layout preserved, text invisible */
 [data-hide-amounts] .num,
 [data-hide-amounts] .amount,
 [data-hide-amounts] .w-num,
 [data-hide-amounts] [data-financial],
 [data-hide-amounts] .ds-masked,
 [data-hide-amounts] .ds-hero-num {
-  filter: blur(6px);
+  color: transparent !important;
+  background: var(--ink-3);
+  border-radius: 3px;
   user-select: none;
   pointer-events: none;
+}
+[data-hide-amounts] .ds-hero-num .cents {
+  color: transparent !important;
+  background: transparent;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
