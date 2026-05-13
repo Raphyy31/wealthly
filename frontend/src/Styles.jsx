@@ -1733,6 +1733,161 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
   display: flex; justify-content: flex-end; gap: 8px;
   padding-top: 18px; margin-top: 10px; border-top: 1px solid var(--border);
 }
+
+.drawer-backdrop {
+  position: fixed; inset: 0; background: rgba(22, 21, 15, .35);
+  display: flex; justify-content: flex-end; z-index: 100;
+}
+.drawer-shell {
+  width: 100%; max-width: 880px; background: var(--bg);
+  height: 100vh; overflow-y: auto;
+  box-shadow: -16px 0 48px -16px rgba(22, 21, 15, .15);
+}
+.drawer-head {
+  position: relative;
+  padding: 22px 28px; border-bottom: 1px solid var(--border);
+  background: var(--bg-elev);
+}
+.drawer-back {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--ink-2); cursor: pointer;
+  margin-bottom: 10px; background: none; border: none; padding: 0;
+  font-family: inherit;
+}
+.drawer-close {
+  position: absolute; top: 18px; right: 18px;
+  width: 28px; height: 28px; border-radius: 6px;
+  background: transparent; border: none;
+  color: var(--ink-2); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.drawer-close:hover { background: var(--bg-sunk); color: var(--ink); }
+.drawer-title-row {
+  display: flex; align-items: flex-end;
+  justify-content: space-between; gap: 16px;
+}
+.drawer-title {
+  font-family: 'Geist', sans-serif; font-weight: 500; font-size: 22px;
+  margin: 0; color: var(--ink);
+}
+.drawer-title em {
+  font-family: 'Newsreader', Georgia, serif;
+  font-style: italic; font-weight: 400;
+}
+.drawer-meta { font-size: 12px; color: var(--ink-3); margin-top: 4px; }
+.drawer-meta-muted { color: var(--ink-3); }
+.drawer-total { text-align: right; }
+.drawer-total-val {
+  font-family: 'Newsreader', Georgia, serif;
+  font-style: italic; font-size: 26px; color: var(--ink);
+}
+.drawer-total-delta { font-size: 12px; margin-top: 2px; }
+.drawer-total-delta.up   { color: var(--positive); }
+.drawer-total-delta.down { color: var(--negative); }
+
+.drawer-kpi-strip {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 14px; margin-top: 18px;
+}
+.drawer-kpi {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 14px;
+}
+.drawer-kpi-label {
+  font-family: 'Geist Mono', monospace; font-size: 10.5px;
+  letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3);
+}
+.drawer-kpi-val {
+  font-family: 'Newsreader', Georgia, serif; font-style: italic;
+  font-size: 20px; margin-top: 2px; color: var(--ink);
+}
+.drawer-kpi-val.up   { color: var(--positive); }
+.drawer-kpi-val.down { color: var(--negative); }
+
+.drawer-body { padding: 24px 28px; }
+.drawer-section { margin-bottom: 28px; }
+.drawer-section-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-bottom: 12px; padding-bottom: 8px;
+  border-bottom: 1px dotted var(--border-strong);
+}
+.drawer-section-label {
+  font-family: 'Geist Mono', monospace; font-size: 11px;
+  letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3);
+}
+.drawer-section-title {
+  font-family: 'Geist', sans-serif; font-weight: 500;
+  font-size: 15px; margin: 2px 0 0;
+}
+.drawer-section-title em {
+  font-family: 'Newsreader', Georgia, serif;
+  font-style: italic; font-weight: 400;
+}
+.drawer-section-meta { font-size: 12px; color: var(--ink-3); }
+
+.positions-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.positions-table th {
+  text-align: left; font-family: 'Geist Mono', monospace;
+  font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em;
+  color: var(--ink-3); padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.positions-table th.r, .positions-table td.r { text-align: right; }
+.positions-table td {
+  padding: 12px 10px; border-bottom: 1px solid var(--border);
+}
+.pos-name-line { font-weight: 500; color: var(--ink); }
+.pos-isin {
+  font-family: 'Geist Mono', monospace;
+  font-size: 11px; color: var(--ink-3);
+}
+.pl-up   { color: var(--positive); }
+.pl-down { color: var(--negative); }
+
+.drawer-empty-inline {
+  font-size: 13px; color: var(--ink-2);
+  padding: 14px 0;
+}
+.link-btn {
+  background: none; border: none; color: var(--accent);
+  cursor: pointer; padding: 0; font-family: inherit; font-size: 13px;
+  text-decoration: underline;
+}
+.link-btn:disabled { color: var(--ink-3); cursor: not-allowed; text-decoration: none; }
+.csv-link-disabled {
+  font-family: 'Newsreader', Georgia, serif; font-style: italic;
+  font-size: 13px; color: var(--ink-3);
+}
+
+.fiscal-insight { padding: 4px 0; }
+.fiscal-bar {
+  height: 6px; background: var(--bg-sunk);
+  border-radius: 3px; overflow: hidden; margin: 10px 0;
+}
+.fiscal-bar-fill {
+  height: 100%; background: var(--accent); transition: width .3s;
+}
+.fiscal-row {
+  display: flex; justify-content: space-between; font-size: 13px;
+}
+.fiscal-note {
+  font-family: 'Newsreader', Georgia, serif; font-style: italic;
+  font-size: 12.5px; color: var(--ink-2); margin: 8px 0 0;
+}
+
+.config-list { display: flex; flex-direction: column; }
+.config-row {
+  display: flex; justify-content: space-between;
+  padding: 8px 0; border-bottom: 1px dotted var(--border-strong);
+  font-size: 13px;
+}
+.config-row:last-child { border-bottom: none; }
+.config-actions {
+  display: flex; gap: 8px;
+  margin-top: 14px; padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.drawer-danger { color: var(--negative); }
 `;
   return <style>{css}</style>;
 }

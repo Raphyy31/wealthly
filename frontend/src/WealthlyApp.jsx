@@ -1507,6 +1507,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             memberShare={memberShare} fmt={fmt}
             wealthHistory={wealthHistory}
             onOpenAddWizard={() => setShowAddAccount(true)}
+            reload={reloadAll}
           />
         )}
         {view === 'transactions' && (

@@ -26,6 +26,8 @@ import { NetWorthChart } from '../components/NetWorthChart.jsx';
 import { RegulatoryCaps } from '../components/RegulatoryCaps.jsx';
 import { CATEGORY_LABELS } from '../types/wealth.js';
 import { useWealthItems } from '../hooks/useWealthItems.js';
+import { WealthItemDrawer } from '../components/WealthItemDrawer.jsx';
+import * as api from '../api.js';
 
 // ============================================================================
 // WEALTH (Assets + Liabilities)
@@ -42,12 +44,13 @@ const WEALTH_SUBVIEWS = [
   { key: 'emprunts',        label: CATEGORY_LABELS.emprunts,        categories: ['emprunts'],          icon: CreditCard },
 ];
 
-export function Wealth({ assets, liabilities, members, activeMemberId, visibleAssets, visibleLiabilities, saveAsset, deleteAsset, saveLiability, deleteLiability, memberShare, fmt, wealthHistory = [], accounts = [], accountBalances = {}, onOpenAddWizard }) {
+export function Wealth({ assets, liabilities, members, activeMemberId, visibleAssets, visibleLiabilities, saveAsset, deleteAsset, saveLiability, deleteLiability, memberShare, fmt, wealthHistory = [], accounts = [], accountBalances = {}, onOpenAddWizard, reload }) {
   const [editingAsset, setEditingAsset] = useState(null);
   const [editingLia, setEditingLia] = useState(null);
   const [viewingLia, setViewingLia] = useState(null);
   const [subview, setSubview] = useState('all');
   const [showAddPicker, setShowAddPicker] = useState(false);
+  const [drawerItem, setDrawerItem] = useState(null);
 
   // Unified WealthItem stream — accounts + assets + liabilities normalised
   const allItems = useWealthItems({ accounts, assets, liabilities, accountBalances });
@@ -267,14 +270,7 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
                 key={item.id}
                 item={item}
                 fmt={fmt}
-                onClick={(it) => {
-                  if (it.sourceTable === 'asset') {
-                    setEditingAsset(assets.find(a => a.id === it.sourceId));
-                  } else if (it.sourceTable === 'liability') {
-                    setViewingLia(liabilities.find(l => l.id === it.sourceId));
-                  }
-                  // 'account' items currently have no detail drawer — Tasks 14-16 add the unified drawer
-                }}
+                onClick={(it) => setDrawerItem(it)}
               />
             ))}
           </div>
@@ -294,6 +290,34 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
           onPickLiability={() => {
             setShowAddPicker(false);
             setEditingLia({ id: null, type: 'mortgage', name: '', initialCapital: '', remainingCapital: '', monthlyPayment: '', interestRate: '', endDate: '', memberIds: activeMemberId !== 'all' ? [activeMemberId] : [], notes: '', downPayment: '', insuranceRate: '', applicationFees: '', ownershipPct: 100, durationMonths: '', startDate: '', linkedAssetId: '' });
+          }}
+        />
+      )}
+      {drawerItem && (
+        <WealthItemDrawer
+          item={drawerItem}
+          fmt={fmt}
+          members={members}
+          onClose={() => setDrawerItem(null)}
+          onEdit={(it) => {
+            if (it.sourceTable === 'asset') {
+              const a = assets.find(x => x.id === it.sourceId);
+              if (a) { setEditingAsset(a); setDrawerItem(null); }
+            } else if (it.sourceTable === 'liability') {
+              const l = liabilities.find(x => x.id === it.sourceId);
+              if (l) { setEditingLia(l); setDrawerItem(null); }
+            }
+            // account: no editor today (would need a future AccountEditor); no-op
+          }}
+          onDelete={async (it) => {
+            if (!confirm(`Supprimer "${it.name}" ?`)) return;
+            try {
+              await api.wealth.delete(it);
+              setDrawerItem(null);
+              if (reload) await reload();
+            } catch (err) {
+              console.error('Failed to delete wealth item:', err);
+            }
           }}
         />
       )}
