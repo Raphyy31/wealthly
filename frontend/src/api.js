@@ -11,6 +11,8 @@
  * Base URL: from VITE_API_URL env var, falls back to /api (proxied by Vite in dev).
  */
 
+import { SUBTYPE_TO_CATEGORY } from './types/wealth.js';
+
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 const LEGACY_TOKEN_KEY = 'wealthly:token';
 
@@ -314,3 +316,90 @@ export const banking = {
   /** Delete a connection (also revokes the GoCardless requisition) */
   deleteConnection: (id) => del(`/banking/connections/${id}`),
 };
+
+// ============================================================================
+// WEALTH — unified facade routing to accounts / assets / liabilities
+// ----------------------------------------------------------------------------
+// Frontend components consume api.wealth.* exclusively. This module knows
+// how to map a unified payload to the right backend table based on the
+// (category, subtype, syncMode) triple.
+// ============================================================================
+
+// Internal: decide which backend table a (category, subtype, syncMode) goes to.
+const _resolveTarget = ({ category, subtype, syncMode }) => {
+  if (category === 'emprunts') return 'liability';
+  // Synced banking items (live transactions) → account
+  if (syncMode === 'synced' && ['compte_courant', 'pea', 'av', 'livret'].includes(subtype)) {
+    return 'account';
+  }
+  // Everything else (manual investments, immo, crypto, or, autre) → asset
+  return 'asset';
+};
+
+// Map canonical subtype → backend asset.type / account.type strings
+const _subtypeToBackendType = (subtype, target) => {
+  if (target === 'liability') return subtype; // mortgage / consumer_loan / auto_loan / other_loan all match
+  if (target === 'account') {
+    if (subtype === 'compte_courant') return 'checking';
+    return subtype; // pea, av, livret → savings on account side
+  }
+  // asset
+  if (subtype === 'cto') return 'stocks';
+  if (subtype === 'livret') return 'savings_account';
+  return subtype;
+};
+
+export const wealth = {
+  create: async (payload) => {
+    const target = _resolveTarget(payload);
+    const backendType = _subtypeToBackendType(payload.subtype, target);
+
+    if (target === 'liability') {
+      return liabilities.create({
+        type: backendType,
+        name: payload.name,
+        initial_capital: payload.value || 0,
+        remaining_capital: payload.value || 0,
+        currency: payload.currency || 'EUR',
+        memberIds: payload.memberIds || [],
+      });
+    }
+    if (target === 'account') {
+      return accounts.create({
+        name: payload.name,
+        bank: payload.bank || payload.name,
+        type: backendType,
+        initial_balance: payload.value || 0,
+        currency: payload.currency || 'EUR',
+        memberIds: payload.memberIds || [],
+        role: payload.role || 'principal',
+      });
+    }
+    // asset
+    return assets.create({
+      name: payload.name,
+      type: backendType,
+      current_value: payload.value || 0,
+      currency: payload.currency || 'EUR',
+      memberIds: payload.memberIds || [],
+      ...(payload.meta || {}),
+    });
+  },
+
+  update: async (item, patch) => {
+    if (item.sourceTable === 'account') return accounts.update(item.sourceId, patch);
+    if (item.sourceTable === 'asset')   return assets.update(item.sourceId, patch);
+    if (item.sourceTable === 'liability') return liabilities.update(item.sourceId, patch);
+  },
+
+  delete: async (item) => {
+    // existing namespaces expose `.delete` (see accounts/assets/liabilities above)
+    const fn = (ns) => ns.remove || ns.delete;
+    if (item.sourceTable === 'account')   return fn(accounts)(item.sourceId);
+    if (item.sourceTable === 'asset')     return fn(assets)(item.sourceId);
+    if (item.sourceTable === 'liability') return fn(liabilities)(item.sourceId);
+  },
+};
+
+// Re-export to keep SUBTYPE_TO_CATEGORY reachable from api.js consumers if needed.
+export { SUBTYPE_TO_CATEGORY };
