@@ -336,23 +336,44 @@ const _resolveTarget = ({ category, subtype, syncMode }) => {
   return 'asset';
 };
 
-// Map canonical subtype → backend asset.type / account.type strings
-const _subtypeToBackendType = (subtype, target) => {
-  if (target === 'liability') return subtype; // mortgage / consumer_loan / auto_loan / other_loan all match
-  if (target === 'account') {
-    if (subtype === 'compte_courant') return 'checking';
-    return subtype; // pea, av, livret → savings on account side
+// Map canonical subtype → backend type string (and optional asset.subtype for refinement).
+// Returns { type, subtype? }.
+const _resolveBackendType = (canonicalSubtype, target) => {
+  if (target === 'liability') {
+    // mortgage / consumer_loan / auto_loan / other_loan match the backend enum directly
+    return { type: canonicalSubtype };
   }
-  // asset
-  if (subtype === 'cto') return 'stocks';
-  if (subtype === 'livret') return 'savings_account';
-  return subtype;
+  if (target === 'account') {
+    if (canonicalSubtype === 'compte_courant') return { type: 'checking' };
+    if (canonicalSubtype === 'livret')         return { type: 'savings' };
+    if (canonicalSubtype === 'av')             return { type: 'life_insurance' };
+    // pea matches as-is
+    return { type: canonicalSubtype };
+  }
+  // ── asset target ───────────────────────────────────────────────────────────
+  // Asset.type column accepts ONLY: real_estate, life_insurance, pea, per,
+  // savings_account, crypto, stocks, other_asset. Map canonical → these.
+  switch (canonicalSubtype) {
+    case 'rp':       return { type: 'real_estate', subtype: 'RP' };
+    case 'locatif':  return { type: 'real_estate', subtype: 'locative' };
+    case 'scpi':     return { type: 'real_estate', subtype: 'scpi' };
+    case 'cto':      return { type: 'stocks' };
+    case 'livret':   return { type: 'savings_account' };
+    case 'av':       return { type: 'life_insurance' };
+    case 'pea':      return { type: 'pea' };
+    case 'per':      return { type: 'per' };
+    case 'crypto':   return { type: 'crypto' };
+    case 'or':       return { type: 'other_asset' };  // pas de type 'or' backend — stocké en other_asset
+    case 'autre':    return { type: 'other_asset' };
+    case 'cash':     return { type: 'other_asset' };  // espèces non-bancaires
+    default:         return { type: 'other_asset' };  // fallback safe
+  }
 };
 
 export const wealth = {
   create: async (payload) => {
     const target = _resolveTarget(payload);
-    const backendType = _subtypeToBackendType(payload.subtype, target);
+    const { type: backendType, subtype: backendSubtype } = _resolveBackendType(payload.subtype, target);
 
     if (target === 'liability') {
       return liabilities.create({
@@ -379,6 +400,7 @@ export const wealth = {
     return assets.create({
       name: payload.name,
       type: backendType,
+      ...(backendSubtype ? { subtype: backendSubtype } : {}),
       current_value: payload.value || 0,
       currency: payload.currency || 'EUR',
       memberIds: payload.memberIds || [],
