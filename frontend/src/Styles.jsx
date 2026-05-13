@@ -1658,6 +1658,81 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
   align-items: center;
   gap: 6px;
 }
+
+/* ---- AddWealthModal wizard (Tasks 10-12) ---- */
+.modal-eyebrow {
+  font-family: 'Geist Mono', monospace;
+  font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
+  color: var(--ink-3); margin: 0 0 12px;
+}
+.cat-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
+}
+.cat-card {
+  text-align: left; padding: 14px; border: 1px solid var(--border);
+  background: var(--bg-elev); border-radius: 10px;
+  cursor: pointer; display: flex; flex-direction: column; gap: 4px;
+  font-family: inherit;
+}
+.cat-card:hover { border-color: var(--accent); background: var(--bg); }
+.cat-card.selected { border-color: var(--accent); background: var(--accent-soft); }
+.cat-card-ic {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: var(--bg-sunk); color: var(--ink-2);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 6px;
+}
+.cat-card.selected .cat-card-ic { background: white; color: var(--accent); }
+.cat-card-name { font-weight: 600; font-size: 13.5px; color: var(--ink); }
+.cat-card-desc { font-size: 11.5px; color: var(--ink-2); line-height: 1.4; }
+
+.subcat-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+.subcat-chip {
+  padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--bg-elev); font-size: 12px; color: var(--ink-2); cursor: pointer;
+  font-family: inherit;
+}
+.subcat-chip.selected {
+  background: var(--accent-soft); border-color: var(--accent);
+  color: var(--accent); font-weight: 500;
+}
+
+.mode-pick { display: flex; flex-direction: column; gap: 8px; }
+.mode-row {
+  display: flex; gap: 14px; align-items: center;
+  padding: 14px 16px; border: 1px solid var(--border);
+  border-radius: 10px; cursor: pointer; background: var(--bg-elev);
+  text-align: left; width: 100%; font-family: inherit;
+}
+.mode-row:hover { border-color: var(--accent); }
+.mode-row.selected { border-color: var(--accent); background: var(--accent-soft); }
+.mode-ic {
+  width: 36px; height: 36px; border-radius: 8px;
+  background: var(--bg-sunk); color: var(--ink-2);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.mode-row.selected .mode-ic { background: white; color: var(--accent); }
+.mode-title { font-weight: 600; font-size: 13.5px; margin-bottom: 2px; color: var(--ink); }
+.mode-sub { font-size: 11.5px; color: var(--ink-2); }
+
+.form-row { margin-bottom: 14px; }
+.form-label {
+  display: block; font-size: 11.5px; text-transform: uppercase;
+  letter-spacing: .04em; color: var(--ink-3); margin-bottom: 4px;
+  font-family: 'Geist Mono', monospace;
+}
+.form-input {
+  width: 100%; border: 1px solid var(--border); border-radius: 8px;
+  padding: 9px 12px; font-family: inherit; font-size: 13.5px;
+  color: var(--ink); background: var(--bg-elev); box-sizing: border-box;
+}
+.form-input:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+.form-row-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.modal-foot {
+  display: flex; justify-content: flex-end; gap: 8px;
+  padding-top: 18px; margin-top: 10px; border-top: 1px solid var(--border);
+}
 `;
   return <style>{css}</style>;
 }
