@@ -4,6 +4,7 @@
 // Pass `from="GBP"` etc. if the value is not EUR-denominated.
 
 import { useCurrency } from '../../contexts/Currency.jsx';
+import { useHideAmounts } from '../../contexts/HideAmounts.jsx';
 import { convertCurrency } from '../../utils.js';
 
 const LOCALE = { EUR: 'fr-FR', USD: 'en-US', GBP: 'en-GB', CHF: 'de-CH' };
@@ -28,7 +29,9 @@ const _fmt = (n, currency = 'EUR', { abbr = false, decimals = 2 } = {}) => {
  *  Hiding is handled globally via CSS [data-hide-amounts] blur on .num. */
 export function useFormatEUR() {
   const { baseCurrency, rates } = useCurrency();
+  const hidden = useHideAmounts();
   return (n, opts = {}) => {
+    if (hidden) return '···';
     if (typeof n !== 'number' || Number.isNaN(n)) return '—';
     const from = opts.from || 'EUR';
     const converted = convertCurrency(n, from, baseCurrency, rates);
@@ -38,6 +41,9 @@ export function useFormatEUR() {
 
 export function Amount({ value, from = 'EUR', hero = false, abbr = false, decimals = 2, className = '', style }) {
   const { baseCurrency, rates } = useCurrency();
+  const hidden = useHideAmounts();
+
+  if (hidden) return <span className={`${hero ? 'ds-hero-num' : 'num'} ${className}`} style={style}>···</span>;
 
   if (typeof value !== 'number' || Number.isNaN(value)) {
     return <span className={className} style={style}>—</span>;
