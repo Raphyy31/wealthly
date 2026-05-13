@@ -1258,7 +1258,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   // and are cached for 1h; when rates aren't loaded yet we no-op the conversion.
   const fmt = useCallback(
     (v, opts = {}) => {
-      if (hideAmounts) return formatCurrency(v, { currency: baseCurrency });
+      if (hideAmounts) return '···';
       const from = opts.from || opts.currency || 'EUR';
       const converted = convertCurrency(v, from, baseCurrency, rates);
       // Always display in the user's base currency, with the locale matching it.

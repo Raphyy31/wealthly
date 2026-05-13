@@ -1,4 +1,4 @@
-// ============================================================================
+﻿// ============================================================================
 // Dashboard — Wealthly v3 (Refonte Claude Design)
 //
 // Spec source: design_handoff_wealthly_dashboard/README.md (Screen 01).
@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { ASSET_CLASS_MAP } from '../constants.js';
 import { Amount, useFormatEUR } from '../components/ui/Amount.jsx';
+import { useHideAmounts } from '../contexts/HideAmounts.jsx';
 import { BankMark } from '../components/ui/BankMark.jsx';
 import { Sparkline } from '../components/ui/Sparkline.jsx';
 import { Donut } from '../components/ui/Donut.jsx';
@@ -78,6 +79,7 @@ export function Dashboard({
 }) {
   const { t } = useTranslation();
   const formatEUR = useFormatEUR();
+  const hidden = useHideAmounts();
   const [period, setPeriod] = useState('6m');
   const [txFilter, setTxFilter] = useState('all'); // all | expense | income
   const [hover, setHover] = useState(null); // chart hover point
@@ -272,7 +274,7 @@ export function Dashboard({
             <div className="hero-delta">
               <span className={`ds-pill ${periodDelta.abs >= 0 ? 'pos' : 'neg'}`}>
                 {periodDelta.abs >= 0 ? <ArrowUp size={11}/> : <ArrowDown size={11}/>}
-                <span className="num">{periodDelta.abs >= 0 ? '+' : ''}{formatEUR(periodDelta.abs)} · {periodDelta.pct >= 0 ? '+' : ''}{periodDelta.pct.toFixed(2)}&nbsp;%</span>
+                <span className="num">{periodDelta.abs >= 0 ? '+' : ''}{formatEUR(periodDelta.abs)} · {hidden ? '···' : `${periodDelta.pct >= 0 ? '+' : ''}${periodDelta.pct.toFixed(2)} %`}</span>
               </span>
               <span style={{ color: 'var(--ink-2)', fontSize: 13 }}>{t('dashboard.vsStart')}</span>
             </div>
@@ -287,7 +289,7 @@ export function Dashboard({
                 <div className="kpi-val num">{formatEUR(k.value)}</div>
                 {k.delta != null && (
                   <div className={`kpi-delta num ${k.delta >= 0 ? 'pos' : 'neg'}`}>
-                    {k.delta >= 0 ? '+' : ''}{k.delta.toFixed(1)} %
+                    {hidden ? '···' : `${k.delta >= 0 ? '+' : ''}${k.delta.toFixed(1)} %`}
                   </div>
                 )}
               </div>
@@ -313,7 +315,7 @@ export function Dashboard({
                   <span className="swatch" style={{ background: d.color }}/>
                   <span className="alloc-name">{d.name}</span>
                   <span className="alloc-val num">{formatEUR(d.value, { abbr: true })}</span>
-                  <span className="alloc-pct num">{allocationTotal ? ((d.value / allocationTotal) * 100).toFixed(0) : '0'} %</span>
+                  <span className="alloc-pct num">{hidden ? '···' : `${allocationTotal ? ((d.value / allocationTotal) * 100).toFixed(0) : '0'} %`}</span>
                 </li>
               ))}
               {!allocationData.length && (
