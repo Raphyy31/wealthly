@@ -3,10 +3,15 @@
 // Détection de paires (Account, Asset) probablement doublons après l'unification.
 // Heuristique stricte (booléenne) — voir spec §3.6.
 
+// Strip combining diacritical marks (U+0300..U+036F).
+// Use explicit \u escapes so the pattern survives any transport that may
+// otherwise mangle bare combining characters.
+const ACCENT_RE = new RegExp('[\\u0300-\\u036F]', 'g');
+
 const normalize = (s) => (s || '')
   .toLowerCase()
   .normalize('NFD')
-  .replace(/[̀-ͯ]/g, '')   // strip accents
+  .replace(ACCENT_RE, '')
   .replace(/\s+/g, ' ')
   .trim();
 
