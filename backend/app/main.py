@@ -154,6 +154,9 @@ def _run_lightweight_migrations() -> None:
             "ALTER TABLE accounts ADD COLUMN IF NOT EXISTS external_id VARCHAR",
             "CREATE INDEX IF NOT EXISTS ix_accounts_source ON accounts (source)",
             "CREATE INDEX IF NOT EXISTS ix_accounts_external_id ON accounts (external_id)",
+            # wealth_item_uuid — Option A++ unification preparation (2026-05-13)
+            "ALTER TABLE accounts ADD COLUMN IF NOT EXISTS wealth_item_uuid VARCHAR",
+            "ALTER TABLE assets   ADD COLUMN IF NOT EXISTS wealth_item_uuid VARCHAR",
         ]
     with engine.begin() as conn:
         for stmt in statements:

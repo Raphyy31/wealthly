@@ -175,6 +175,10 @@ class Account(Base):
     # Together with source, it lets a sync re-find the same account across
     # runs without creating duplicates.
     external_id = Column(String, nullable=True, index=True)
+    # Stable UUID shared with the wealth_items table — Option A++ unification
+    # preparation (2026-05-13). Lets us treat Accounts and Assets as a single
+    # patrimoine item set without merging the underlying tables yet.
+    wealth_item_uuid = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     household_id = Column(String, ForeignKey("households.id", ondelete="CASCADE"), nullable=False)
@@ -257,6 +261,10 @@ class Asset(Base):
     construction_year = Column(Integer, nullable=True)
     ownership_pct = Column(Float, nullable=True, default=100.0)
     address = Column(String, nullable=True)              # liée à l'emprunt si tu veux
+
+    # Stable UUID shared with the wealth_items table — Option A++ unification
+    # preparation (2026-05-13). See Account.wealth_item_uuid.
+    wealth_item_uuid = Column(String, nullable=True)
 
     household_id = Column(String, ForeignKey("households.id", ondelete="CASCADE"), nullable=False)
     household = relationship("Household", back_populates="assets")
