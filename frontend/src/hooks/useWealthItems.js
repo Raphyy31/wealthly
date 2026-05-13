@@ -1,0 +1,108 @@
+// frontend/src/hooks/useWealthItems.js
+//
+// Normalise accounts + assets + liabilities en WealthItem[] unifié.
+// Memoization stricte — recompute uniquement quand les sources changent.
+
+import { useMemo } from 'react';
+import { BACKEND_TO_SUBTYPE, SUBTYPE_TO_CATEGORY } from '../types/wealth.js';
+
+const accountToWealthItem = (a, accountBalances = {}) => {
+  // Fall back to role-based subtype when account.type is unspecific
+  let subtype = BACKEND_TO_SUBTYPE[a.type];
+  if (!subtype) {
+    if (a.role === 'epargne') subtype = 'livret';
+    else if (a.role === 'investissement') subtype = 'cto';
+    else subtype = 'compte_courant';
+  }
+  const value = parseFloat(accountBalances[a.id] ?? a.balance ?? a.initialBalance ?? 0);
+
+  return {
+    id: `account:${a.id}`,
+    sourceTable: 'account',
+    sourceId: a.id,
+    category: SUBTYPE_TO_CATEGORY[subtype] || 'liquidites',
+    subtype,
+    name: a.name,
+    currency: a.currency || 'EUR',
+    value,
+    syncMode: a.source === 'gocardless' ? 'synced' : 'manual',
+    lastSyncedAt: a.lastSyncedAt || null,
+    connectionId: a.connectionId || null,
+    memberIds: a.memberIds || [],
+    meta: { bank: a.bank, role: a.role, externalId: a.externalId },
+  };
+};
+
+const assetToWealthItem = (a) => {
+  let subtype = BACKEND_TO_SUBTYPE[a.type] || 'autre';
+  // Real-estate subtype refinement using Asset.subtype field
+  if (a.type === 'real_estate' && a.subtype) {
+    const refined = { RP: 'rp', locative: 'locatif', secondaire: 'rp', scpi: 'scpi' };
+    subtype = refined[a.subtype] || 'rp';
+  }
+
+  const value = parseFloat(a.currentValue ?? 0);
+  const costBasis = a.purchasePrice != null ? parseFloat(a.purchasePrice) : null;
+  const plLatente = costBasis != null ? value - costBasis : null;
+  const plLatentePct = costBasis != null && costBasis > 0 ? (plLatente / costBasis) * 100 : null;
+
+  return {
+    id: `asset:${a.id}`,
+    sourceTable: 'asset',
+    sourceId: a.id,
+    category: SUBTYPE_TO_CATEGORY[subtype] || 'autres',
+    subtype,
+    name: a.name,
+    currency: a.currency || 'EUR',
+    value,
+    costBasis,
+    plLatente,
+    plLatentePct,
+    syncMode: 'manual',
+    memberIds: a.memberIds || [],
+    meta: {
+      ticker: a.ticker,
+      quantity: a.quantity,
+      surface_m2: a.surfaceM2,
+      address: a.address,
+      ownership_pct: a.ownershipPct,
+    },
+  };
+};
+
+const liabilityToWealthItem = (l) => {
+  const subtype = BACKEND_TO_SUBTYPE[l.type] || 'other_loan';
+  return {
+    id: `liability:${l.id}`,
+    sourceTable: 'liability',
+    sourceId: l.id,
+    category: 'emprunts',
+    subtype,
+    name: l.name,
+    currency: l.currency || 'EUR',
+    value: parseFloat(l.remainingCapital ?? 0),
+    syncMode: 'manual',
+    memberIds: l.memberIds || [],
+    meta: {
+      initialCapital: l.initialCapital,
+      monthlyPayment: l.monthlyPayment,
+      interestRate: l.interestRate,
+      endDate: l.endDate,
+      linkedAssetId: l.linkedAssetId,
+    },
+  };
+};
+
+/**
+ * @param {{accounts: Array, assets: Array, liabilities: Array, accountBalances?: Object}} sources
+ * @returns {WealthItem[]}
+ */
+export function useWealthItems({ accounts, assets, liabilities, accountBalances }) {
+  return useMemo(() => {
+    const out = [];
+    (accounts || []).forEach(a => out.push(accountToWealthItem(a, accountBalances)));
+    (assets || []).forEach(a => out.push(assetToWealthItem(a)));
+    (liabilities || []).forEach(l => out.push(liabilityToWealthItem(l)));
+    return out;
+  }, [accounts, assets, liabilities, accountBalances]);
+}
