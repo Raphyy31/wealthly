@@ -13,11 +13,13 @@
 // Customisation (add/edit/delete des charges fixes) → bouton "+ Ajouter"
 // dans chaque groupe ouvre le FixedChargeEditor existant.
 // ============================================================================
-import { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   ComposedChart, Bar, Line, ResponsiveContainer,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  Sankey, Layer, Rectangle, PieChart, Pie, Cell,
 } from 'recharts';
+import { useIsNarrow } from '../hooks/useIsNarrow.js';
 import {
   Plus, Trash2, Edit3, Check, AlertTriangle, Repeat, Sparkles, Lightbulb,
   TrendingUp, ArrowUp, ArrowDown, Minus, Activity, BarChart3, X,
@@ -88,6 +90,60 @@ export function Monthly({
         return { ...t, sharedAmount: t.amount * share, isTransfer: transferIds.has(t.id) };
       });
   }, [transactions, selectedMonth, accounts, memberShare, transferIds]);
+
+  // ── Cashflow tab: income/expense by category for selected month ────────
+  const cashflowData = useMemo(() => {
+    const catFor = slug => categories.find(c => c.slug === slug || c.id === slug);
+    const monthTx = transactions
+      .filter(t => {
+        const [ty, tm] = t.date.split('-');
+        const mk = `${ty}-${tm}`;
+        return mk === selectedMonth && !transferIds.has(t.id);
+      })
+      .map(t => {
+        const acc = accounts.find(a => a.id === t.accountId);
+        const share = acc ? memberShare(acc) : 1;
+        return { ...t, sharedAmount: t.amount * share };
+      });
+
+    const incomeByCat = {};
+    const expenseByCat = {};
+    monthTx.forEach(t => {
+      const slug = t.categoryId || 'uncategorized';
+      if (t.amount >= 0) incomeByCat[slug] = (incomeByCat[slug] || 0) + t.sharedAmount;
+      else expenseByCat[slug] = (expenseByCat[slug] || 0) + Math.abs(t.sharedAmount);
+    });
+
+    const totalIncome = Object.values(incomeByCat).reduce((s, v) => s + v, 0);
+    const totalExpense = Object.values(expenseByCat).reduce((s, v) => s + v, 0);
+    const available = totalIncome - totalExpense;
+    const incomeEntries = Object.entries(incomeByCat).sort((a, b) => b[1] - a[1]);
+    const expenseEntries = Object.entries(expenseByCat).sort((a, b) => b[1] - a[1]);
+
+    const nodes = [];
+    const links = [];
+    incomeEntries.forEach(([slug, value]) => {
+      const cat = catFor(slug);
+      nodes.push({ name: cat?.name || slug, kind: 'income', value, color: cat?.color || 'var(--positive)' });
+    });
+    const hubIdx = nodes.length;
+    nodes.push({ name: 'Disponible', kind: 'hub' });
+    expenseEntries.forEach(([slug, value]) => {
+      const cat = catFor(slug);
+      nodes.push({ name: cat?.name || slug, kind: 'expense', value, color: cat?.color || 'var(--negative)' });
+    });
+    if (available > 0) {
+      const surplusIdx = nodes.length;
+      nodes.push({ name: 'Épargne', kind: 'savings', value: available, color: 'var(--accent)' });
+      links.push({ source: hubIdx, target: surplusIdx, value: available });
+    }
+    incomeEntries.forEach((_, i) => links.push({ source: i, target: hubIdx, value: incomeEntries[i][1] }));
+    expenseEntries.forEach((_, i) => links.push({ source: hubIdx, target: hubIdx + 1 + i, value: expenseEntries[i][1] }));
+
+    return { nodes, links, totalIncome, totalExpense, available, incomeEntries, expenseEntries, catFor, hasData: totalIncome > 0 || totalExpense > 0 };
+  }, [transactions, selectedMonth, transferIds, accounts, memberShare, categories]);
+
+  const isNarrow = useIsNarrow(760);
 
   // ── Group expense categories into "Abonnements" vs "Charges fixes" vs
   // "Dépenses variables" based on whether they have a registered fixed
@@ -256,6 +312,7 @@ export function Monthly({
       <div className="mon-tabs">
         <button className={tab === 'budget' ? 'on' : ''} onClick={() => setTab('budget')}>Budget</button>
         <button className={tab === 'evolution' ? 'on' : ''} onClick={() => setTab('evolution')}>Évolution</button>
+        <button className={tab === 'cashflow' ? 'on' : ''} onClick={() => setTab('cashflow')}>Flux</button>
       </div>
 
       {tab === 'budget' && (
@@ -465,6 +522,97 @@ export function Monthly({
         </section>
       )}
 
+      {tab === 'cashflow' && (
+        <section className="mon-cashflow">
+          {cashflowData.hasData ? (
+            <div className="mon-card" style={{ overflowX: 'auto' }}>
+              <div className="mon-card-head">
+                <h3>Flux du mois</h3>
+                <span className="mon-card-meta">{cashflowData.incomeEntries.length} source{cashflowData.incomeEntries.length > 1 ? 's' : ''} · {cashflowData.expenseEntries.length} catégorie{cashflowData.expenseEntries.length > 1 ? 's' : ''}</span>
+              </div>
+              <ResponsiveContainer width="100%" height={isNarrow ? 480 : 380}>
+                <Sankey
+                  data={{ nodes: cashflowData.nodes, links: cashflowData.links }}
+                  nodePadding={isNarrow ? 14 : 22}
+                  nodeWidth={isNarrow ? 8 : 10}
+                  linkCurvature={0.5}
+                  iterations={64}
+                  node={<MonthlySankeyNode narrow={isNarrow}/>}
+                  link={{ stroke: 'var(--border)', strokeOpacity: 0.45, fill: 'var(--accent-soft)' }}
+                  margin={isNarrow ? { top: 8, right: 80, bottom: 8, left: 80 } : { top: 12, right: 160, bottom: 12, left: 160 }}
+                >
+                  <Tooltip
+                    formatter={v => fmt(v)}
+                    contentStyle={{ background: 'var(--bg-elev)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
+                  />
+                </Sankey>
+              </ResponsiveContainer>
+              <div className="cashflow-kpi-row" style={{ marginTop: 8 }}>
+                <div className="cashflow-kpi">
+                  <div className="cashflow-kpi-label">Entrées</div>
+                  <div className="cashflow-kpi-value positive">+{fmt(cashflowData.totalIncome)}</div>
+                </div>
+                <div className="cashflow-kpi">
+                  <div className="cashflow-kpi-label">Sorties</div>
+                  <div className="cashflow-kpi-value negative">−{fmt(cashflowData.totalExpense)}</div>
+                </div>
+                <div className="cashflow-kpi">
+                  <div className="cashflow-kpi-label">Disponible</div>
+                  <div className={`cashflow-kpi-value ${cashflowData.available >= 0 ? 'positive' : 'negative'}`}>
+                    {cashflowData.available >= 0 ? '+' : ''}{fmt(cashflowData.available)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="mon-empty"><Activity size={28}/><span>Aucune transaction ce mois-ci.</span></div>
+          )}
+
+          {cashflowData.hasData && (
+            <div className="cashflow-cats-grid" style={{ marginTop: 16 }}>
+              <div className="mon-card">
+                <div className="mon-card-head"><h3>Entrées</h3></div>
+                <div className="cashflow-cat-list">
+                  {cashflowData.incomeEntries.map(([slug, value]) => {
+                    const cat = cashflowData.catFor(slug);
+                    const pct = cashflowData.totalIncome > 0 ? (value / cashflowData.totalIncome * 100).toFixed(0) : 0;
+                    return (
+                      <div key={slug} className="cashflow-cat-row">
+                        <span className="cashflow-cat-icon" style={{ background: (cat?.color || '#999') + '22', color: cat?.color || 'var(--positive)' }}>{cat?.icon || '💰'}</span>
+                        <div className="cashflow-cat-info">
+                          <div className="cashflow-cat-name">{cat?.name || slug}</div>
+                          <div className="cashflow-cat-meta">{pct} % des entrées</div>
+                        </div>
+                        <div className="cashflow-cat-amount positive">+{fmt(value)}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="mon-card">
+                <div className="mon-card-head"><h3>Sorties</h3></div>
+                <div className="cashflow-cat-list">
+                  {cashflowData.expenseEntries.map(([slug, value]) => {
+                    const cat = cashflowData.catFor(slug);
+                    const pct = cashflowData.totalExpense > 0 ? (value / cashflowData.totalExpense * 100).toFixed(0) : 0;
+                    return (
+                      <div key={slug} className="cashflow-cat-row">
+                        <span className="cashflow-cat-icon" style={{ background: (cat?.color || '#999') + '22', color: cat?.color || 'var(--negative)' }}>{cat?.icon || '💸'}</span>
+                        <div className="cashflow-cat-info">
+                          <div className="cashflow-cat-name">{cat?.name || slug}</div>
+                          <div className="cashflow-cat-meta">{pct} % des sorties</div>
+                        </div>
+                        <div className="cashflow-cat-amount negative">−{fmt(value)}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
       {editingCharge && (
         <FixedChargeEditor
           charge={editingCharge}
@@ -592,6 +740,29 @@ function spentSumFromGroups(groups, spentMap) {
   });
   return total;
 }
+
+// ─── Sankey node for the Flux tab ───────────────────────────────────────────
+const MonthlySankeyNode = React.memo(function MonthlySankeyNode({ x, y, width, height, index, payload, narrow }) {
+  const isLeft = payload.kind === 'income';
+  const color = payload.color || (payload.kind === 'hub' ? 'var(--accent)' : payload.kind === 'savings' ? 'var(--accent)' : payload.kind === 'income' ? 'var(--positive)' : 'var(--negative)');
+  const labelOffset = narrow ? 5 : 8;
+  const fontSize = narrow ? 10 : 12;
+  const valueLabel = payload.value ? Math.round(payload.value).toLocaleString('fr-FR') + ' €' : '';
+  const labelText = narrow ? payload.name : `${payload.name}${valueLabel ? ` · ${valueLabel}` : ''}`;
+  return (
+    <Layer key={`node-${index}`}>
+      <Rectangle x={x} y={y} width={width} height={height} fill={color} fillOpacity={payload.kind === 'hub' ? 0.9 : 0.75} stroke="none"/>
+      {payload.kind !== 'hub' && (
+        <text textAnchor={isLeft ? 'end' : 'start'} x={isLeft ? x - labelOffset : x + width + labelOffset} y={y + height / 2} dy={4} fontSize={fontSize} fill="var(--ink-2)">
+          {labelText}
+        </text>
+      )}
+      {payload.kind === 'hub' && (
+        <text textAnchor="middle" x={x + width / 2} y={y - 8} fontSize={11} fill="var(--ink-3)">Disponible</text>
+      )}
+    </Layer>
+  );
+});
 
 // ─── Styles ─────────────────────────────────────────────────────────────────
 
