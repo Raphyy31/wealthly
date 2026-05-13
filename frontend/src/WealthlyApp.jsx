@@ -18,7 +18,7 @@ import {
   parseCSV, detectBankProfile, autoDetectMapping, applyMapping,
   categorize, detectRecurring,
   accountIncludeInNetWorth, accountCountsAsIncome, accountCountsAsExpense,
-  detectInternalTransfers, convertCurrency,
+  detectInternalTransfers, convertCurrency, ACCOUNT_ROLES,
 } from './utils.js';
 import { useRates } from './hooks/useRates.js';
 import { useBaseCurrency } from './hooks/useBaseCurrency.js';
@@ -1656,11 +1656,11 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
 // AddAccountModal — Finary-style multi-step: choice → bank flow OR manual form
 // ============================================================================
 const ACCOUNT_TYPES = [
-  { value: 'checking',     label: 'Compte courant' },
-  { value: 'savings',      label: 'Livret / Épargne' },
-  { value: 'investment',   label: 'PEA / CTO / AV' },
-  { value: 'joint',        label: 'Compte joint' },
-  { value: 'professional', label: 'Professionnel' },
+  { value: 'checking',     label: 'Compte courant',   role: 'principal',      hint: 'Revenus et dépenses du quotidien comptabilisés dans le cashflow.' },
+  { value: 'savings',      label: 'Livret / Épargne', role: 'epargne',        hint: 'Hors cashflow mensuel — solde inclus dans le patrimoine.' },
+  { value: 'investment',   label: 'PEA / CTO / AV',  role: 'investissement', hint: 'Hors cashflow mensuel — valorisation incluse dans le patrimoine.' },
+  { value: 'joint',        label: 'Compte joint',     role: 'principal',      hint: 'Revenus et dépenses partagés comptabilisés dans le cashflow.' },
+  { value: 'professional', label: 'Professionnel',    role: 'professionnel',  hint: 'Entièrement exclu du patrimoine personnel et du cashflow.' },
 ];
 
 const BANK_COUNTRIES = [
@@ -1949,6 +1949,16 @@ function AddAccountModal({ members = [], onSave, onClose }) {
                   <select className="form-input" value={form.type} onChange={e => setField('type', e.target.value)}>
                     {ACCOUNT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                   </select>
+                  {(() => {
+                    const t = ACCOUNT_TYPES.find(t => t.value === form.type);
+                    if (!t) return null;
+                    return (
+                      <p style={{ margin: '5px 0 0', fontSize: 11.5, color: 'var(--ink-3)', lineHeight: 1.4 }}>
+                        <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{ACCOUNT_ROLES[t.role]?.label}</span>
+                        {' '}— {t.hint}
+                      </p>
+                    );
+                  })()}
                 </div>
                 <div>
                   <label className="form-label">Devise</label>
