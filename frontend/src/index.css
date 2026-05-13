@@ -255,22 +255,18 @@ html, body {
   font-feature-settings: 'tnum';
 }
 
-/* Hide-amounts mode: solid redaction bar — layout preserved, text invisible */
+/* Hide-amounts mode: text-shadow smudge — discreet, layout-preserving, no blur filter */
 [data-hide-amounts] .num,
 [data-hide-amounts] .amount,
 [data-hide-amounts] .w-num,
 [data-hide-amounts] [data-financial],
 [data-hide-amounts] .ds-masked,
-[data-hide-amounts] .ds-hero-num {
-  color: transparent !important;
-  background: var(--ink-3);
-  border-radius: 3px;
-  user-select: none;
-  pointer-events: none;
-}
+[data-hide-amounts] .ds-hero-num,
 [data-hide-amounts] .ds-hero-num .cents {
   color: transparent !important;
-  background: transparent;
+  text-shadow: 0 0 7px var(--ink-3);
+  user-select: none;
+  pointer-events: none;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
