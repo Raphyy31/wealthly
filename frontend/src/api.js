@@ -287,6 +287,13 @@ export const migrate = {
   importJson: (jsonData) => post('/migrate/import-json', jsonData),
 };
 
+// Wipe : supprime toutes les données du foyer en une transaction côté
+// backend (transactions, comptes, assets, dettes, snapshots, budgets,
+// goals, rules, fixed_charges, dca, bank_connections, members,
+// categories). Préserve User + Household pour que le compte reste
+// utilisable. Endpoint dans other.py : DELETE /me/wipe.
+export const wipeHousehold = () => del('/me/wipe');
+
 // ============================================================================
 // GoCardless Bank Account Data — open banking sync
 // ============================================================================

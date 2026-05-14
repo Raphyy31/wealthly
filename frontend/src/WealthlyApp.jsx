@@ -1242,18 +1242,32 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     if (!confirm('Effacer TOUTES les données du foyer ? Cette action est irréversible.')) return;
     if (!confirm('Vraiment sûr ? Faites un export avant !')) return;
     try {
-      // Delete in safe order
-      for (const t of transactions) { try { await api.transactions.delete(t.id); } catch {} }
-      for (const a of accounts) { try { await api.accounts.delete(a.id); } catch {} }
-      for (const a of assets) { try { await api.assets.delete(a.id); } catch {} }
-      for (const l of liabilities) { try { await api.liabilities.delete(l.id); } catch {} }
-      for (const g of goals) { try { await api.goals.delete(g.id); } catch {} }
-      for (const m of members) { try { await api.members.delete(m.id); } catch {} }
-      for (const k of Object.values(STORAGE_KEYS)) await storage.delete(k);
-      await reloadAll();
+      // Un seul appel backend qui purge tout en une transaction.
+      // Beaucoup plus fiable que d'itérer entité par entité (où une
+      // erreur silencieuse laissait des orphelins — comptes supprimés
+      // mais positions enfants ou liabilities restantes → patrimoine
+      // négatif après "reset").
+      await api.wipeHousehold();
+      // Purge aussi le state local et les caches localStorage
+      setMembers([]);
+      setAccounts([]);
+      setTransactions([]);
+      setAssets([]);
+      setLiabilities([]);
+      setGoals([]);
+      setFixedCharges([]);
+      setBudgets({});
+      setBankConnections([]);
+      setWealthHistory([]);
+      setAchievements([]);
+      setDcaPlans([]);
+      setCustomRules([]);
+      for (const k of Object.values(STORAGE_KEYS)) { try { await storage.delete(k); } catch {} }
       setOnboarded(false);
       showToast('Données effacées', 'success');
-    } catch (err) { showToast('Erreur : ' + err.message, 'error'); }
+    } catch (err) {
+      showToast('Erreur lors du reset : ' + err.message, 'error');
+    }
   };
 
   const logout = async () => {

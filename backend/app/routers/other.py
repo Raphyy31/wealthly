@@ -11,6 +11,7 @@ from app.database import get_db
 from app.models import (
     User, Category, Budget, Goal, Achievement,
     CategorisationRule, Member, Account, Transaction, Asset, Liability,
+    BankConnection, FixedCharge, DcaPlan, WealthSnapshot,
 )
 from app.schemas import (
     CategoryOut, CategoryUpdate, BudgetSet, BudgetOut,
@@ -351,3 +352,25 @@ def import_v2_backup(payload: dict = Body(...), db: Session = Depends(get_db), u
 
     db.commit()
     return {"status": "ok", "imported": stats}
+
+
+# ============================================================================
+# /me/wipe — DELETE toutes les données du foyer en une transaction unique.
+# Ne supprime PAS l'utilisateur ni le household lui-même, pour que le user
+# puisse réutiliser son compte. Plus fiable que d'itérer côté frontend où
+# une seule erreur bloque la suite (et laisse des orphelins).
+# ============================================================================
+@router.delete("/me/wipe", status_code=204)
+def wipe_household(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    hh = user.household_id
+    # Ordre : enfants avant parents pour respecter les FK même quand
+    # ondelete=CASCADE n'est pas posé en base (cas SQLite). Liste exhaustive
+    # de toutes les tables scopées par household_id.
+    for model in (
+        Transaction, FixedCharge, Budget, Goal, Achievement, CategorisationRule,
+        BankConnection, DcaPlan, WealthSnapshot,
+        Asset, Liability,
+        Account, Category, Member,
+    ):
+        db.query(model).filter(model.household_id == hh).delete(synchronize_session=False)
+    db.commit()
