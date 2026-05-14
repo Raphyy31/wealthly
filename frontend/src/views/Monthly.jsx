@@ -18,8 +18,9 @@ import {
   Sankey, Layer, Rectangle,
 } from 'recharts';
 import {
-  Edit3, Target, TrendingUp, ChevronDown, ChevronRight, X, BarChart3, Calendar,
-  ChevronLeft,
+  Edit3, Target, TrendingUp, TrendingDown, PiggyBank, Wallet,
+  ChevronDown, ChevronRight, X, BarChart3, Calendar,
+  ChevronLeft, Coins, Sparkles,
 } from 'lucide-react';
 import { formatCurrency, formatDate, monthKey } from '../utils.js';
 import { useIsNarrow } from '../hooks/useIsNarrow.js';
@@ -314,10 +315,14 @@ export function Monthly({
       {/* ── Empty state ─────────────────────────────────────────────── */}
       {!hasRefMonth && (
         <section className="card mon-empty-state">
-          <Target size={28}/>
-          <h3>Configure ton mois type</h3>
-          <p className="ds-micro">Définis ton salaire et tes dépenses habituelles pour que l'app puisse t'aider à suivre chaque mois.</p>
-          <button className="ds-btn primary" onClick={() => setShowEditor(true)}>
+          <div className="mon-empty-illu">
+            <Sparkles size={20} className="mon-empty-spark mon-empty-spark-1"/>
+            <Target size={32}/>
+            <Sparkles size={14} className="mon-empty-spark mon-empty-spark-2"/>
+          </div>
+          <h3>Configure ton <em>mois type.</em></h3>
+          <p>Définis ton salaire et tes dépenses habituelles — l'app comparera chaque mois pour t'aider à rester sur la bonne trajectoire.</p>
+          <button className="ds-btn primary lg" onClick={() => setShowEditor(true)}>
             <Edit3 size={14}/> Configurer mon mois type
           </button>
         </section>
@@ -364,11 +369,21 @@ export function Monthly({
             </div>
             {tableSections.map(section => (
               <React.Fragment key={section.kind}>
-                <div className="mon-row mon-row-section">{section.title}</div>
+                <div className={`mon-row mon-row-section mon-row-section-${section.kind}`}>
+                  <span className="mon-section-icon">
+                    {section.kind === 'income'
+                      ? <TrendingUp size={12}/>
+                      : section.kind === 'saving'
+                      ? <PiggyBank size={12}/>
+                      : <TrendingDown size={12}/>}
+                  </span>
+                  {section.title}
+                </div>
                 {section.items.length === 0 && (
                   <div className="mon-row mon-row-empty ds-micro">Aucune ligne dans cette section</div>
                 )}
                 {section.items.map(item => {
+                  const cat = catFor(item.category_id);
                   const ecart = item.real_total - item.ref_total;
                   const pct = item.ref_total > 0 ? Math.round((item.real_total / item.ref_total) * 100) : (item.real_total > 0 ? 999 : 0);
                   const expanded = expandedRows.has(item.key);
@@ -380,7 +395,11 @@ export function Monthly({
                         onClick={hasSubs ? () => toggleRow(item.key) : undefined}
                       >
                         <span className="mon-cat-name">
-                          {hasSubs && (expanded ? <ChevronDown size={12}/> : <ChevronRight size={12}/>)}
+                          {hasSubs
+                            ? (expanded ? <ChevronDown size={12}/> : <ChevronRight size={12}/>)
+                            : <span style={{ width: 12, display: 'inline-block' }}/>}
+                          <span className="mon-cat-dot" style={{ background: cat?.color || 'var(--border-strong)' }}/>
+                          <span className="mon-cat-emoji" aria-hidden="true">{cat?.icon || '•'}</span>
                           {item.cat_name}
                           {item.is_unexpected && <span className="mon-pill warn">? Inattendu</span>}
                         </span>
@@ -477,24 +496,36 @@ function Kpi({ realTotals, refTotals, hasRefMonth, restToLive, dailyBudget, days
   };
   return (
     <section className="mon-kpi-strip">
-      <div className="mon-kpi">
-        <span className="ds-micro">Revenus</span>
-        <span className="num">{fmt(realTotals.income)}</span>
+      <div className="mon-kpi mon-kpi-income">
+        <div className="mon-kpi-head">
+          <span className="mon-kpi-icon"><TrendingUp size={14}/></span>
+          <span className="ds-micro">Revenus</span>
+        </div>
+        <span className="num mon-kpi-value">{fmt(realTotals.income)}</span>
         {renderDelta(realTotals.income, refTotals.income, true)}
       </div>
-      <div className="mon-kpi">
-        <span className="ds-micro">Dépenses</span>
-        <span className="num">{fmt(realTotals.expense)}</span>
+      <div className="mon-kpi mon-kpi-expense">
+        <div className="mon-kpi-head">
+          <span className="mon-kpi-icon"><TrendingDown size={14}/></span>
+          <span className="ds-micro">Dépenses</span>
+        </div>
+        <span className="num mon-kpi-value">{fmt(realTotals.expense)}</span>
         {renderDelta(realTotals.expense, refTotals.expense, false)}
       </div>
-      <div className="mon-kpi">
-        <span className="ds-micro">Épargne</span>
-        <span className="num">{fmt(realTotals.saving)}</span>
+      <div className="mon-kpi mon-kpi-saving">
+        <div className="mon-kpi-head">
+          <span className="mon-kpi-icon"><PiggyBank size={14}/></span>
+          <span className="ds-micro">Épargne</span>
+        </div>
+        <span className="num mon-kpi-value">{fmt(realTotals.saving)}</span>
         {renderDelta(realTotals.saving, refTotals.saving, true)}
       </div>
-      <div className="mon-kpi">
-        <span className="ds-micro">{isCurrentMonth ? 'Reste à vivre' : 'Balance mois'}</span>
-        <span className="num">{fmt(isCurrentMonth ? restToLive : realTotals.balance)}</span>
+      <div className="mon-kpi mon-kpi-rest">
+        <div className="mon-kpi-head">
+          <span className="mon-kpi-icon"><Wallet size={14}/></span>
+          <span className="ds-micro">{isCurrentMonth ? 'Reste à vivre' : 'Balance mois'}</span>
+        </div>
+        <span className="num mon-kpi-value">{fmt(isCurrentMonth ? restToLive : realTotals.balance)}</span>
         {isCurrentMonth && daysLeft > 0
           ? <span className="ds-micro num">{fmt(dailyBudget)}/jour · {daysLeft}j restants</span>
           : null}

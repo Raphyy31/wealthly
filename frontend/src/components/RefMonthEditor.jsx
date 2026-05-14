@@ -10,7 +10,7 @@
 // ============================================================================
 import React, { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, RotateCcw, Lock, Unlock, Plus, Trash2 } from 'lucide-react';
+import { X, RotateCcw, Lock, Unlock, Plus, Trash2, TrendingUp, TrendingDown, PiggyBank } from 'lucide-react';
 import { monthKey } from '../utils.js';
 
 function _uuid() {
@@ -91,6 +91,16 @@ const KIND_LABEL = {
   income: 'Entrées',
   expense: 'Dépenses',
   saving: 'Épargne',
+};
+const KIND_ICON = {
+  income:  <TrendingUp size={14}/>,
+  expense: <TrendingDown size={14}/>,
+  saving:  <PiggyBank size={14}/>,
+};
+const KIND_COLOR = {
+  income:  'var(--positive)',
+  expense: 'var(--ink-2)',
+  saving:  'var(--accent)',
 };
 
 // Starter template for first-time editing. Each entry creates an empty line
@@ -274,7 +284,10 @@ export function RefMonthEditor({
             const cats = kind === 'income' ? incomeCats : expenseCats;
             return (
               <section key={kind} className="rm-section">
-                <h3 className="rm-section-head">{KIND_LABEL[kind]}</h3>
+                <h3 className="rm-section-head" style={{ color: KIND_COLOR[kind] }}>
+                  <span className="rm-section-icon" style={{ color: KIND_COLOR[kind] }}>{KIND_ICON[kind]}</span>
+                  {KIND_LABEL[kind]}
+                </h3>
                 {groups.length === 0 && (
                   <p className="ds-micro" style={{ padding: '6px 0', color: 'var(--ink-3)' }}>
                     Aucune ligne — ajoutez-en pour démarrer.
@@ -282,10 +295,14 @@ export function RefMonthEditor({
                 )}
                 {groups.map(g => {
                   const cat = catFor(g.category_id);
+                  const catColor = cat?.color || 'var(--border-strong)';
                   return (
-                    <div key={`${kind}-${g.category_id}`} className="rm-group">
+                    <div key={`${kind}-${g.category_id}`} className="rm-group" style={{ borderLeftColor: catColor }}>
                       <div className="rm-group-head">
-                        <span className="rm-cat-name">{cat?.name || g.category_id}</span>
+                        <span className="rm-cat-name">
+                          <span className="rm-cat-icon" aria-hidden="true">{cat?.icon || '•'}</span>
+                          {cat?.name || g.category_id}
+                        </span>
                         <span className="rm-cat-total num">{fmt(g.lines.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0))}</span>
                       </div>
                       {g.lines.map(line => {
