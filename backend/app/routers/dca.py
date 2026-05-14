@@ -1,6 +1,7 @@
 """DCA Plans — systematic investment plan CRUD."""
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Dict
+import re
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -36,6 +37,22 @@ class DcaPlanIn(BaseModel):
         return None if v == '' else v
 
 
+_MONTH_KEY_RE = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
+
+
+class DcaExecutionsUpdate(BaseModel):
+    """Replace the full executions map. Keys: YYYY-MM. Values: bool."""
+    executions: Dict[str, bool]
+
+    @field_validator('executions')
+    @classmethod
+    def validate_keys(cls, v):
+        for key in v:
+            if not _MONTH_KEY_RE.match(key):
+                raise ValueError(f"Invalid month key: {key!r} (expected YYYY-MM)")
+        return v
+
+
 def _serialize(p: DcaPlan) -> dict:
     return {
         "id": p.id,
@@ -53,6 +70,7 @@ def _serialize(p: DcaPlan) -> dict:
         "expected_return": p.expected_return,
         "notes": p.notes,
         "member_ids": p.member_ids or [],
+        "executions": p.executions or {},
         "created_at": p.created_at.isoformat() if p.created_at else None,
         "updated_at": p.updated_at.isoformat() if p.updated_at else None,
     }
@@ -89,6 +107,27 @@ def update_plan(plan_id: str, body: DcaPlanIn, current_user: User = Depends(get_
         raise HTTPException(status_code=404, detail="Plan introuvable")
     for k, v in body.model_dump().items():
         setattr(plan, k, v)
+    plan.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(plan)
+    return _serialize(plan)
+
+
+@router.put("/{plan_id}/executions")
+def update_executions(
+    plan_id: str,
+    body: DcaExecutionsUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Replace the full executions map for a plan. Owner-only."""
+    plan = db.query(DcaPlan).filter(
+        DcaPlan.id == plan_id,
+        DcaPlan.household_id == current_user.household_id,
+    ).first()
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan introuvable")
+    plan.executions = body.executions
     plan.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(plan)

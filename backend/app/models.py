@@ -544,6 +544,10 @@ class DcaPlan(Base):
     expected_return = Column(Float, default=7.0)           # annual % for projection
     notes        = Column(Text, nullable=True)
     member_ids   = Column(JSON, default=list)
+    # Per-month execution status: { "2026-01": true, "2026-02": false, ... }
+    # Missing keys default to true for past months (the user only marks
+    # exceptions). Keeps backward-compat with existing plans.
+    executions   = Column(JSON, default=dict, nullable=False, server_default='{}')
 
     created_at   = Column(DateTime, default=datetime.utcnow)
     updated_at   = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

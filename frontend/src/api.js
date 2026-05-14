@@ -249,6 +249,7 @@ export const dcaApi = {
   create: (body)     => post('/dca', body),
   update: (id, body) => put(`/dca/${id}`, body),
   remove: (id)       => del(`/dca/${id}`),
+  setExecutions: (id, executions) => put(`/dca/${id}/executions`, { executions }),
 };
 
 // ============================================================================
