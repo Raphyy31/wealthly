@@ -48,7 +48,34 @@ const WEALTH_SUBVIEWS = [
   { key: 'emprunts',        labelKey: 'wealth.subnav.emprunts',        categories: ['emprunts'],          icon: CreditCard },
 ];
 
-export function Wealth({ assets, liabilities, members, activeMemberId, visibleAssets, visibleLiabilities, saveAsset, deleteAsset, saveLiability, deleteLiability, memberShare, fmt, wealthHistory = [], accounts = [], accountBalances = {}, transactions = [], onOpenAddWizard, reload }) {
+// Mapping subtype canonique (AddWealthModal) → type/subtype attendus par les
+// éditeurs canoniques. Reflète api.js _resolveBackendType pour rester cohérent.
+const SUBTYPE_TO_EDITOR = {
+  // emprunts → LiabilityEditor avec le bon type
+  mortgage:      { kind: 'liability', type: 'mortgage' },
+  consumer_loan: { kind: 'liability', type: 'consumer_loan' },
+  auto_loan:     { kind: 'liability', type: 'auto_loan' },
+  other_loan:    { kind: 'liability', type: 'other_loan' },
+  // immobilier → RealEstateEditor (type=real_estate)
+  rp:      { kind: 'asset', type: 'real_estate', subtype: 'RP' },
+  locatif: { kind: 'asset', type: 'real_estate', subtype: 'locative' },
+  scpi:    { kind: 'asset', type: 'real_estate', subtype: 'scpi' },
+  // investissements → SimpleAssetEditor avec le bon type
+  pea:     { kind: 'asset', type: 'pea' },
+  cto:     { kind: 'asset', type: 'stocks' },
+  av:      { kind: 'asset', type: 'life_insurance' },
+  per:     { kind: 'asset', type: 'per' },
+  // liquidités manuelles → other_asset (compte_courant manuel) ou savings_account
+  livret:         { kind: 'asset', type: 'savings_account' },
+  cash:           { kind: 'asset', type: 'other_asset' },
+  compte_courant: { kind: 'asset', type: 'other_asset' },
+  // cryptos / autres
+  crypto: { kind: 'asset', type: 'crypto' },
+  or:     { kind: 'asset', type: 'other_asset' },
+  autre:  { kind: 'asset', type: 'other_asset' },
+};
+
+export function Wealth({ assets, liabilities, members, activeMemberId, visibleAssets, visibleLiabilities, saveAsset, deleteAsset, saveLiability, deleteLiability, memberShare, fmt, wealthHistory = [], accounts = [], accountBalances = {}, transactions = [], onOpenAddWizard, reload, seededNewItem, onSeededConsumed }) {
   const { t } = useTranslation();
   const [editingAsset, setEditingAsset] = useState(null);
   const [editingLia, setEditingLia] = useState(null);
@@ -60,6 +87,37 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
   const [viewingOther, setViewingOther] = useState(null);
   const [subview, setSubview] = useState('all');
   const [showAddPicker, setShowAddPicker] = useState(false);
+
+  // Quand le wizard "+ Ajouter" termine en mode manuel, WealthlyApp passe
+  // ici { category, subtype } via seededNewItem. On ouvre alors l'éditeur
+  // canonique correspondant avec un objet blanc préfixé (type + subtype).
+  useEffect(() => {
+    if (!seededNewItem) return;
+    const mapping = SUBTYPE_TO_EDITOR[seededNewItem.subtype];
+    if (!mapping) {
+      onSeededConsumed && onSeededConsumed();
+      return;
+    }
+    const baseMembers = activeMemberId !== 'all' ? [activeMemberId] : [];
+    if (mapping.kind === 'liability') {
+      setEditingLia({
+        id: null, type: mapping.type, name: '',
+        initialCapital: '', remainingCapital: '', monthlyPayment: '',
+        interestRate: '', endDate: '', memberIds: baseMembers, notes: '',
+        downPayment: '', insuranceRate: '', applicationFees: '',
+        ownershipPct: 100, durationMonths: '', startDate: '', linkedAssetId: '',
+        currency: 'EUR',
+      });
+    } else {
+      setEditingAsset({
+        id: null, type: mapping.type,
+        ...(mapping.subtype ? { subtype: mapping.subtype } : {}),
+        name: '', currentValue: 0, memberIds: baseMembers, notes: '',
+        currency: 'EUR', updatedAt: new Date().toISOString(),
+      });
+    }
+    onSeededConsumed && onSeededConsumed();
+  }, [seededNewItem, activeMemberId, onSeededConsumed]);
   const [drawerItem, setDrawerItem] = useState(null);
   const [importingTo, setImportingTo] = useState(null);
 

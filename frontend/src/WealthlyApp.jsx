@@ -136,6 +136,10 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
 
   const [showAddAccount, setShowAddAccount] = useState(false);
   const [showBankConnect, setShowBankConnect] = useState(false);
+  // Quand le wizard "+ Ajouter" termine en mode manuel, on stocke ici
+  // { category, subtype } pour que la vue Patrimoine ouvre l'éditeur
+  // canonique correspondant (LiabilityEditor / RealEstateEditor / SimpleAssetEditor).
+  const [seededNewItem, setSeededNewItem] = useState(null);
 
   const [importFile, setImportFile] = useState(null);
   const [importStep, setImportStep] = useState('upload');
@@ -1554,6 +1558,8 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             wealthHistory={wealthHistory}
             onOpenAddWizard={() => setShowAddAccount(true)}
             reload={reloadAll}
+            seededNewItem={seededNewItem}
+            onSeededConsumed={() => setSeededNewItem(null)}
           />
         )}
         {view === 'transactions' && (
@@ -1707,35 +1713,14 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
 
       {showAddAccount && (
         <AddWealthModal
-          members={members}
-          assets={assets}
-          onSave={async (payload) => {
-            // En démo, l'API throw "Mode démo : modifications non enregistrées".
-            // En prod, on récupère { target, data } pour pousser le nouvel
-            // élément directement dans le state — pas besoin d'attendre que
-            // reloadAll() propage (sinon l'utilisateur a l'impression que
-            // rien ne s'est passé jusqu'à un refresh).
-            try {
-              const result = await api.wealth.create(payload);
-              if (result && result.data) {
-                if (result.target === 'asset') {
-                  setAssets(prev => [...prev, assetFromApi(result.data)]);
-                } else if (result.target === 'account') {
-                  setAccounts(prev => [...prev, accountFromApi(result.data)]);
-                } else if (result.target === 'liability') {
-                  setLiabilities(prev => [...prev, liaFromApi(result.data)]);
-                }
-              }
-              // Reload en arrière-plan pour récupérer d'éventuels effets de
-              // bord côté backend (catégories par défaut, transactions, etc.).
-              reloadAll().catch(() => {});
-              showToast(t('toasts.itemAdded'), 'success');
-              setShowAddAccount(false);
-            } catch (err) {
-              const msg = err?.message || 'Création impossible.';
-              showToast(msg, 'error');
-              throw err;
-            }
+          onPickType={({ category, subtype }) => {
+            // Mode manuel: l'éditeur canonique 5-step (LiabilityEditor /
+            // RealEstateEditor / SimpleAssetEditor) prend le relais côté
+            // vue Patrimoine pour capturer toutes les infos d'un coup.
+            setSeededNewItem({ category, subtype });
+            setShowAddAccount(false);
+            // Bascule en vue Patrimoine si on n'y est pas déjà.
+            if (view !== 'wealth') setView('wealth');
           }}
           onConnectBank={() => {
             setShowAddAccount(false);
