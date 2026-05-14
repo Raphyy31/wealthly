@@ -178,9 +178,69 @@ export function Dashboard({
   const totalBudget = budgetItems.reduce((s, i) => s + i.amount, 0);
   const totalSpent  = budgetItems.reduce((s, i) => s + i.spent, 0);
 
+  // Rolling 6-month average of expenses per category, excluding current month.
+  // categoryAnalysis only covers the current month, so we recompute from raw
+  // transactions to surface "Comparer mois" deltas.
+  const categoryCompare = useMemo(() => {
+    const now = new Date();
+    const curYear = now.getFullYear();
+    const curMonth = now.getMonth();
+    const curKey = `${curYear}-${String(curMonth + 1).padStart(2, '0')}`;
+    const prevKeys = new Set();
+    for (let i = 1; i <= 6; i++) {
+      const d = new Date(curYear, curMonth - i, 1);
+      prevKeys.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    }
+    const current = {};
+    const prevSums = {};
+    (transactions || []).forEach(tx => {
+      if (!tx?.date || typeof tx.amount !== 'number') return;
+      if (tx.amount >= 0) return;
+      if (transferIds.has(tx.id)) return;
+      const catId = tx.categoryId;
+      if (!catId) return;
+      const key = String(tx.date).slice(0, 7);
+      const abs = Math.abs(tx.amount);
+      if (key === curKey) {
+        current[catId] = (current[catId] || 0) + abs;
+      } else if (prevKeys.has(key)) {
+        prevSums[catId] = (prevSums[catId] || 0) + abs;
+      }
+    });
+    const result = [];
+    Object.keys(current).forEach(catId => {
+      const cur = current[catId];
+      const avg = (prevSums[catId] || 0) / 6;
+      if (avg <= 0) return;
+      if (cur <= 50) return;
+      const deltaPct = ((cur - avg) / avg) * 100;
+      if (Math.abs(deltaPct) <= 20) return;
+      result.push({ catId, current: cur, avg, deltaPct });
+    });
+    result.sort((a, b) => Math.abs(b.deltaPct) - Math.abs(a.deltaPct));
+    return result;
+  }, [transactions, transferIds]);
+
   // Insights
   const insights = useMemo(() => {
     const list = [];
+
+    // Comparer mois — surface up to 2 categories with the biggest swing vs 6m avg
+    categoryCompare.slice(0, 2).forEach(({ catId, current, avg, deltaPct }) => {
+      const cat = categories?.find(c => c.id === catId || c.slug === catId);
+      const catLabel = cat?.name || catId;
+      const pct = Math.round(deltaPct);
+      const pctStr = (pct > 0 ? '+' : '') + pct;
+      const isIncrease = deltaPct > 0;
+      const tKey = isIncrease ? 'dashboard.compareIncrease' : 'dashboard.compareDecrease';
+      list.push({
+        variant: isIncrease ? 'neg' : 'pos',
+        icon: isIncrease ? <AlertTriangle size={14}/> : <TrendingUp size={14}/>,
+        title: t(`${tKey}Title`, { category: catLabel, pct: pctStr }),
+        body: t(`${tKey}Body`, { current: formatEUR(current), avg: formatEUR(avg) }),
+      });
+    });
+
     if (thisMonthStats?.income > 0) {
       const rate = (monthSaving / thisMonthStats.income) * 100;
       if (rate >= 30) {
@@ -199,7 +259,7 @@ export function Dashboard({
       list.push({ variant: 'pos', icon: <TrendingUp size={14}/>, title: 'Patrimoine en hausse', body: `+${periodDelta.pct.toFixed(1)} % sur la période — la trajectoire est bonne.` });
     }
     return list.slice(0, 3);
-  }, [thisMonthStats, monthSaving, budgets, categoryAnalysis, periodDelta]);
+  }, [thisMonthStats, monthSaving, budgets, categoryAnalysis, periodDelta, categoryCompare, categories, formatEUR, t]);
 
   const userFirstName = currentUser?.full_name?.split(' ')[0]
     || currentUser?.email?.split('@')[0]
