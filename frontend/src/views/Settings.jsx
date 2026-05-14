@@ -386,7 +386,83 @@ function ComptesSection({ accounts, accountBalances, members, transactions, upda
 // ============================================================================
 // SECTION : SÉCURITÉ (placeholder + best-effort recent activity)
 // ============================================================================
+function ChangePasswordModal({ onClose }) {
+  const [currentPwd, setCurrentPwd] = useState('');
+  const [newPwd, setNewPwd] = useState('');
+  const [confirmPwd, setConfirmPwd] = useState('');
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const submit = async () => {
+    setError(null);
+    if (!currentPwd) return setError('Renseigne ton mot de passe actuel.');
+    if (newPwd.length < 10) return setError('Le nouveau mot de passe doit faire au moins 10 caractères.');
+    if (!/[a-zA-Z]/.test(newPwd) || !/\d/.test(newPwd)) return setError('Le nouveau mot de passe doit contenir au moins une lettre et un chiffre.');
+    if (newPwd !== confirmPwd) return setError('La confirmation ne correspond pas au nouveau mot de passe.');
+    if (newPwd === currentPwd) return setError('Le nouveau mot de passe doit être différent de l\'actuel.');
+    setSubmitting(true);
+    try {
+      await api.auth.changePassword(currentPwd, newPwd);
+      setSuccess(true);
+      setTimeout(onClose, 1500);
+    } catch (err) {
+      setError(err?.message || 'Échec du changement de mot de passe.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal" style={{ maxWidth: 460 }} onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600 }}>
+            Changer le <em style={{ fontFamily: "'Newsreader', serif", fontStyle: 'italic', fontWeight: 400 }}>mot de passe.</em>
+          </h2>
+          <button className="icon-btn" onClick={onClose}><X size={18}/></button>
+        </div>
+        {success ? (
+          <div className="modal-body" style={{ textAlign: 'center', padding: '32px 24px' }}>
+            <p style={{ fontFamily: "'Newsreader', serif", fontStyle: 'italic', fontSize: 22, color: 'var(--positive)', margin: '0 0 12px' }}>
+              Mot de passe mis à jour ✓
+            </p>
+          </div>
+        ) : (
+          <div className="modal-body">
+            <div className="form-row">
+              <label className="form-label">Mot de passe actuel</label>
+              <input className="form-input" type="password" value={currentPwd}
+                     onChange={e => setCurrentPwd(e.target.value)} autoFocus autoComplete="current-password"/>
+            </div>
+            <div className="form-row">
+              <label className="form-label">Nouveau mot de passe</label>
+              <input className="form-input" type="password" value={newPwd}
+                     onChange={e => setNewPwd(e.target.value)} autoComplete="new-password"
+                     placeholder="≥ 10 caractères, lettres + chiffres"/>
+            </div>
+            <div className="form-row">
+              <label className="form-label">Confirmation</label>
+              <input className="form-input" type="password" value={confirmPwd}
+                     onChange={e => setConfirmPwd(e.target.value)} autoComplete="new-password"
+                     onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}/>
+            </div>
+            {error && <div className="form-error">⚠︎ {error}</div>}
+            <div className="modal-foot">
+              <button className="secondary-btn" onClick={onClose} type="button">Annuler</button>
+              <button className="primary-btn" disabled={submitting} onClick={submit} type="button">
+                {submitting ? 'Mise à jour…' : 'Mettre à jour'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function SecuriteSection({ currentUser }) {
+  const [showPwdModal, setShowPwdModal] = useState(false);
   const [events, setEvents] = useState(null);  // null = not loaded, [] = loaded empty, [...] = data
   const [eventsError, setEventsError] = useState(false);
 
@@ -425,7 +501,9 @@ function SecuriteSection({ currentUser }) {
             <div className="settings-field-hint">Change ton mot de passe régulièrement pour rester en sécurité.</div>
           </div>
           <div className="settings-field-control">
-            <button className="secondary-btn" disabled>Changer mon mot de passe</button>
+            <button className="secondary-btn" onClick={() => setShowPwdModal(true)}>
+              Changer mon mot de passe
+            </button>
           </div>
         </div>
 
@@ -463,6 +541,8 @@ function SecuriteSection({ currentUser }) {
           </div>
         )}
       </div>
+
+      {showPwdModal && <ChangePasswordModal onClose={() => setShowPwdModal(false)}/>}
     </section>
   );
 }

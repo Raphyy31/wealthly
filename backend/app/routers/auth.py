@@ -26,7 +26,7 @@ from app.models import User, Household, Category, PasswordResetToken
 from app.rate_limit import limiter
 from app.schemas import (
     UserCreate, UserLogin, Token, UserOut,
-    ForgotPasswordRequest, ResetPasswordRequest, MessageOut,
+    ForgotPasswordRequest, ResetPasswordRequest, ChangePasswordRequest, MessageOut,
 )
 from app.auth import (
     hash_password, verify_password, create_access_token, get_current_user,
@@ -227,3 +227,44 @@ def reset_password(request: Request, response: Response, payload: ResetPasswordR
     record_auth_event(db, kind="password_reset_success", success=True, request=request,
                       user_id=user.id, email=user.email)
     return Token(access_token=token)
+
+
+# ============================================================================
+# /auth/change-password — utilisateur connecté change son mot de passe en
+# fournissant l'ancien (preuve d'identité). Validation : complexité +
+# breach HIBP via validate_password. Différent du reset par lien email.
+# ============================================================================
+@router.post("/change-password", response_model=MessageOut)
+def change_password(
+    payload: ChangePasswordRequest,
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    # 1. Vérifie l'ancien mot de passe
+    if not verify_password(payload.current_password, user.hashed_password):
+        record_auth_event(db, kind="password_change_failure", success=False, request=request,
+                          user_id=user.id, email=user.email, detail="wrong_current_password")
+        raise HTTPException(status_code=400, detail="Mot de passe actuel incorrect.")
+
+    # 2. Empêche de réutiliser le même mot de passe
+    if verify_password(payload.new_password, user.hashed_password):
+        raise HTTPException(status_code=400, detail="Le nouveau mot de passe doit être différent de l'ancien.")
+
+    # 3. Valide la complexité + breach check HIBP
+    ok, reason = validate_password(payload.new_password)
+    if not ok:
+        raise HTTPException(status_code=400, detail=reason or "Mot de passe trop faible.")
+
+    # 4. Hash + commit
+    user.hashed_password = hash_password(payload.new_password)
+    db.commit()
+
+    # 5. Re-issue un cookie auth frais (l'ancien reste valide jusqu'à
+    # expiration mais on rafraîchit pour rotater).
+    token = create_access_token(user.id, user.household_id)
+    set_auth_cookie(response, token)
+    record_auth_event(db, kind="password_change_success", success=True, request=request,
+                      user_id=user.id, email=user.email)
+    return MessageOut(message="Mot de passe mis à jour.")

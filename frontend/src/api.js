@@ -294,6 +294,11 @@ export const migrate = {
 // utilisable. Endpoint dans other.py : DELETE /me/wipe.
 export const wipeHousehold = () => del('/me/wipe');
 
+// Change le mot de passe de l'utilisateur connecté (preuve d'identité
+// = current_password). Différent du reset par lien email.
+auth.changePassword = (currentPassword, newPassword) =>
+  post('/auth/change-password', { current_password: currentPassword, new_password: newPassword });
+
 // ============================================================================
 // GoCardless Bank Account Data — open banking sync
 // ============================================================================
