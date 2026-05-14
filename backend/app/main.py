@@ -234,7 +234,7 @@ else:
 
 app = FastAPI(
     title=settings.APP_NAME,
-    version="2.0.0",
+    version="2.1.0",
     description="Self-hosted family finance tracker — backend API",
 )
 
