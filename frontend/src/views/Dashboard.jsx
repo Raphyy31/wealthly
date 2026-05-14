@@ -207,17 +207,31 @@ export function Dashboard({
         prevSums[catId] = (prevSums[catId] || 0) + abs;
       }
     });
+    // Loosened thresholds (was cur>50€ / |Δ|>20%) so users with modest
+    // budgets or small swings still see at least one Comparer mois insight.
+    // The fallback below guarantees a signal even when nothing passes.
     const result = [];
+    const all = [];
     Object.keys(current).forEach(catId => {
       const cur = current[catId];
       const avg = (prevSums[catId] || 0) / 6;
       if (avg <= 0) return;
-      if (cur <= 50) return;
       const deltaPct = ((cur - avg) / avg) * 100;
-      if (Math.abs(deltaPct) <= 20) return;
+      all.push({ catId, current: cur, avg, deltaPct });
+      if (cur <= 30) return;
+      if (Math.abs(deltaPct) <= 15) return;
       result.push({ catId, current: cur, avg, deltaPct });
     });
     result.sort((a, b) => Math.abs(b.deltaPct) - Math.abs(a.deltaPct));
+    if (result.length === 0 && all.length > 0) {
+      // Fallback: surface the single biggest mover as a neutral signal so
+      // the dashboard isn't empty when no category trips the strict thresholds.
+      all.sort((a, b) => Math.abs(b.deltaPct) - Math.abs(a.deltaPct));
+      const top = all[0];
+      if (top && top.avg > 0 && top.current > 0) {
+        result.push({ ...top, fallback: true });
+      }
+    }
     return result;
   }, [transactions, transferIds]);
 
@@ -226,12 +240,21 @@ export function Dashboard({
     const list = [];
 
     // Comparer mois — surface up to 2 categories with the biggest swing vs 6m avg
-    categoryCompare.slice(0, 2).forEach(({ catId, current, avg, deltaPct }) => {
+    categoryCompare.slice(0, 2).forEach(({ catId, current, avg, deltaPct, fallback }) => {
       const cat = categories?.find(c => c.id === catId || c.slug === catId);
       const catLabel = cat?.name || catId;
       const pct = Math.round(deltaPct);
       const pctStr = (pct > 0 ? '+' : '') + pct;
       const isIncrease = deltaPct > 0;
+      if (fallback) {
+        list.push({
+          variant: 'neutral',
+          icon: <Sparkles size={14}/>,
+          title: t('dashboard.compareNeutralTitle', { category: catLabel, pct: pctStr }),
+          body: t('dashboard.compareNeutralBody', { current: formatEUR(current), avg: formatEUR(avg) }),
+        });
+        return;
+      }
       const tKey = isIncrease ? 'dashboard.compareIncrease' : 'dashboard.compareDecrease';
       list.push({
         variant: isIncrease ? 'neg' : 'pos',
