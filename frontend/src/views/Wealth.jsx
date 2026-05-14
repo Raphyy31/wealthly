@@ -353,6 +353,13 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
           members={members}
           fmt={fmt}
           onEdit={() => { setEditingAsset(viewingInv); setViewingInv(null); }}
+          onImportCSV={(a) => {
+            // Convertit l'asset en WealthItem compatible avec ImportPositionsModal
+            // (qui attend `sourceId` + `currency` + `memberIds`).
+            const item = allItems.find(it => it.sourceTable === 'asset' && it.sourceId === a.id);
+            setImportingTo(item || { sourceId: a.id, currency: a.currency || 'EUR', memberIds: a.memberIds || [], name: a.name });
+            setViewingInv(null);
+          }}
           onSyncPositions={async (parent, rows) => {
             // Push live values into each position's currentValue, then update
             // the parent asset's total to reflect the new positions sum + cash.
@@ -1928,7 +1935,7 @@ function LiquidityDetail({ item, accounts = [], accountBalances = {}, transactio
 // ============================================================================
 // InvestmentDetail — PEA / CTO / AV / PER
 // ============================================================================
-function InvestmentDetail({ asset, assets = [], members = [], fmt, onEdit, onClose, onSyncPositions }) {
+function InvestmentDetail({ asset, assets = [], members = [], fmt, onEdit, onClose, onSyncPositions, onImportCSV }) {
   const positions = useMemo(
     () => assets.filter(a => a.parentAssetId === asset.id || a.parent_asset_id === asset.id),
     [assets, asset.id]
@@ -2110,6 +2117,15 @@ function InvestmentDetail({ asset, assets = [], members = [], fmt, onEdit, onClo
                   <div className="ds-panel-title">Positions</div>
                   <div className="ds-panel-sub">Triées par valorisation décroissante</div>
                 </div>
+                {onImportCSV && (
+                  <button
+                    className="ds-btn"
+                    onClick={() => onImportCSV(asset)}
+                    title="Importer un relevé de positions (CSV ou XLSX, toutes banques)"
+                  >
+                    Importer
+                  </button>
+                )}
               </div>
 
               <div className="inv-v3-table-wrap">
@@ -2162,7 +2178,16 @@ function InvestmentDetail({ asset, assets = [], members = [], fmt, onEdit, onClo
               <div className="inv-v3-empty-inner">
                 <BarChart3 size={28}/>
                 <h3>Aucune position importée</h3>
-                <p>Importe le relevé de positions de ton broker (CSV Bourse Direct, Boursorama…) pour voir le détail ligne à ligne. En attendant la valorisation globale du compte reste à <strong>{fmt(currentValue)}</strong>.</p>
+                <p>Importe le relevé de positions de ton broker (CSV / XLSX — Boursorama, BNP, Bourse Direct, Trade Republic, IBKR…) pour voir le détail ligne à ligne et activer les cours live. En attendant la valorisation globale du compte reste à <strong>{fmt(currentValue)}</strong>.</p>
+                {onImportCSV && (
+                  <button
+                    className="ds-btn primary"
+                    onClick={() => onImportCSV(asset)}
+                    style={{ marginTop: 16 }}
+                  >
+                    Importer un portefeuille
+                  </button>
+                )}
               </div>
             </section>
           )}

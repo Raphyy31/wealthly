@@ -454,7 +454,7 @@ export function Dashboard({
                 <div className="ds-panel-title">Budget · {monthName(currentMonth)}</div>
                 <div className="ds-panel-sub num">{formatEUR(totalSpent)} / {formatEUR(totalBudget)}</div>
               </div>
-              <button className="link-btn" onClick={() => setView?.('budgets')}>Tout →</button>
+              <button className="link-btn" onClick={() => setView?.('budgets')}>{t('dashboard.viewAll')} →</button>
             </div>
             <div className="budget-list">
               {budgetItems.map(b => (
