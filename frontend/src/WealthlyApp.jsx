@@ -352,7 +352,8 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       setCategories(DEFAULT_CATEGORIES);
       setBudgets(d.budgets);
       setGoals(d.goals);
-      setFixedCharges([]);
+      setFixedCharges(d.fixedCharges || []);
+      setWealthHistory(d.wealthHistory || []);
       setCustomRules(d.customRules);
       dcaApi.list().then(setDcaPlans).catch(() => {});
       return;
@@ -1040,7 +1041,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
 
   const syncBankConnection = async (connectionId) => {
     try {
-      showToast('â³ Synchronisation en cours...', 'info');
+      showToast('⏳ Synchronisation en cours...', 'info');
       const result = await api.banking.sync(connectionId);
       showToast(`✅ ${result.imported} nouvelles transactions importées`, 'success');
       await reloadAll();
@@ -1355,7 +1356,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
               <Calculator size={16}/> <span>{t('nav.tax')}</span>
             </button>
             <button onClick={() => setView('dca')} className={view === 'dca' ? 'on' : ''}>
-              <TrendingUp size={16}/> <span>Invest. DCA</span>
+              <TrendingUp size={16}/> <span>{t('nav.dca')}</span>
             </button>
 
             <div className="ws-nav-group">{t('nav.group_accounts')}</div>

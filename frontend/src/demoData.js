@@ -116,6 +116,26 @@ function buildTransactions() {
     push(A.liva,      monthStart + 4,  'Virement épargne mensuelle', 600, 'savings');
     push(A.bnpAlice,  monthStart + 4,  'Virement vers Livret A',  -600, 'savings');
 
+    // Versements programmés vers PEA / Assurance-vie (DCA) — sortent du flux
+    // bancaire mensuel, contribuent à expliquer l'écart initialBalance vs
+    // currentBalance (sinon les comptes accumulent +3 925 €/mois irréaliste).
+    push(A.bnpAlice,  monthStart + 15, 'Versement PEA programmé',  -800, 'savings');
+    push(A.jointLcl,  monthStart + 15, 'Versement Assurance-vie',  -400, 'savings');
+
+    // Dépenses quotidiennes additionnelles pour rendre le mois complet
+    // (sinon la démo affiche un taux d'épargne de 79 %, irréaliste pour
+    // un couple parisien proprio avec un enfant).
+    push(A.bnpAlice,  monthStart + 17, 'Boulangerie Poilâne',      -18,  'groceries');
+    push(A.caBob,     monthStart + 19, 'Picard',                   -42,  'groceries');
+    push(A.jointLcl,  monthStart + 14, 'Franprix',                 -64,  'groceries');
+    push(A.caBob,     monthStart + 22, 'Le Petit Vendôme',         -48,  'restaurants');
+    push(A.bnpAlice,  monthStart + 24, 'Sushi Shop',               -35,  'restaurants');
+    push(A.bnpAlice,  monthStart + 26, 'Pharmacie Vaugirard',      -22,  'health');
+    push(A.caBob,     monthStart + 16, 'RATP Navigo',              -88,  'transport');
+    push(A.bnpAlice,  monthStart + 16, 'RATP Navigo',              -88,  'transport');
+    push(A.jointLcl,  monthStart + 20, 'Coiffeur Studio 14',       -65,  'personal');
+    push(A.bnpAlice,  monthStart + 27, 'Zara',                     -79,  'shopping');
+
     // Quelques variations selon le mois
     if (m === 0) {
       push(A.bnpAlice, 6,  'Pharmacie de la place',  -34, 'health');
@@ -220,6 +240,69 @@ const goals = [
 
 const achievements = ['first_import', 'budget_set', 'first_member'];
 
+// Charges fixes mensuelles — peuplent la vue Suivi mensuel.
+// Les `day_of_month` correspondent aux jours réels où ces charges tombent
+// (cohérence avec `buildTransactions` qui les pousse aux mêmes dates).
+const fixedCharges = [
+  { id: 'demo-fc-pret',      name: 'Échéance prêt immobilier', amount: 1150,  day_of_month: 28, category_slug: 'housing',       kind: 'expense', member_ids: [M.alice, M.bob], notes: '' },
+  { id: 'demo-fc-creche',    name: 'Crèche Les Petits Pas',    amount: 680,   day_of_month: 5,  category_slug: 'children',      kind: 'expense', member_ids: [M.alice, M.bob], notes: '' },
+  { id: 'demo-fc-copro',     name: 'Charges copropriété',      amount: 260,   day_of_month: 5,  category_slug: 'housing',       kind: 'expense', member_ids: [M.alice, M.bob], notes: '' },
+  { id: 'demo-fc-cesu',      name: 'CESU Mme Sanchez',         amount: 160,   day_of_month: 14, category_slug: 'housing',       kind: 'expense', member_ids: [M.alice],        notes: 'Femme de ménage' },
+  { id: 'demo-fc-edf',       name: 'EDF Énergie',              amount: 88,    day_of_month: 6,  category_slug: 'utilities',     kind: 'expense', member_ids: [M.alice, M.bob], notes: '' },
+  { id: 'demo-fc-free',      name: 'Free Box',                 amount: 39,    day_of_month: 7,  category_slug: 'utilities',     kind: 'expense', member_ids: [M.alice, M.bob], notes: '' },
+  { id: 'demo-fc-axa',       name: 'AXA Assurance habitation', amount: 54,    day_of_month: 10, category_slug: 'insurance',     kind: 'expense', member_ids: [M.alice, M.bob], notes: '' },
+  { id: 'demo-fc-auto',      name: 'Direct Assurance Auto',    amount: 42,    day_of_month: 12, category_slug: 'insurance',     kind: 'expense', member_ids: [M.bob],          notes: '' },
+  { id: 'demo-fc-netflix',   name: 'Netflix',                  amount: 15.99, day_of_month: 8,  category_slug: 'subscriptions', kind: 'expense', member_ids: [M.alice],        notes: '' },
+  { id: 'demo-fc-spotify',   name: 'Spotify Family',           amount: 17.99, day_of_month: 9,  category_slug: 'subscriptions', kind: 'expense', member_ids: [M.alice, M.bob], notes: '' },
+  { id: 'demo-fc-sport',     name: 'Salle de sport',           amount: 34,    day_of_month: 11, category_slug: 'subscriptions', kind: 'expense', member_ids: [M.alice],        notes: '' },
+  { id: 'demo-fc-pea',       name: 'Versement PEA programmé',  amount: 800,   day_of_month: 15, category_slug: 'savings',       kind: 'expense', member_ids: [M.alice],        notes: 'DCA mensuel ETF World' },
+  { id: 'demo-fc-av',        name: 'Versement Assurance-vie',  amount: 400,   day_of_month: 15, category_slug: 'savings',       kind: 'expense', member_ids: [M.alice, M.bob], notes: '' },
+  { id: 'demo-fc-livret',    name: 'Virement Livret A',        amount: 600,   day_of_month: 4,  category_slug: 'savings',       kind: 'expense', member_ids: [M.alice],        notes: '' },
+  // Revenus fixes
+  { id: 'demo-fc-sal-alice', name: 'Salaire ACME SAS',         amount: 3850,  day_of_month: 2,  category_slug: 'salary',        kind: 'income',  member_ids: [M.alice],        notes: '' },
+  { id: 'demo-fc-sal-bob',   name: 'Salaire CONSULT FR',       amount: 3220,  day_of_month: 3,  category_slug: 'salary',        kind: 'income',  member_ids: [M.bob],          notes: '' },
+];
+
+// Snapshots mensuels du patrimoine net — utilisés par le Dashboard pour
+// dessiner la courbe d'évolution. Sans ça, le chart utilise une approximation
+// basée sur les soldes bancaires uniquement, ce qui donne des chiffres
+// absurdes (+149 %) en mode démo.
+function buildWealthHistory() {
+  const today = new Date();
+  const currentNetWorth = 284390;
+  // Progression réaliste : ~+8 % sur 6 mois (immobilier stable, marchés en
+  // hausse modérée, capital de prêt remboursé doucement, épargne mensuelle).
+  // On part de ~262 k il y a 6 mois et on monte progressivement.
+  const points = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+    const month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    // Courbe quasi-linéaire avec un léger creux au mois 3 (drawdown marchés)
+    const progress = (6 - i) / 6; // 0 → 1
+    const dip = i === 3 ? -1800 : 0;
+    const netWorth = Math.round(262000 + progress * (currentNetWorth - 262000) + dip);
+    const realEstateValue = 418000 + Math.round(progress * 2000); // 418k → 420k
+    const liabilitiesValue = Math.round(222000 - progress * 3500); // 222k → 218.5k
+    const liquidWealth = Math.round(18500 + progress * 5300 + (dip ? dip / 4 : 0)); // 18.5k → 23.8k
+    const assetsValue = netWorth - liquidWealth + liabilitiesValue;
+    const financialAssetsValue = liquidWealth + (assetsValue - realEstateValue);
+    points.push({
+      month,
+      net_worth: netWorth,
+      liquid_wealth: liquidWealth,
+      assets_value: assetsValue,
+      liabilities_value: liabilitiesValue,
+      real_estate_value: realEstateValue,
+      financial_assets_value: financialAssetsValue,
+      mortgage_debt: liabilitiesValue,
+      other_debt: 0,
+    });
+  }
+  return points;
+}
+
+const wealthHistory = buildWealthHistory();
+
 // Categories — let the frontend use its DEFAULT_CATEGORIES, no override needed.
 const customRules = [];
 
@@ -240,6 +323,8 @@ export function getDemoData() {
     goals,
     achievements,
     customRules,
+    fixedCharges,
+    wealthHistory,
   };
 }
 

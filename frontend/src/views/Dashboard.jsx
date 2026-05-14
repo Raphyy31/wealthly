@@ -106,10 +106,18 @@ export function Dashboard({
   const allocationTotal = allocationData.reduce((s, d) => s + d.value, 0);
 
   // ── Performance ────────────────────────────────────────────────────────
-  const sortedEvo = useMemo(
-    () => [...(monthlyEvolution || [])].sort((a, b) => a.month.localeCompare(b.month)),
-    [monthlyEvolution]
-  );
+  // Préférer wealthHistory (snapshots NW mensuels) au monthlyEvolution
+  // (soldes bancaires uniquement). Sans ça, le chart affiche l'évolution
+  // des comptes courants alors que le hero affiche le patrimoine net,
+  // donnant des deltas absurdes (+149 % sur 6 mois en démo).
+  const sortedEvo = useMemo(() => {
+    if (wealthHistory && wealthHistory.length >= 2) {
+      return [...wealthHistory]
+        .sort((a, b) => a.month.localeCompare(b.month))
+        .map(s => ({ month: s.month, balance: s.net_worth ?? s.netWorth ?? 0 }));
+    }
+    return [...(monthlyEvolution || [])].sort((a, b) => a.month.localeCompare(b.month));
+  }, [wealthHistory, monthlyEvolution]);
 
   const chartData = useMemo(() => {
     const p = PERIODS.find(p => p.id === period);
