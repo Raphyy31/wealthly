@@ -1,12 +1,9 @@
 /**
  * API service: all HTTP calls to the Wealthly backend.
  *
- * Auth: HttpOnly Secure SameSite=None cookie `wealthly_session` set by the
+ * Auth: HttpOnly Secure SameSite=None cookie `trove_session` set by the
  * backend on login/register/reset. The browser auto-attaches it on every
  * request thanks to `credentials: 'include'`. JS cannot read it (XSS-safe).
- *
- * Legacy: a localStorage token (`wealthly:token`) is still cleared on logout
- * so existing sessions migrate cleanly. New logins do NOT write to it.
  *
  * Base URL: from VITE_API_URL env var, falls back to /api (proxied by Vite in dev).
  */
@@ -14,14 +11,6 @@
 import { SUBTYPE_TO_CATEGORY } from './types/wealth.js';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
-const LEGACY_TOKEN_KEY = 'wealthly:token';
-
-// ============================================================================
-// TOKEN MANAGEMENT (legacy — cookie auth supersedes this)
-// ============================================================================
-export const getToken = () => localStorage.getItem(LEGACY_TOKEN_KEY);
-export const setToken = (token) => localStorage.setItem(LEGACY_TOKEN_KEY, token);
-export const clearToken = () => localStorage.removeItem(LEGACY_TOKEN_KEY);
 
 // ============================================================================
 // CORE FETCH WRAPPER
@@ -34,12 +23,6 @@ async function request(method, path, body = null) {
   }
 
   const headers = { 'Content-Type': 'application/json' };
-  // Legacy Bearer header — only sent if the localStorage token still exists
-  // (users who logged in before the cookie migration). Cookie auth is the
-  // primary path; this exists purely so existing sessions don't get kicked
-  // out on the day of the upgrade.
-  const legacyToken = getToken();
-  if (legacyToken) headers['Authorization'] = `Bearer ${legacyToken}`;
 
   const opts = {
     method,
@@ -56,22 +39,10 @@ async function request(method, path, body = null) {
   }
 
   if (response.status === 401) {
-    // Récupère le message d'erreur du backend AVANT toute autre logique
-    // — sinon une mauvaise tentative login afficherait jamais "mot de
-    // passe incorrect".
+    // Récupère le message d'erreur du backend — sinon une mauvaise
+    // tentative login n'afficherait jamais "mot de passe incorrect".
     let errMsg = 'Session expirée';
     try { const d = await response.clone().json(); errMsg = d?.detail || errMsg; } catch {}
-
-    // Si on a un vieux token legacy ET que ce n'est PAS un appel à
-    // /auth/login ou /auth/register (les "mauvaise saisie" ne sont
-    // jamais "session expirée"), on purge le token et on recharge.
-    const isAuthEndpoint = path.startsWith('/auth/login') || path.startsWith('/auth/register');
-    if (legacyToken && !isAuthEndpoint) {
-      clearToken();
-      window.location.reload();
-      return; // empêche le throw qui suit pendant le reload
-    }
-
     throw new Error(errMsg);
   }
 

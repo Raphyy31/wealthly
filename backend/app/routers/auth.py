@@ -8,11 +8,11 @@ Security guarantees added in this module:
     email within 15 minutes triggers a 30-minute block. Detection lives
     in `app.security.is_locked_out`.
   - Password complexity: ≥10 chars, letters + digits, not in HIBP.
-  - Auth cookie: on successful login/register/reset we ALSO set an
-    HttpOnly + Secure + SameSite=None cookie carrying the JWT. The
-    legacy `access_token` JSON field is still returned for the duration
-    of the frontend transition; it will be removed once the frontend
-    switches to cookie auth fully.
+  - Auth cookie: on successful login/register/reset we set an HttpOnly +
+    Secure + SameSite=None cookie carrying the JWT. The `access_token`
+    JSON field is still returned in the response body for backward
+    compatibility with the `Token` schema but the frontend ignores it —
+    cookie is the only transport.
 """
 import hashlib
 import secrets
@@ -129,9 +129,8 @@ def login(request: Request, response: Response, payload: UserLogin, db: Session 
 @router.post("/logout", response_model=MessageOut)
 def logout(request: Request, response: Response, db: Session = Depends(get_db)):
     """Clear the auth cookie. We don't blacklist the JWT itself (stateless
-    by design) but the cookie disappears so subsequent requests fail the
-    cookie path. The Bearer header path is also obsolete after frontend
-    swap. Audit log records the explicit logout."""
+    by design) but the cookie disappears so subsequent requests fail.
+    Audit log records the explicit logout."""
     clear_auth_cookie(response)
     # Best-effort: log who logged out if we can resolve them.
     try:
