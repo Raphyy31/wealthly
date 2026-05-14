@@ -93,17 +93,64 @@ const KIND_LABEL = {
   saving: 'Épargne',
 };
 
+// Starter template for first-time editing. Each entry creates an empty line
+// (amount=0) — the user fills in the values. Categories chosen for a typical
+// French household (couple + enfants, propriétaire ou locataire).
+const STARTER_TEMPLATE = [
+  // Entrées
+  { kind: 'income',  category_id: 'salary',        label: 'Salaire' },
+  // Logement
+  { kind: 'expense', category_id: 'housing',       label: 'Loyer / prêt' },
+  { kind: 'expense', category_id: 'housing',       label: 'Charges / copropriété' },
+  // Énergie & utilities
+  { kind: 'expense', category_id: 'utilities',     label: 'Électricité / gaz' },
+  { kind: 'expense', category_id: 'utilities',     label: 'Internet & mobile' },
+  // Vie quotidienne
+  { kind: 'expense', category_id: 'groceries',     label: 'Courses' },
+  { kind: 'expense', category_id: 'food',          label: 'Restaurants & sorties' },
+  { kind: 'expense', category_id: 'transport',     label: 'Transports' },
+  { kind: 'expense', category_id: 'fuel',          label: 'Carburant' },
+  // Assurances, santé, enfants
+  { kind: 'expense', category_id: 'insurance',     label: 'Assurances' },
+  { kind: 'expense', category_id: 'health',        label: 'Santé' },
+  { kind: 'expense', category_id: 'children',      label: 'Enfants' },
+  // Récurrent
+  { kind: 'expense', category_id: 'subscriptions', label: 'Abonnements' },
+  { kind: 'expense', category_id: 'shopping',      label: 'Shopping & loisirs' },
+  // Épargne
+  { kind: 'saving',  category_id: 'savings',       label: 'Versement épargne' },
+];
+
+function _buildStarter() {
+  return STARTER_TEMPLATE.map(t => ({
+    id: _uuid(),
+    category_id: t.category_id,
+    kind: t.kind,
+    label: t.label,
+    amount: 0,
+    locked: false,
+  }));
+}
+
 export function RefMonthEditor({
   refMonth, saveRefMonth,
   categories, transactions, accounts, memberShare, transferIds,
   currentMonth, fmt, onClose,
 }) {
   const { t } = useTranslation();
-  const [draft, setDraft] = useState(refMonth?.lines || []);
+  // First-time open with no saved Mois type → seed with classic categories
+  // so the user doesn't face an empty drawer.
+  const [draft, setDraft] = useState(() => {
+    const existing = refMonth?.lines || [];
+    return existing.length > 0 ? existing : _buildStarter();
+  });
   const [saving, setSaving] = useState(false);
 
   // Re-sync draft if refMonth prop changes from outside (after save).
-  useEffect(() => { setDraft(refMonth?.lines || []); }, [refMonth]);
+  useEffect(() => {
+    const existing = refMonth?.lines || [];
+    if (existing.length > 0) setDraft(existing);
+  }, [refMonth]);
 
   const saving_slugs = SAVING_SLUGS_DEFAULT;
 

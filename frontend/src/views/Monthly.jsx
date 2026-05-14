@@ -10,7 +10,7 @@
 //   - Modal FiftyThirtyTwentyModal (analyse 50/30/20)
 //   - Modal Évolution (chart 6 mois)
 // ============================================================================
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ComposedChart, Bar, Line, ResponsiveContainer,
@@ -19,6 +19,7 @@ import {
 } from 'recharts';
 import {
   Edit3, Target, TrendingUp, ChevronDown, ChevronRight, X, BarChart3, Calendar,
+  ChevronLeft,
 } from 'lucide-react';
 import { formatCurrency, formatDate, monthKey } from '../utils.js';
 import { useIsNarrow } from '../hooks/useIsNarrow.js';
@@ -64,7 +65,6 @@ export function Monthly({
     try { return new Set(JSON.parse(localStorage.getItem('wealthly:monthly_expanded') || '[]')); }
     catch { return new Set(); }
   });
-  const monthBarRef = useRef(null);
   const isNarrow = useIsNarrow(760);
 
   useEffect(() => {
@@ -81,12 +81,6 @@ export function Monthly({
     }
     return arr;
   }, [currentMonth]);
-
-  useEffect(() => {
-    if (!monthBarRef.current) return;
-    const active = monthBarRef.current.querySelector('.mon-month.is-active');
-    if (active) active.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'auto' });
-  }, [selectedMonth]);
 
   const catFor = (id) => categories.find(c => c.id === id || c.slug === id);
 
@@ -296,19 +290,14 @@ export function Monthly({
         </div>
       </div>
 
-      {/* ── Month carousel ──────────────────────────────────────────── */}
-      <div className="mon-month-bar" ref={monthBarRef}>
-        {availableMonths.map(m => (
-          <button
-            key={m}
-            className={`mon-month ${m === selectedMonth ? 'is-active' : ''} ${m === currentMonth ? 'is-current' : ''}`}
-            onClick={() => setSelectedMonth(m)}
-          >
-            {shortMonth(m)}
-            <span className="mon-month-year">{m.slice(0, 4)}</span>
-          </button>
-        ))}
-      </div>
+      {/* ── Month picker ────────────────────────────────────────────── */}
+      <MonthPicker
+        selectedMonth={selectedMonth}
+        currentMonth={currentMonth}
+        availableMonths={availableMonths}
+        onChange={setSelectedMonth}
+      />
+
 
       {/* ── KPI strip ───────────────────────────────────────────────── */}
       <Kpi
@@ -511,6 +500,92 @@ function Kpi({ realTotals, refTotals, hasRefMonth, restToLive, dailyBudget, days
           : null}
       </div>
     </section>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────
+function MonthPicker({ selectedMonth, currentMonth, availableMonths, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [year, setYear] = useState(() => parseInt(selectedMonth.split('-')[0], 10));
+  useEffect(() => {
+    if (open) setYear(parseInt(selectedMonth.split('-')[0], 10));
+  }, [open, selectedMonth]);
+
+  const close = () => setOpen(false);
+
+  // Available months grouped by year for navigation.
+  const minYear = Math.min(...availableMonths.map(m => parseInt(m.split('-')[0], 10)));
+  const maxYear = Math.max(...availableMonths.map(m => parseInt(m.split('-')[0], 10)));
+  const monthsForYear = useMemo(() => {
+    const arr = [];
+    for (let m = 1; m <= 12; m++) {
+      const key = `${year}-${String(m).padStart(2, '0')}`;
+      const enabled = availableMonths.includes(key);
+      arr.push({ key, month: m, enabled });
+    }
+    return arr;
+  }, [year, availableMonths]);
+
+  const label = formatDate(selectedMonth + '-01', { format: 'monthYear' });
+  const monthLabels = ['Janv.', 'Févr.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
+
+  return (
+    <div className="mon-picker-wrap">
+      <button
+        className="mon-picker-toggle"
+        onClick={() => setOpen(o => !o)}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+      >
+        <Calendar size={14}/>
+        <span>{label}</span>
+        <ChevronDown size={14} className={open ? 'rot' : ''}/>
+      </button>
+      {open && (
+        <>
+          <div className="mon-picker-backdrop" onClick={close}/>
+          <div className="mon-picker-pop" role="dialog">
+            <div className="mon-picker-head">
+              <button
+                className="ds-icon-btn"
+                disabled={year <= minYear}
+                onClick={() => setYear(y => y - 1)}
+                aria-label="Année précédente"
+              ><ChevronLeft size={14}/></button>
+              <strong>{year}</strong>
+              <button
+                className="ds-icon-btn"
+                disabled={year >= maxYear}
+                onClick={() => setYear(y => y + 1)}
+                aria-label="Année suivante"
+              ><ChevronRight size={14}/></button>
+            </div>
+            <div className="mon-picker-grid">
+              {monthsForYear.map(({ key, month, enabled }) => {
+                const isActive = key === selectedMonth;
+                const isCurrent = key === currentMonth;
+                return (
+                  <button
+                    key={key}
+                    className={`mon-picker-cell ${isActive ? 'is-active' : ''} ${isCurrent ? 'is-current' : ''}`}
+                    disabled={!enabled}
+                    onClick={() => { onChange(key); close(); }}
+                  >
+                    {monthLabels[month - 1]}
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              className="mon-picker-today"
+              onClick={() => { onChange(currentMonth); close(); }}
+            >
+              Aujourd'hui
+            </button>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 
