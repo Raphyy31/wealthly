@@ -52,20 +52,20 @@ export function Budgets({ categories, budgets, setBudget, categoryAnalysis, fift
         <div className="ratio-display">
           <div className="ratio-bar-large">
             <div className="ratio-segment needs" style={{ flex: fiftyThirtyTwenty.needs }}>
-              {needsRatio > 8 && <span className="ratio-pct">{needsRatio.toFixed(0)}%</span>}
+              {needsRatio > 8 && <span className="ratio-pct">{needsRatio.toFixed(0)} %</span>}
             </div>
             <div className="ratio-segment wants" style={{ flex: fiftyThirtyTwenty.wants }}>
-              {wantsRatio > 8 && <span className="ratio-pct">{wantsRatio.toFixed(0)}%</span>}
+              {wantsRatio > 8 && <span className="ratio-pct">{wantsRatio.toFixed(0)} %</span>}
             </div>
             <div className="ratio-segment savings" style={{ flex: fiftyThirtyTwenty.savings }}>
-              {savingsRatio > 8 && <span className="ratio-pct">{savingsRatio.toFixed(0)}%</span>}
+              {savingsRatio > 8 && <span className="ratio-pct">{savingsRatio.toFixed(0)} %</span>}
             </div>
           </div>
 
           <div className="ratio-cards">
             <div className="ratio-card needs">
               <div className="ratio-card-header">
-                <div className="ratio-card-pct">{needsRatio.toFixed(0)}%</div>
+                <div className="ratio-card-pct">{needsRatio.toFixed(0)} %</div>
                 <div className="ratio-card-target">cible 50%</div>
               </div>
               <div className="ratio-card-name">Besoins essentiels</div>
@@ -79,7 +79,7 @@ export function Budgets({ categories, budgets, setBudget, categoryAnalysis, fift
             </div>
             <div className="ratio-card wants">
               <div className="ratio-card-header">
-                <div className="ratio-card-pct">{wantsRatio.toFixed(0)}%</div>
+                <div className="ratio-card-pct">{wantsRatio.toFixed(0)} %</div>
                 <div className="ratio-card-target">cible 30%</div>
               </div>
               <div className="ratio-card-name">Envies & loisirs</div>
@@ -93,7 +93,7 @@ export function Budgets({ categories, budgets, setBudget, categoryAnalysis, fift
             </div>
             <div className="ratio-card savings">
               <div className="ratio-card-header">
-                <div className="ratio-card-pct">{savingsRatio.toFixed(0)}%</div>
+                <div className="ratio-card-pct">{savingsRatio.toFixed(0)} %</div>
                 <div className="ratio-card-target">cible 20%</div>
               </div>
               <div className="ratio-card-name">Épargne & invest</div>
@@ -197,7 +197,7 @@ export function Budgets({ categories, budgets, setBudget, categoryAnalysis, fift
                       )}
                     </div>
                     <div className="budget-meta">
-                      <span>{pct.toFixed(0)}% utilisé</span>
+                      <span>{pct.toFixed(0)} % utilisé</span>
                       {suggestion > 0 && Math.abs(suggestion - budget) > 5 && (
                         <button className="suggestion-btn" onClick={() => setBudget(cat.id, suggestion)}>
                           <Lightbulb size={10}/> Suggérer {fmt(suggestion)}
@@ -258,7 +258,7 @@ export function Budgets({ categories, budgets, setBudget, categoryAnalysis, fift
                     <div className="goal-progress-fill" style={{ width: `${progress}%` }}/>
                   </div>
                   <div className="goal-meta">
-                    <span className="goal-pct">{progress.toFixed(0)}%</span>
+                    <span className="goal-pct">{progress.toFixed(0)} %</span>
                     {remaining > 0 && <span>encore {fmt(remaining)}</span>}
                     {progress >= 100 && <span className="goal-complete">Atteint</span>}
                   </div>

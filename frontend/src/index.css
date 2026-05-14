@@ -250,9 +250,31 @@ html, body {
   transition: background var(--t-med), color var(--t-med);
 }
 
+/* ─────────────────────────────────────────────────────────────────────────
+   Tabular-nums universel sur l'app — garantit l'alignement vertical de tous
+   les chiffres (€, %, dates, IBAN, isin) dans les tables et les KPIs sans
+   avoir à ajouter manuellement .num/.w-num partout. Inoffensif sur le texte
+   non-numérique (n'affecte que les glyphes 0-9).
+   ───────────────────────────────────────────────────────────────────────── */
+.app,
+.modal-backdrop,
+.dv3-page,
+.inv-v3-page,
+.import-positions-v3 {
+  font-variant-numeric: tabular-nums;
+}
+
 .num, .amount, [data-financial], .w-num {
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum';
+}
+
+/* Helper pour le format FR strict des pourcentages : NNBSP avant le %
+   et tabular-nums systématique. Utiliser <span className="pct">12,5 %</span>
+   ou via la fonction formatPct() de utils.js. */
+.pct {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 

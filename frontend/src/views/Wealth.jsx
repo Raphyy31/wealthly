@@ -1522,11 +1522,11 @@ function RealEstateDetail({ asset, liabilities = [], members = [], memberShare, 
               <div className="loan-monthly-label">PLUS-VALUE LATENTE</div>
               <div className={`re-pl-value w-num ${plLatente >= 0 ? 'pl-up' : 'pl-down'}`}>
                 {plLatente >= 0 ? '+' : ''}{fmt(plLatente)}
-                <span className="re-pl-pct">{plLatente >= 0 ? '+' : ''}{plLatentePct.toFixed(1)} %</span>
+                <span className="re-pl-pct">{plLatente >= 0 ? '+' : ''}{plLatentePct.toFixed(1).replace('.', ',')} %</span>
               </div>
               {yieldAnnual !== 0 && (
                 <div className="re-pl-meta">
-                  Rendement annualisé : <strong className="w-num">{yieldAnnual >= 0 ? '+' : ''}{yieldAnnual.toFixed(1)} %/an</strong>
+                  Rendement annualisé : <strong className="w-num">{yieldAnnual >= 0 ? '+' : ''}{yieldAnnual.toFixed(1).replace('.', ',')} %/an</strong>
                   <em> · avant fiscalité de cession</em>
                 </div>
               )}
@@ -1815,7 +1815,7 @@ function LiquidityDetail({ item, accounts = [], accountBalances = {}, transactio
               <div className="ds-panel-head">
                 <div>
                   <div className="ds-panel-title">{livretLabel} · Épargne réglementée</div>
-                  <div className="ds-panel-sub">Taux nominal {(livretRate * 100).toFixed(2)} % — exonéré d'impôt et de prélèvements sociaux</div>
+                  <div className="ds-panel-sub">Taux nominal {(livretRate * 100).toFixed(2).replace('.', ',')} % — exonéré d'impôt et de prélèvements sociaux</div>
                 </div>
                 <div className="dv3-livret-yield num pos">
                   +{fmt(interests)} <span className="dv3-kpi-meta">/an estimé</span>
@@ -2024,7 +2024,7 @@ function InvestmentDetail({ asset, assets = [], members = [], fmt, onEdit, onClo
                 <div className={`inv-v3-hero-delta ${plLatente >= 0 ? 'pos' : 'neg'}`}>
                   <span className="num">{plLatente >= 0 ? '+' : ''}{fmt(plLatente)}</span>
                   <span className="inv-v3-dot">·</span>
-                  <span className="num">{plLatente >= 0 ? '+' : ''}{plLatentePct.toFixed(2)} %</span>
+                  <span className="num">{plLatente >= 0 ? '+' : ''}{plLatentePct.toFixed(2).replace('.', ',')} %</span>
                 </div>
               )}
             </div>
@@ -2093,7 +2093,7 @@ function InvestmentDetail({ asset, assets = [], members = [], fmt, onEdit, onClo
                       <div className="num">{r.pl >= 0 ? '+' : ''}{fmt(r.pl)}</div>
                       {r.invested > 0 && (
                         <div className="num inv-v3-pl-pct">
-                          {r.pl >= 0 ? '+' : ''}{r.plPct.toFixed(2)} %
+                          {r.pl >= 0 ? '+' : ''}{r.plPct.toFixed(2).replace('.', ',')} %
                         </div>
                       )}
                     </div>
@@ -2505,7 +2505,7 @@ function CryptoDetail({ asset, members = [], fmt, onEdit, onClose, onSync }) {
                 <div className={`dv3-hero-delta ${plLatente >= 0 ? 'pos' : 'neg'}`}>
                   <span className="num">{plLatente >= 0 ? '+' : ''}{fmt(plLatente)}</span>
                   <span className="dv3-dot">·</span>
-                  <span className="num">{plLatente >= 0 ? '+' : ''}{plLatentePct.toFixed(2)} %</span>
+                  <span className="num">{plLatente >= 0 ? '+' : ''}{plLatentePct.toFixed(2).replace('.', ',')} %</span>
                 </div>
               )}
             </div>
@@ -2533,7 +2533,7 @@ function CryptoDetail({ asset, members = [], fmt, onEdit, onClose, onSync }) {
               <div className="dv3-kpi">
                 <div className="ds-micro">Perf. annualisée</div>
                 <div className={`dv3-kpi-val num ${cagrPct >= 0 ? 'pos' : 'neg'}`}>
-                  {cagrPct >= 0 ? '+' : ''}{cagrPct.toFixed(1)} %<span className="dv3-kpi-meta"> /an</span>
+                  {cagrPct >= 0 ? '+' : ''}{cagrPct.toFixed(1).replace('.', ',')} %<span className="dv3-kpi-meta"> /an</span>
                 </div>
               </div>
             )}
@@ -2626,7 +2626,7 @@ function OtherAssetDetail({ asset, members = [], fmt, onEdit, onClose }) {
                 <div className={`dv3-hero-delta ${plLatente >= 0 ? 'pos' : 'neg'}`}>
                   <span className="num">{plLatente >= 0 ? '+' : ''}{fmt(plLatente)}</span>
                   <span className="dv3-dot">·</span>
-                  <span className="num">{plLatente >= 0 ? '+' : ''}{plLatentePct.toFixed(1)} %</span>
+                  <span className="num">{plLatente >= 0 ? '+' : ''}{plLatentePct.toFixed(1).replace('.', ',')} %</span>
                 </div>
               )}
             </div>
@@ -2671,7 +2671,7 @@ function OtherAssetDetail({ asset, members = [], fmt, onEdit, onClose }) {
                   <span>Plus-value latente</span>
                   <span className={`num dv3-kv-bold ${plLatente >= 0 ? 'pos' : 'neg'}`}>
                     {plLatente >= 0 ? '+' : ''}{fmt(plLatente)}
-                    <span className="dv3-kv-pct"> · {plLatente >= 0 ? '+' : ''}{plLatentePct.toFixed(1)} %</span>
+                    <span className="dv3-kv-pct"> · {plLatente >= 0 ? '+' : ''}{plLatentePct.toFixed(1).replace('.', ',')} %</span>
                   </span>
                 </div>
               )}
@@ -2679,7 +2679,7 @@ function OtherAssetDetail({ asset, members = [], fmt, onEdit, onClose }) {
                 <div className="dv3-kv-row">
                   <span>Performance annualisée</span>
                   <span className={`num ${cagrPct >= 0 ? 'pos' : 'neg'}`}>
-                    {cagrPct >= 0 ? '+' : ''}{cagrPct.toFixed(1)} % /an
+                    {cagrPct >= 0 ? '+' : ''}{cagrPct.toFixed(1).replace('.', ',')} % /an
                   </span>
                 </div>
               )}

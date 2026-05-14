@@ -251,18 +251,48 @@ export const convertCurrency = (amount, fromCurrency, toCurrency, rates) => {
 };
 
 export const formatCurrency = (amount, options = {}) => {
-  const { compact = false, sign = false, currency = 'EUR' } = options;
+  const { compact = false, sign = false, currency = 'EUR', abbr = false } = options;
   const locale = CURRENCY_LOCALE[currency] || 'fr-FR';
-  const formatted = new Intl.NumberFormat(locale, {
+  if (amount == null || !Number.isFinite(amount)) return '—';
+  // signDisplay: 'exceptZero' → "+1 234,56 €" pour positifs, "-1 234,56 €" pour
+  // négatifs, sans préfixe pour 0. Garantit que le sign est rendu dans le
+  // même Intl style (U+002D pour fr-FR, pas un mix hyphen/minus).
+  return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency,
-    notation: compact ? 'compact' : 'standard',
-    maximumFractionDigits: compact ? 1 : 2,
-    minimumFractionDigits: compact ? 0 : 2,
-  }).format(Math.abs(amount));
-  if (sign && amount > 0) return '+' + formatted;
-  if (amount < 0) return '-' + formatted;
+    notation: (compact || abbr) ? 'compact' : 'standard',
+    maximumFractionDigits: (compact || abbr) ? 1 : 2,
+    minimumFractionDigits: (compact || abbr) ? 0 : 2,
+    signDisplay: sign ? 'exceptZero' : 'auto',
+  }).format(amount);
+};
+
+// Format FR strict pour les pourcentages : "12,5 %" avec espace insécable
+// fine (U+202F) avant le %, cohérent avec ce que produit Intl.NumberFormat.
+// Options : { digits: 1, sign: false } — sign=true préfixe "+" si positif.
+export const formatPct = (value, options = {}) => {
+  const { digits = 1, sign = false } = options;
+  if (value == null || !Number.isFinite(value)) return '—';
+  const formatted = new Intl.NumberFormat('fr-FR', {
+    style: 'percent',
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(value / 100);
+  if (sign && value > 0) return '+' + formatted;
   return formatted;
+};
+
+// Compact pour grandes valeurs : "1,2 M€", "284 k€", "284 €". Utilise toujours
+// fr-FR pour assurer la cohérence visuelle (espace insécable fine).
+export const formatCompact = (amount, currency = 'EUR') => {
+  if (amount == null || !Number.isFinite(amount)) return '—';
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency,
+    notation: 'compact',
+    maximumFractionDigits: 1,
+    minimumFractionDigits: 0,
+  }).format(amount);
 };
 
 export const formatDate = (dateStr, options = {}) => {

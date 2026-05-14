@@ -272,7 +272,9 @@ const SankeyNode = React.memo(function SankeyNode({ x, y, width, height, index, 
   const color = payload.color || (payload.kind === 'hub' ? 'var(--primary)' : payload.kind === 'savings' ? 'var(--primary)' : payload.kind === 'income' ? 'var(--success)' : 'var(--danger)');
   const labelOffset = narrow ? 5 : 8;
   const fontSize = narrow ? 10 : 12;
-  const valueLabel = payload.value ? Math.round(payload.value).toLocaleString('fr-FR') + ' €' : '';
+  const valueLabel = payload.value
+    ? new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(Math.round(payload.value))
+    : '';
   // On narrow viewports the sankey margins are tight (~70px each side), so we
   // drop the value suffix from labels to keep them readable.
   const labelText = narrow ? payload.name : `${payload.name}${valueLabel ? ` · ${valueLabel}` : ''}`;

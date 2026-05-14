@@ -31,11 +31,16 @@ function timeAgo(iso) {
   return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' });
 }
 
+// Format compact cohérent avec le reste du site (fr-FR Intl, NNBSP).
 function fmt(n) {
   if (n == null) return '—';
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M€`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}k€`;
-  return `${n.toFixed(0)}€`;
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'EUR',
+    notation: 'compact',
+    maximumFractionDigits: 1,
+    minimumFractionDigits: 0,
+  }).format(n);
 }
 
 const PLAN_COLORS = {

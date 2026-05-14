@@ -282,7 +282,7 @@ export function Dashboard({
             <div className="hero-delta">
               <span className={`ds-pill ${periodDelta.abs >= 0 ? 'pos' : 'neg'}`}>
                 {periodDelta.abs >= 0 ? <ArrowUp size={11}/> : <ArrowDown size={11}/>}
-                <span className="num">{periodDelta.abs >= 0 ? '+' : ''}{formatEUR(periodDelta.abs)} · {hidden ? '···' : `${periodDelta.pct >= 0 ? '+' : ''}${periodDelta.pct.toFixed(2)} %`}</span>
+                <span className="num">{periodDelta.abs >= 0 ? '+' : ''}{formatEUR(periodDelta.abs)} · {hidden ? '···' : `${periodDelta.pct >= 0 ? '+' : ''}${periodDelta.pct.toFixed(2).replace('.', ',')} %`}</span>
               </span>
               <span style={{ color: 'var(--ink-2)', fontSize: 13 }}>{t('dashboard.vsStart')}</span>
             </div>
@@ -297,7 +297,7 @@ export function Dashboard({
                 <div className="kpi-val num">{formatEUR(k.value)}</div>
                 {k.delta != null && (
                   <div className={`kpi-delta num ${k.delta >= 0 ? 'pos' : 'neg'}`}>
-                    {hidden ? '···' : `${k.delta >= 0 ? '+' : ''}${k.delta.toFixed(1)} %`}
+                    {hidden ? '···' : `${k.delta >= 0 ? '+' : ''}${k.delta.toFixed(1).replace('.', ',')} %`}
                   </div>
                 )}
               </div>
