@@ -256,7 +256,7 @@ const assets = [
 const liabilities = [
   {
     id: 'demo-lia-immo',
-    type: 'Prêt immobilier',
+    type: 'mortgage',
     name: 'Prêt immo BNP — résidence principale',
     initialCapital: 280000,
     remainingCapital: 218500,
@@ -267,6 +267,7 @@ const liabilities = [
     endDate: '2042-09-01',
     notes: '20 ans, taux fixe',
     memberIds: [M.alice, M.bob],
+    linkedAssetId: 'demo-asset-immo',
   },
 ];
 

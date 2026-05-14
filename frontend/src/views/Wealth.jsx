@@ -306,7 +306,28 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
 
       {editingAsset && <AssetEditor asset={editingAsset} members={members} liabilities={visibleLiabilities} onSave={(a) => { saveAsset(a); setEditingAsset(null); }} onCancel={() => setEditingAsset(null)}/>}
       {editingLia && <LiabilityEditor liability={editingLia} members={members} assets={assets} onSave={(l) => { saveLiability(l); setEditingLia(null); }} onCancel={() => setEditingLia(null)}/>}
-      {viewingLia && <LiabilityDetail liability={viewingLia} assets={assets} members={members} memberShare={memberShare} fmt={fmt} onEdit={() => { setEditingLia(viewingLia); setViewingLia(null); }} onClose={() => setViewingLia(null)}/>}
+      {viewingLia && (
+        <LiabilityDetail
+          liability={viewingLia}
+          assets={assets}
+          members={members}
+          memberShare={memberShare}
+          fmt={fmt}
+          onEdit={() => { setEditingLia(viewingLia); setViewingLia(null); }}
+          onClose={() => setViewingLia(null)}
+          onOpenLinkedAsset={(a) => {
+            // Ferme le détail de l'emprunt et ouvre le bon popup d'actif
+            // selon sa catégorie (immobilier, investissement, crypto, etc.).
+            setViewingLia(null);
+            if (!a) return;
+            if (a.type === 'real_estate') setViewingRE(a);
+            else if (['pea', 'stocks', 'life_insurance', 'per'].includes(a.type)) setViewingInv(a);
+            else if (a.type === 'crypto') setViewingCrypto(a);
+            else if (a.type === 'savings_account') setViewingLiq({ ...a, isAccount: false });
+            else setViewingOther(a);
+          }}
+        />
+      )}
       {viewingRE && <RealEstateDetail asset={viewingRE} liabilities={liabilities} members={members} memberShare={memberShare} fmt={fmt} onEdit={() => { setEditingAsset(viewingRE); setViewingRE(null); }} onClose={() => setViewingRE(null)}/>}
       {viewingLiq && (
         <LiquidityDetail
@@ -488,11 +509,28 @@ function CompletePatrimoinePicker({ onClose, onPickAsset, onPickLiability }) {
 }
 
 function AssetEditor({ asset, members, liabilities = [], onSave, onCancel }) {
-  // Real-estate gets the multi-step wizard; the rest stays the lighter form.
+  // Garde-fou : si on reçoit un asset null/undefined (race condition entre
+  // setEditingAsset et setViewingInv), on ferme proprement plutôt que de
+  // crasher. Si le type est manquant ou inconnu, fallback sur SimpleAssetEditor
+  // qui sait afficher tous les champs malgré tout.
+  if (!asset) {
+    if (typeof console !== 'undefined') console.warn('[AssetEditor] asset is null/undefined');
+    return null;
+  }
   if (asset.type === 'real_estate') {
     return <RealEstateEditor asset={asset} members={members} liabilities={liabilities} onSave={onSave} onCancel={onCancel}/>;
   }
-  return <SimpleAssetEditor asset={asset} members={members} onSave={onSave} onCancel={onCancel}/>;
+  // Normalise les champs minimum requis par SimpleAssetEditor pour éviter
+  // les <input value={undefined}> warnings React et le modal vide.
+  const safe = {
+    type: asset.type || 'other_asset',
+    currency: asset.currency || 'EUR',
+    name: asset.name || '',
+    currentValue: asset.currentValue ?? '',
+    memberIds: asset.memberIds || [],
+    ...asset,
+  };
+  return <SimpleAssetEditor asset={safe} members={members} onSave={onSave} onCancel={onCancel}/>;
 }
 
 function SimpleAssetEditor({ asset, members, onSave, onCancel }) {
@@ -1032,7 +1070,7 @@ function LiabilityEditor({ liability, members, assets = [], onSave, onCancel }) 
  */
 // buildAmortization moved to utils.js so the PDF generator can reuse it.
 
-function LiabilityDetail({ liability, assets, members, memberShare, fmt, onEdit, onClose }) {
+function LiabilityDetail({ liability, assets, members, memberShare, fmt, onEdit, onClose, onOpenLinkedAsset }) {
   const l = liability;
   const [activeTab, setActiveTab] = useState('synthese');
 
@@ -1231,9 +1269,14 @@ function LiabilityDetail({ liability, assets, members, memberShare, fmt, onEdit,
                 </div>
               </div>
 
-              {/* Linked asset card */}
+              {/* Linked asset card — cliquable pour naviguer vers le détail de l'actif */}
               {linkedAsset && (
-                <div className="loan-finary-linked">
+                <button
+                  className="loan-finary-linked"
+                  onClick={() => onOpenLinkedAsset && onOpenLinkedAsset(linkedAsset)}
+                  title={onOpenLinkedAsset ? 'Voir le détail de l\'actif' : ''}
+                  disabled={!onOpenLinkedAsset}
+                >
                   <div className="loan-finary-linked-icon">
                     <Home size={18}/>
                   </div>
@@ -1244,7 +1287,7 @@ function LiabilityDetail({ liability, assets, members, memberShare, fmt, onEdit,
                     </div>
                   </div>
                   <ChevronRight size={16} className="loan-finary-linked-chevron"/>
-                </div>
+                </button>
               )}
 
               {owners && (

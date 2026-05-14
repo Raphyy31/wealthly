@@ -1220,12 +1220,15 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .loan-finary-sub li { display: flex; justify-content: space-between; gap: 12px; font-size: 12.5px; color: var(--text-tertiary); padding: 2px 0; }
 .loan-finary-sub li > span:last-child { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
 
-.loan-finary-linked { display: flex; align-items: center; gap: 14px; padding: 14px 18px; background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; cursor: default; }
+.loan-finary-linked { display: flex; align-items: center; gap: 14px; padding: 14px 18px; background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; cursor: pointer; text-align: left; font-family: inherit; width: 100%; transition: background 120ms cubic-bezier(.2,.6,.2,1), border-color 120ms cubic-bezier(.2,.6,.2,1); }
+.loan-finary-linked:hover:not(:disabled) { background: var(--bg-hover); border-color: var(--border-strong); }
+.loan-finary-linked:hover:not(:disabled) .loan-finary-linked-chevron { color: var(--accent); transform: translateX(2px); }
+.loan-finary-linked:disabled { cursor: default; }
 .loan-finary-linked-icon { width: 38px; height: 38px; border-radius: 10px; background: var(--primary-soft); color: var(--primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .loan-finary-linked-text { flex: 1; min-width: 0; }
 .loan-finary-linked-label { font-size: 11px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.12em; font-weight: 500; }
 .loan-finary-linked-name { font-size: 14px; color: var(--text-primary); font-weight: 500; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.loan-finary-linked-chevron { color: var(--text-tertiary); flex-shrink: 0; }
+.loan-finary-linked-chevron { color: var(--text-tertiary); flex-shrink: 0; transition: transform 120ms cubic-bezier(.2,.6,.2,1), color 120ms cubic-bezier(.2,.6,.2,1); }
 
 .loan-finary-meta { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-tertiary); padding: 4px 0; }
 
