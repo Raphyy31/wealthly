@@ -403,3 +403,26 @@ class ChangePasswordRequest(BaseModel):
 
 class MessageOut(BaseModel):
     message: str
+
+
+# ============================================================================
+# RefMonth — Mois type budget template (per user, JSON blob)
+# ============================================================================
+class RefMonthLine(BaseModel):
+    id: str
+    category_id: Optional[str] = None
+    kind: str  # "income" | "expense" | "saving"
+    label: str
+    amount: float
+    locked: bool = False
+
+
+class RefMonthIn(BaseModel):
+    version: int = 1
+    lines: List[RefMonthLine] = []
+
+
+class RefMonthOut(BaseModel):
+    version: int = 1
+    updated_at: Optional[str] = None
+    lines: List[RefMonthLine] = []

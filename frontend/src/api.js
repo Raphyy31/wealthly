@@ -253,6 +253,32 @@ export const dcaApi = {
 };
 
 // ============================================================================
+// REF MONTH (Mois type) — JSON budget template per user.
+// Demo mode persists in localStorage to mimic the backend behaviour.
+// ============================================================================
+const REF_MONTH_DEMO_KEY = 'wealthly:demo_ref_month';
+function _emptyRefMonth() {
+  return { version: 1, updated_at: null, lines: [] };
+}
+function _readDemoRefMonth() {
+  try {
+    const raw = localStorage.getItem(REF_MONTH_DEMO_KEY);
+    return raw ? JSON.parse(raw) : _emptyRefMonth();
+  } catch { return _emptyRefMonth(); }
+}
+function _writeDemoRefMonth(payload) {
+  try {
+    const stamped = { ...payload, updated_at: new Date().toISOString().slice(0, 10) };
+    localStorage.setItem(REF_MONTH_DEMO_KEY, JSON.stringify(stamped));
+    return stamped;
+  } catch { return payload; }
+}
+export const refMonth = {
+  get: () => isDemo() ? Promise.resolve(_readDemoRefMonth()) : get('/me/ref-month'),
+  put: (payload) => isDemo() ? Promise.resolve(_writeDemoRefMonth(payload)) : put('/me/ref-month', payload),
+};
+
+// ============================================================================
 // MIGRATION FROM v2 JSON BACKUP
 // ============================================================================
 export const migrate = {

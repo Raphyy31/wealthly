@@ -31,7 +31,6 @@ import { Transactions } from './views/Transactions.jsx';
 import { Analysis } from './views/Analysis.jsx';
 import { Monthly } from './views/Monthly.jsx';
 import { Cashflow } from './views/Cashflow.jsx';
-import { Budgets } from './views/Budgets.jsx';
 import { Dashboard } from './views/Dashboard.jsx';
 import { Wealth } from './views/Wealth.jsx';
 import { SettingsView } from './views/Settings.jsx';
@@ -106,6 +105,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   const [achievements, setAchievements] = useState([]);
   const [fixedCharges, setFixedCharges] = useState([]);
   const [dcaPlans, setDcaPlans] = useState([]);
+  const [refMonth, setRefMonth] = useState({ version: 1, updated_at: null, lines: [] });
   const [currentUser, setCurrentUser] = useState(() => {
     try { return JSON.parse(localStorage.getItem('w2:current_user') || 'null'); } catch { return null; }
   });
@@ -360,10 +360,11 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       setWealthHistory(d.wealthHistory || []);
       setCustomRules(d.customRules);
       dcaApi.list().then(setDcaPlans).catch(() => {});
+      api.refMonth.get().then(setRefMonth).catch(() => {});
       return;
     }
     try {
-      const [memList, accList, txList, astList, liaList, catList, budList, goalList, achList, ruleList, connList, dcaList] = await Promise.all([
+      const [memList, accList, txList, astList, liaList, catList, budList, goalList, achList, ruleList, connList, dcaList, rmData] = await Promise.all([
         api.members.list(),
         api.accounts.list(),
         api.transactions.list(),
@@ -376,6 +377,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
         api.rules.list(),
         api.banking.listConnections().catch(() => []),
         dcaApi.list().catch(() => []),
+        api.refMonth.get().catch(() => ({ version: 1, updated_at: null, lines: [] })),
       ]);
       const mappedAccounts = accList.map(accountFromApi);
       const mappedTx = txList.map(txFromApi);
@@ -400,6 +402,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       setCustomRules((ruleList || []).map(r => ({ pattern: r.pattern, categoryId: r.category_slug, source: r.source, _id: r.id })));
       setBankConnections(connList || []);
       setDcaPlans(dcaList || []);
+      setRefMonth(rmData || { version: 1, updated_at: null, lines: [] });
     } catch (err) {
       showToast(t('toasts.loadError', { message: err.message }), 'error');
     }
@@ -1165,6 +1168,19 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     } catch (err) { showToast(t('toasts.genericError', { message: err.message }), 'error'); }
   };
 
+  // Persist the Mois type template. Optimistic local update, backend
+  // round-trip returns the canonical record (with updated_at) which we
+  // re-set to stay in sync.
+  const saveRefMonth = async (next) => {
+    setRefMonth(next);
+    try {
+      const saved = await api.refMonth.put({ version: next.version || 1, lines: next.lines || [] });
+      setRefMonth(saved);
+    } catch (err) {
+      showToast(t('toasts.genericError', { message: err.message }), 'error');
+    }
+  };
+
   const saveGoal = async (goal) => {
     try {
       const apiPayload = goalToApi(goal);
@@ -1364,10 +1380,6 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             <div className="ws-nav-group">{t('nav.group_gestion')}</div>
             <button onClick={() => setView('monthly')} className={view === 'monthly' ? 'on' : ''}>
               <Calendar size={16}/> <span>{t('nav.monthly')}</span>
-              {budgetsOverCount > 0 && <span className="ws-badge">{budgetsOverCount}</span>}
-            </button>
-            <button onClick={() => setView('budgets')} className={view === 'budgets' ? 'on' : ''}>
-              <Target size={16}/> <span>{t('nav.goals')}</span>
             </button>
             <button onClick={() => setView('tax')} className={view === 'tax' ? 'on' : ''}>
               <Calculator size={16}/> <span>{t('nav.tax')}</span>
@@ -1502,7 +1514,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             currentUser={currentUser}
           />
         )}
-        {['monthly','cashflow','budgets'].includes(view) && (
+        {['monthly','cashflow'].includes(view) && (
           <div className="monthly-hub">
             {view === 'monthly' && (
               <Monthly
@@ -1512,7 +1524,8 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
                 anomalies={anomalies}
                 categoryAnalysis={categoryAnalysis}
                 fixedCharges={fixedCharges} saveFixedCharge={saveFixedCharge} deleteFixedCharge={deleteFixedCharge}
-                budgets={budgets} setBudget={setBudget}
+                refMonth={refMonth} saveRefMonth={saveRefMonth}
+                fiftyThirtyTwenty={fiftyThirtyTwenty}
                 transferIds={transferIds}
                 memberShare={memberShare}
                 currentMonth={currentMonth} fmt={fmt}
@@ -1522,15 +1535,6 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
               <Cashflow
                 transactions={visibleTransactions} categories={categories} accounts={accounts}
                 memberShare={memberShare} fmt={fmt} currentMonth={currentMonth}
-              />
-            )}
-            {view === 'budgets' && (
-              <Budgets
-                categories={categories} budgets={budgets} setBudget={setBudget}
-                categoryAnalysis={categoryAnalysis} fiftyThirtyTwenty={fiftyThirtyTwenty}
-                thisMonthStats={thisMonthStats} cashflowProjection={cashflowProjection}
-                goals={goals} saveGoal={saveGoal} deleteGoal={deleteGoal}
-                fmt={fmt}
               />
             )}
           </div>
@@ -1637,7 +1641,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
                 { v: 'settings',  icon: <Settings size={16}/>,  label: t('nav.settings') },
               ].map(({ v, icon, label, badge }) => (
                 <button key={v}
-                  className={view === v || (v === 'monthly' && ['monthly','cashflow','budgets'].includes(view)) ? 'active' : ''}
+                  className={view === v || (v === 'monthly' && ['monthly','cashflow'].includes(view)) ? 'active' : ''}
                   onClick={() => { setView(v); setNavOpen(false); }}>
                   {icon} <span>{label}</span>
                   {badge > 0 && <span className="nav-alert-dot">{badge}</span>}
@@ -1668,7 +1672,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       <nav className="bottom-nav">
         <button onClick={() => setView('dashboard')} className={view === 'dashboard' ? 'active' : ''}><Activity size={18}/> <span>{t('nav.dashboard')}</span></button>
         <button onClick={() => setView('wealth')} className={view === 'wealth' ? 'active' : ''}><Landmark size={18}/> <span>{t('nav.wealth')}</span></button>
-        <button onClick={() => setView('monthly')} className={['monthly','cashflow','budgets'].includes(view) ? 'active' : ''}>
+        <button onClick={() => setView('monthly')} className={['monthly','cashflow'].includes(view) ? 'active' : ''}>
           <Calendar size={18}/> <span>{t('nav.monthlyShort')}</span>
           {budgetsOverCount > 0 && <span className="nav-alert-dot">{budgetsOverCount}</span>}
         </button>

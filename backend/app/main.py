@@ -26,7 +26,7 @@ logging.basicConfig(
 from app.config import settings
 from app.database import engine, Base
 from app.rate_limit import limiter, rate_limit_handler
-from app.routers import auth, members, accounts, transactions, wealth, other, categorize, banking, admin, quotes, fixed_charges, dca
+from app.routers import auth, members, accounts, transactions, wealth, other, categorize, banking, admin, quotes, fixed_charges, dca, ref_month
 
 logger = logging.getLogger("wealthly")
 
@@ -164,6 +164,9 @@ def _run_lightweight_migrations() -> None:
             # DCA plans — per-month execution map. Lets the user mark months
             # as paid/skipped vs the simulated default. Missing keys = paid.
             "ALTER TABLE dca_plans ADD COLUMN IF NOT EXISTS executions JSON DEFAULT '{}'::json NOT NULL",
+            # Mois type — JSON budget template stored per user. See
+            # docs/superpowers/specs/2026-05-14-budget-mensuel-refonte-design.md.
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS ref_month JSON",
         ]
     with engine.begin() as conn:
         for stmt in statements:
@@ -298,3 +301,4 @@ app.include_router(admin.router)
 app.include_router(quotes.router)
 app.include_router(fixed_charges.router)
 app.include_router(dca.router)
+app.include_router(ref_month.router)

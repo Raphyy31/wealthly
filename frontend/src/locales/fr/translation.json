@@ -115,20 +115,15 @@
       "searchPlaceholder": "Rechercher dans les libellés…"
     },
     "monthly": {
-      "title": "Suivi",
+      "title": "Budget",
       "titleAccent": "mensuel.",
-      "subtitle": "Tous vos flux du mois — charges, abonnements, opérations neutres, revenus.",
+      "subtitle": "Ton mois type vs. le mois réel — où va vraiment ton argent.",
       "emptyFixed": "Aucune charge fixe enregistrée",
       "emptySubs": "Aucun abonnement",
       "emptyVariable": "Aucune dépense variable",
       "emptyTransfers": "Aucun virement interne détecté",
       "emptyIncome": "Aucun revenu enregistré ce mois",
       "emptyMonth": "Aucune transaction ce mois-ci."
-    },
-    "budgets": {
-      "title": "Budgets",
-      "titleAccent": "& objectifs.",
-      "subtitle": "Méthode 50/30/20, plafonds par catégorie et objectifs d'épargne."
     },
     "analysis": {
       "title": "Vos",
@@ -151,6 +146,7 @@
     "netWorth": "Patrimoine net",
     "totalNetWorth": "Patrimoine net total",
     "allocation": "Allocation patrimoine",
+    "allocCenterLabel": "Actifs",
     "vsStart": "vs. début période",
     "perf3m": "Performance 3 mois",
     "debtRatio": "Ratio d'endettement",

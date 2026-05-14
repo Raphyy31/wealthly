@@ -116,19 +116,14 @@
     },
     "monthly": {
       "title": "Monthly",
-      "titleAccent": "tracking.",
-      "subtitle": "Every flow this month — fixed costs, subscriptions, neutral moves, income.",
+      "titleAccent": "budget.",
+      "subtitle": "Your reference month vs. actual — see where the money really goes.",
       "emptyFixed": "No fixed charges recorded",
       "emptySubs": "No subscriptions",
       "emptyVariable": "No variable expenses",
       "emptyTransfers": "No internal transfers detected",
       "emptyIncome": "No income recorded this month",
       "emptyMonth": "No transactions this month."
-    },
-    "budgets": {
-      "title": "Budgets",
-      "titleAccent": "& goals.",
-      "subtitle": "50/30/20 method, per-category caps and savings goals."
     },
     "analysis": {
       "title": "Your",
@@ -151,6 +146,7 @@
     "netWorth": "Net worth",
     "totalNetWorth": "Total net worth",
     "allocation": "Wealth allocation",
+    "allocCenterLabel": "Assets",
     "vsStart": "vs. start of period",
     "perf3m": "3-month performance",
     "debtRatio": "Debt-to-asset ratio",

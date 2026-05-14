@@ -95,6 +95,11 @@ class User(Base):
     is_admin = Column(Boolean, default=False)  # admin can manage household settings
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    # "Mois type" — JSON budget template the user defines once and compares each
+    # real month against. Shape: { version, updated_at, lines: [{id, category_id,
+    # kind, label, amount, locked}] }. See specs/2026-05-14-budget-mensuel-refonte-design.md.
+    ref_month = Column(JSON, nullable=True)
+
     household_id = Column(String, ForeignKey("households.id", ondelete="CASCADE"), nullable=False)
     household = relationship("Household", back_populates="users")
 

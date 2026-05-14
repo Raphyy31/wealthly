@@ -398,7 +398,7 @@ export function Dashboard({
             <Donut
               data={allocationData}
               size={140}
-              centerLabel="Total"
+              centerLabel={t('dashboard.allocCenterLabel')}
               centerValue={formatEUR(allocationTotal, { abbr: true })}
             />
             <ul className="alloc-list">
@@ -864,12 +864,13 @@ function DashStyles() {
 /* Transactions list */
 .tx-list { padding: 0; }
 .tx-day { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background: var(--bg); color: var(--ink-3); }
-.tx-row { display: grid; grid-template-columns: 32px 1fr auto; gap: 12px; align-items: center; padding: 10px 20px; border-top: 1px solid var(--border); transition: background var(--t-fast); }
+.tx-row { display: grid; grid-template-columns: 32px minmax(0,1fr) auto; gap: 12px; align-items: center; padding: 10px 20px; border-top: 1px solid var(--border); transition: background var(--t-fast); }
 .tx-row:hover { background: var(--bg-hover); }
-.tx-mid { min-width: 0; }
+.tx-mid { min-width: 0; overflow: hidden; }
 .tx-label { font-size: 13.5px; font-weight: 500; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tx-meta { display: flex; align-items: center; gap: 8px; margin-top: 2px; font-size: 11px; color: var(--ink-3); }
-.tx-amount { font-size: 14px; font-weight: 500; }
+.tx-meta { display: flex; align-items: center; gap: 8px; margin-top: 2px; font-size: 11px; color: var(--ink-3); overflow: hidden; }
+.tx-meta > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.tx-amount { font-size: 14px; font-weight: 500; flex-shrink: 0; white-space: nowrap; }
 
 /* Budget panel */
 .budget-list { padding: 4px 8px 12px; }
