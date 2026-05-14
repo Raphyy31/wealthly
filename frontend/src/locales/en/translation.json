@@ -72,7 +72,11 @@
     "healthScoreMeta": "5 weighted criteria",
     "healthRatingLow": "Needs attention",
     "healthRatingMid": "Fair",
-    "healthRatingHigh": "Solid"
+    "healthRatingHigh": "Solid",
+    "compareIncreaseTitle": "{{category}}: {{pct}}% vs 6-month average",
+    "compareIncreaseBody": "{{current}} this month vs {{avg}} on average over 6 months.",
+    "compareDecreaseTitle": "{{category}}: {{pct}}% vs 6-month average",
+    "compareDecreaseBody": "{{current}} this month vs {{avg}} on average over 6 months."
   },
   "settings": {
     "title": "Settings",

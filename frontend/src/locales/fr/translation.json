@@ -72,7 +72,11 @@
     "healthScoreMeta": "5 critères pondérés",
     "healthRatingLow": "À surveiller",
     "healthRatingMid": "Correct",
-    "healthRatingHigh": "Solide"
+    "healthRatingHigh": "Solide",
+    "compareIncreaseTitle": "{{category}} : {{pct}} % vs moyenne 6 mois",
+    "compareIncreaseBody": "{{current}} ce mois vs {{avg}} en moyenne sur 6 mois.",
+    "compareDecreaseTitle": "{{category}} : {{pct}} % vs moyenne 6 mois",
+    "compareDecreaseBody": "{{current}} ce mois vs {{avg}} en moyenne sur 6 mois."
   },
   "settings": {
     "title": "Réglages",
