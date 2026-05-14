@@ -9,7 +9,7 @@
     "analysis": "Analysis",
     "goals": "Budgets",
     "cashflow": "Cash Flow",
-    "tax": "Tax",
+    "tax": "Taxes",
     "dca": "DCA Investing",
     "settings": "Settings",
     "import": "Import",
@@ -24,6 +24,64 @@
     "monthlyTab": "Monthly view",
     "cashflowTab": "Cashflow",
     "budgetsTab": "Budgets"
+  },
+  "actions": {
+    "add": "Add",
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
+    "validate": "Confirm",
+    "cancel": "Cancel",
+    "back": "Back",
+    "confirm": "Confirm",
+    "next": "Next"
+  },
+  "confirms": {
+    "deleteItem": "Delete \"{{name}}\"?",
+    "deleteGeneric": "Confirm deletion?"
+  },
+  "views": {
+    "wealth": {
+      "title": "Your",
+      "titleAccent": "wealth.",
+      "subtitle": "Assets, liabilities and allocation — by asset class.",
+      "emptyCategory": "No items in",
+      "noResults": "No results."
+    },
+    "transactions": {
+      "title": "Your",
+      "titleAccent": "transactions.",
+      "subtitle": "All your bank activity. Click a category to change it.",
+      "searchPlaceholder": "Search descriptions…"
+    },
+    "monthly": {
+      "title": "Monthly",
+      "titleAccent": "tracking.",
+      "subtitle": "Every flow this month — fixed costs, subscriptions, neutral moves, income.",
+      "emptyFixed": "No fixed charges recorded",
+      "emptySubs": "No subscriptions",
+      "emptyVariable": "No variable expenses",
+      "emptyTransfers": "No internal transfers detected",
+      "emptyIncome": "No income recorded this month",
+      "emptyMonth": "No transactions this month."
+    },
+    "budgets": {
+      "title": "Budgets",
+      "titleAccent": "& goals.",
+      "subtitle": "50/30/20 method, per-category caps and savings goals."
+    },
+    "analysis": {
+      "title": "Your",
+      "titleAccent": "analytics.",
+      "subtitle": "Merchants, categories and spending trends over time.",
+      "empty": "No transactions to analyse",
+      "emptyData": "No data"
+    },
+    "tax": {
+      "title": "Tax",
+      "titleAccent": "simulator.",
+      "subtitle": "2025 income · 2026 filing brackets"
+    }
   },
   "dashboard": {
     "greetingMorning": "Good morning",
@@ -53,7 +111,7 @@
     "newAccount": "New account",
     "assets": "Assets",
     "liabilities": "Liabilities",
-    "liquidity": "Liquidity",
+    "liquidity": "Cash",
     "savingsMonth": "Monthly savings",
     "filterAll": "All",
     "filterExpenses": "Expenses",

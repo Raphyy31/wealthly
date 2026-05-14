@@ -8,6 +8,7 @@
 // only invoked from this view, so colocating keeps prop-drilling sane.
 // ============================================================================
 import { useState, useMemo, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   PieChart, Pie, Cell, AreaChart, Area, BarChart, Bar, ResponsiveContainer,
   XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine,
@@ -48,6 +49,7 @@ const WEALTH_SUBVIEWS = [
 ];
 
 export function Wealth({ assets, liabilities, members, activeMemberId, visibleAssets, visibleLiabilities, saveAsset, deleteAsset, saveLiability, deleteLiability, memberShare, fmt, wealthHistory = [], accounts = [], accountBalances = {}, transactions = [], onOpenAddWizard, reload }) {
+  const { t } = useTranslation();
   const [editingAsset, setEditingAsset] = useState(null);
   const [editingLia, setEditingLia] = useState(null);
   const [viewingLia, setViewingLia] = useState(null);
@@ -116,10 +118,10 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
     <div className="wealth-view">
       <div className="subview-header">
         <div>
-          <h1>Votre <em>patrimoine.</em></h1>
-          <p>Actifs, passifs et allocation — par classe d'actif.</p>
+          <h1>{t('views.wealth.title')} <em>{t('views.wealth.titleAccent')}</em></h1>
+          <p>{t('views.wealth.subtitle')}</p>
         </div>
-        <button className="primary-btn" onClick={() => (onOpenAddWizard ? onOpenAddWizard() : setShowAddPicker(true))}><Plus size={14}/> Ajouter</button>
+        <button className="primary-btn" onClick={() => (onOpenAddWizard ? onOpenAddWizard() : setShowAddPicker(true))}><Plus size={14}/> {t('actions.add')}</button>
       </div>
 
       <nav className="wealth-subnav">

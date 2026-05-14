@@ -14,6 +14,7 @@
 // dans chaque groupe ouvre le FixedChargeEditor existant.
 // ============================================================================
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ComposedChart, Bar, Line, ResponsiveContainer,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
@@ -35,6 +36,7 @@ export function Monthly({
   budgets = {}, setBudget = () => {},
   memberShare, currentMonth, fmt, transferIds = new Set(),
 }) {
+  const { t } = useTranslation();
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [editingCharge, setEditingCharge] = useState(null);
   const [tab, setTab] = useState('budget'); // budget | evolution
@@ -340,8 +342,8 @@ export function Monthly({
     <div className="monthly-view">
       <div className="subview-header">
         <div>
-          <h1>Suivi <em>mensuel.</em></h1>
-          <p>Tous vos flux du mois — charges, abonnements, opérations neutres, revenus.</p>
+          <h1>{t('views.monthly.title')} <em>{t('views.monthly.titleAccent')}</em></h1>
+          <p>{t('views.monthly.subtitle')}</p>
         </div>
       </div>
 
@@ -432,7 +434,7 @@ export function Monthly({
                 onDelete={() => deleteFixedCharge(it.id)}
               />
             )))}
-            {fixedByCategory.length === 0 && <EmptyRow label="Aucune charge fixe enregistrée"/>}
+            {fixedByCategory.length === 0 && <EmptyRow label={t('views.monthly.emptyFixed')}/>}
           </BudgetGroup>
 
           <BudgetGroup
@@ -459,7 +461,7 @@ export function Monthly({
                 onDelete={() => deleteFixedCharge(it.id)}
               />
             )))}
-            {subsByCategory.length === 0 && <EmptyRow label="Aucun abonnement"/>}
+            {subsByCategory.length === 0 && <EmptyRow label={t('views.monthly.emptySubs')}/>}
           </BudgetGroup>
 
           <BudgetGroup
@@ -486,7 +488,7 @@ export function Monthly({
                 fmt={fmt}
               />
             ))}
-            {variableByCategory.length === 0 && <EmptyRow label="Aucune dépense variable"/>}
+            {variableByCategory.length === 0 && <EmptyRow label={t('views.monthly.emptyVariable')}/>}
           </BudgetGroup>
 
           <BudgetGroup
@@ -514,7 +516,7 @@ export function Monthly({
                   isNeutral
                 />
               );
-            }) : <EmptyRow label="Aucun virement interne détecté"/>}
+            }) : <EmptyRow label={t('views.monthly.emptyTransfers')}/>}
             {neutralOps.length > 8 && <EmptyRow label={`… et ${neutralOps.length - 8} autres`}/>}
           </BudgetGroup>
 
@@ -556,7 +558,7 @@ export function Monthly({
                 isIncome
                 fmt={fmt}
               />
-            )) : (activeFixedIncomes.length === 0 && <EmptyRow label="Aucun revenu enregistré ce mois"/>)}
+            )) : (activeFixedIncomes.length === 0 && <EmptyRow label={t('views.monthly.emptyIncome')}/>)}
           </BudgetGroup>
 
           {anomalies.length > 0 && isCurrentMonth && (
@@ -665,7 +667,7 @@ export function Monthly({
                   </div>
                 </div>
               ) : (
-                <div className="mon-empty"><Activity size={28}/><span>Aucune transaction ce mois-ci.</span></div>
+                <div className="mon-empty"><Activity size={28}/><span>{t('views.monthly.emptyMonth')}</span></div>
               )}
               {cashflowData.hasData && (
                 <div className="cashflow-cats-grid">

@@ -5,6 +5,7 @@
 // vues.
 // ============================================================================
 import { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   BarChart, Bar, LineChart, Line, ResponsiveContainer,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
@@ -21,6 +22,7 @@ const TOOLTIP_STYLE = {
 };
 
 export function Analysis({ transactions, categories, recurringIds, recurringGroups, monthlyEvolution, accounts, memberShare, fmt }) {
+  const { t } = useTranslation();
   const [selectedCat, setSelectedCat] = useState('all');
 
   const catTimeData = useMemo(() => {
@@ -56,8 +58,8 @@ export function Analysis({ transactions, categories, recurringIds, recurringGrou
 
       <div className="subview-header">
         <div>
-          <h1>Vos <em>analyses.</em></h1>
-          <p>Marchands, catégories et tendances de vos dépenses sur la durée.</p>
+          <h1>{t('views.analysis.title')} <em>{t('views.analysis.titleAccent')}</em></h1>
+          <p>{t('views.analysis.subtitle')}</p>
         </div>
       </div>
 
@@ -95,7 +97,7 @@ export function Analysis({ transactions, categories, recurringIds, recurringGrou
           </div>
           <div className="ana-merchants">
             {topMerchants.length === 0 && (
-              <div className="ana-empty">Aucune transaction à analyser</div>
+              <div className="ana-empty">{t('views.analysis.empty')}</div>
             )}
             {topMerchants.map((m, idx) => (
               <div key={idx} className="ana-merchant-row">
@@ -138,7 +140,7 @@ export function Analysis({ transactions, categories, recurringIds, recurringGrou
                   <Line type="monotone" dataKey="amount" stroke="var(--accent)" strokeWidth={2} dot={{ r: 2.5, fill: 'var(--accent)' }} activeDot={{ r: 4 }}/>
                 </LineChart>
               </ResponsiveContainer>
-            ) : <div className="ana-empty">Aucune donnée</div>}
+            ) : <div className="ana-empty">{t('views.analysis.emptyData')}</div>}
           </div>
         </section>
       </div>

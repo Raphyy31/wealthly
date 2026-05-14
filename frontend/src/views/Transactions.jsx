@@ -6,6 +6,7 @@
 // catégories / comptes / membres, date range, amount range, and tx type.
 // ============================================================================
 import { useState, useMemo, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Search, ArrowUpDown, Repeat, Trash2, Filter, X, RotateCcw } from 'lucide-react';
 import { formatDate } from '../utils.js';
 
@@ -21,6 +22,7 @@ const EMPTY_FILTERS = {
 };
 
 export function Transactions({ transactions, accounts, categories, members = [], recurringIds, toggleRecurring, transferIds = new Set(), setTransferOverride, updateCategory, deleteTransaction, fmt, initialAccountFilter, onConsumeInitialFilter }) {
+  const { t } = useTranslation();
   const [search, setSearch] = useState('');
   // Seed the account filter on mount if the parent passed one (e.g. coming
   // from the AccountDrawer "voir toutes les transactions" CTA).
@@ -127,15 +129,15 @@ export function Transactions({ transactions, accounts, categories, members = [],
     <div className="transactions-view">
       <div className="subview-header">
         <div>
-          <h1>Vos <em>transactions.</em></h1>
-          <p>Toutes vos opérations bancaires. Cliquez une catégorie pour la modifier.</p>
+          <h1>{t('views.transactions.title')} <em>{t('views.transactions.titleAccent')}</em></h1>
+          <p>{t('views.transactions.subtitle')}</p>
         </div>
       </div>
 
       <div className="filters-bar" ref={panelRef}>
         <div className="search-box">
           <Search size={16}/>
-          <input placeholder="Rechercher dans les libellés…" value={search} onChange={(e) => setSearch(e.target.value)}/>
+          <input placeholder={t('views.transactions.searchPlaceholder')} value={search} onChange={(e) => setSearch(e.target.value)}/>
         </div>
 
         <button
