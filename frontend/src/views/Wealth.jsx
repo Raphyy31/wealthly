@@ -2416,79 +2416,18 @@ function CryptoDetail({ asset, members = [], fmt, onEdit, onClose }) {
           </div>
         </div>
 
-        <div className="dv3-body">
-          {/* Détail position — la table essentielle */}
-          <section className="ds-panel">
-            <div className="ds-panel-head">
-              <div>
-                <div className="ds-panel-title">Détail de la position</div>
-                <div className="ds-panel-sub">Plus-value latente avant fiscalité (flat tax 30 % à la cession)</div>
-              </div>
-            </div>
-            <div className="dv3-kv-list">
-              <div className="dv3-kv-row">
-                <span>Quantité</span>
-                <span className="num">{formatCryptoQty(quantity)} {ticker}</span>
-              </div>
-              <div className="dv3-kv-row">
-                <span>Prix de revient moyen</span>
-                <span className="num">{fmt(purchasePrice)} / unité</span>
-              </div>
-              <div className="dv3-kv-row">
-                <span>Capital investi <em>(quantité × prix moyen)</em></span>
-                <span className="num">{fmt(invested)}</span>
-              </div>
-              <div className="dv3-kv-row dv3-kv-sep">
-                <span>Cours actuel</span>
-                <span className="num">{fmt(unitPrice)} / unité</span>
-              </div>
-              <div className="dv3-kv-row">
-                <span>Valorisation actuelle</span>
-                <span className="num dv3-kv-bold">{fmt(currentValue)}</span>
-              </div>
-              <div className="dv3-kv-row dv3-kv-sep">
-                <span>Plus-value latente</span>
-                <span className={`num dv3-kv-bold ${plLatente >= 0 ? 'pos' : 'neg'}`}>
-                  {plLatente >= 0 ? '+' : ''}{fmt(plLatente)}
-                  {invested > 0 && <span className="dv3-kv-pct"> · {plLatente >= 0 ? '+' : ''}{plLatentePct.toFixed(2)} %</span>}
-                </span>
-              </div>
-            </div>
-          </section>
-
-          {/* Métadonnées : date achat + détenteurs + notes */}
-          <section className="ds-panel">
-            <div className="ds-panel-head">
-              <div>
-                <div className="ds-panel-title">Acquisition</div>
-              </div>
-            </div>
-            <div className="dv3-kv-list">
-              <div className="dv3-kv-row">
-                <span>Date d'achat</span>
-                <span>{asset.purchaseDate ? formatDate(asset.purchaseDate) : '—'}</span>
-              </div>
-              {yearsSincePurchase >= 0.1 && (
-                <div className="dv3-kv-row">
-                  <span>Détenue depuis</span>
-                  <span className="num">{yearsSincePurchase < 1 ? `${Math.round(yearsSincePurchase * 12)} mois` : `${yearsSincePurchase.toFixed(1)} ans`}</span>
-                </div>
-              )}
-              <div className="dv3-kv-row">
-                <span>Détenteur·s</span>
-                <span>{owners}</span>
-              </div>
-              {asset.notes && (
-                <div className="dv3-kv-row dv3-kv-notes">
-                  <span>Notes</span>
-                  <span className="dv3-kv-notes-text">{asset.notes}</span>
-                </div>
-              )}
-            </div>
-          </section>
-        </div>
+        {asset.notes && (
+          <div className="dv3-body">
+            <section className="ds-panel">
+              <div className="dv3-notes-body">{asset.notes}</div>
+            </section>
+          </div>
+        )}
 
         <div className="dv3-foot">
+          <div className="dv3-foot-meta">
+            {asset.purchaseDate && <span>Acquis le <span className="num">{formatDate(asset.purchaseDate)}</span></span>}
+          </div>
           <button className="ds-btn" onClick={() => onEdit && onEdit()}>
             <Edit3 size={14}/> Modifier
           </button>
@@ -2952,8 +2891,14 @@ function DetailV3Styles() {
   padding: 14px 28px;
   border-top: 1px solid var(--border);
   background: var(--bg-elev);
-  display: flex; justify-content: flex-end;
+  display: flex; justify-content: space-between; align-items: center; gap: 16px;
 }
+.dv3-foot-meta {
+  font: 400 12px/1.3 var(--font-sans);
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.dv3-foot-meta:empty { display: none; }
 
 /* Mobile */
 @media (max-width: 720px) {
