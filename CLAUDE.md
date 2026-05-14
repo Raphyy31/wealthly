@@ -7,6 +7,37 @@ Notes for Claude (and any future AI tooling) picking the project back up.
 
 ---
 
+## Session 2026-05-14 — Raphyy31 + Claude (Sonnet 4.6 puis Opus 4.7) — parallel agents salve
+
+Session conduite avec 4 puis 3 agents en parallèle dans des worktrees (`feature/comparer-mois`, `feature/dca-polish`, `feature/i18n-audit`, `feature/jwt-cleanup`, puis `feature/dca-tracking`, `feature/comparer-tune`, `feature/i18n-sweep`).
+
+**Livré (~12 commits)** :
+
+| Domaine | Changement |
+|---|---|
+| **JWT cleanup** | Suppression du legacy `localStorage` token (`LEGACY_TOKEN_KEY`, `getToken/setToken/clearToken`, header Bearer côté navigateur). L'auth passe exclusivement par le cookie httpOnly `trove_session`. Bearer fallback conservé backend pour pytest. **Utilisateurs existants déconnectés au déploiement** (cookie absent → AuthScreen). |
+| **DCA polish** | `useQuotes` branché : "Valeur actuelle" si quote dispo, "Valeur théorique" sinon. PlanCard migré du shell bespoke (border-left cobalt) vers `.card` + `.card-header` canoniques. Accent cobalt déplacé dans le titre + chip ticker. |
+| **DCA tracking** | Nouvelle colonne JSON `dca_plans.executions` (map `YYYY-MM` → bool). Migration `IF NOT EXISTS` au boot. Endpoint `PUT /dca/{plan_id}/executions`. UI : chip timeline 12 derniers mois cliquable (toggle payé/sauté, optimistic), indicator "N mois sautés" en ocre dans `card-meta`. `realCurrentState`/`theoreticalState` respectent `executions`. Tests pytest : default, replace, regex `YYYY-MM`, 404, isolation cross-household. |
+| **Comparer mois Dashboard** | Nouvel insight `categoryCompare` useMemo : ratio mois courant / moyenne 6m (hors mois courant). Seuils permissifs `cur > 30 €` et `\|Δ\| > 15 %`. Fallback : si aucune catégorie ne passe le seuil, surface la plus grosse mouvement en variant neutral (Sparkles). Variant `neg` hausses, `pos` baisses. Cap 3 insights total. |
+| **i18n EN sweep** | ~180 clés EN ajoutées : Dashboard (sections, insights, filter chips, allocation empty, sync states), DCA (toutes les KPI ProjectionHero + PlanCard + PlanModal), Settings (7 sections + ChangePasswordModal + CustomRules + BankConnections + MemberEditor + reset confirms), Wealth (`WEALTH_SUBVIEWS`, KPIs, allocation, empty states), AuthScreen (4 modes + validations), WealthlyApp (~25 toasts + confirms + `toasts.genericError`). Resté FR : Settings sub-section h2, modal editor h2, Wealth subview labels du tableau, body insights `rate < 0` / `else`, helpers `relTime`/`prettyDay`/`prettyType` (module-level sans accès à `t()`). |
+| **Admin** | Onglet Foyers retiré (table Patrimoine net + Actifs bruts + Passifs). KPIs "Foyers" et "Actifs suivis" retirés du Vue d'ensemble. Ligne "Foyer :" du détail user retirée. "foyer(s)" renommé "compte(s)" dans les chips + table Abonnements. Imports `Home`/`ChevronUp`/`ChevronDown` nettoyés. |
+| **Wizard emprunt complet** | Refonte `AddWealthModal` : quand `category === 'emprunts'`, le step `form` capture tous les champs liability dès la création (capital initial/restant en 2 colonnes, mensualité/taux, durée/date début, bien rattaché si mortgage, section repliable "Options avancées" : apport, assurance, frais de dossier, quote-part). API forward tout vers `liabilities.create` en snake_case. Plus besoin d'ouvrir l'éditeur après création. |
+| **Bug `memberIds` → `member_ids`** | Le wizard envoyait `memberIds` (camelCase) à l'API qui attend `member_ids` (snake_case) ; Pydantic ignorait silencieusement le champ → les actifs/comptes/emprunts créés via le wizard n'étaient en réalité assignés à aucun membre. Fix dans les 3 branches d'`api.wealth.create`. |
+| **API version bump** | `2.0.0` → `2.1.0`. Force déclenché parce que Railway était figé 3 commits derrière (cause des 404 sur `/me/wipe` et `/auth/change-password` reportés par l'utilisateur). |
+| **CSS** | `.form-row-2col` ajouté à `Styles.jsx` (grid 1fr 1fr, fallback 1 col < 540px) pour le wizard emprunt. |
+
+**Pattern parallèle** : worktrees créés en local (`git worktree add`), `node_modules` symlinké pour partager les deps, agents dispatchés en `run_in_background`, merges en cascade ensuite avec résolution manuelle des conflits sur `locales/*.json` + DCA.jsx.
+
+**Reste après cette session** :
+- 2FA TOTP (table `totp_secrets`, endpoints setup/verify/disable, flow login step 2)
+- Cron Railway auto-sync GoCardless nightly + email re-consent J-7
+- i18n : Settings sub-section h2, modal editors, Wealth subview labels via `WEALTH_SUBVIEWS`, helpers FR de Dashboard.jsx
+- WealthlyApp.jsx découpe L3 (extract data hooks) — déprioritisé
+- Frontend tests vitest sur `taxFr.js`
+- Mobile bottom nav : 6 slots, décision pendante sur Plus overflow
+
+---
+
 ## Session 2026-05-12 — Raphyy31 + Claude (Opus 4.7) — design freeze + Monthly + GoCardless
 
 **Livré (gros chantier multi-heures, ~25 commits)** :

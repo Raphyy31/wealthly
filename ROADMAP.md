@@ -1,10 +1,29 @@
 # Wealthly — Roadmap
 
-État au **2026-05-13** — session unification Account/Asset + refonte Settings + polish Emprunt + import CSV Boursorama.
+État au **2026-05-14** — session parallel agents (JWT cleanup + DCA polish/tracking + Comparer mois + i18n EN sweep + Admin cleanup + Wizard emprunt complet).
 
 ---
 
-## 🆕 Session 2026-05-13 — Raphyy31 + Claude (Opus 4.7)
+## 🆕 Session 2026-05-14 — Raphyy31 + Claude (Sonnet 4.6 → Opus 4.7)
+
+Salve menée avec 4 puis 3 agents en parallèle dans des worktrees. Voir `CLAUDE.md` pour le détail.
+
+**Livré (~12 commits push directs sur main)** :
+- [x] **JWT migration finalisée** — legacy `localStorage` token retiré ; cookie httpOnly `trove_session` seul chemin. Bearer fallback conservé backend pour pytest.
+- [x] **DCA point 1** — vraies valeurs marché via `useQuotes`, label "Valeur actuelle" / "Valeur théorique" selon dispo.
+- [x] **DCA point 2** — suivi des versements réels (executions JSON + timeline 12 mois cliquable + indicator "N mois sautés" ocre + tests pytest cross-household).
+- [x] **DCA point 3** — PlanCard migré au `.card` + `.card-header` canoniques.
+- [x] **Dashboard insight Comparer mois** — catégorie courante vs moyenne 6m, seuils 30€/15%, fallback neutral si aucun delta significatif.
+- [x] **i18n EN sweep** — ~180 clés (Dashboard, DCA, Settings, Wealth, AuthScreen, toasts/confirms WealthlyApp).
+- [x] **Admin** — onglet Foyers + montants utilisateur retirés (table Patrimoine net, KPIs Foyers/Actifs suivis, ligne Foyer dans détail user).
+- [x] **Wizard emprunt complet** — tous les champs liability capturés dès la création (capital initial/restant, mensualité, taux, durée, date début, bien rattaché, options avancées : apport, assurance, frais, quote-part). Fix `memberIds → member_ids` au passage.
+- [x] **API version 2.1.0** — bump pour forcer un redéploy Railway figé (cause des 404 `/me/wipe` reportés).
+
+**Pendant en fin de session** : un commentaire utilisateur sur "j'arrive pas à réinitialiser dans Zone dangereuse" a été résolu via le bump de version Railway. Le hard refresh est nécessaire côté client après chaque déploiement (PWA service worker).
+
+---
+
+## Session 2026-05-13 — Raphyy31 + Claude (Opus 4.7)
 
 **Chantier 1 — Unification Account/Asset (18 tâches, brainstorm complet)**
 - [x] Bug PEA invisible résolu (root cause : dualité Account vs Asset)
@@ -137,22 +156,9 @@ Aucun moyen de créer un admin sans accès DB direct. Besoin d'un script :
 
 ### 🔴 P0 — Corriger les 4 bugs démo (tableau ci-dessus)
 
-### 🟠 P1 — JWT → httpOnly cookies
+### ✅ P1 — JWT → httpOnly cookies (livré 2026-05-14)
 
-Actuellement le JWT est dans `localStorage` → accessible à tout JS injecté. La section Sécurité de la landing le présente comme une feature — c'est une erreur à corriger aussi.
-
-**Backend** (`backend/app/routers/auth.py`) :
-- [ ] `POST /auth/login` → `Set-Cookie: trove_token=...; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=604800`
-- [ ] `GET /auth/me` → lire cookie en priorité (fallback Bearer header pour compatibilité)
-- [ ] `POST /auth/logout` → effacer le cookie (`Max-Age=0`) + endpoint frontend
-
-**Backend** (`backend/app/main.py`) :
-- [ ] CORS : ajouter `allow_credentials=True`
-
-**Frontend** :
-- [ ] `api.js` → `credentials: 'include'` sur tous les fetch
-- [ ] `App.jsx` + `AuthScreen.jsx` → supprimer les `localStorage` du token
-- [ ] Landing `Sécurité` : supprimer/reformuler la phrase "Un JWT en localStorage, c'est tout"
+Backend : cookie `trove_session` httpOnly/Secure/SameSite=None depuis 2026-05-10, finalisé 2026-05-14 par la suppression du legacy `localStorage` token frontend (`LEGACY_TOKEN_KEY`, `getToken/setToken/clearToken`, header Bearer côté navigateur). Bearer fallback conservé backend uniquement pour pytest. CORS `allow_credentials=True` déjà en place.
 
 ### 🟠 P1 — 2FA TOTP (obligatoire pour admins)
 
