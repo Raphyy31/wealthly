@@ -1,22 +1,21 @@
 // ============================================================================
 // Admin — SaaS management panel. Visible only to is_admin users.
 //
-// Six sections:
+// Five sections:
 //   1. Vue d'ensemble — product KPIs + growth chart + security alerts
 //   2. Utilisateurs   — rich user table with actions
-//   3. Foyers         — household table with stats
-//   4. Abonnements    — plan management per household
-//   5. Sécurité       — auth events log
-//   6. Système        — API health + deploy info
+//   3. Abonnements    — plan management
+//   4. Sécurité       — auth events log
+//   5. Système        — API health + deploy info
 // ============================================================================
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import * as api from '../api.js';
 import {
-  Users, Home, CreditCard, ShieldAlert, ShieldCheck, Activity,
+  Users, CreditCard, ShieldAlert, ShieldCheck, Activity,
   Lock, RefreshCw, TrendingUp, Database, Server, CheckCircle2,
-  XCircle, MailCheck, Trash2, ToggleLeft, ToggleRight, ChevronDown,
-  ChevronUp, Globe, AlertTriangle,
+  XCircle, MailCheck, Trash2, ToggleLeft, ToggleRight,
+  Globe, AlertTriangle,
 } from 'lucide-react';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -112,7 +111,6 @@ const KindBadge = ({ kind }) => {
 const SECTIONS = [
   { id: 'overview',       label: 'Vue d\'ensemble', icon: TrendingUp },
   { id: 'users',          label: 'Utilisateurs',    icon: Users },
-  { id: 'households',     label: 'Foyers',          icon: Home },
   { id: 'subscriptions',  label: 'Abonnements',     icon: CreditCard },
   { id: 'security',       label: 'Sécurité',        icon: ShieldAlert },
   { id: 'system',         label: 'Système',         icon: Server },
@@ -194,7 +192,7 @@ export function Admin() {
   const handlePlan = async (householdId, currentPlan) => {
     const plans = ['solo', 'pro', 'family', 'admin'];
     const choice = window.prompt(
-      `Changer le plan du foyer\nActuel : ${currentPlan}\nValeurs : ${plans.join(' / ')}`,
+      `Changer le plan du compte\nActuel : ${currentPlan}\nValeurs : ${plans.join(' / ')}`,
       currentPlan
     );
     if (!choice || choice === currentPlan) return;
@@ -287,9 +285,7 @@ export function Admin() {
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(160px, 1fr))', gap:12 }}>
               {[
                 { label:'Utilisateurs', value: metrics?.total_users ?? '—', sub:`${metrics?.active_users ?? 0} actifs`, icon: Users, color:'var(--color-w-accent-2)' },
-                { label:'Foyers', value: metrics?.total_households ?? '—', icon: Home, color:'#34d399' },
                 { label:'Transactions', value: (metrics?.total_transactions ?? 0).toLocaleString('fr-FR'), icon: Activity, color:'#fbbf24' },
-                { label:'Actifs suivis', value: fmt(metrics?.total_assets_value), sub:`net ${fmt(metrics?.net_assets_value)}`, icon: TrendingUp, color:'#a855f7' },
                 { label:'Comptes bancaires', value: metrics?.total_accounts ?? '—', icon: Database, color:'#60a5fa' },
                 { label:'Nouveaux (30j)', value: metrics?.new_users_this_month ?? '—', sub:`${metrics?.new_users_this_week ?? 0} cette semaine`, icon: Users, color:'#f97316' },
               ].map(k => (
@@ -313,7 +309,7 @@ export function Admin() {
                     <div key={plan} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 14px', borderRadius:8, background:'var(--bg-subtle)', border:'1px solid var(--color-w-border)' }}>
                       <PlanBadge plan={plan}/>
                       <span style={{ fontSize:18, fontWeight:700, fontVariantNumeric:'tabular-nums' }}>{count}</span>
-                      <span style={{ fontSize:12, color:'var(--text-muted)' }}>foyer{count > 1 ? 's' : ''}</span>
+                      <span style={{ fontSize:12, color:'var(--text-muted)' }}>compte{count > 1 ? 's' : ''}</span>
                     </div>
                   ))}
                 </div>
@@ -437,7 +433,6 @@ export function Admin() {
                         <tr key={`${u.id}-detail`} style={{ background:'var(--bg-subtle)' }}>
                           <td colSpan={8} style={{ padding:'14px 20px', fontSize:12.5, color:'var(--text-secondary)' }}>
                             <div style={{ display:'flex', gap:24, flexWrap:'wrap' }}>
-                              <div><span style={{ color:'var(--text-muted)' }}>Foyer :</span> {u.household_name} <span style={{ color:'var(--text-muted)', fontFamily:'monospace', fontSize:11 }}>({u.household_id?.slice(0, 8)}…)</span></div>
                               <div><span style={{ color:'var(--text-muted)' }}>IP dernier login :</span> {u.last_login_ip || '—'}</div>
                               <div><span style={{ color:'var(--text-muted)' }}>Connexions totales :</span> {u.login_count}</div>
                               <div><span style={{ color:'var(--text-muted)' }}>Dernier login :</span> {timeAgo(u.last_login_at)}</div>
@@ -453,64 +448,7 @@ export function Admin() {
           </div>
         )}
 
-        {/* ── 3. FOYERS ───────────────────────────────────────────────────── */}
-        {section === 'households' && (
-          <div style={{ background:'var(--bg-card)', borderRadius:12, border:'1px solid var(--color-w-border)', overflow:'hidden' }}>
-            <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12.5 }}>
-              <thead>
-                <tr style={{ background:'var(--bg-subtle)' }}>
-                  {['Foyer','Propriétaire','Plan','Créé','Membres','Comptes','Transactions','Patrimoine net','Actions'].map(h => (
-                    <th key={h} style={thStyle}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {households.map(h => (
-                  <>
-                    <tr key={h.id} style={{ borderTop:'1px solid var(--color-w-border)', cursor:'pointer' }}
-                      onClick={() => setExpandedRow(expandedRow === h.id ? null : h.id)}>
-                      <td style={{ ...tdStyle, fontWeight:600 }}>
-                        <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                          {expandedRow === h.id ? <ChevronUp size={13}/> : <ChevronDown size={13}/>}
-                          {h.name}
-                        </div>
-                      </td>
-                      <td style={{ ...tdStyle, color:'var(--text-muted)' }}>{h.owner_email || '—'}</td>
-                      <td style={tdStyle}><PlanBadge plan={h.plan}/></td>
-                      <td style={{ ...tdStyle, color:'var(--text-muted)' }}>{timeAgo(h.created_at)}</td>
-                      <td style={{ ...tdStyle, fontVariantNumeric:'tabular-nums', textAlign:'center' }}>{h.member_count}</td>
-                      <td style={{ ...tdStyle, fontVariantNumeric:'tabular-nums', textAlign:'center' }}>{h.account_count}</td>
-                      <td style={{ ...tdStyle, fontVariantNumeric:'tabular-nums', textAlign:'center' }}>{h.transaction_count}</td>
-                      <td style={{ ...tdStyle, fontVariantNumeric:'tabular-nums', fontWeight:600, color: h.net_worth >= 0 ? 'var(--color-w-success)' : 'var(--danger)' }}>
-                        {fmt(h.net_worth)}
-                      </td>
-                      <td style={{ ...tdStyle, whiteSpace:'nowrap' }} onClick={e => e.stopPropagation()}>
-                        <button onClick={() => handlePlan(h.id, h.plan)}
-                          disabled={actionLoading === h.id}
-                          style={{ ...btnStyle, fontSize:11 }}>
-                          Changer plan
-                        </button>
-                      </td>
-                    </tr>
-                    {expandedRow === h.id && (
-                      <tr key={`${h.id}-detail`} style={{ background:'var(--bg-subtle)' }}>
-                        <td colSpan={9} style={{ padding:'14px 20px', fontSize:12.5, color:'var(--text-secondary)' }}>
-                          <div style={{ display:'flex', gap:24, flexWrap:'wrap' }}>
-                            <div><span style={{ color:'var(--text-muted)' }}>ID :</span> <span style={{ fontFamily:'monospace', fontSize:11 }}>{h.id}</span></div>
-                            <div><span style={{ color:'var(--text-muted)' }}>Actifs bruts :</span> {fmt(h.assets_value)}</div>
-                            <div><span style={{ color:'var(--text-muted)' }}>Passifs :</span> {fmt(h.liabilities_value)}</div>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* ── 4. ABONNEMENTS ──────────────────────────────────────────────── */}
+        {/* ── 3. ABONNEMENTS ──────────────────────────────────────────────── */}
         {section === 'subscriptions' && (
           <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
             {/* Plan summary */}
@@ -525,7 +463,7 @@ export function Admin() {
                       <PlanBadge plan={plan}/>
                     </div>
                     <div style={{ fontSize:28, fontWeight:700, fontVariantNumeric:'tabular-nums' }}>{count}</div>
-                    <div style={{ fontSize:12, color:'var(--text-muted)', marginTop:4 }}>foyer{count !== 1 ? 's' : ''}</div>
+                    <div style={{ fontSize:12, color:'var(--text-muted)', marginTop:4 }}>compte{count !== 1 ? 's' : ''}</div>
                   </div>
                 );
               })}
@@ -550,12 +488,12 @@ export function Admin() {
             {/* Per-household plan table */}
             <div style={{ background:'var(--bg-card)', borderRadius:12, border:'1px solid var(--color-w-border)', overflow:'hidden' }}>
               <div style={{ padding:'14px 20px', borderBottom:'1px solid var(--color-w-border)' }}>
-                <h3 style={{ fontSize:13.5, fontWeight:600, margin:0 }}>Plans par foyer</h3>
+                <h3 style={{ fontSize:13.5, fontWeight:600, margin:0 }}>Plans par compte</h3>
               </div>
               <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12.5 }}>
                 <thead>
                   <tr style={{ background:'var(--bg-subtle)' }}>
-                    {['Foyer','Propriétaire','Plan actuel','Membres','Transactions','Action'].map(h => (
+                    {['Nom','Propriétaire','Plan actuel','Membres','Transactions','Action'].map(h => (
                       <th key={h} style={thStyle}>{h}</th>
                     ))}
                   </tr>
