@@ -28,6 +28,8 @@ import { CATEGORY_LABELS } from '../types/wealth.js';
 import { useWealthItems } from '../hooks/useWealthItems.js';
 import { WealthItemDrawer } from '../components/WealthItemDrawer.jsx';
 import { ImportPositionsModal } from '../components/ImportPositionsModal.jsx';
+import { useLiveQuotes, cryptoToYahoo, relTimeFromTs } from '../utils/marketPrices.js';
+import { RefreshCw } from 'lucide-react';
 import * as api from '../api.js';
 
 // ============================================================================
@@ -330,6 +332,20 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
           members={members}
           fmt={fmt}
           onEdit={() => { setEditingAsset(viewingInv); setViewingInv(null); }}
+          onSyncPositions={async (parent, rows) => {
+            // Push live values into each position's currentValue, then update
+            // the parent asset's total to reflect the new positions sum + cash.
+            const liveRows = rows.filter(r => r.isLive && Math.abs(r.value - r.saisi) > 0.5);
+            for (const r of liveRows) {
+              const pos = assets.find(a => a.id === r.id);
+              if (pos) await saveAsset({ ...pos, currentValue: Math.round(r.value * 100) / 100 });
+            }
+            // Update parent currentValue too (= positions live + cash original)
+            const newPositionsValue = rows.reduce((s, r) => s + r.value, 0);
+            const cashAvailable = Math.max(0, (parseFloat(parent.currentValue) || 0) - rows.reduce((s, r) => s + r.saisi, 0));
+            await saveAsset({ ...parent, currentValue: Math.round((newPositionsValue + cashAvailable) * 100) / 100 });
+            if (reload) await reload();
+          }}
           onClose={() => setViewingInv(null)}
         />
       )}
@@ -339,6 +355,10 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
           members={members}
           fmt={fmt}
           onEdit={() => { setEditingAsset(viewingCrypto); setViewingCrypto(null); }}
+          onSync={async (a, newValue) => {
+            await saveAsset({ ...a, currentValue: newValue });
+            setViewingCrypto({ ...viewingCrypto, currentValue: newValue });
+          }}
           onClose={() => setViewingCrypto(null)}
         />
       )}
@@ -1859,16 +1879,82 @@ function LiquidityDetail({ item, accounts = [], accountBalances = {}, transactio
 // ============================================================================
 // InvestmentDetail — PEA / CTO / AV / PER
 // ============================================================================
-function InvestmentDetail({ asset, assets = [], members = [], fmt, onEdit, onClose }) {
+function InvestmentDetail({ asset, assets = [], members = [], fmt, onEdit, onClose, onSyncPositions }) {
   const positions = useMemo(
     () => assets.filter(a => a.parentAssetId === asset.id || a.parent_asset_id === asset.id),
     [assets, asset.id]
   );
   const hasPositions = positions.length > 0;
 
-  const currentValue = parseFloat(asset.currentValue) || 0;
-  const positionsValue = positions.reduce((s, p) => s + (parseFloat(p.currentValue) || 0), 0);
-  const cashAvailable = Math.max(0, currentValue - positionsValue);
+  // Récupère les cours live via Yahoo pour toutes les positions qui ont
+  // un ticker (champ tickerYahoo / ticker_yahoo / ticker selon migration).
+  const positionTickers = useMemo(
+    () => positions
+      .map(p => (p.tickerYahoo || p.ticker_yahoo || p.ticker || '').toString().toUpperCase().trim())
+      .filter(Boolean),
+    [positions]
+  );
+  const demoSeedPrices = useMemo(() => {
+    const seeds = {};
+    positions.forEach(p => {
+      const sym = (p.tickerYahoo || p.ticker_yahoo || p.ticker || '').toString().toUpperCase().trim();
+      const qty = parseFloat(p.quantity) || 0;
+      const val = parseFloat(p.currentValue) || 0;
+      if (sym && qty > 0) seeds[sym] = val / qty;
+    });
+    return seeds;
+  }, [positions]);
+  const { prices, loading: liveLoading, refresh: refreshLive } = useLiveQuotes(positionTickers, demoSeedPrices);
+  const lastFetchedAt = useMemo(() => {
+    let max = 0;
+    Object.values(prices).forEach(q => { if (q?.fetchedAt > max) max = q.fetchedAt; });
+    return max || null;
+  }, [prices]);
+  const anyLive = Object.keys(prices).length > 0;
+
+  // Positions enrichies : si tickerYahoo + cours live dispo, on recompose la
+  // valeur (qty × livePrice) à la volée. Sinon on retombe sur le saisi.
+  const rows = useMemo(() => {
+    return positions
+      .map(p => {
+        const qty = parseFloat(p.quantity) || 0;
+        const saisi = parseFloat(p.currentValue) || 0;
+        const buy = parseFloat(p.purchasePrice) || 0;
+        const sym = (p.tickerYahoo || p.ticker_yahoo || p.ticker || '').toString().toUpperCase().trim();
+        const livePx = sym && prices[sym] ? prices[sym].price : null;
+        const isLive = livePx != null && qty > 0;
+        const value = isLive ? qty * livePx : saisi;
+        const cours = isLive ? livePx : (qty > 0 ? saisi / qty : 0);
+        const invested = buy * qty;
+        const pl = value - invested;
+        const plPct = invested > 0 ? (pl / invested) * 100 : 0;
+        return {
+          id: p.id,
+          name: p.name || '—',
+          isin: p.isin || sym || '',
+          qty,
+          cours,
+          value,
+          saisi,
+          isLive,
+          pl,
+          plPct,
+          invested,
+          color: positionColor(p.name),
+          initial: (p.name || '?').trim()[0]?.toUpperCase() || '?',
+        };
+      })
+      .sort((a, b) => b.value - a.value);
+  }, [positions, prices]);
+
+  // Recalcule la valeur globale du compte avec les cours live quand dispo.
+  const saisiValue = parseFloat(asset.currentValue) || 0;
+  const positionsValue = rows.reduce((s, r) => s + r.value, 0);
+  const saisiPositionsValue = positions.reduce((s, p) => s + (parseFloat(p.currentValue) || 0), 0);
+  const cashAvailable = Math.max(0, saisiValue - saisiPositionsValue);
+  const currentValue = hasPositions
+    ? (positionsValue + cashAvailable)
+    : saisiValue;
 
   const invested = hasPositions
     ? positions.reduce((s, p) => s + (parseFloat(p.purchasePrice) || 0) * (parseFloat(p.quantity) || 0), 0)
@@ -1883,33 +1969,18 @@ function InvestmentDetail({ asset, assets = [], members = [], fmt, onEdit, onClo
 
   const owners = ownersList(asset.memberIds, members);
 
-  // Positions enrichies + triées par valeur décroissante (Finary-style).
-  const rows = useMemo(() => {
-    return positions
-      .map(p => {
-        const qty = parseFloat(p.quantity) || 0;
-        const value = parseFloat(p.currentValue) || 0;
-        const buy = parseFloat(p.purchasePrice) || 0;
-        const cours = qty > 0 ? value / qty : 0;
-        const invested = buy * qty;
-        const pl = value - invested;
-        const plPct = invested > 0 ? (pl / invested) * 100 : 0;
-        return {
-          id: p.id,
-          name: p.name || '—',
-          isin: p.isin || p.ticker || '',
-          qty,
-          cours,
-          value,
-          pl,
-          plPct,
-          invested,
-          color: positionColor(p.name),
-          initial: (p.name || '?').trim()[0]?.toUpperCase() || '?',
-        };
-      })
-      .sort((a, b) => b.value - a.value);
-  }, [positions]);
+  // Sync : pousse les valorisations live dans la DB (positions + compte parent)
+  const [syncing, setSyncing] = useState(false);
+  const liveRowsToSync = rows.filter(r => r.isLive && Math.abs(r.value - r.saisi) > 0.5);
+  const handleSync = async () => {
+    if (!onSyncPositions || liveRowsToSync.length === 0) return;
+    setSyncing(true);
+    try {
+      await onSyncPositions(asset, rows);
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -1933,8 +2004,12 @@ function InvestmentDetail({ asset, assets = [], members = [], fmt, onEdit, onClo
                 <em>{asset.name?.split(' ').slice(1).join(' ') || ''}.</em>
               </h2>
               <div className="inv-v3-sub">
-                {rows.length > 0 && <span>{rows.length} position{rows.length > 1 ? 's' : ''}</span>}
+                {anyLive
+                  ? <span className="dv3-badge dv3-badge-live">Cours live</span>
+                  : <span className="dv3-badge">Saisi manuellement</span>}
+                {rows.length > 0 && <><span className="inv-v3-dot">·</span><span>{rows.length} position{rows.length > 1 ? 's' : ''}</span></>}
                 {owners && <><span className="inv-v3-dot">·</span><span>{owners}</span></>}
+                {lastFetchedAt && <><span className="inv-v3-dot">·</span><span>maj il y a {relTimeFromTs(lastFetchedAt)}</span></>}
               </div>
             </div>
             <div className="inv-v3-value-block">
@@ -2045,6 +2120,17 @@ function InvestmentDetail({ asset, assets = [], members = [], fmt, onEdit, onClo
         </div>
 
         <div className="inv-v3-foot">
+          {liveRowsToSync.length > 0 && (
+            <button
+              className="ds-btn"
+              onClick={handleSync}
+              disabled={syncing}
+              title={`Pousser le cours live dans ${liveRowsToSync.length} position(s)`}
+            >
+              <RefreshCw size={13} style={{ animation: syncing || liveLoading ? 'spin 1s linear infinite' : undefined }}/>
+              {syncing ? 'Sync…' : `Synchroniser ${liveRowsToSync.length} position${liveRowsToSync.length > 1 ? 's' : ''}`}
+            </button>
+          )}
           <button className="ds-btn" onClick={() => onEdit && onEdit()}>
             <Edit3 size={14}/> Modifier
           </button>
@@ -2293,7 +2379,7 @@ function InvestmentDetailStyles() {
   padding: 14px 28px;
   border-top: 1px solid var(--border);
   background: var(--bg-elev);
-  display: flex; justify-content: flex-end;
+  display: flex; justify-content: flex-end; gap: 8px;
 }
 
 /* Mobile */
@@ -2328,17 +2414,31 @@ function InvestmentDetailStyles() {
 // ============================================================================
 // CryptoDetail — Single crypto asset
 // ============================================================================
-function CryptoDetail({ asset, members = [], fmt, onEdit, onClose }) {
-  const currentValue = parseFloat(asset.currentValue) || 0;
+function CryptoDetail({ asset, members = [], fmt, onEdit, onClose, onSync }) {
   const quantity = parseFloat(asset.quantity) || 0;
   const purchasePrice = parseFloat(asset.purchasePrice) || 0;
   const ticker = (asset.ticker || '').toUpperCase();
+  const saisiValue = parseFloat(asset.currentValue) || 0;
+  const saisiUnitPrice = quantity > 0 ? saisiValue / quantity : 0;
+
+  // Cours live via Yahoo (BTC-EUR, ETH-EUR…)
+  const yahooSym = cryptoToYahoo(ticker);
+  const { prices, loading: liveLoading, refresh } = useLiveQuotes(
+    yahooSym ? [yahooSym] : [],
+    yahooSym ? { [yahooSym]: saisiUnitPrice } : {}
+  );
+  const liveQuote = yahooSym ? prices[yahooSym] : null;
+  const livePrice = liveQuote?.price ?? null;
+  const isLive = livePrice != null && quantity > 0;
+
+  // Valeur utilisée pour tous les calculs : live si dispo, sinon saisi
+  const currentValue = isLive ? quantity * livePrice : saisiValue;
+  const unitPrice = isLive ? livePrice : saisiUnitPrice;
 
   const invested = purchasePrice * quantity;
   const plLatente = currentValue - invested;
   const plLatentePct = invested > 0 ? (plLatente / invested) * 100 : 0;
 
-  const unitPrice = quantity > 0 ? currentValue / quantity : 0;
   const owners = ownersList(asset.memberIds, members);
 
   // Date helpers — combien de temps depuis l'achat
@@ -2349,6 +2449,14 @@ function CryptoDetail({ asset, members = [], fmt, onEdit, onClose }) {
   const cagrPct = invested > 0 && yearsSincePurchase >= 0.1
     ? (Math.pow(currentValue / invested, 1 / yearsSincePurchase) - 1) * 100
     : null;
+
+  // Sync : pousse la valeur live dans currentValue (vrai bouton dans le footer)
+  const [syncing, setSyncing] = useState(false);
+  const handleSync = async () => {
+    if (!isLive || !onSync) return;
+    setSyncing(true);
+    try { await onSync(asset, currentValue); } finally { setSyncing(false); }
+  };
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -2374,9 +2482,14 @@ function CryptoDetail({ asset, members = [], fmt, onEdit, onClose }) {
                   {asset.name.split(' ')[0]} <em>{asset.name.split(' ').slice(1).join(' ') || ticker || ''}.</em>
                 </h2>
                 <div className="dv3-sub">
-                  <span className="dv3-badge">Manuel</span>
+                  {isLive
+                    ? <span className="dv3-badge dv3-badge-live">Cours live</span>
+                    : <span className="dv3-badge">Saisi manuellement</span>}
                   {ticker && <><span className="dv3-dot">·</span><span className="mono">{ticker}</span></>}
                   {owners && <><span className="dv3-dot">·</span><span>{owners}</span></>}
+                  {liveQuote?.fetchedAt && (
+                    <><span className="dv3-dot">·</span><span>maj il y a {relTimeFromTs(liveQuote.fetchedAt)}</span></>
+                  )}
                 </div>
               </div>
             </div>
@@ -2402,8 +2515,13 @@ function CryptoDetail({ asset, members = [], fmt, onEdit, onClose }) {
               <div className="dv3-kpi-val num">{fmt(purchasePrice)}<span className="dv3-kpi-meta"> / unité</span></div>
             </div>
             <div className="dv3-kpi">
-              <div className="ds-micro">Cours actuel</div>
-              <div className="dv3-kpi-val num">{fmt(unitPrice)}<span className="dv3-kpi-meta"> / unité</span></div>
+              <div className="ds-micro">Cours actuel{isLive && <span className="dv3-live-tag"> ● live</span>}</div>
+              <div className="dv3-kpi-val num">
+                {fmt(unitPrice)}<span className="dv3-kpi-meta"> / unité</span>
+                {isLive && saisiUnitPrice > 0 && Math.abs(saisiUnitPrice - unitPrice) / saisiUnitPrice > 0.005 && (
+                  <span className="dv3-kpi-meta"> · saisi {fmt(saisiUnitPrice)}</span>
+                )}
+              </div>
             </div>
             {cagrPct !== null && (
               <div className="dv3-kpi">
@@ -2428,9 +2546,22 @@ function CryptoDetail({ asset, members = [], fmt, onEdit, onClose }) {
           <div className="dv3-foot-meta">
             {asset.purchaseDate && <span>Acquis le <span className="num">{formatDate(asset.purchaseDate)}</span></span>}
           </div>
-          <button className="ds-btn" onClick={() => onEdit && onEdit()}>
-            <Edit3 size={14}/> Modifier
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {isLive && Math.abs(saisiValue - currentValue) > 1 && (
+              <button
+                className="ds-btn"
+                onClick={handleSync}
+                disabled={syncing}
+                title="Mettre à jour la valorisation enregistrée avec le cours live"
+              >
+                <RefreshCw size={13} style={{ animation: syncing || liveLoading ? 'spin 1s linear infinite' : undefined }}/>
+                {syncing ? 'Sync…' : 'Synchroniser la valeur'}
+              </button>
+            )}
+            <button className="ds-btn" onClick={() => onEdit && onEdit()}>
+              <Edit3 size={14}/> Modifier
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -2706,6 +2837,32 @@ function DetailV3Styles() {
   border-radius: 999px;
 }
 .dv3-badge.pos { background: var(--positive-soft); color: var(--positive); }
+.dv3-badge-live {
+  background: var(--positive-soft);
+  color: var(--positive);
+  position: relative;
+}
+.dv3-badge-live::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 50%; transform: translateY(-50%);
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--positive);
+  animation: dv3-pulse 2s ease-in-out infinite;
+}
+.dv3-badge-live { padding-left: 20px; }
+.dv3-live-tag {
+  color: var(--positive);
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+@keyframes dv3-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 
 .dv3-crypto-logo {
   width: 44px; height: 44px;
