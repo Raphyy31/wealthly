@@ -2212,6 +2212,15 @@ function InvestmentDetail({ asset, assets = [], members = [], fmt, onEdit, onClo
                   <div className="cell-r num inv-v3-val">{fmt(cashAvailable)}</div>
                 </div>
               )}
+
+              {anyLive && (
+                <LivePricesFooter
+                  fetchedAt={lastFetchedAt}
+                  count={Object.keys(prices).length}
+                  onRefresh={refreshLive}
+                  loading={liveLoading}
+                />
+              )}
             </section>
           ) : (
             <section className="ds-panel inv-v3-empty">
@@ -2277,6 +2286,50 @@ function positionColor(name) {
 // onCommit(newValue) appelé au blur ou Enter si la valeur a changé.
 // Escape annule. Disabled si pas de callback fourni ou cellule en live.
 // ────────────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────
+// LivePricesFooter — bande discrète sous la table des positions ou
+// le panneau crypto, qui rappelle à l'utilisateur que les cours sont
+// récupérés en direct + d'où ils viennent + quand. Inclut un bouton
+// "rafraîchir" pour forcer un re-fetch hors du polling 5 min.
+// ────────────────────────────────────────────────────────────────────────
+function LivePricesFooter({ fetchedAt, count = 0, onRefresh, loading }) {
+  return (
+    <div className="lpf-bar">
+      <div className="lpf-left">
+        <span className="lpf-dot"/>
+        <span>
+          {count > 1
+            ? <>Cours actualisés en direct sur <strong>{count} positions</strong></>
+            : <>Cours actualisé en direct</>}
+          <span className="lpf-sep">·</span>
+          <span>
+            source <em>Yahoo Finance</em>
+          </span>
+          {fetchedAt && (
+            <>
+              <span className="lpf-sep">·</span>
+              <span>maj il y a {relTimeFromTs(fetchedAt)}</span>
+            </>
+          )}
+          <span className="lpf-sep">·</span>
+          <span>auto-refresh toutes les 5 min</span>
+        </span>
+      </div>
+      {onRefresh && (
+        <button
+          className="lpf-refresh"
+          onClick={onRefresh}
+          disabled={loading}
+          title="Forcer un rafraîchissement maintenant"
+        >
+          <RefreshCw size={12} style={{ animation: loading ? 'spin 1s linear infinite' : undefined }}/>
+          Rafraîchir
+        </button>
+      )}
+    </div>
+  );
+}
+
 function EditableNumCell({ value, format, onCommit, disabled, className = '', title }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
@@ -2554,6 +2607,60 @@ function InvestmentDetailStyles() {
   box-shadow: 0 0 0 3px var(--accent-soft);
   outline: none;
 }
+
+/* Footer "Cours live via Yahoo Finance" */
+.lpf-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+  background: linear-gradient(90deg, var(--bg-sunk) 0%, var(--accent-soft) 100%);
+  font: 400 12px/1.4 var(--font-sans);
+  color: var(--ink-2);
+  flex-wrap: wrap;
+}
+.lpf-left { display: inline-flex; align-items: center; gap: 8px; }
+.lpf-bar .lpf-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--positive);
+  box-shadow: 0 0 0 0 var(--positive-soft);
+  animation: lpf-pulse 2.5s ease-in-out infinite;
+  flex-shrink: 0;
+}
+@keyframes lpf-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(19, 109, 62, 0.4); }
+  50%      { box-shadow: 0 0 0 6px rgba(19, 109, 62, 0); }
+}
+.lpf-bar em {
+  font-family: var(--font-serif);
+  font-style: italic;
+  color: var(--accent-2);
+  font-weight: 500;
+}
+.lpf-bar strong { color: var(--ink); font-weight: 500; }
+.lpf-bar .lpf-sep { color: var(--ink-mute); padding: 0 6px; }
+.lpf-refresh {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-elev);
+  color: var(--ink-2);
+  cursor: pointer;
+  font: 500 11.5px/1 var(--font-sans);
+  letter-spacing: 0.02em;
+  transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
+}
+.lpf-refresh:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--ink);
+  border-color: var(--border-strong);
+}
+.lpf-refresh:disabled { opacity: 0.6; cursor: default; }
 .inv-v3-pl { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; font: 500 13px/1.2 var(--font-sans); }
 .inv-v3-pl.pos { color: var(--positive); }
 .inv-v3-pl.neg { color: var(--negative); }
@@ -2749,11 +2856,23 @@ function CryptoDetail({ asset, members = [], fmt, onEdit, onClose, onSync }) {
           </div>
         </div>
 
-        {asset.notes && (
+        {(asset.notes || isLive) && (
           <div className="dv3-body">
-            <section className="ds-panel">
-              <div className="dv3-notes-body">{asset.notes}</div>
-            </section>
+            {asset.notes && (
+              <section className="ds-panel">
+                <div className="dv3-notes-body">{asset.notes}</div>
+              </section>
+            )}
+            {isLive && (
+              <section className="ds-panel" style={{ padding: 0 }}>
+                <LivePricesFooter
+                  fetchedAt={liveQuote?.fetchedAt}
+                  count={1}
+                  onRefresh={refresh}
+                  loading={liveLoading}
+                />
+              </section>
+            )}
           </div>
         )}
 
