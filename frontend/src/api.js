@@ -361,14 +361,39 @@ export const wealth = {
     const { type: backendType, subtype: backendSubtype } = _resolveBackendType(payload.subtype, target);
 
     if (target === 'liability') {
-      const data = await liabilities.create({
+      // Le wizard envoie soit la version riche (initialCapital/monthlyPayment/…),
+      // soit l'ancienne version réduite (juste value). On gère les deux pour ne
+      // pas casser les callers historiques.
+      const initialCapital = payload.initialCapital != null
+        ? payload.initialCapital
+        : (payload.value || 0);
+      const remainingCapital = payload.remainingCapital != null
+        ? payload.remainingCapital
+        : (payload.value || initialCapital);
+      const liaPayload = {
         type: backendType,
         name: payload.name,
-        initial_capital: payload.value || 0,
-        remaining_capital: payload.value || 0,
+        initial_capital: initialCapital,
+        remaining_capital: remainingCapital,
+        monthly_payment: payload.monthlyPayment || 0,
+        interest_rate: payload.interestRate || 0,
         currency: payload.currency || 'EUR',
-        memberIds: payload.memberIds || [],
-      });
+        member_ids: payload.memberIds || [],
+      };
+      // Champs optionnels : ne les envoyer que si renseignés, pour éviter de
+      // pousser des 0/null/'' qui parasitent le calcul d'amortissement.
+      if (payload.durationMonths) liaPayload.duration_months = payload.durationMonths;
+      if (payload.startDate)      liaPayload.start_date = payload.startDate;
+      if (payload.downPayment != null && payload.downPayment !== '')
+        liaPayload.down_payment = payload.downPayment;
+      if (payload.insuranceRate != null && payload.insuranceRate !== '')
+        liaPayload.insurance_rate = payload.insuranceRate;
+      if (payload.applicationFees != null && payload.applicationFees !== '')
+        liaPayload.application_fees = payload.applicationFees;
+      if (payload.ownershipPct != null && payload.ownershipPct !== '' && payload.ownershipPct !== 100)
+        liaPayload.ownership_pct = payload.ownershipPct;
+      if (payload.linkedAssetId) liaPayload.linked_asset_id = payload.linkedAssetId;
+      const data = await liabilities.create(liaPayload);
       return { target, data };
     }
     if (target === 'account') {
@@ -378,7 +403,7 @@ export const wealth = {
         type: backendType,
         initial_balance: payload.value || 0,
         currency: payload.currency || 'EUR',
-        memberIds: payload.memberIds || [],
+        member_ids: payload.memberIds || [],
         role: payload.role || 'principal',
       });
       return { target, data };
@@ -390,7 +415,7 @@ export const wealth = {
       ...(backendSubtype ? { subtype: backendSubtype } : {}),
       current_value: payload.value || 0,
       currency: payload.currency || 'EUR',
-      memberIds: payload.memberIds || [],
+      member_ids: payload.memberIds || [],
       ...(payload.meta || {}),
     });
     return { target, data };

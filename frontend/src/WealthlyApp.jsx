@@ -1708,6 +1708,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       {showAddAccount && (
         <AddWealthModal
           members={members}
+          assets={assets}
           onSave={async (payload) => {
             // En démo, l'API throw "Mode démo : modifications non enregistrées".
             // En prod, on récupère { target, data } pour pousser le nouvel

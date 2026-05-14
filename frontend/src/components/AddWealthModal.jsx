@@ -58,14 +58,32 @@ const SUBTYPES_BY_CATEGORY = {
 // Subtypes qui supportent la synchronisation bancaire via GoCardless
 const SYNCABLE_SUBTYPES = ['compte_courant', 'pea', 'cto', 'av'];
 
-export function AddWealthModal({ members = [], onSave, onClose, onConnectBank }) {
+export function AddWealthModal({ members = [], assets = [], onSave, onClose, onConnectBank }) {
   const [step, setStep] = useState('category');
   const [category, setCategory] = useState(null);
   const [subtype, setSubtype] = useState(null);
   const [syncMode, setSyncMode] = useState(null);
-  const [form, setForm] = useState({ name: '', currency: 'EUR', memberIds: [], value: '' });
+  const [form, setForm] = useState({
+    name: '',
+    currency: 'EUR',
+    memberIds: [],
+    value: '',
+    // Loan-specific fields (only used when category === 'emprunts')
+    initialCapital: '',
+    remainingCapital: '',
+    monthlyPayment: '',
+    interestRate: '',
+    durationMonths: '',
+    startDate: '',
+    downPayment: '',
+    insuranceRate: '',
+    applicationFees: '',
+    ownershipPct: 100,
+    linkedAssetId: '',
+  });
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const goCategory = () => { setStep('category'); setCategory(null); setSubtype(null); setSyncMode(null); };
   const goDetail   = () => { setStep('detail');   setSubtype(null); setSyncMode(null); };
@@ -88,6 +106,8 @@ export function AddWealthModal({ members = [], onSave, onClose, onConnectBank })
     setStep('form');
   };
 
+  const isLoan = category === 'emprunts';
+
   const submit = async () => {
     setSubmitError(null);
     if (!form.name.trim()) {
@@ -98,17 +118,42 @@ export function AddWealthModal({ members = [], onSave, onClose, onConnectBank })
       setSubmitError('Sélectionne au moins un détenteur.');
       return;
     }
+    if (isLoan && !form.initialCapital) {
+      setSubmitError('Renseigne le capital initial emprunté.');
+      return;
+    }
     setSubmitting(true);
     try {
-      await onSave({
+      const basePayload = {
         category,
         subtype,
         syncMode: 'manual',
         name: form.name.trim(),
         currency: form.currency,
-        value: parseFloat(form.value) || 0,
         memberIds: form.memberIds,
-      });
+      };
+      const payload = isLoan
+        ? {
+            ...basePayload,
+            // value sert de fallback pour le capital restant si non précisé
+            value: parseFloat(form.remainingCapital) || parseFloat(form.initialCapital) || 0,
+            initialCapital: parseFloat(form.initialCapital) || 0,
+            remainingCapital: parseFloat(form.remainingCapital) || parseFloat(form.initialCapital) || 0,
+            monthlyPayment: parseFloat(form.monthlyPayment) || 0,
+            interestRate: parseFloat(form.interestRate) || 0,
+            durationMonths: form.durationMonths ? parseInt(form.durationMonths, 10) : null,
+            startDate: form.startDate || null,
+            downPayment: form.downPayment ? parseFloat(form.downPayment) : null,
+            insuranceRate: form.insuranceRate ? parseFloat(form.insuranceRate) : null,
+            applicationFees: form.applicationFees ? parseFloat(form.applicationFees) : null,
+            ownershipPct: parseFloat(form.ownershipPct) || 100,
+            linkedAssetId: form.linkedAssetId || null,
+          }
+        : {
+            ...basePayload,
+            value: parseFloat(form.value) || 0,
+          };
+      await onSave(payload);
     } catch (err) {
       // Si l'erreur n'est pas attrapée plus haut, on la montre ici plutôt
       // que de laisser l'utilisateur cliquer dans le vide.
@@ -247,17 +292,175 @@ export function AddWealthModal({ members = [], onSave, onClose, onConnectBank })
               </select>
             </div>
 
-            <div className="form-row">
-              <label className="form-label">Valeur actuelle</label>
-              <input
-                className="form-input"
-                type="number"
-                step="0.01"
-                value={form.value}
-                onChange={e => setForm({ ...form, value: e.target.value })}
-                placeholder="0,00"
-              />
-            </div>
+            {!isLoan && (
+              <div className="form-row">
+                <label className="form-label">Valeur actuelle</label>
+                <input
+                  className="form-input"
+                  type="number"
+                  step="0.01"
+                  value={form.value}
+                  onChange={e => setForm({ ...form, value: e.target.value })}
+                  placeholder="0,00"
+                />
+              </div>
+            )}
+
+            {isLoan && (
+              <>
+                <div className="form-row-2col">
+                  <div className="form-row">
+                    <label className="form-label">Capital initial emprunté</label>
+                    <input
+                      className="form-input"
+                      type="number"
+                      step="0.01"
+                      value={form.initialCapital}
+                      onChange={e => setForm({ ...form, initialCapital: e.target.value })}
+                      placeholder="150 000"
+                    />
+                  </div>
+                  <div className="form-row">
+                    <label className="form-label">Capital restant dû</label>
+                    <input
+                      className="form-input"
+                      type="number"
+                      step="0.01"
+                      value={form.remainingCapital}
+                      onChange={e => setForm({ ...form, remainingCapital: e.target.value })}
+                      placeholder="par défaut = capital initial"
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row-2col">
+                  <div className="form-row">
+                    <label className="form-label">Mensualité (hors assurance)</label>
+                    <input
+                      className="form-input"
+                      type="number"
+                      step="0.01"
+                      value={form.monthlyPayment}
+                      onChange={e => setForm({ ...form, monthlyPayment: e.target.value })}
+                      placeholder="850"
+                    />
+                  </div>
+                  <div className="form-row">
+                    <label className="form-label">Taux d'intérêt (%)</label>
+                    <input
+                      className="form-input"
+                      type="number"
+                      step="0.01"
+                      value={form.interestRate}
+                      onChange={e => setForm({ ...form, interestRate: e.target.value })}
+                      placeholder="1.65"
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row-2col">
+                  <div className="form-row">
+                    <label className="form-label">Durée totale (mois)</label>
+                    <input
+                      className="form-input"
+                      type="number"
+                      step="1"
+                      value={form.durationMonths}
+                      onChange={e => setForm({ ...form, durationMonths: e.target.value })}
+                      placeholder="240 (= 20 ans)"
+                    />
+                  </div>
+                  <div className="form-row">
+                    <label className="form-label">Date de début</label>
+                    <input
+                      className="form-input"
+                      type="date"
+                      value={form.startDate}
+                      onChange={e => setForm({ ...form, startDate: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                {subtype === 'mortgage' && (
+                  <div className="form-row">
+                    <label className="form-label">Bien immobilier financé <span className="form-hint">· optionnel</span></label>
+                    <select
+                      className="form-input"
+                      value={form.linkedAssetId}
+                      onChange={e => setForm({ ...form, linkedAssetId: e.target.value })}
+                    >
+                      <option value="">— Pas de bien rattaché —</option>
+                      {assets.filter(a => a.type === 'real_estate').map(a => (
+                        <option key={a.id} value={a.id}>{a.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  className="secondary-btn"
+                  style={{ alignSelf: 'flex-start', padding: '6px 10px', fontSize: 12 }}
+                  onClick={() => setShowAdvanced(s => !s)}
+                >
+                  {showAdvanced ? '− Masquer les options avancées' : '+ Options avancées (apport, assurance, frais)'}
+                </button>
+
+                {showAdvanced && (
+                  <>
+                    <div className="form-row-2col">
+                      <div className="form-row">
+                        <label className="form-label">Apport personnel</label>
+                        <input
+                          className="form-input"
+                          type="number"
+                          step="0.01"
+                          value={form.downPayment}
+                          onChange={e => setForm({ ...form, downPayment: e.target.value })}
+                          placeholder="30 000"
+                        />
+                      </div>
+                      <div className="form-row">
+                        <label className="form-label">Taux d'assurance (%)</label>
+                        <input
+                          className="form-input"
+                          type="number"
+                          step="0.01"
+                          value={form.insuranceRate}
+                          onChange={e => setForm({ ...form, insuranceRate: e.target.value })}
+                          placeholder="0.36"
+                        />
+                      </div>
+                    </div>
+                    <div className="form-row-2col">
+                      <div className="form-row">
+                        <label className="form-label">Frais de dossier</label>
+                        <input
+                          className="form-input"
+                          type="number"
+                          step="0.01"
+                          value={form.applicationFees}
+                          onChange={e => setForm({ ...form, applicationFees: e.target.value })}
+                          placeholder="1 000"
+                        />
+                      </div>
+                      <div className="form-row">
+                        <label className="form-label">Ma quote-part (%)</label>
+                        <input
+                          className="form-input"
+                          type="number"
+                          step="1"
+                          min="0"
+                          max="100"
+                          value={form.ownershipPct}
+                          onChange={e => setForm({ ...form, ownershipPct: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
 
             <div className="form-row">
               <label className="form-label">

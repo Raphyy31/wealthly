@@ -1796,6 +1796,9 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .mode-sub { font-size: 11.5px; color: var(--ink-2); }
 
 .form-row { margin-bottom: 14px; }
+.form-row-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 0; }
+.form-row-2col > .form-row { margin-bottom: 14px; }
+@media (max-width: 540px) { .form-row-2col { grid-template-columns: 1fr; gap: 0; } }
 .form-label {
   display: block; font-size: 11.5px; text-transform: uppercase;
   letter-spacing: .04em; color: var(--ink-3); margin-bottom: 4px;
