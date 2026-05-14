@@ -224,27 +224,14 @@ export function AddWealthModal({ members = [], onSave, onClose, onConnectBank })
               />
             </div>
 
-            <div className="form-row form-row-pair">
-              <div>
-                <label className="form-label">Devise</label>
-                <select className="form-input" value={form.currency} onChange={e => setForm({ ...form, currency: e.target.value })}>
-                  <option value="EUR">EUR</option>
-                  <option value="USD">USD</option>
-                  <option value="GBP">GBP</option>
-                  <option value="CHF">CHF</option>
-                </select>
-              </div>
-              <div>
-                <label className="form-label">Détenteur</label>
-                <select
-                  className="form-input"
-                  value={form.memberIds[0] || ''}
-                  onChange={e => setForm({ ...form, memberIds: e.target.value ? [e.target.value] : [] })}
-                >
-                  <option value="">— Choisir —</option>
-                  {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                </select>
-              </div>
+            <div className="form-row">
+              <label className="form-label">Devise</label>
+              <select className="form-input" value={form.currency} onChange={e => setForm({ ...form, currency: e.target.value })}>
+                <option value="EUR">EUR</option>
+                <option value="USD">USD</option>
+                <option value="GBP">GBP</option>
+                <option value="CHF">CHF</option>
+              </select>
             </div>
 
             <div className="form-row">
@@ -258,6 +245,53 @@ export function AddWealthModal({ members = [], onSave, onClose, onConnectBank })
                 placeholder="0,00"
               />
             </div>
+
+            <div className="form-row">
+              <label className="form-label">
+                Détenteur{members.length > 1 ? '·s' : ''}
+                <span className="form-hint"> · Sélectionne un ou plusieurs membres</span>
+              </label>
+              <div className="member-checks">
+                {members.map(m => {
+                  const active = form.memberIds.includes(m.id);
+                  return (
+                    <label
+                      key={m.id}
+                      className={`member-check ${active ? 'active' : ''}`}
+                      style={{ borderColor: active ? m.color : undefined }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={active}
+                        onChange={() => setForm({
+                          ...form,
+                          memberIds: active
+                            ? form.memberIds.filter(id => id !== m.id)
+                            : [...form.memberIds, m.id],
+                        })}
+                      />
+                      <span className="member-avatar" style={{ background: m.color }}>
+                        {m.name.charAt(0).toUpperCase()}
+                      </span>
+                      <span>{m.name}</span>
+                    </label>
+                  );
+                })}
+              </div>
+              {members.length === 0 && (
+                <div className="form-hint" style={{ marginTop: 6 }}>
+                  Aucun membre — ajoute-en un dans Réglages → Membres.
+                </div>
+              )}
+            </div>
+
+            {/* Hint pour les enveloppes financières : on pourra importer les
+                positions juste après la création depuis le détail de l'actif. */}
+            {['pea', 'cto', 'av', 'per'].includes(subtype) && (
+              <div className="form-hint-banner">
+                <strong>Étape suivante :</strong> une fois le compte créé, ouvre-le depuis Patrimoine pour <em>importer tes positions</em> (CSV/XLSX Boursorama, BNP, Trade Republic, IBKR…) ou les saisir manuellement.
+              </div>
+            )}
 
             <div className="modal-foot">
               <button className="secondary-btn" onClick={goDetail} type="button">Retour</button>

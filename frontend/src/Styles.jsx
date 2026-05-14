@@ -1808,6 +1808,14 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 }
 .form-input:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
 .form-row-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.form-hint { font-size: 11px; font-family: 'Geist', system-ui; text-transform: none; letter-spacing: 0; color: var(--ink-3); font-weight: 400; }
+.form-hint-banner {
+  margin-top: 4px; padding: 10px 14px;
+  background: var(--accent-soft); color: var(--accent-2);
+  border-radius: 10px; font-size: 12.5px; line-height: 1.5;
+}
+.form-hint-banner strong { font-weight: 600; }
+.form-hint-banner em { font-family: 'Newsreader', Georgia, serif; font-style: italic; font-weight: 400; }
 
 .modal-foot {
   display: flex; justify-content: flex-end; gap: 8px;
