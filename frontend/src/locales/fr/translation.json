@@ -134,7 +134,9 @@
     "compareIncreaseTitle": "{{category}} : {{pct}} % vs moyenne 6 mois",
     "compareIncreaseBody": "{{current}} ce mois vs {{avg}} en moyenne sur 6 mois.",
     "compareDecreaseTitle": "{{category}} : {{pct}} % vs moyenne 6 mois",
-    "compareDecreaseBody": "{{current}} ce mois vs {{avg}} en moyenne sur 6 mois."
+    "compareDecreaseBody": "{{current}} ce mois vs {{avg}} en moyenne sur 6 mois.",
+    "compareNeutralTitle": "{{category}} : {{pct}} % vs moyenne 6 mois",
+    "compareNeutralBody": "{{current}} ce mois vs {{avg}} en moyenne."
   },
   "settings": {
     "title": "Réglages",
