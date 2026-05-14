@@ -360,6 +360,29 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
             setImportingTo(item || { sourceId: a.id, currency: a.currency || 'EUR', memberIds: a.memberIds || [], name: a.name });
             setViewingInv(null);
           }}
+          onUpdatePosition={async (positionId, patch) => {
+            // Inline-edit d'une position depuis la table — pas de popup.
+            const pos = assets.find(a => a.id === positionId);
+            if (!pos) return;
+            const updated = { ...pos };
+            // patch peut contenir : quantity, lastPrice, currentValue.
+            if (patch.quantity != null) {
+              updated.quantity = patch.quantity;
+              // Re-dérive currentValue à partir du nouveau qty × ancien cours
+              const oldQty = parseFloat(pos.quantity) || 0;
+              const oldVal = parseFloat(pos.currentValue) || 0;
+              const oldCours = oldQty > 0 ? oldVal / oldQty : 0;
+              updated.currentValue = patch.quantity * oldCours;
+            }
+            if (patch.lastPrice != null) {
+              const qty = parseFloat(updated.quantity) || 0;
+              updated.currentValue = qty * patch.lastPrice;
+            }
+            if (patch.currentValue != null) {
+              updated.currentValue = patch.currentValue;
+            }
+            await saveAsset(updated);
+          }}
           onSyncPositions={async (parent, rows) => {
             // Push live values into each position's currentValue, then update
             // the parent asset's total to reflect the new positions sum + cash.
@@ -1935,7 +1958,7 @@ function LiquidityDetail({ item, accounts = [], accountBalances = {}, transactio
 // ============================================================================
 // InvestmentDetail — PEA / CTO / AV / PER
 // ============================================================================
-function InvestmentDetail({ asset, assets = [], members = [], fmt, onEdit, onClose, onSyncPositions, onImportCSV }) {
+function InvestmentDetail({ asset, assets = [], members = [], fmt, onEdit, onClose, onSyncPositions, onImportCSV, onUpdatePosition }) {
   const positions = useMemo(
     () => assets.filter(a => a.parentAssetId === asset.id || a.parent_asset_id === asset.id),
     [assets, asset.id]
@@ -2145,9 +2168,26 @@ function InvestmentDetail({ asset, assets = [], members = [], fmt, onEdit, onClo
                         {r.isin && <div className="inv-v3-name-meta mono">{r.isin}</div>}
                       </div>
                     </div>
-                    <div className="cell-r num">{formatQty(r.qty)}</div>
-                    <div className="cell-r num">{fmt(r.cours)}</div>
-                    <div className="cell-r num inv-v3-val">{fmt(r.value)}</div>
+                    <EditableNumCell
+                      value={r.qty}
+                      format={formatQty}
+                      onCommit={(v) => onUpdatePosition?.(r.id, { quantity: v })}
+                      disabled={!onUpdatePosition}
+                    />
+                    <EditableNumCell
+                      value={r.cours}
+                      format={fmt}
+                      onCommit={(v) => onUpdatePosition?.(r.id, { lastPrice: v })}
+                      disabled={!onUpdatePosition || r.isLive}
+                      title={r.isLive ? 'Cours synchronisé en live — désactive la sync pour saisir manuellement' : 'Cliquer pour modifier'}
+                    />
+                    <EditableNumCell
+                      value={r.value}
+                      format={fmt}
+                      onCommit={(v) => onUpdatePosition?.(r.id, { currentValue: v })}
+                      disabled={!onUpdatePosition}
+                      className="inv-v3-val"
+                    />
                     <div className={`cell-r inv-v3-pl ${r.pl >= 0 ? 'pos' : 'neg'}`}>
                       <div className="num">{r.pl >= 0 ? '+' : ''}{fmt(r.pl)}</div>
                       {r.invested > 0 && (
@@ -2230,6 +2270,62 @@ function positionColor(name) {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
   return colors[h % colors.length];
+}
+
+// ────────────────────────────────────────────────────────────────────────
+// EditableNumCell — affiche une valeur formatée, devient input au focus.
+// onCommit(newValue) appelé au blur ou Enter si la valeur a changé.
+// Escape annule. Disabled si pas de callback fourni ou cellule en live.
+// ────────────────────────────────────────────────────────────────────────
+function EditableNumCell({ value, format, onCommit, disabled, className = '', title }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  const startEdit = () => {
+    if (disabled) return;
+    // Représentation FR éditable : virgule décimale, pas d'espace
+    const s = value == null ? '' : String(value).replace('.', ',');
+    setDraft(s);
+    setEditing(true);
+  };
+  const commit = () => {
+    setEditing(false);
+    const parsed = parseFloat(String(draft).replace(',', '.').replace(/\s/g, ''));
+    if (!Number.isFinite(parsed) || parsed === value) return;
+    onCommit?.(parsed);
+  };
+  const cancel = () => setEditing(false);
+
+  if (editing) {
+    return (
+      <div className={`cell-r inv-v3-edit-cell ${className}`}>
+        <input
+          type="text"
+          inputMode="decimal"
+          autoFocus
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') { e.preventDefault(); commit(); }
+            if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+          }}
+          onFocus={(e) => e.target.select()}
+        />
+      </div>
+    );
+  }
+  return (
+    <div
+      className={`cell-r num ${className} ${disabled ? '' : 'inv-v3-editable'}`}
+      onClick={startEdit}
+      title={title || (disabled ? '' : 'Cliquer pour modifier')}
+      role={disabled ? undefined : 'button'}
+      tabIndex={disabled ? undefined : 0}
+      onKeyDown={(e) => { if (!disabled && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); startEdit(); } }}
+    >
+      {format ? format(value) : value}
+    </div>
+  );
 }
 
 function formatQty(q) {
@@ -2422,6 +2518,42 @@ function InvestmentDetailStyles() {
 }
 
 .inv-v3-val { font: 500 14px/1.2 var(--font-sans); color: var(--ink); }
+
+/* Cellules éditables inline */
+.inv-v3-editable {
+  cursor: text;
+  border-radius: 4px;
+  padding: 4px 6px;
+  margin: -4px -6px;
+  transition: background var(--t-fast), box-shadow var(--t-fast);
+  position: relative;
+}
+.inv-v3-editable:hover {
+  background: var(--bg-hover);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+.inv-v3-editable:focus-visible {
+  outline: none;
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.inv-v3-edit-cell {
+  padding: 0;
+}
+.inv-v3-edit-cell input {
+  width: 100%;
+  height: 32px;
+  text-align: right;
+  padding: 0 8px;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  background: var(--bg-elev);
+  color: var(--ink);
+  font: 500 14px/1 var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  outline: none;
+}
 .inv-v3-pl { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; font: 500 13px/1.2 var(--font-sans); }
 .inv-v3-pl.pos { color: var(--positive); }
 .inv-v3-pl.neg { color: var(--negative); }
