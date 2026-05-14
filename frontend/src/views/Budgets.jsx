@@ -2,10 +2,12 @@
 // Budgets — 50/30/20 method, per-category caps, savings goals
 // ============================================================================
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Target, Wallet, Plus, Edit3, Trash2, Check, Lightbulb, X } from 'lucide-react';
 import { formatDate } from '../utils.js';
 
 export function Budgets({ categories, budgets, setBudget, categoryAnalysis, fiftyThirtyTwenty, thisMonthStats, cashflowProjection, goals, saveGoal, deleteGoal, fmt }) {
+  const { t } = useTranslation();
   const [showGoalEditor, setShowGoalEditor] = useState(null);
   const [budgetMode, setBudgetMode] = useState('balanced'); // balanced | strict | flexible
 
@@ -38,8 +40,8 @@ export function Budgets({ categories, budgets, setBudget, categoryAnalysis, fift
     <div className="budgets-view">
       <div className="subview-header">
         <div>
-          <h1>Budgets <em>&amp; objectifs.</em></h1>
-          <p>Méthode 50/30/20, plafonds par catégorie et objectifs d&apos;épargne.</p>
+          <h1>{t('views.budgets.title')} <em>{t('views.budgets.titleAccent')}</em></h1>
+          <p>{t('views.budgets.subtitle')}</p>
         </div>
       </div>
       {/* 50/30/20 visualization */}

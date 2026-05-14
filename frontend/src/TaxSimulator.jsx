@@ -10,6 +10,7 @@
  */
 
 import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Calculator, AlertCircle, Info, TrendingUp, Users, Home } from 'lucide-react';
 import {
   computeTax,
@@ -41,6 +42,7 @@ const num = (v) => parseFloat(v) || 0;
 const intOrZero = (v) => Math.max(0, parseInt(v) || 0);
 
 export default function TaxSimulator({ transactions = [] }) {
+  const { t } = useTranslation();
   const estimatedGross = useMemo(() => estimateAnnualGross(transactions), [transactions]);
 
   // Earners — A is always present, B only when household = 'couple'.
@@ -113,8 +115,8 @@ export default function TaxSimulator({ transactions = [] }) {
       {/* Header */}
       <div className="subview-header mb-7">
         <div>
-          <h1>Simulateur <em>d'impôt.</em></h1>
-          <p>Revenus 2025 · barème déclaration 2026</p>
+          <h1>{t('views.tax.title')} <em>{t('views.tax.titleAccent')}</em></h1>
+          <p>{t('views.tax.subtitle')}</p>
         </div>
       </div>
 

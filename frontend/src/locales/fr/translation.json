@@ -25,6 +25,64 @@
     "cashflowTab": "Cashflow",
     "budgetsTab": "Budgets"
   },
+  "actions": {
+    "add": "Ajouter",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "save": "Enregistrer",
+    "validate": "Valider",
+    "cancel": "Annuler",
+    "back": "Retour",
+    "confirm": "Confirmer",
+    "next": "Suivant"
+  },
+  "confirms": {
+    "deleteItem": "Supprimer \"{{name}}\" ?",
+    "deleteGeneric": "Confirmer la suppression ?"
+  },
+  "views": {
+    "wealth": {
+      "title": "Votre",
+      "titleAccent": "patrimoine.",
+      "subtitle": "Actifs, passifs et allocation — par classe d'actif.",
+      "emptyCategory": "Aucun élément dans",
+      "noResults": "Aucun résultat."
+    },
+    "transactions": {
+      "title": "Vos",
+      "titleAccent": "transactions.",
+      "subtitle": "Toutes vos opérations bancaires. Cliquez une catégorie pour la modifier.",
+      "searchPlaceholder": "Rechercher dans les libellés…"
+    },
+    "monthly": {
+      "title": "Suivi",
+      "titleAccent": "mensuel.",
+      "subtitle": "Tous vos flux du mois — charges, abonnements, opérations neutres, revenus.",
+      "emptyFixed": "Aucune charge fixe enregistrée",
+      "emptySubs": "Aucun abonnement",
+      "emptyVariable": "Aucune dépense variable",
+      "emptyTransfers": "Aucun virement interne détecté",
+      "emptyIncome": "Aucun revenu enregistré ce mois",
+      "emptyMonth": "Aucune transaction ce mois-ci."
+    },
+    "budgets": {
+      "title": "Budgets",
+      "titleAccent": "& objectifs.",
+      "subtitle": "Méthode 50/30/20, plafonds par catégorie et objectifs d'épargne."
+    },
+    "analysis": {
+      "title": "Vos",
+      "titleAccent": "analyses.",
+      "subtitle": "Marchands, catégories et tendances de vos dépenses sur la durée.",
+      "empty": "Aucune transaction à analyser",
+      "emptyData": "Aucune donnée"
+    },
+    "tax": {
+      "title": "Simulateur",
+      "titleAccent": "d'impôt.",
+      "subtitle": "Revenus 2025 · barème déclaration 2026"
+    }
+  },
   "dashboard": {
     "greetingMorning": "Bonjour",
     "greetingAfternoon": "Bon après-midi",
