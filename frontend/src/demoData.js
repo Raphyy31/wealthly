@@ -180,12 +180,19 @@ const assets = [
   {
     id: 'demo-asset-pea',
     type: 'pea',
-    name: 'PEA Boursorama — World ETF',
+    name: 'PEA Boursorama',
     currentValue: 32500,
     notes: '80 % MSCI World, 20 % émergents',
     memberIds: [M.alice],
     updatedAt: new Date().toISOString(),
   },
+  // Positions PEA (Finary-style) — montrent la table de détail dans InvestmentDetail.
+  { id: 'demo-pos-amundi', parentAssetId: 'demo-asset-pea', type: 'stock_position', name: 'Amundi MSCI World UCITS ETF', isin: 'LU1681043599', quantity: 32,  purchasePrice: 318.50, currentValue: 13660,  memberIds: [M.alice], updatedAt: new Date().toISOString() },
+  { id: 'demo-pos-lyxor-w', parentAssetId: 'demo-asset-pea', type: 'stock_position', name: 'Lyxor PEA MSCI World UCITS ETF', isin: 'FR0011869353', quantity: 240, purchasePrice: 22.10,  currentValue: 6195,   memberIds: [M.alice], updatedAt: new Date().toISOString() },
+  { id: 'demo-pos-lyxor-n', parentAssetId: 'demo-asset-pea', type: 'stock_position', name: 'Lyxor NASDAQ-100 PEA UCITS ETF', isin: 'FR0011871128', quantity: 80,  purchasePrice: 41.20,  currentValue: 4370,   memberIds: [M.alice], updatedAt: new Date().toISOString() },
+  { id: 'demo-pos-lvmh',    parentAssetId: 'demo-asset-pea', type: 'stock_position', name: 'LVMH Moët Hennessy', isin: 'FR0000121014', quantity: 6,   purchasePrice: 612.00, currentValue: 4295,   memberIds: [M.alice], updatedAt: new Date().toISOString() },
+  { id: 'demo-pos-total',   parentAssetId: 'demo-asset-pea', type: 'stock_position', name: 'TotalEnergies SE', isin: 'FR0000120271', quantity: 40,  purchasePrice: 48.30,  currentValue: 2284,   memberIds: [M.alice], updatedAt: new Date().toISOString() },
+  { id: 'demo-pos-axa',     parentAssetId: 'demo-asset-pea', type: 'stock_position', name: 'AXA', isin: 'FR0000120628', quantity: 50,  purchasePrice: 28.40,  currentValue: 1620,   memberIds: [M.alice], updatedAt: new Date().toISOString() },
   {
     id: 'demo-asset-av',
     type: 'life_insurance',

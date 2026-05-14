@@ -1881,45 +1881,41 @@ function InvestmentDetail({ asset, assets = [], members = [], fmt, onEdit, onClo
 
   const owners = ownersList(asset.memberIds, members);
 
-  const topPosition = useMemo(() => {
-    if (!hasPositions) return null;
-    const sorted = [...positions].sort((a, b) => (parseFloat(b.currentValue) || 0) - (parseFloat(a.currentValue) || 0));
-    const top = sorted[0];
-    const v = parseFloat(top.currentValue) || 0;
-    return { name: top.name, value: v, pct: currentValue > 0 ? (v / currentValue) * 100 : 0 };
-  }, [positions, currentValue, hasPositions]);
-
-  const allocData = useMemo(() => {
-    if (positions.length < 2) return [];
-    const colors = ['var(--d1)', 'var(--d2)', 'var(--d3)', 'var(--d4)', 'var(--d5)', 'var(--d6)', 'var(--d7)'];
+  // Positions enrichies + triées par valeur décroissante (Finary-style).
+  const rows = useMemo(() => {
     return positions
-      .map((p, i) => ({
-        name: p.name,
-        value: parseFloat(p.currentValue) || 0,
-        color: colors[i % colors.length],
-        pct: currentValue > 0 ? ((parseFloat(p.currentValue) || 0) / currentValue) * 100 : 0,
-      }))
-      .filter(p => p.value > 0)
+      .map(p => {
+        const qty = parseFloat(p.quantity) || 0;
+        const value = parseFloat(p.currentValue) || 0;
+        const buy = parseFloat(p.purchasePrice) || 0;
+        const cours = qty > 0 ? value / qty : 0;
+        const invested = buy * qty;
+        const pl = value - invested;
+        const plPct = invested > 0 ? (pl / invested) * 100 : 0;
+        return {
+          id: p.id,
+          name: p.name || '—',
+          isin: p.isin || p.ticker || '',
+          qty,
+          cours,
+          value,
+          pl,
+          plPct,
+          invested,
+          color: positionColor(p.name),
+          initial: (p.name || '?').trim()[0]?.toUpperCase() || '?',
+        };
+      })
       .sort((a, b) => b.value - a.value);
-  }, [positions, currentValue]);
-
-  const chartData = useMemo(() => {
-    if (!asset.purchaseDate || invested <= 0) return [];
-    const startYear = new Date(asset.purchaseDate).getFullYear();
-    const endYear = new Date().getFullYear();
-    const years = Math.max(1, endYear - startYear);
-    const pts = [];
-    for (let i = 0; i <= years; i++) {
-      const ratio = i / years;
-      pts.push({ year: String(startYear + i), value: Math.round(invested + (currentValue - invested) * ratio) });
-    }
-    return pts;
-  }, [asset.purchaseDate, invested, currentValue]);
+  }, [positions]);
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal loan-finary-page" onClick={e => e.stopPropagation()}>
-        <div className="loan-finary-head">
+      <div className="modal inv-v3-page" onClick={e => e.stopPropagation()}>
+        <InvestmentDetailStyles/>
+
+        {/* Header */}
+        <div className="inv-v3-head">
           <button className="drawer-back" onClick={onClose}>
             <ChevronLeft size={14}/> Patrimoine · Investissements
           </button>
@@ -1927,190 +1923,404 @@ function InvestmentDetail({ asset, assets = [], members = [], fmt, onEdit, onClo
             <X size={18}/>
           </button>
 
-          <div className="drawer-title-row">
-            <div>
-              <h2 className="drawer-title">
-                {subtypeLabel} <em>{asset.name}.</em>
+          <div className="inv-v3-title-row">
+            <div className="inv-v3-title-block">
+              <div className="inv-v3-eyebrow">{subtypeLabel}</div>
+              <h2 className="inv-v3-title">
+                {asset.name?.split(' ')[0] || 'Compte'}{' '}
+                <em>{asset.name?.split(' ').slice(1).join(' ') || ''}.</em>
               </h2>
-              <div className="drawer-meta">
-                <span className="badge badge-manual"><Edit3 size={11}/> Manuel</span>
-                {hasPositions && <span style={{ marginLeft: 8 }}>{positions.length} positions</span>}
+              <div className="inv-v3-sub">
+                {rows.length > 0 && <span>{rows.length} position{rows.length > 1 ? 's' : ''}</span>}
+                {owners && <><span className="inv-v3-dot">·</span><span>{owners}</span></>}
               </div>
             </div>
-            <div className="drawer-total">
-              <div className="drawer-total-val w-num">{fmt(currentValue)}</div>
+            <div className="inv-v3-value-block">
+              <div className="inv-v3-hero-num num">{fmt(currentValue)}</div>
               {invested > 0 && (
-                <div className={`drawer-total-delta ${plLatente >= 0 ? 'up' : 'down'}`}>
-                  {plLatente >= 0 ? '+' : ''}{fmt(plLatente)} · {plLatente >= 0 ? '+' : ''}{plLatentePct.toFixed(1)}%
+                <div className={`inv-v3-hero-delta ${plLatente >= 0 ? 'pos' : 'neg'}`}>
+                  <span className="num">{plLatente >= 0 ? '+' : ''}{fmt(plLatente)}</span>
+                  <span className="inv-v3-dot">·</span>
+                  <span className="num">{plLatente >= 0 ? '+' : ''}{plLatentePct.toFixed(2)} %</span>
                 </div>
               )}
             </div>
           </div>
 
-          <div className="re-kpi-strip">
-            <div className="loan-monthly-panel">
-              <div className="loan-monthly-label">PERFORMANCE</div>
-              <div className="loan-monthly-val w-num">
-                <em className={plLatente >= 0 ? 'pl-up' : 'pl-down'}>{plLatente >= 0 ? '+' : ''}{fmt(plLatente)}</em>
-              </div>
-              <div className="loan-monthly-breakdown">
-                <div><span className="dot dot-cobalt"/>Investi <span className="w-num">{fmt(invested)}</span></div>
-                <div><span className="dot dot-sage"/>Valeur actuelle <span className="w-num">{fmt(currentValue)}</span></div>
-                <div><span className={`dot ${plLatente >= 0 ? 'dot-sage' : 'dot-terra'}`}/>Performance <span className={`w-num ${plLatente >= 0 ? 'pl-up' : 'pl-down'}`}>{plLatente >= 0 ? '+' : ''}{plLatentePct.toFixed(1)}%</span></div>
-              </div>
+          {/* Compact KPI strip */}
+          <div className="inv-v3-kpis">
+            <div className="inv-v3-kpi">
+              <div className="ds-micro">Investi</div>
+              <div className="inv-v3-kpi-val num">{fmt(invested)}</div>
             </div>
-
-            <div className="loan-monthly-panel">
-              <div className="loan-monthly-label">COMPOSITION</div>
-              <div className="loan-monthly-val w-num"><em>{positions.length} position{positions.length > 1 ? 's' : ''}</em></div>
-              <div className="loan-monthly-breakdown">
-                <div><span className="dot dot-cobalt"/>Titres <span className="w-num">{fmt(positionsValue)}</span></div>
-                <div><span className="dot dot-ocre"/>Cash disponible <span className="w-num">{fmt(cashAvailable)}</span></div>
-                {topPosition && (
-                  <div><span className="dot dot-mauve"/>Top : {topPosition.name} <span className="w-num">{topPosition.pct.toFixed(0)} %</span></div>
-                )}
-              </div>
+            <div className="inv-v3-kpi">
+              <div className="ds-micro">Valorisation</div>
+              <div className="inv-v3-kpi-val num">{fmt(currentValue)}</div>
             </div>
+            {hasPositions && (
+              <div className="inv-v3-kpi">
+                <div className="ds-micro">Liquidités</div>
+                <div className="inv-v3-kpi-val num">{fmt(cashAvailable)}</div>
+              </div>
+            )}
+            {isPEA && (
+              <div className="inv-v3-kpi">
+                <div className="ds-micro">Plafond PEA</div>
+                <div className="inv-v3-kpi-val num">
+                  {Math.round((invested / 150000) * 100)} %
+                  <span className="inv-v3-kpi-meta"> de 150 000 €</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="loan-finary-body">
-          <div className="loan-finary-grid">
-            <div className="loan-finary-chart">
-              {chartData.length >= 2 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={chartData} margin={{ left: 0, right: 24, top: 10, bottom: 8 }}>
-                    <defs>
-                      <linearGradient id="invValueFill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.3}/>
-                        <stop offset="100%" stopColor="var(--accent)" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" vertical={false}/>
-                    <XAxis dataKey="year" stroke="var(--text-tertiary)" fontSize={11} tickLine={false} axisLine={false}/>
-                    <YAxis tickFormatter={(v) => formatCurrency(v, { compact: true })} stroke="var(--text-tertiary)" fontSize={11} tickLine={false} axisLine={false} width={56}/>
-                    <Tooltip
-                      formatter={(v) => [fmt(v), 'Valeur']}
-                      contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-strong)', borderRadius: 8, fontSize: 12 }}
-                    />
-                    <Area type="monotone" dataKey="value" stroke="var(--accent)" strokeWidth={2} fill="url(#invValueFill)"/>
-                  </AreaChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="empty-mini" style={{ padding: '60px 0' }}>
-                  <BarChart3 size={24}/>
-                  <p>Renseigne la date d'achat et le prix de revient pour voir la courbe.</p>
-                </div>
-              )}
-            </div>
-
-            <div className="loan-finary-details">
-              <div className="loan-finary-detail-block">
-                <div className="loan-finary-detail-head">
-                  <span>Valeur actuelle</span>
-                  <span className="loan-finary-detail-value w-num">{fmt(currentValue)}</span>
+        {/* Body : table de positions Finary-style, ou état vide. */}
+        <div className="inv-v3-body">
+          {hasPositions ? (
+            <section className="ds-panel inv-v3-panel">
+              <div className="ds-panel-head">
+                <div>
+                  <div className="ds-panel-title">Positions</div>
+                  <div className="ds-panel-sub">Triées par valorisation décroissante</div>
                 </div>
               </div>
 
-              {invested > 0 && (
-                <div className="loan-finary-detail-block">
-                  <div className="loan-finary-detail-head">
-                    <span>Plus-value latente</span>
-                    <span className={`loan-finary-detail-value w-num ${plLatente >= 0 ? 'pl-up' : 'pl-down'}`}>
-                      {plLatente >= 0 ? '+' : ''}{fmt(plLatente)}
-                    </span>
-                  </div>
-                  <ul className="loan-finary-sub">
-                    <li><span>Performance</span><span className={`w-num ${plLatente >= 0 ? 'pl-up' : 'pl-down'}`}>{plLatente >= 0 ? '+' : ''}{plLatentePct.toFixed(1)} %</span></li>
-                    <li><span>Capital investi</span><span className="w-num">{fmt(invested)}</span></li>
-                  </ul>
+              <div className="inv-v3-table-wrap">
+                <div className="inv-v3-cols ds-micro">
+                  <div>Nom</div>
+                  <div className="cell-r">Quantité</div>
+                  <div className="cell-r">Cours</div>
+                  <div className="cell-r">Valeur</div>
+                  <div className="cell-r">+/- value</div>
                 </div>
-              )}
-
-              {isPEA && (
-                <div className="loan-finary-detail-block">
-                  <div className="loan-finary-detail-head">
-                    <span>Plafond PEA</span>
-                    <span className="loan-finary-detail-value w-num">{fmt(invested)} / {fmt(150000)}</span>
-                  </div>
-                  <div className="fiscal-bar"><div className="fiscal-bar-fill" style={{ width: `${Math.min(100, (invested / 150000) * 100)}%` }}/></div>
-                  <ul className="loan-finary-sub">
-                    <li><span>Versements cumulés</span><span className="w-num">{((invested / 150000) * 100).toFixed(0)} %</span></li>
-                  </ul>
-                </div>
-              )}
-
-              <div className="loan-finary-detail-block">
-                <div className="loan-finary-detail-head">
-                  <span>Détenteur·s</span>
-                  <span className="loan-finary-detail-value">{owners}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {allocData.length >= 2 && (
-            <div className="card invest-allocation">
-              <div className="loan-synth-eyebrow">RÉPARTITION DES POSITIONS</div>
-              <div className="allocation-body" style={{ marginTop: 12 }}>
-                <ResponsiveContainer width={200} height={200}>
-                  <PieChart>
-                    <Pie data={allocData} dataKey="value" cx="50%" cy="50%" innerRadius={55} outerRadius={88} paddingAngle={2}>
-                      {allocData.map((entry, i) => <Cell key={i} fill={entry.color}/>)}
-                    </Pie>
-                    <Tooltip formatter={(v) => fmt(v)} contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}/>
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="invest-allocation-list">
-                  {allocData.map((p, i) => (
-                    <div key={i} className="invest-allocation-row">
-                      <span><span className="invest-allocation-dot" style={{ background: p.color }}/>{p.name}</span>
-                      <span><span className="w-num">{fmt(p.value)}</span> · <span className="w-num">{p.pct.toFixed(1)} %</span></span>
+                {rows.map(r => (
+                  <div key={r.id} className="inv-v3-row">
+                    <div className="inv-v3-name">
+                      <span className="inv-v3-logo" style={{ background: r.color }}>{r.initial}</span>
+                      <div className="inv-v3-name-block">
+                        <div className="inv-v3-name-line">{r.name}</div>
+                        {r.isin && <div className="inv-v3-name-meta mono">{r.isin}</div>}
+                      </div>
                     </div>
-                  ))}
-                </div>
+                    <div className="cell-r num">{formatQty(r.qty)}</div>
+                    <div className="cell-r num">{fmt(r.cours)}</div>
+                    <div className="cell-r num inv-v3-val">{fmt(r.value)}</div>
+                    <div className={`cell-r inv-v3-pl ${r.pl >= 0 ? 'pos' : 'neg'}`}>
+                      <div className="num">{r.pl >= 0 ? '+' : ''}{fmt(r.pl)}</div>
+                      {r.invested > 0 && (
+                        <div className="num inv-v3-pl-pct">
+                          {r.pl >= 0 ? '+' : ''}{r.plPct.toFixed(2)} %
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
+
+              {cashAvailable > 0 && (
+                <div className="inv-v3-cash-row">
+                  <div className="inv-v3-name">
+                    <span className="inv-v3-logo inv-v3-logo-cash">€</span>
+                    <div className="inv-v3-name-block">
+                      <div className="inv-v3-name-line">Liquidités du compte</div>
+                      <div className="inv-v3-name-meta">Cash disponible</div>
+                    </div>
+                  </div>
+                  <div className="cell-r num inv-v3-val">{fmt(cashAvailable)}</div>
+                </div>
+              )}
+            </section>
+          ) : (
+            <section className="ds-panel inv-v3-empty">
+              <div className="inv-v3-empty-inner">
+                <BarChart3 size={28}/>
+                <h3>Aucune position importée</h3>
+                <p>Importe le relevé de positions de ton broker (CSV Bourse Direct, Boursorama…) pour voir le détail ligne à ligne. En attendant la valorisation globale du compte reste à <strong>{fmt(currentValue)}</strong>.</p>
+              </div>
+            </section>
           )}
+        </div>
 
-          <div className="loan-synth-cards">
-            <div className="card loan-synth-card">
-              <div className="loan-synth-eyebrow">INVESTI</div>
-              <div className="loan-synth-value w-num"><em>{fmt(invested)}</em></div>
-              <ul className="loan-synth-sub">
-                <li><span>Capital placé</span><span className="w-num">{fmt(invested)}</span></li>
-                <li><span>Nombre de positions</span><span className="w-num">{positions.length}</span></li>
-              </ul>
-            </div>
-
-            <div className="card loan-synth-card">
-              <div className="loan-synth-eyebrow">VALORISATION ACTUELLE</div>
-              <div className="loan-synth-value w-num"><em>{fmt(currentValue)}</em></div>
-              <ul className="loan-synth-sub">
-                <li><span>Performance globale</span><span className={`w-num ${plLatente >= 0 ? 'pl-up' : 'pl-down'}`}>{plLatente >= 0 ? '+' : ''}{plLatentePct.toFixed(1)} %</span></li>
-                <li><span>Cash disponible</span><span className="w-num">{fmt(cashAvailable)}</span></li>
-              </ul>
-            </div>
-
-            <div className="card loan-synth-card">
-              <div className="loan-synth-eyebrow">PLUS-VALUE LATENTE</div>
-              <div className="loan-synth-value w-num"><em className={plLatente >= 0 ? 'pl-up' : 'pl-down'}>{plLatente >= 0 ? '+' : ''}{fmt(plLatente)}</em></div>
-              <ul className="loan-synth-sub">
-                <li><span>%</span><span className={`w-num ${plLatente >= 0 ? 'pl-up' : 'pl-down'}`}>{plLatente >= 0 ? '+' : ''}{plLatentePct.toFixed(1)} %</span></li>
-                <li><span><em>Avant fiscalité</em></span><span/></li>
-              </ul>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-            <button className="secondary-btn" onClick={() => onEdit && onEdit()}>
-              <Edit3 size={14}/> Modifier
-            </button>
-          </div>
+        <div className="inv-v3-foot">
+          <button className="ds-btn" onClick={() => onEdit && onEdit()}>
+            <Edit3 size={14}/> Modifier
+          </button>
         </div>
       </div>
     </div>
   );
+}
+
+// Couleur déterministe par nom (cobalt / sage / terracotta / mauve / pink / grey / ocre).
+function positionColor(name) {
+  const colors = ['#2540D9', '#1F8E6E', '#C2733B', '#7B57C6', '#B85D7A', '#4D4D4D', '#E0B23E', '#7a8aa8'];
+  if (!name) return colors[0];
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return colors[h % colors.length];
+}
+
+function formatQty(q) {
+  if (q === 0) return '0';
+  if (Math.abs(q) >= 100) return q.toFixed(0);
+  if (Math.abs(q) >= 1) return q.toFixed(2);
+  return q.toFixed(4).replace(/\.?0+$/, '');
+}
+
+function InvestmentDetailStyles() {
+  const css = `
+.inv-v3-page {
+  max-width: 1180px; width: 95vw;
+  max-height: 92vh;
+  display: flex; flex-direction: column;
+  padding: 0;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+}
+.inv-v3-page .num { font-variant-numeric: tabular-nums; }
+.inv-v3-page .mono { font-family: var(--font-mono); }
+.inv-v3-page .cell-r { text-align: right; }
+
+/* Header */
+.inv-v3-head {
+  position: relative;
+  padding: 18px 28px 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-elev);
+}
+.inv-v3-head .drawer-back {
+  background: transparent; border: none; padding: 0;
+  display: inline-flex; align-items: center; gap: 6px;
+  font: 500 12px/1 var(--font-sans);
+  color: var(--ink-3);
+  cursor: pointer;
+  margin-bottom: 14px;
+  transition: color var(--t-fast);
+}
+.inv-v3-head .drawer-back:hover { color: var(--ink); }
+.inv-v3-head .drawer-close {
+  position: absolute; top: 16px; right: 18px;
+  width: 32px; height: 32px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-elev);
+  color: var(--ink-2);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: background var(--t-fast), color var(--t-fast);
+}
+.inv-v3-head .drawer-close:hover { background: var(--bg-hover); color: var(--ink); }
+
+.inv-v3-title-row {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 24px; flex-wrap: wrap;
+}
+.inv-v3-title-block { min-width: 0; flex: 1; }
+.inv-v3-eyebrow {
+  font: 500 11px/1.2 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+.inv-v3-title {
+  font: 500 26px/1.15 var(--font-sans);
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin: 0 0 6px;
+}
+.inv-v3-title em {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  color: var(--ink-2);
+}
+.inv-v3-sub {
+  display: inline-flex; align-items: center; gap: 6px;
+  font: 400 13px/1.4 var(--font-sans);
+  color: var(--ink-3);
+}
+.inv-v3-dot { color: var(--ink-mute); padding: 0 2px; }
+
+.inv-v3-value-block { text-align: right; }
+.inv-v3-hero-num {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: 38px;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+.inv-v3-hero-delta {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 8px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font: 500 13px/1 var(--font-sans);
+}
+.inv-v3-hero-delta.pos { background: var(--positive-soft); color: var(--positive); }
+.inv-v3-hero-delta.neg { background: var(--negative-soft); color: var(--negative); }
+
+/* KPI strip */
+.inv-v3-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  margin: 20px -28px 0;
+  border-top: 1px solid var(--border);
+}
+.inv-v3-kpi {
+  padding: 14px 20px;
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 4px;
+}
+.inv-v3-kpi:last-child { border-right: none; }
+.inv-v3-kpi-val {
+  font: 500 16px/1.1 var(--font-sans);
+  color: var(--ink);
+}
+.inv-v3-kpi-meta {
+  font: 400 11px/1 var(--font-sans);
+  color: var(--ink-3);
+  margin-left: 4px;
+}
+
+/* Body */
+.inv-v3-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 28px;
+  background: var(--bg);
+}
+.inv-v3-panel { background: var(--bg-elev); }
+
+.inv-v3-table-wrap { padding: 0; }
+.inv-v3-cols {
+  display: grid;
+  grid-template-columns: 2.2fr 0.9fr 0.9fr 1fr 1.2fr;
+  gap: 14px;
+  padding: 10px 20px;
+  background: var(--bg-sunk);
+  border-bottom: 1px solid var(--border);
+}
+.inv-v3-row {
+  display: grid;
+  grid-template-columns: 2.2fr 0.9fr 0.9fr 1fr 1.2fr;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+  transition: background var(--t-fast);
+}
+.inv-v3-row:first-of-type { border-top: none; }
+.inv-v3-row:hover { background: var(--bg-hover); }
+
+.inv-v3-name { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.inv-v3-logo {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff;
+  font: 600 12px/1 var(--font-sans);
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+.inv-v3-logo-cash {
+  background: var(--bg-sunk);
+  color: var(--ink-2);
+  border: 1px solid var(--border);
+  font-family: var(--font-serif);
+  font-size: 16px;
+}
+.inv-v3-name-block { min-width: 0; }
+.inv-v3-name-line {
+  font: 500 14px/1.2 var(--font-sans);
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.inv-v3-name-meta {
+  font: 400 11px/1.2 var(--font-mono);
+  color: var(--ink-3);
+  margin-top: 2px;
+  letter-spacing: 0.02em;
+}
+
+.inv-v3-val { font: 500 14px/1.2 var(--font-sans); color: var(--ink); }
+.inv-v3-pl { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; font: 500 13px/1.2 var(--font-sans); }
+.inv-v3-pl.pos { color: var(--positive); }
+.inv-v3-pl.neg { color: var(--negative); }
+.inv-v3-pl-pct { font-size: 11px; opacity: 0.8; }
+
+.inv-v3-cash-row {
+  display: grid;
+  grid-template-columns: 2.2fr 0.9fr 0.9fr 1fr 1.2fr;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-sunk);
+}
+.inv-v3-cash-row > .cell-r { grid-column: 5; }
+
+.inv-v3-empty { padding: 0; }
+.inv-v3-empty-inner {
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--ink-3);
+}
+.inv-v3-empty-inner svg { color: var(--ink-3); margin-bottom: 12px; }
+.inv-v3-empty-inner h3 {
+  margin: 0 0 8px;
+  font: 500 16px/1.2 var(--font-sans);
+  color: var(--ink);
+}
+.inv-v3-empty-inner p {
+  margin: 0 auto;
+  max-width: 520px;
+  font: 400 13px/1.55 var(--font-sans);
+}
+.inv-v3-empty-inner strong { color: var(--ink); font-weight: 500; }
+
+/* Footer */
+.inv-v3-foot {
+  padding: 14px 28px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-elev);
+  display: flex; justify-content: flex-end;
+}
+
+/* Mobile */
+@media (max-width: 720px) {
+  .inv-v3-page { width: 100vw; height: 100vh; max-height: 100vh; border-radius: 0; }
+  .inv-v3-head { padding: 14px 18px 0; }
+  .inv-v3-head .drawer-close { top: 12px; right: 12px; }
+  .inv-v3-title { font-size: 22px; }
+  .inv-v3-hero-num { font-size: 30px; }
+  .inv-v3-kpis { margin: 16px -18px 0; grid-template-columns: repeat(2, 1fr); }
+  .inv-v3-kpi { padding: 12px 16px; }
+  .inv-v3-kpi:nth-child(2n) { border-right: none; }
+  .inv-v3-body { padding: 14px; }
+  .inv-v3-cols,
+  .inv-v3-row,
+  .inv-v3-cash-row {
+    grid-template-columns: 1.5fr 1fr 1.1fr;
+    gap: 10px;
+    padding: 12px 14px;
+  }
+  .inv-v3-cols > div:nth-child(2),
+  .inv-v3-cols > div:nth-child(3),
+  .inv-v3-row > .cell-r:nth-child(2),
+  .inv-v3-row > .cell-r:nth-child(3) { display: none; }
+  .inv-v3-cash-row > .cell-r { grid-column: 3; }
+  .inv-v3-foot { padding: 12px 18px; }
+}
+`;
+  return <style dangerouslySetInnerHTML={{ __html: css }}/>;
 }
 
 // ============================================================================
