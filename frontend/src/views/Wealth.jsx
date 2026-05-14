@@ -424,12 +424,18 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
               await api.assets.create({
                 type: 'stocks',
                 name: p.name,
-                current_value: p.quantity * p.lastPrice,
+                current_value: p.amount || p.quantity * p.lastPrice,
                 currency: importingTo.currency || 'EUR',
                 quantity: p.quantity,
                 purchase_price: p.buyingPrice,
                 parent_asset_id: importingTo.sourceId,
                 member_ids: importingTo.memberIds || [],
+                // Stocke ISIN + ticker Yahoo si détectés — base pour les cours
+                // live dans InvestmentDetail. Le backend peut ignorer ces
+                // champs s'il ne les supporte pas encore (forward-compat).
+                ...(p.isin && { isin: p.isin }),
+                ...(p.ticker && { ticker: p.ticker }),
+                ...(p.tickerYahoo && { ticker_yahoo: p.tickerYahoo }),
               });
             }
             if (reload) await reload();
