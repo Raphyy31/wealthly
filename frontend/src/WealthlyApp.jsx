@@ -397,7 +397,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       setBankConnections(connList || []);
       setDcaPlans(dcaList || []);
     } catch (err) {
-      showToast('Erreur de chargement : ' + err.message, 'error');
+      showToast(t('toasts.loadError', { message: err.message }), 'error');
     }
   }, [demoMode]);
 
@@ -810,9 +810,9 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       }
       await reloadAll();
       setOnboarded(true);
-      showToast('Foyer configuré.', 'success');
+      showToast(t('toasts.householdSet'), 'success');
     } catch (err) {
-      showToast('Erreur : ' + err.message, 'error');
+      showToast(t('toasts.genericError', { message: err.message }), 'error');
     }
   };
 
@@ -836,15 +836,15 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
 
   const proceedToAccountStep = () => {
     if (!currentMapping.date || (!currentMapping.amount && (!currentMapping.debit || !currentMapping.credit))) {
-      showToast('Mappez au minimum la colonne Date et Montant (ou Débit + Crédit)', 'warning');
+      showToast(t('toasts.mapColumns'), 'warning');
       return;
     }
     setImportStep('account');
   };
 
   const proceedToPreview = async () => {
-    if (!importAccount.name) { showToast('Donnez un nom à ce compte', 'warning'); return; }
-    if (!importAccount.memberIds || importAccount.memberIds.length === 0) { showToast('Assignez ce compte à au moins un membre', 'warning'); return; }
+    if (!importAccount.name) { showToast(t('toasts.nameAccount'), 'warning'); return; }
+    if (!importAccount.memberIds || importAccount.memberIds.length === 0) { showToast(t('toasts.assignAccount'), 'warning'); return; }
     let accountId;
     const existing = accounts.find(a => a.name === importAccount.name && a.bank === importAccount.bank);
     accountId = existing ? existing.id : generateId();
@@ -871,7 +871,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             }
           });
           const aiCount = txs.filter(t => t.aiCategorized).length;
-          showToast(`${aiCount} transaction${aiCount > 1 ? 's' : ''} catégorisée${aiCount > 1 ? 's' : ''} par IA.`, 'success');
+          showToast(t('toasts.aiCategorized', { count: aiCount }), 'success');
         }
       } catch {
         // AI unavailable — silent fallback, uncategorized stays as-is
@@ -912,14 +912,14 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
         account_id: accountId, // override to ensure correct account
       }));
       const result = await api.transactions.bulkImport(accountId, txsForApi);
-      showToast(`✅ ${result.inserted} transactions ajoutées${result.skipped_duplicates > 0 ? ` · ${result.skipped_duplicates} doublons ignorés` : ''}`, 'success');
+      showToast(result.skipped_duplicates > 0 ? t('toasts.importedTxDup', { count: result.inserted, dup: result.skipped_duplicates }) : t('toasts.importedTx', { count: result.inserted }), 'success');
       // Reload from server to get fresh state
       await reloadAll();
       setImportFile(null); setImportStep('upload'); setParsedData(null);
       setCurrentMapping({}); setImportPreview([]); setImportAccount({ name: '', bank: '', memberIds: [], type: 'checking', initialBalance: 0 });
       setView('dashboard');
     } catch (err) {
-      showToast('Erreur d\'import : ' + err.message, 'error');
+      showToast(t('toasts.importError', { message: err.message }), 'error');
     }
   };
 
@@ -947,7 +947,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
           }
         }
       }
-    } catch (err) { showToast('Erreur : ' + err.message, 'error'); }
+    } catch (err) { showToast(t('toasts.genericError', { message: err.message }), 'error'); }
   };
 
   const toggleRecurring = async (txId, isFixed) => {
@@ -965,24 +965,24 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   const setTransferOverride = async (txId, value) => {
     setTransactions(prev => prev.map(t => t.id === txId ? { ...t, isTransferOverride: value } : t));
     try { await api.transactions.update(txId, { is_transfer_override: value }); }
-    catch (err) { showToast('Erreur : ' + err.message, 'error'); }
+    catch (err) { showToast(t('toasts.genericError', { message: err.message }), 'error'); }
   };
 
   const deleteTransaction = async (txId) => {
-    if (!confirm('Supprimer cette transaction ?')) return;
+    if (!confirm(t('confirms.deleteTransaction'))) return;
     try {
       await api.transactions.delete(txId);
       setTransactions(prev => prev.filter(t => t.id !== txId));
-    } catch (err) { showToast('Erreur : ' + err.message, 'error'); }
+    } catch (err) { showToast(t('toasts.genericError', { message: err.message }), 'error'); }
   };
 
   const createAccount = async (fields) => {
     try {
       const created = await api.accounts.create(accountToApi(fields));
       setAccounts(prev => [...prev, accountFromApi(created)]);
-      showToast('Compte ajouté', 'success');
+      showToast(t('toasts.accountAdded'), 'success');
       setShowAddAccount(false);
-    } catch (err) { showToast('Erreur : ' + err.message, 'error'); }
+    } catch (err) { showToast(t('toasts.genericError', { message: err.message }), 'error'); }
   };
 
   const updateAccount = async (accId, patch) => {
@@ -995,16 +995,16 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       const updated = await api.accounts.update(accId, apiPatch);
       const mapped = accountFromApi(updated);
       setAccounts(prev => prev.map(a => a.id === accId ? { ...a, ...mapped } : a));
-    } catch (err) { showToast('Erreur : ' + err.message, 'error'); }
+    } catch (err) { showToast(t('toasts.genericError', { message: err.message }), 'error'); }
   };
 
   const deleteAccount = async (accId) => {
-    if (!confirm('Supprimer ce compte et toutes ses transactions ?')) return;
+    if (!confirm(t('confirms.deleteAccount'))) return;
     try {
       await api.accounts.delete(accId);
       setAccounts(prev => prev.filter(a => a.id !== accId));
       setTransactions(prev => prev.filter(t => t.accountId !== accId));
-    } catch (err) { showToast('Erreur : ' + err.message, 'error'); }
+    } catch (err) { showToast(t('toasts.genericError', { message: err.message }), 'error'); }
   };
 
   const unlockAchievement = async (slug) => {
@@ -1020,15 +1020,15 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       const result = await api.banking.complete(pending.state);
       setBankingPendingState(null);
       if (result.status === 'authorized') {
-        showToast('🏦 Banque connectée ! Vous pouvez maintenant synchroniser vos transactions.', 'success');
+        showToast(t('toasts.bankConnected'), 'success');
         const conns = await api.banking.listConnections();
         setBankConnections(conns);
       } else {
-        showToast('En attente d\'autorisation bancaire...', 'info');
+        showToast(t('toasts.bankPending'), 'info');
       }
     } catch (err) {
       setBankingPendingState(null);
-      showToast('Erreur connexion bancaire : ' + err.message, 'error');
+      showToast(t('toasts.bankError', { message: err.message }), 'error');
     }
   }, []);
 
@@ -1041,22 +1041,22 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
 
   const syncBankConnection = async (connectionId) => {
     try {
-      showToast('⏳ Synchronisation en cours...', 'info');
+      showToast(t('toasts.syncRunning'), 'info');
       const result = await api.banking.sync(connectionId);
-      showToast(`✅ ${result.imported} nouvelles transactions importées`, 'success');
+      showToast(t('toasts.syncImported', { count: result.imported }), 'success');
       await reloadAll();
       if (result.imported > 0) unlockAchievement('first_import');
     } catch (err) {
-      showToast('Erreur sync : ' + err.message, 'error');
+      showToast(t('toasts.syncError', { message: err.message }), 'error');
     }
   };
 
   const syncAllBankAccounts = async () => {
     if (!bankConnections || bankConnections.length === 0) {
-      showToast('Aucune banque connectée — ajoutez un compte via Réglages.', 'info');
+      showToast(t('toasts.noBankConnected'), 'info');
       return;
     }
-    showToast('Synchronisation en cours…', 'info');
+    showToast(t('toasts.syncAllStart'), 'info');
     let totalImported = 0;
     let errors = 0;
     for (const conn of bankConnections) {
@@ -1069,14 +1069,14 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     }
     await reloadAll();
     if (errors > 0 && totalImported === 0) {
-      showToast(`Échec de la synchronisation (${errors} erreur${errors > 1 ? 's' : ''})`, 'error');
+      showToast(t('toasts.syncAllFail', { count: errors }), 'error');
     } else if (errors > 0) {
-      showToast(`${totalImported} transactions importées · ${errors} compte${errors > 1 ? 's' : ''} en erreur`, 'info');
+      showToast(t('toasts.syncAllPartial', { count: totalImported, errors }), 'info');
     } else {
       showToast(
         totalImported > 0
-          ? `${totalImported} nouvelle${totalImported > 1 ? 's' : ''} transaction${totalImported > 1 ? 's' : ''} importée${totalImported > 1 ? 's' : ''}`
-          : 'Comptes synchronisés — déjà à jour',
+          ? t('toasts.syncImported', { count: totalImported })
+          : t('toasts.syncRunning'),
         'success'
       );
     }
@@ -1084,13 +1084,13 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   };
 
   const deleteBankConnection = async (connectionId) => {
-    if (!confirm('Déconnecter cette banque ?')) return;
+    if (!confirm(t('confirms.deleteBank'))) return;
     try {
       await api.banking.deleteConnection(connectionId);
       setBankConnections(prev => prev.filter(c => c.id !== connectionId));
-      showToast('Connexion bancaire supprimée', 'info');
+      showToast(t('toasts.bankDeleted'), 'info');
     } catch (err) {
-      showToast('Erreur : ' + err.message, 'error');
+      showToast(t('toasts.genericError', { message: err.message }), 'error');
     }
   };
 
@@ -1102,16 +1102,16 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       else saved = await api.assets.create(apiPayload);
       const mapped = assetFromApi(saved);
       setAssets(prev => asset.id ? prev.map(a => a.id === asset.id ? mapped : a) : [...prev, mapped]);
-      showToast('💎 Actif enregistré', 'success');
-    } catch (err) { showToast('Erreur : ' + err.message, 'error'); }
+      showToast(t('toasts.assetSaved'), 'success');
+    } catch (err) { showToast(t('toasts.genericError', { message: err.message }), 'error'); }
   };
 
   const deleteAsset = async (assetId) => {
-    if (!confirm('Supprimer cet actif ?')) return;
+    if (!confirm(t('confirms.deleteAsset'))) return;
     try {
       await api.assets.delete(assetId);
       setAssets(prev => prev.filter(a => a.id !== assetId));
-    } catch (err) { showToast('Erreur : ' + err.message, 'error'); }
+    } catch (err) { showToast(t('toasts.genericError', { message: err.message }), 'error'); }
   };
 
   const saveLiability = async (lia) => {
@@ -1122,16 +1122,16 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       else saved = await api.liabilities.create(apiPayload);
       const mapped = liaFromApi(saved);
       setLiabilities(prev => lia.id ? prev.map(l => l.id === lia.id ? mapped : l) : [...prev, mapped]);
-      showToast('💳 Prêt enregistré', 'success');
-    } catch (err) { showToast('Erreur : ' + err.message, 'error'); }
+      showToast(t('toasts.loanSaved'), 'success');
+    } catch (err) { showToast(t('toasts.genericError', { message: err.message }), 'error'); }
   };
 
   const deleteLiability = async (liaId) => {
-    if (!confirm('Supprimer ce prêt ?')) return;
+    if (!confirm(t('confirms.deleteLoan'))) return;
     try {
       await api.liabilities.delete(liaId);
       setLiabilities(prev => prev.filter(l => l.id !== liaId));
-    } catch (err) { showToast('Erreur : ' + err.message, 'error'); }
+    } catch (err) { showToast(t('toasts.genericError', { message: err.message }), 'error'); }
   };
 
   const saveMember = async (member) => {
@@ -1141,16 +1141,16 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       if (member.id) saved = await api.members.update(member.id, payload);
       else saved = await api.members.create(payload);
       setMembers(prev => member.id ? prev.map(m => m.id === member.id ? saved : m) : [...prev, saved]);
-    } catch (err) { showToast('Erreur : ' + err.message, 'error'); }
+    } catch (err) { showToast(t('toasts.genericError', { message: err.message }), 'error'); }
   };
 
   const deleteMember = async (memberId) => {
-    if (!confirm('Supprimer ce membre ? Les comptes/actifs liés ne seront pas supprimés.')) return;
+    if (!confirm(t('confirms.deleteMember'))) return;
     try {
       await api.members.delete(memberId);
       setMembers(prev => prev.filter(m => m.id !== memberId));
       if (activeMemberId === memberId) setActiveMemberId('all');
-    } catch (err) { showToast('Erreur : ' + err.message, 'error'); }
+    } catch (err) { showToast(t('toasts.genericError', { message: err.message }), 'error'); }
   };
 
   const setBudget = async (categoryId, amount) => {
@@ -1158,7 +1158,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     try {
       await api.budgets.set(categoryId, num);
       setBudgets(prev => ({ ...prev, [categoryId]: num }));
-    } catch (err) { showToast('Erreur : ' + err.message, 'error'); }
+    } catch (err) { showToast(t('toasts.genericError', { message: err.message }), 'error'); }
   };
 
   const saveGoal = async (goal) => {
@@ -1169,15 +1169,15 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       else saved = await api.goals.create(apiPayload);
       const mapped = goalFromApi(saved);
       setGoals(prev => goal.id ? prev.map(g => g.id === goal.id ? mapped : g) : [...prev, mapped]);
-    } catch (err) { showToast('Erreur : ' + err.message, 'error'); }
+    } catch (err) { showToast(t('toasts.genericError', { message: err.message }), 'error'); }
   };
 
   const deleteGoal = async (id) => {
-    if (!confirm('Supprimer cet objectif ?')) return;
+    if (!confirm(t('confirms.deleteGoal'))) return;
     try {
       await api.goals.delete(id);
       setGoals(prev => prev.filter(g => g.id !== id));
-    } catch (err) { showToast('Erreur : ' + err.message, 'error'); }
+    } catch (err) { showToast(t('toasts.genericError', { message: err.message }), 'error'); }
   };
 
   const saveFixedCharge = async (charge) => {
@@ -1196,15 +1196,15 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       if (charge.id) saved = await api.fixedCharges.update(charge.id, payload);
       else saved = await api.fixedCharges.create(payload);
       setFixedCharges(prev => charge.id ? prev.map(f => f.id === charge.id ? saved : f) : [...prev, saved]);
-    } catch (err) { showToast('Erreur : ' + err.message, 'error'); }
+    } catch (err) { showToast(t('toasts.genericError', { message: err.message }), 'error'); }
   };
 
   const deleteFixedCharge = async (id) => {
-    if (!confirm('Supprimer cette charge fixe ?')) return;
+    if (!confirm(t('confirms.deleteFixed'))) return;
     try {
       await api.fixedCharges.delete(id);
       setFixedCharges(prev => prev.filter(f => f.id !== id));
-    } catch (err) { showToast('Erreur : ' + err.message, 'error'); }
+    } catch (err) { showToast(t('toasts.genericError', { message: err.message }), 'error'); }
   };
 
   const exportData = () => {
@@ -1219,28 +1219,28 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     a.href = url;
     a.download = `wealthly-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
-    showToast('📥 Backup téléchargé', 'success');
+    showToast(t('toasts.backupDownloaded'), 'success');
   };
 
   const importData = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (!confirm('Importer ce backup ajoutera ses données à votre foyer actuel (les doublons sont ignorés). Continuer ?')) return;
+    if (!confirm(t('confirms.import'))) return;
     try {
       const text = await file.text();
       const data = JSON.parse(text);
       const result = await api.migrate.importJson(data);
       const stats = result.imported || {};
-      showToast(`✅ Import : ${stats.transactions || 0} tx, ${stats.members || 0} membres, ${stats.assets || 0} actifs`, 'success');
+      showToast(t('toasts.backupImported', { tx: stats.transactions || 0, members: stats.members || 0, assets: stats.assets || 0 }), 'success');
       await reloadAll();
     } catch (err) {
-      showToast('Erreur : ' + err.message, 'error');
+      showToast(t('toasts.genericError', { message: err.message }), 'error');
     }
   };
 
   const resetAllData = async () => {
-    if (!confirm('Effacer TOUTES les données du foyer ? Cette action est irréversible.')) return;
-    if (!confirm('Vraiment sûr ? Faites un export avant !')) return;
+    if (!confirm(t('confirms.resetAll1'))) return;
+    if (!confirm(t('confirms.resetAll2'))) return;
     try {
       // Un seul appel backend qui purge tout en une transaction.
       // Beaucoup plus fiable que d'itérer entité par entité (où une
@@ -1264,9 +1264,9 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       setCustomRules([]);
       for (const k of Object.values(STORAGE_KEYS)) { try { await storage.delete(k); } catch {} }
       setOnboarded(false);
-      showToast('Données effacées', 'success');
+      showToast(t('toasts.resetDone'), 'success');
     } catch (err) {
-      showToast('Erreur lors du reset : ' + err.message, 'error');
+      showToast(t('toasts.resetError', { message: err.message }), 'error');
     }
   };
 
@@ -1728,7 +1728,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
               // Reload en arrière-plan pour récupérer d'éventuels effets de
               // bord côté backend (catégories par défaut, transactions, etc.).
               reloadAll().catch(() => {});
-              showToast('Élément ajouté à ton patrimoine', 'success');
+              showToast(t('toasts.itemAdded'), 'success');
               setShowAddAccount(false);
             } catch (err) {
               const msg = err?.message || 'Création impossible.';

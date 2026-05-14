@@ -42,15 +42,15 @@ const INITIAL = (s) => {
   return ((t[0]?.[0] || '') + (t[1]?.[0] || t[0]?.[1] || '')).toUpperCase();
 };
 
-// "il y a X min" relative time pour la sync
-const relTime = (d = new Date(Date.now() - 4 * 60_000)) => {
+// "il y aX min" relative time pour la sync
+const relTime = (d = new Date(Date.now() - 4 * 60_000), tFn = (k) => k) => {
   const sec = Math.floor((Date.now() - d.getTime()) / 1000);
-  if (sec < 60) return `il y a ${sec} s`;
+  if (sec < 60) return `il y a${sec} s`;
   const min = Math.floor(sec / 60);
-  if (min < 60) return `il y a ${min} min`;
+  if (min < 60) return `il y a${min} min`;
   const h = Math.floor(min / 60);
-  if (h < 24) return `il y a ${h} h`;
-  return `il y a ${Math.floor(h / 24)} j`;
+  if (h < 24) return `il y a${h} h`;
+  return `il y a${Math.floor(h / 24)} j`;
 };
 
 const greeting = (t) => {
@@ -244,19 +244,20 @@ export function Dashboard({
     if (thisMonthStats?.income > 0) {
       const rate = (monthSaving / thisMonthStats.income) * 100;
       if (rate >= 30) {
-        list.push({ variant: 'pos', icon: <TrendingUp size={14}/>, title: 'Excellent taux d\'épargne', body: `${formatEUR(monthSaving)} épargnés ce mois, ${rate.toFixed(0)} % des revenus.` });
+        list.push({ variant: 'pos', icon: <TrendingUp size={14}/>, title: t('dashboard.insightSavingsExcellentTitle'), body: t('dashboard.insightSavingsExcellentBody', { amount: formatEUR(monthSaving), pct: rate.toFixed(0) }) /* OLD */ });
+        // _ B` });
       } else if (rate < 0) {
-        list.push({ variant: 'neg', icon: <AlertTriangle size={14}/>, title: 'Dépenses supérieures aux revenus', body: `${formatEUR(Math.abs(monthSaving))} à combler ce mois.` });
+        list.push({ variant: 'neg', icon: <AlertTriangle size={14}/>, title: t('dashboard.insightOverspendTitle'), body: `${formatEUR(Math.abs(monthSaving))} à combler ce mois.` });
       } else {
-        list.push({ variant: 'neutral', icon: <Sparkles size={14}/>, title: 'Marge mensuelle', body: `${formatEUR(monthSaving)} de marge — visez 30 % pour solidifier l'épargne.` });
+        list.push({ variant: 'neutral', icon: <Sparkles size={14}/>, title: t('dashboard.insightMarginTitle'), body: `${formatEUR(monthSaving)} de marge — visez 30 % pour solidifier l'épargne.` });
       }
     }
     const overBudgets = Object.entries(budgets).filter(([id, a]) => (categoryAnalysis[id]?.current || 0) > a);
     if (overBudgets.length) {
-      list.push({ variant: 'neg', icon: <AlertTriangle size={14}/>, title: `${overBudgets.length} budget${overBudgets.length > 1 ? 's' : ''} dépassé${overBudgets.length > 1 ? 's' : ''}`, body: 'À examiner dans la section budgets.' });
+      list.push({ variant: 'neg', icon: <AlertTriangle size={14}/>, title: t('dashboard.insightBudgetOverTitle', { count: overBudgets.length }), body: t('dashboard.insightBudgetOverBody') });
     }
     if (periodDelta.pct > 5) {
-      list.push({ variant: 'pos', icon: <TrendingUp size={14}/>, title: 'Patrimoine en hausse', body: `+${periodDelta.pct.toFixed(1)} % sur la période — la trajectoire est bonne.` });
+      list.push({ variant: 'pos', icon: <TrendingUp size={14}/>, title: t('dashboard.insightWealthUpTitle'), body: `+${periodDelta.pct.toFixed(1)} % sur la période — la trajectoire est bonne.` });
     }
     return list.slice(0, 3);
   }, [thisMonthStats, monthSaving, budgets, categoryAnalysis, periodDelta, categoryCompare, categories, formatEUR, t]);
@@ -279,13 +280,13 @@ export function Dashboard({
             {userFirstName && <em className="dash-h1-em">{` ${userFirstName}`}</em>}
           </h1>
           <div className="dash-sub">
-            {visibleAccounts?.length || 0}&nbsp;compte{(visibleAccounts?.length || 0) > 1 ? 's' : ''} connecté{(visibleAccounts?.length || 0) > 1 ? 's' : ''}
+            {t('dashboard.accountsConnected', { count: visibleAccounts?.length || 0 })}
           </div>
         </div>
         <div className="dash-actions">
           <button
             className="ds-btn"
-            title="Télécharger le bilan en PDF"
+            title={t('dashboard.pdfTitle')}
             onClick={async () => {
               const { generateBilanPdf } = await import('../pdfReport.js');
               generateBilanPdf({
@@ -309,11 +310,11 @@ export function Dashboard({
               setSyncing(true);
               try { await onSyncAll(); } finally { setSyncing(false); }
             }}
-            title={hasConnections ? 'Synchroniser toutes les banques' : 'Aucune banque connectée'}
+            title={hasConnections ? t('dashboard.syncTitle') : t('dashboard.noBanksTitle')}
             style={{ opacity: syncing ? 0.6 : 1 }}
           >
             {syncing
-              ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }}/> <span className="dash-btn-label">Sync…</span></>
+              ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }}/> <span className="dash-btn-label">{t('dashboard.syncing')}</span></>
               : <><RefreshCw size={14}/> <span className="dash-btn-label">{t('dashboard.sync')}</span></>
             }
           </button>
@@ -387,7 +388,7 @@ export function Dashboard({
                 </li>
               ))}
               {!allocationData.length && (
-                <li style={{ color: 'var(--ink-3)', padding: '6px 0' }}>Aucune donnée pour l'instant.</li>
+                <li style={{ color: 'var(--ink-3)', padding: '6px 0' }}>{t('dashboard.noAllocData')}</li>
               )}
             </ul>
           </div>
@@ -429,7 +430,7 @@ export function Dashboard({
                 <div className="cell-r"><Sparkline data={spark}/></div>
                 <div className="cell-r" style={{ color: 'var(--ink-3)', fontSize: 12 }}>{prettyType(a.type)}</div>
                 <div className="cell-r" style={{ color: a.lastSyncedAt ? 'var(--positive)' : 'var(--ink-3)', fontSize: 11.5 }}>
-                  {a.lastSyncedAt ? relTime(new Date(a.lastSyncedAt)) : (a.source === 'gocardless' ? 'En attente' : '—')}
+                  {a.lastSyncedAt ? relTime(new Date(a.lastSyncedAt), t) : (a.source === 'gocardless' ? t('dashboard.syncPending') : '—')}
                 </div>
                 <div className="cell-r"><span className="ds-icon-btn" style={{ width: 26, height: 26 }} onClick={(e) => e.stopPropagation()}><MoreHorizontal size={14}/></span></div>
               </button>
@@ -472,26 +473,26 @@ export function Dashboard({
                     {grp.total >= 0 ? '+' : ''}{formatEUR(grp.total)}
                   </span>
                 </div>
-                {grp.txs.map(t => {
-                  const cat = categories.find(c => c.id === t.categoryId || c.slug === t.categoryId);
-                  const isTransfer = transferIds.has(t.id);
+                {grp.txs.map(tx => {
+                  const cat = categories.find(c => c.id === tx.categoryId || c.slug === tx.categoryId);
+                  const isTransfer = transferIds.has(tx.id);
                   return (
-                    <div key={t.id} className="tx-row">
+                    <div key={tx.id} className="tx-row">
                       <div className="ds-tx-icon" style={{
-                        background: t.amount >= 0 ? 'var(--positive-soft)' : 'var(--neutral-soft)',
-                        color: t.amount >= 0 ? 'var(--positive)' : 'var(--ink-2)',
-                      }}>{INITIAL(t.label)}</div>
+                        background: tx.amount >= 0 ? 'var(--positive-soft)' : 'var(--neutral-soft)',
+                        color: tx.amount >= 0 ? 'var(--positive)' : 'var(--ink-2)',
+                      }}>{INITIAL(tx.label)}</div>
                       <div className="tx-mid">
-                        <div className="tx-label">{t.label || '(sans libellé)'}</div>
+                        <div className="tx-label">{tx.label || t('dashboard.noLabel')}</div>
                         <div className="tx-meta">
                           {isTransfer
-                            ? <span className="ds-pill accent">Transfert</span>
-                            : <span className="ds-pill">{cat?.name || 'Non catégorisé'}</span>}
-                          <span>{accountName(visibleAccounts, t.accountId)}</span>
+                            ? <span className="ds-pill accent">{t('dashboard.transferPill')}</span>
+                            : <span className="ds-pill">{cat?.name || t('dashboard.uncategorized')}</span>}
+                          <span>{accountName(visibleAccounts, tx.accountId)}</span>
                         </div>
                       </div>
-                      <div className="tx-amount num" style={{ color: t.amount > 0 ? 'var(--positive)' : 'var(--ink)' }}>
-                        {t.amount >= 0 ? '+' : ''}{formatEUR(t.amount)}
+                      <div className="tx-amount num" style={{ color: tx.amount > 0 ? 'var(--positive)' : 'var(--ink)' }}>
+                        {tx.amount >= 0 ? '+' : ''}{formatEUR(tx.amount)}
                       </div>
                     </div>
                   );
@@ -511,7 +512,7 @@ export function Dashboard({
           <div className="ds-panel">
             <div className="ds-panel-head">
               <div>
-                <div className="ds-panel-title">Budget · {monthName(currentMonth)}</div>
+                <div className="ds-panel-title">{t('dashboard.budgetTitle', { month: monthName(currentMonth) })}</div>
                 <div className="ds-panel-sub num">{formatEUR(totalSpent)} / {formatEUR(totalBudget)}</div>
               </div>
               <button className="link-btn" onClick={() => setView?.('budgets')}>{t('dashboard.viewAll')} →</button>
@@ -535,14 +536,14 @@ export function Dashboard({
                     />
                   </div>
                   <div className="budget-line3">
-                    <span style={{ color: 'var(--ink-3)' }}>{b.pct >= 100 ? 'Dépassé' : `Reste ${formatEUR(Math.max(0, b.amount - b.spent))}`}</span>
+                    <span style={{ color: 'var(--ink-3)' }}>{b.pct >= 100 ? t('dashboard.budgetOver') : t('dashboard.budgetRest', { amount: formatEUR(Math.max(0, b.amount - b.spent)) })}</span>
                     <span className="mono num">{b.pct.toFixed(0)} %</span>
                   </div>
                 </div>
               ))}
               {!budgetItems.length && (
                 <div style={{ padding: 14, color: 'var(--ink-3)', fontSize: 13 }}>
-                  Aucun budget défini. <button className="link-btn" onClick={() => setView?.('budgets')}>En créer →</button>
+                  {t('dashboard.budgetEmpty')} <button className="link-btn" onClick={() => setView?.('budgets')}>{t('dashboard.budgetCreate')}</button>
                 </div>
               )}
             </div>
@@ -552,7 +553,7 @@ export function Dashboard({
           <div className="ds-panel">
             <div className="ds-panel-head">
               <div>
-                <div className="ds-panel-title">Insights</div>
+                <div className="ds-panel-title">{t('dashboard.insights')}</div>
                 <div className="ds-panel-sub">{t('dashboard.insightsGenerated')}</div>
               </div>
             </div>
@@ -568,7 +569,7 @@ export function Dashboard({
               ))}
               {!insights.length && (
                 <div style={{ padding: 14, color: 'var(--ink-3)', fontSize: 13 }}>
-                  Plus d'insights apparaîtront avec quelques mois de données.
+                  {t('dashboard.insightsEmpty')}
                 </div>
               )}
             </div>

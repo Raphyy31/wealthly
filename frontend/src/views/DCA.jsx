@@ -3,6 +3,7 @@
 // Plans DCA (Dollar Cost Averaging) : création, suivi, projection compound.
 // ============================================================================
 import { useState, useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from 'recharts';
@@ -187,6 +188,7 @@ const EMPTY = {
 };
 
 function PlanModal({ plan, accounts, members, onSave, onClose }) {
+  const { t } = useTranslation();
   const [d, setD] = useState(plan ? {
     ...EMPTY, ...plan,
     amount: plan.amount ?? '',
@@ -212,34 +214,34 @@ function PlanModal({ plan, accounts, members, onSave, onClose }) {
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" style={{ maxWidth: 520 }} onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>{plan?.id ? 'Modifier le plan' : 'Nouveau plan DCA'}</h2>
+          <h2>{plan?.id ? t('dca.editPlan') : t('dca.newPlanTitle')}</h2>
           <button className="icon-btn-sm" onClick={onClose}><X size={16}/></button>
         </div>
         <div className="modal-body">
 
-          <label><span>Nom du plan</span>
+          <label><span>{t('dca.planName')}</span>
             <input value={d.name} onChange={e => set('name', e.target.value)}
-              placeholder="ex: DCA ETF Monde mensuel" autoFocus/>
+              placeholder={t('dca.planNamePh')} autoFocus/>
           </label>
 
           <div className="field-row">
-            <label><span>Ticker Bloomberg / Yahoo</span>
+            <label><span>{t('dca.tickerLabel')}</span>
               <input value={d.ticker} onChange={e => set('ticker', e.target.value.toUpperCase())}
                 placeholder="CW8.PA, SP500, BTC-EUR…"
                 style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}/>
             </label>
-            <label><span>Libellé (si pas de ticker)</span>
+            <label><span>{t('dca.assetLabel')}</span>
               <input value={d.asset_name} onChange={e => set('asset_name', e.target.value)}
                 placeholder="MSCI World Amundi"/>
             </label>
           </div>
 
           <div className="field-row">
-            <label><span>Montant / versement</span>
+            <label><span>{t('dca.amountPer')}</span>
               <input type="number" value={d.amount} onChange={e => set('amount', e.target.value)}
                 placeholder="300" step="any" min="1"/>
             </label>
-            <label><span>Devise</span>
+            <label><span>{t('dca.currency')}</span>
               <select value={d.currency} onChange={e => set('currency', e.target.value)}>
                 <option value="EUR">🇪🇺 EUR</option>
                 <option value="USD">🇺🇸 USD</option>
@@ -250,38 +252,38 @@ function PlanModal({ plan, accounts, members, onSave, onClose }) {
           </div>
 
           <div className="field-row">
-            <label><span>Fréquence</span>
+            <label><span>{t('dca.frequency')}</span>
               <select value={d.frequency} onChange={e => set('frequency', e.target.value)}>
-                <option value="monthly">Mensuel</option>
-                <option value="quarterly">Trimestriel</option>
-                <option value="annual">Annuel</option>
+                <option value="monthly">{t('dca.frequencyMonthly')}</option>
+                <option value="quarterly">{t('dca.frequencyQuarterly')}</option>
+                <option value="annual">{t('dca.frequencyAnnual')}</option>
               </select>
             </label>
-            <label><span>Jour du mois</span>
+            <label><span>{t('dca.dayOfMonth')}</span>
               <input type="number" value={d.day_of_month} onChange={e => set('day_of_month', e.target.value)}
                 min="1" max="28"/>
             </label>
           </div>
 
           <div className="field-row">
-            <label><span>Compte de débit</span>
+            <label><span>{t('dca.debitAccount')}</span>
               <select value={d.account_id} onChange={e => set('account_id', e.target.value)}>
-                <option value="">— Aucun —</option>
+                <option value="">{t('dca.noneOption')}</option>
                 {(accounts || []).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select>
             </label>
-            <label><span>Date de démarrage</span>
+            <label><span>{t('dca.startDate')}</span>
               <input type="date" value={d.start_date} onChange={e => set('start_date', e.target.value)}/>
             </label>
           </div>
 
           <div className="field-row">
-            <label><span>Horizon de projection (ans)</span>
+            <label><span>{t('dca.horizonYears')}</span>
               <input type="number" value={d.target_years} onChange={e => set('target_years', e.target.value)}
                 min="1" max="40"/>
             </label>
             <label>
-              <span>Rendement annuel estimé (%)</span>
+              <span>{t('dca.expectedReturn')}</span>
               <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
                 {RETURN_PRESETS.map(p => (
                   <button key={p.value} type="button"
@@ -298,15 +300,15 @@ function PlanModal({ plan, accounts, members, onSave, onClose }) {
             </label>
           </div>
 
-          <label><span>Notes</span>
+          <label><span>{t('dca.notes')}</span>
             <textarea value={d.notes} onChange={e => set('notes', e.target.value)}
-              rows={2} placeholder="Stratégie, règle de rééquilibrage…"/>
+              rows={2} placeholder={t('dca.notesPh')}/>
           </label>
         </div>
         <div className="modal-footer">
-          <button className="secondary-btn" onClick={onClose}>Annuler</button>
+          <button className="secondary-btn" onClick={onClose}>{t('actions.cancel')}</button>
           <button className="primary-btn" onClick={submit} disabled={saving || !d.name || !d.amount}>
-            <Check size={14}/> {saving ? 'Enregistrement…' : 'Enregistrer'}
+            <Check size={14}/> {saving ? t('actions.saving') : t('actions.save')}
           </button>
         </div>
       </div>
@@ -316,6 +318,8 @@ function PlanModal({ plan, accounts, members, onSave, onClose }) {
 
 // ── Plan card ────────────────────────────────────────────────────────────────
 function PlanCard({ plan, accounts, quotes, onEdit, onToggle, onDelete }) {
+  const { t } = useTranslation();
+  const FREQ_LABEL_LOCAL = { monthly: t('dca.perFrequencyMonthly'), quarterly: t('dca.perFrequencyQuarterly'), annual: t('dca.perFrequencyAnnual') };
   const [expanded, setExpanded] = useState(false);
   const [horizon, setHorizon] = useState(plan.target_years || 10);
 
@@ -358,14 +362,14 @@ function PlanCard({ plan, accounts, quotes, onEdit, onToggle, onDelete }) {
               fontSize: 10, fontWeight: 600, letterSpacing: '0.14em',
               background: 'var(--border)', color: 'var(--text-tertiary)',
               padding: '2px 6px', borderRadius: 4,
-            }}>PAUSE</span>
+            }}>{t('dca.paused')}</span>
           )}
         </h3>
         <span className="card-meta">
-          {fmt(plan.amount)} / {FREQ_LABEL[plan.frequency]}
+          {fmt(plan.amount)} / {FREQ_LABEL_LOCAL[plan.frequency]}
           {acc && <> · {acc.name}</>}
-          {plan.start_date && <> · depuis {new Date(plan.start_date).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}</>}
-          {quote && <> · cours {fmt(quote.price)}</>}
+          {plan.start_date && <> · {t('dca.since', { date: new Date(plan.start_date).toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) })}</>}
+          {quote && <> · {t('dca.price', { price: fmt(quote.price) })}</>}
         </span>
       </div>
 
@@ -373,39 +377,39 @@ function PlanCard({ plan, accounts, quotes, onEdit, onToggle, onDelete }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', gap: 28, flex: 1, minWidth: 0 }}>
           <div>
-            <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 5 }}>Investi</div>
+            <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 5 }}>{t('dca.invested')}</div>
             <div style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.015em', fontVariantNumeric: 'tabular-nums', color: 'var(--ink)' }}>{fmt(currentInvested)}</div>
           </div>
           <div>
             <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 5 }}>
-              {isReal ? 'Valeur actuelle' : 'Valeur théorique'}
+              {isReal ? t('dca.currentValue') : t('dca.theoreticalValue')}
             </div>
             <div style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.015em', fontVariantNumeric: 'tabular-nums', color: 'var(--accent)' }}>
               {fmt(currentValue)}
             </div>
           </div>
           <div>
-            <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 5 }}>+/− value</div>
+            <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 5 }}>{t('dca.plusValue')}</div>
             <div style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.015em', fontVariantNumeric: 'tabular-nums', color: currentGain >= 0 ? 'var(--positive)' : 'var(--negative)' }}>
               {currentGain >= 0 ? '+' : ''}{fmt(currentGain)}
             </div>
           </div>
           <div>
-            <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 5 }}>Projeté {horizon}a</div>
+            <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 5 }}>{t('dca.projectedFor', { n: horizon })}</div>
             <div style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.015em', fontVariantNumeric: 'tabular-nums', color: 'var(--ink)' }}>{fmt(fv)} <span style={{ color: 'var(--positive)', fontSize: 13, marginLeft: 4 }}>×{multiplier.toFixed(1)}</span></div>
           </div>
         </div>
 
         {/* Actions */}
         <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-          <button className="icon-btn-sm" onClick={() => setExpanded(e => !e)} title="Voir la projection">
+          <button className="icon-btn-sm" onClick={() => setExpanded(e => !e)} title={t('dca.viewProjection')}>
             {expanded ? <ChevronUp size={14}/> : <ChevronDown size={14}/>}
           </button>
-          <button className="icon-btn-sm" onClick={() => onEdit(plan)} title="Modifier"><Edit2 size={13}/></button>
-          <button className="icon-btn-sm" onClick={() => onToggle(plan)} title={plan.status === 'active' ? 'Mettre en pause' : 'Reprendre'}>
+          <button className="icon-btn-sm" onClick={() => onEdit(plan)} title={t('actions.edit')}><Edit2 size={13}/></button>
+          <button className="icon-btn-sm" onClick={() => onToggle(plan)} title={plan.status === 'active' ? t('dca.pause') : t('dca.resume')}>
             {plan.status === 'active' ? <Pause size={13}/> : <Play size={13}/>}
           </button>
-          <button className="icon-btn-sm" style={{ color: 'var(--danger)' }} onClick={() => onDelete(plan)} title="Supprimer">
+          <button className="icon-btn-sm" style={{ color: 'var(--danger)' }} onClick={() => onDelete(plan)} title={t('actions.delete')}>
             <Trash2 size={13}/>
           </button>
         </div>
@@ -416,7 +420,7 @@ function PlanCard({ plan, accounts, quotes, onEdit, onToggle, onDelete }) {
         <div style={{ borderTop: '1px dotted var(--border)', marginTop: 16, paddingTop: 16 }}>
           {/* Horizon tabs */}
           <div style={{ display: 'flex', gap: 6, marginBottom: 16, alignItems: 'center' }}>
-            <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginRight: 4 }}>Horizon</span>
+            <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginRight: 4 }}>{t('dca.horizon')}</span>
             {[5, 10, 20, 30].filter(y => y <= 40).map(y => (
               <button key={y} onClick={() => setHorizon(y)}
                 style={{
@@ -425,11 +429,11 @@ function PlanCard({ plan, accounts, quotes, onEdit, onToggle, onDelete }) {
                   color: horizon === y ? '#0a0b0e' : 'var(--text-secondary)',
                   cursor: 'pointer', fontFamily: 'inherit', fontWeight: horizon === y ? 700 : 400,
                 }}>
-                {y} ans
+                {t('dca.years', { n: y })}
               </button>
             ))}
             <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-tertiary)' }}>
-              Taux : <strong style={{ color: 'var(--text-primary)' }}>{plan.expected_return} %</strong> / an
+              {t('dca.rate')} : <strong style={{ color: 'var(--text-primary)' }}>{plan.expected_return} %</strong> {t('dca.perYear')}
             </span>
           </div>
 
@@ -462,10 +466,10 @@ function PlanCard({ plan, accounts, quotes, onEdit, onToggle, onDelete }) {
           {/* Stats row */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginTop: 14 }}>
             {[
-              { label: 'Capital investi', value: fmt(totalInvested) },
-              { label: 'Valeur projetée', value: fmt(fv), gold: true },
-              { label: 'Gains composés', value: fmt(fv - totalInvested), green: true },
-              { label: 'Multiplicateur', value: `×${multiplier.toFixed(2)}`, green: true },
+              { label: t('dca.capitalInvestedShort'), value: fmt(totalInvested) },
+              { label: t('dca.projectedValue'), value: fmt(fv), gold: true },
+              { label: t('dca.compoundGains'), value: fmt(fv - totalInvested), green: true },
+              { label: t('dca.multiplier'), value: `×${multiplier.toFixed(2)}`, green: true },
             ].map(s => (
               <div key={s.label} style={{ background: 'var(--bg-subtle)', borderRadius: 8, padding: '10px 12px' }}>
                 <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 4 }}>{s.label.toUpperCase()}</div>
@@ -490,6 +494,7 @@ function PlanCard({ plan, accounts, quotes, onEdit, onToggle, onDelete }) {
 
 // ── Aggregated projection hero ───────────────────────────────────────────────
 function ProjectionHero({ plans, quotes, fmt0 }) {
+  const { t } = useTranslation();
   const [horizon, setHorizon] = useState(10);
   // Plan filter: Set of plan IDs to include. null = all plans.
   const [selectedIds, setSelectedIds] = useState(null);
@@ -542,7 +547,7 @@ function ProjectionHero({ plans, quotes, fmt0 }) {
   return (
     <section className="card dca-hero">
       <div className="card-header">
-        <h3><TrendingUp size={14}/> Projection globale</h3>
+        <h3><TrendingUp size={14}/> {t('dca.globalProjection')}</h3>
         <div className="dca-horizon">
           {[5, 10, 20, 30].map(y => (
             <button
@@ -550,7 +555,7 @@ function ProjectionHero({ plans, quotes, fmt0 }) {
               className={`dca-horizon-tab ${horizon === y ? 'is-active' : ''}`}
               onClick={() => setHorizon(y)}
             >
-              {y} ans
+              {t('dca.years', { n: y })}
             </button>
           ))}
         </div>
@@ -559,18 +564,18 @@ function ProjectionHero({ plans, quotes, fmt0 }) {
       {plans.length === 0 ? (
         <div className="empty-mini">
           <TrendingUp size={24}/>
-          <p>La courbe de projection apparaîtra dès que vous créerez un premier plan.</p>
+          <p>{t('dca.projectionEmpty')}</p>
         </div>
       ) : (
         <>
           {plans.length > 1 && (
             <div className="dca-filter">
-              <span className="dca-filter-label">Plans inclus</span>
+              <span className="dca-filter-label">{t('dca.plansIncluded')}</span>
               <button
                 className={`dca-chip ${isAll ? 'is-active' : ''}`}
                 onClick={() => setSelectedIds(null)}
               >
-                Tous
+                {t('dca.all')}
               </button>
               {plans.map(p => {
                 const active = isAll || selectedIds.has(p.id);
@@ -590,18 +595,18 @@ function ProjectionHero({ plans, quotes, fmt0 }) {
           {/* Two-column KPI strip: today vs horizon */}
           <div className="dca-state-grid">
             <div className="dca-state-block">
-              <div className="dca-state-eyebrow">État au {new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}</div>
+              <div className="dca-state-eyebrow">{t('dca.stateAs', { date: new Date().toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) })}</div>
               <div className="dca-state-row">
                 <div className="dca-state-kpi">
-                  <div className="dca-state-kpi-label">Versé à ce jour</div>
+                  <div className="dca-state-kpi-label">{t('dca.investedToDate')}</div>
                   <div className="dca-state-kpi-value">{fmt0(today.invested)}</div>
                 </div>
                 <div className="dca-state-kpi">
-                  <div className="dca-state-kpi-label">{today.allReal ? 'Valeur actuelle' : 'Valeur théorique'}</div>
+                  <div className="dca-state-kpi-label">{today.allReal ? t('dca.currentValue') : t('dca.theoreticalValue')}</div>
                   <div className="dca-state-kpi-value is-accent">{fmt0(today.value)}</div>
                 </div>
                 <div className="dca-state-kpi">
-                  <div className="dca-state-kpi-label">Plus-value latente</div>
+                  <div className="dca-state-kpi-label">{t('dca.unrealizedGain')}</div>
                   <div className={`dca-state-kpi-value ${today.gain >= 0 ? 'is-positive' : 'is-negative'}`}>
                     {today.gain >= 0 ? '+' : ''}{fmt0(today.gain)}
                   </div>
@@ -609,22 +614,22 @@ function ProjectionHero({ plans, quotes, fmt0 }) {
               </div>
             </div>
             <div className="dca-state-block">
-              <div className="dca-state-eyebrow">Projection dans {horizon} ans</div>
+              <div className="dca-state-eyebrow">{t('dca.projectionIn', { years: horizon })}</div>
               <div className="dca-state-row">
                 <div className="dca-state-kpi">
-                  <div className="dca-state-kpi-label">Mensuel équiv.</div>
+                  <div className="dca-state-kpi-label">{t('dca.monthlyEquiv')}</div>
                   <div className="dca-state-kpi-value">{fmt0(monthlyEquiv)}</div>
                 </div>
                 <div className="dca-state-kpi">
-                  <div className="dca-state-kpi-label">Capital versé</div>
+                  <div className="dca-state-kpi-label">{t('dca.capitalInvested')}</div>
                   <div className="dca-state-kpi-value">{fmt0(last.invested)}</div>
                 </div>
                 <div className="dca-state-kpi">
-                  <div className="dca-state-kpi-label">Valeur projetée</div>
+                  <div className="dca-state-kpi-label">{t('dca.projectedValue')}</div>
                   <div className="dca-state-kpi-value is-accent">{fmt0(last.portfolio)}</div>
                 </div>
                 <div className="dca-state-kpi">
-                  <div className="dca-state-kpi-label">Gains composés</div>
+                  <div className="dca-state-kpi-label">{t('dca.compoundGains')}</div>
                   <div className="dca-state-kpi-value is-positive">+{fmt0(last.gains)}</div>
                 </div>
               </div>
@@ -671,6 +676,7 @@ function ProjectionHero({ plans, quotes, fmt0 }) {
 
 // ── Main view ────────────────────────────────────────────────────────────────
 export function DCAView({ accounts = [], members = [], dcaPlans = [], onPlansChange }) {
+  const { t } = useTranslation();
   const [modal, setModal] = useState(null); // null | 'new' | plan object
   const [toast, setToast] = useState(null);
 
@@ -697,7 +703,7 @@ export function DCAView({ accounts = [], members = [], dcaPlans = [], onPlansCha
       if (data.id) await dcaApi.update(data.id, data);
       else await dcaApi.create(data);
       await reload();
-      notify(data.id ? 'Plan mis à jour' : 'Plan créé');
+      notify(data.id ? t('toasts.planUpdated') : t('toasts.planCreated'));
     } catch (e) { notify(e.message, false); }
   };
 
@@ -710,11 +716,11 @@ export function DCAView({ accounts = [], members = [], dcaPlans = [], onPlansCha
   };
 
   const handleDelete = async (plan) => {
-    if (!confirm(`Supprimer "${plan.name}" ?`)) return;
+    if (!confirm(t('confirms.deletePlan', { name: plan.name }))) return;
     try {
       await dcaApi.remove(plan.id);
       await reload();
-      notify('Plan supprimé');
+      notify(t('toasts.planDeleted'));
     } catch (e) { notify(e.message, false); }
   };
 
@@ -740,11 +746,11 @@ export function DCAView({ accounts = [], members = [], dcaPlans = [], onPlansCha
 
       <div className="subview-header">
         <div>
-          <h1>Vos <em>plans DCA.</em></h1>
-          <p>Versements automatiques et projection par intérêts composés.</p>
+          <h1>{t('dca.title')} <em>{t('dca.titleAccent')}</em></h1>
+          <p>{t('dca.subtitle')}</p>
         </div>
         <button className="primary-btn" onClick={() => setModal('new')} style={{ flexShrink: 0 }}>
-          <Plus size={14}/> Nouveau plan
+          <Plus size={14}/> {t('dca.newPlan')}
         </button>
       </div>
 
@@ -752,15 +758,15 @@ export function DCAView({ accounts = [], members = [], dcaPlans = [], onPlansCha
 
       <section className="card">
         <div className="card-header">
-          <h3><TrendingUp size={14}/> Plans actifs</h3>
-          <span className="card-meta">{activePlans.length} plan{activePlans.length > 1 ? 's' : ''}</span>
+          <h3><TrendingUp size={14}/> {t('dca.activePlans')}</h3>
+          <span className="card-meta">{t('dca.plans', { count: activePlans.length })}</span>
         </div>
         {activePlans.length === 0 ? (
           <div className="empty-mini">
             <TrendingUp size={24}/>
-            <p>Aucun plan DCA configuré. Créez votre premier plan pour visualiser la projection de vos versements.</p>
+            <p>{t('dca.noPlan')}</p>
             <button className="primary-btn" style={{ marginTop: 8 }} onClick={() => setModal('new')}>
-              <Plus size={14}/> Créer un plan
+              <Plus size={14}/> {t('dca.createPlan')}
             </button>
           </div>
         ) : (
@@ -776,8 +782,8 @@ export function DCAView({ accounts = [], members = [], dcaPlans = [], onPlansCha
       {nextDates.length > 0 && (
         <section className="card">
           <div className="card-header">
-            <h3><Calendar size={14}/> Prochains versements</h3>
-            <span className="card-meta">{nextDates.length} à venir</span>
+            <h3><Calendar size={14}/> {t('dca.upcomingPayments')}</h3>
+            <span className="card-meta">{t('dca.upcomingCount', { count: nextDates.length })}</span>
           </div>
           <div className="dca-next-grid">
             {nextDates.map((nd, i) => (
