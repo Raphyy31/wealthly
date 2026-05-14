@@ -211,6 +211,46 @@ const assets = [
     memberIds: [M.bob],
     updatedAt: new Date().toISOString(),
   },
+  // Crypto-actifs — montrent CryptoDetail v3
+  {
+    id: 'demo-asset-btc',
+    type: 'crypto',
+    name: 'Bitcoin',
+    ticker: 'BTC',
+    quantity: 0.18,
+    purchasePrice: 28400,
+    currentValue: 11250,
+    purchaseDate: '2023-03-15',
+    notes: 'DCA mensuel sur Kraken — accumulation long terme.',
+    memberIds: [M.alice, M.bob],
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'demo-asset-eth',
+    type: 'crypto',
+    name: 'Ethereum',
+    ticker: 'ETH',
+    quantity: 2.4,
+    purchasePrice: 1850,
+    currentValue: 6720,
+    purchaseDate: '2022-11-08',
+    notes: '',
+    memberIds: [M.bob],
+    updatedAt: new Date().toISOString(),
+  },
+  // Autre actif — montre OtherAssetDetail v3
+  {
+    id: 'demo-asset-or',
+    type: 'other',
+    subtype: 'Or physique',
+    name: 'Lingots d\'or 50g',
+    purchasePrice: 2800,
+    currentValue: 3450,
+    purchaseDate: '2021-09-10',
+    notes: 'Deux lingots de 50 g achetés chez CPoR à Paris. Conservés en coffre.',
+    memberIds: [M.alice, M.bob],
+    updatedAt: new Date().toISOString(),
+  },
 ];
 
 const liabilities = [
