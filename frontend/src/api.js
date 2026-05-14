@@ -371,12 +371,14 @@ const _resolveBackendType = (canonicalSubtype, target) => {
 };
 
 export const wealth = {
+  // Renvoie { target, data } pour que l'appelant puisse pousser l'objet
+  // directement dans son state sans attendre un reloadAll() complet.
   create: async (payload) => {
     const target = _resolveTarget(payload);
     const { type: backendType, subtype: backendSubtype } = _resolveBackendType(payload.subtype, target);
 
     if (target === 'liability') {
-      return liabilities.create({
+      const data = await liabilities.create({
         type: backendType,
         name: payload.name,
         initial_capital: payload.value || 0,
@@ -384,9 +386,10 @@ export const wealth = {
         currency: payload.currency || 'EUR',
         memberIds: payload.memberIds || [],
       });
+      return { target, data };
     }
     if (target === 'account') {
-      return accounts.create({
+      const data = await accounts.create({
         name: payload.name,
         bank: payload.bank || payload.name,
         type: backendType,
@@ -395,9 +398,10 @@ export const wealth = {
         memberIds: payload.memberIds || [],
         role: payload.role || 'principal',
       });
+      return { target, data };
     }
     // asset
-    return assets.create({
+    const data = await assets.create({
       name: payload.name,
       type: backendType,
       ...(backendSubtype ? { subtype: backendSubtype } : {}),
@@ -406,6 +410,7 @@ export const wealth = {
       memberIds: payload.memberIds || [],
       ...(payload.meta || {}),
     });
+    return { target, data };
   },
 
   update: async (item, patch) => {

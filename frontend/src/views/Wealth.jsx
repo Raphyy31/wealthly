@@ -29,7 +29,7 @@ import { useWealthItems } from '../hooks/useWealthItems.js';
 import { WealthItemDrawer } from '../components/WealthItemDrawer.jsx';
 import { ImportPositionsModal } from '../components/ImportPositionsModal.jsx';
 import { useLiveQuotes, cryptoToYahoo, relTimeFromTs } from '../utils/marketPrices.js';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Upload } from 'lucide-react';
 import * as api from '../api.js';
 
 // ============================================================================
@@ -2194,6 +2194,15 @@ function InvestmentDetail({ asset, assets = [], members = [], fmt, onEdit, onClo
         </div>
 
         <div className="inv-v3-foot">
+          {onImportCSV && (
+            <button
+              className="ds-btn primary"
+              onClick={() => onImportCSV(asset)}
+              title="Importer un relevé de positions (CSV / XLSX, toutes banques)"
+            >
+              <Upload size={14}/> Importer des positions
+            </button>
+          )}
           {liveRowsToSync.length > 0 && (
             <button
               className="ds-btn"

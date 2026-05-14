@@ -1697,18 +1697,29 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
           members={members}
           onSave={async (payload) => {
             // En démo, l'API throw "Mode démo : modifications non enregistrées".
-            // On affiche un toast clair et on ferme le modal pour ne pas
-            // laisser l'utilisateur cliquer dans le vide. On rethrow ensuite
-            // pour que AddWealthModal puisse aussi afficher le message inline.
+            // En prod, on récupère { target, data } pour pousser le nouvel
+            // élément directement dans le state — pas besoin d'attendre que
+            // reloadAll() propage (sinon l'utilisateur a l'impression que
+            // rien ne s'est passé jusqu'à un refresh).
             try {
-              await api.wealth.create(payload);
-              await reloadAll();
+              const result = await api.wealth.create(payload);
+              if (result && result.data) {
+                if (result.target === 'asset') {
+                  setAssets(prev => [...prev, assetFromApi(result.data)]);
+                } else if (result.target === 'account') {
+                  setAccounts(prev => [...prev, accountFromApi(result.data)]);
+                } else if (result.target === 'liability') {
+                  setLiabilities(prev => [...prev, liaFromApi(result.data)]);
+                }
+              }
+              // Reload en arrière-plan pour récupérer d'éventuels effets de
+              // bord côté backend (catégories par défaut, transactions, etc.).
+              reloadAll().catch(() => {});
               showToast('Élément ajouté à ton patrimoine', 'success');
               setShowAddAccount(false);
             } catch (err) {
               const msg = err?.message || 'Création impossible.';
               showToast(msg, 'error');
-              // Rethrow pour que le modal montre l'erreur inline
               throw err;
             }
           }}
