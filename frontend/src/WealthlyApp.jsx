@@ -1275,7 +1275,6 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     // We don't await it — transition the UI immediately so the user
     // never sees a frozen screen. The cookie clear runs in the background.
     api.auth.logout().catch(() => {});
-    api.clearToken();
     if (onLogout) {
       onLogout();
     } else {

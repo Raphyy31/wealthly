@@ -1,15 +1,16 @@
 """
 Authentication: password hashing (bcrypt) + JWT generation/validation.
 
-Token transport — Trove uses an HttpOnly, Secure, SameSite=None cookie
-(`trove_session`) so the token is unreachable from JavaScript and resistant
-to XSS exfiltration. The legacy `Authorization: Bearer <token>` header is
-still accepted as a fallback during the frontend transition; it will be
-phased out once api.js fully relies on the cookie.
+Token transport — Wealthly uses an HttpOnly, Secure, SameSite=None cookie
+(`trove_session`, name kept from the Trove rebrand era) so the token is
+unreachable from JavaScript and resistant to XSS exfiltration. The
+production frontend uses cookies exclusively. The `Authorization: Bearer`
+header is still accepted at the API surface (defense-in-depth — used by
+the pytest suite and any future service-to-service callers); the
+frontend never sends it.
 
 Flow:
-1. Register / Login / Reset-password → backend `Set-Cookie: trove_session`
-   AND returns the token in the JSON body (legacy field, deprecated).
+1. Register / Login / Reset-password → backend `Set-Cookie: trove_session`.
 2. Authenticated requests → the browser auto-sends the cookie.
 3. Logout → `/auth/logout` clears the cookie.
 """
@@ -109,7 +110,7 @@ def clear_auth_cookie(response: Response) -> None:
 
 def get_token_from_request(request: Request) -> Optional[str]:
     """Read the auth token from cookie first, then fall back to the
-    Authorization: Bearer header (transition window)."""
+    Authorization: Bearer header (kept for tests + service-to-service)."""
     cookie_token = request.cookies.get(COOKIE_NAME)
     if cookie_token:
         return cookie_token
@@ -129,8 +130,8 @@ def get_current_user(
     """FastAPI dependency: returns the User for the current request, or 401.
 
     Token resolution order:
-      1. trove_session HttpOnly cookie (preferred, XSS-safe)
-      2. Authorization: Bearer header (legacy, kept for transition)
+      1. trove_session HttpOnly cookie (preferred, XSS-safe, used by frontend)
+      2. Authorization: Bearer header (tests + service-to-service)
     """
     token = request.cookies.get(COOKIE_NAME) or bearer_token
     if not token:

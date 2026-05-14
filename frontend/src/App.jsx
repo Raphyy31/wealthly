@@ -1,5 +1,5 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
-import { getToken, auth } from './api.js';
+import { auth } from './api.js';
 import AuthScreen from './AuthScreen.jsx';
 import WealthlyApp from './WealthlyApp.jsx';
 import { isDemoMode, disableDemoMode, enableDemoMode } from './demoData.js';
@@ -38,9 +38,6 @@ export default function App() {
       // only way to know if the user is logged in is to ask /auth/me. We do
       // a fast best-effort check; if it succeeds we're authed, otherwise
       // we land on the landing/auth flow.
-      // The legacy localStorage token is only kept for users who logged in
-      // before the cookie migration — same /auth/me will succeed for them
-      // because api.js still attaches it as a Bearer header.
       try {
         // Race auth.me() against a 5s timeout — if backend is slow/redeploying
         // we still land on the landing page rather than spinning forever.
