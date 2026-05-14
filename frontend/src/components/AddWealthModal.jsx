@@ -65,6 +65,7 @@ export function AddWealthModal({ members = [], onSave, onClose, onConnectBank })
   const [syncMode, setSyncMode] = useState(null);
   const [form, setForm] = useState({ name: '', currency: 'EUR', memberIds: [], value: '' });
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
 
   const goCategory = () => { setStep('category'); setCategory(null); setSubtype(null); setSyncMode(null); };
   const goDetail   = () => { setStep('detail');   setSubtype(null); setSyncMode(null); };
@@ -88,7 +89,15 @@ export function AddWealthModal({ members = [], onSave, onClose, onConnectBank })
   };
 
   const submit = async () => {
-    if (!form.name.trim()) return;
+    setSubmitError(null);
+    if (!form.name.trim()) {
+      setSubmitError('Donne un nom à cet élément.');
+      return;
+    }
+    if (!form.memberIds.length) {
+      setSubmitError('Sélectionne au moins un détenteur.');
+      return;
+    }
     setSubmitting(true);
     try {
       await onSave({
@@ -100,6 +109,10 @@ export function AddWealthModal({ members = [], onSave, onClose, onConnectBank })
         value: parseFloat(form.value) || 0,
         memberIds: form.memberIds,
       });
+    } catch (err) {
+      // Si l'erreur n'est pas attrapée plus haut, on la montre ici plutôt
+      // que de laisser l'utilisateur cliquer dans le vide.
+      setSubmitError(err?.message || 'Création impossible. Réessaie.');
     } finally {
       setSubmitting(false);
     }
@@ -293,11 +306,17 @@ export function AddWealthModal({ members = [], onSave, onClose, onConnectBank })
               </div>
             )}
 
+            {submitError && (
+              <div className="form-error">
+                ⚠︎ {submitError}
+              </div>
+            )}
+
             <div className="modal-foot">
               <button className="secondary-btn" onClick={goDetail} type="button">Retour</button>
               <button
                 className="primary-btn"
-                disabled={!form.name.trim() || !form.memberIds.length || submitting}
+                disabled={submitting}
                 onClick={submit}
                 type="button"
               >

@@ -1696,12 +1696,20 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
         <AddWealthModal
           members={members}
           onSave={async (payload) => {
+            // En démo, l'API throw "Mode démo : modifications non enregistrées".
+            // On affiche un toast clair et on ferme le modal pour ne pas
+            // laisser l'utilisateur cliquer dans le vide. On rethrow ensuite
+            // pour que AddWealthModal puisse aussi afficher le message inline.
             try {
               await api.wealth.create(payload);
               await reloadAll();
+              showToast('Élément ajouté à ton patrimoine', 'success');
               setShowAddAccount(false);
             } catch (err) {
-              console.error('Failed to create wealth item:', err);
+              const msg = err?.message || 'Création impossible.';
+              showToast(msg, 'error');
+              // Rethrow pour que le modal montre l'erreur inline
+              throw err;
             }
           }}
           onConnectBank={() => {

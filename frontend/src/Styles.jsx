@@ -1816,6 +1816,16 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 }
 .form-hint-banner strong { font-weight: 600; }
 .form-hint-banner em { font-family: 'Newsreader', Georgia, serif; font-style: italic; font-weight: 400; }
+.form-error {
+  margin: 4px 0 12px;
+  padding: 10px 14px;
+  background: var(--negative-soft);
+  color: var(--negative);
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+  font-family: 'Geist', system-ui;
+}
 
 .modal-foot {
   display: flex; justify-content: flex-end; gap: 8px;
