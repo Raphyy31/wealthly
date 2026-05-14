@@ -127,6 +127,33 @@ function capitalInvested(plan) {
   return Math.floor(m / freqM) * plan.amount;
 }
 
+/** Mark-to-market value when a live quote is available.
+ *  We don't track historical purchase prices, so we approximate the share
+ *  count by discounting the current price back through time at the plan's
+ *  expected return rate. For each past contribution at month m (counted
+ *  from start), the estimated unit price was: price_now / (1+r)^(months-m).
+ *  shares_added = amount / est_price ; total_value = shares × price_now.
+ *  This converges to the theoretical value if real performance matched
+ *  expected_return, and diverges to reflect actual market moves otherwise. */
+function realCurrentState(plan, price) {
+  if (!price || price <= 0) return null;
+  const months = monthsElapsed(plan.start_date);
+  const freqM = FREQ_MONTHS[plan.frequency] || 1;
+  const r = (plan.expected_return || 0) / 100 / 12;
+  let invested = 0;
+  let shares = 0;
+  for (let m = 1; m <= months; m++) {
+    if (m % freqM === 0) {
+      invested += plan.amount;
+      // months elapsed since this contribution = months - m
+      const estPriceThen = r > 0 ? price / Math.pow(1 + r, months - m) : price;
+      shares += plan.amount / estPriceThen;
+    }
+  }
+  const value = shares * price;
+  return { invested: Math.round(invested), value: Math.round(value), gain: Math.round(value - invested), shares };
+}
+
 // ── Tooltip personnalisé ─────────────────────────────────────────────────────
 function ProjTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
@@ -293,64 +320,79 @@ function PlanCard({ plan, accounts, quotes, onEdit, onToggle, onDelete }) {
   const [horizon, setHorizon] = useState(plan.target_years || 10);
 
   const acc = accounts?.find(a => a.id === plan.account_id);
-  const quote = plan.ticker ? quotes?.[plan.ticker] : null;
-  const invested = capitalInvested(plan);
+  const tickerKey = (plan.ticker || '').trim().toUpperCase();
+  const quote = tickerKey ? quotes?.[tickerKey] : null;
+  const real = useMemo(() => quote ? realCurrentState(plan, quote.price) : null, [plan, quote]);
+  const theoretical = useMemo(() => currentState(plan), [plan]);
+  const isReal = !!real;
+  const currentValue = isReal ? real.value : theoretical.value;
+  const currentInvested = isReal ? real.invested : theoretical.invested;
+  const currentGain = isReal ? real.gain : theoretical.gain;
+
   const projData = useMemo(() => buildProjection(plan, horizon), [plan, horizon]);
   const fv = projData[projData.length - 1]?.portfolio ?? 0;
   const totalInvested = projData[projData.length - 1]?.invested ?? 0;
   const multiplier = totalInvested > 0 ? fv / totalInvested : 1;
-  const freqM = FREQ_MONTHS[plan.frequency] || 1;
 
   const fmt = v => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: plan.currency || 'EUR', maximumFractionDigits: 0 }).format(v);
 
   return (
-    <div style={{
-      background: 'var(--bg-card)', border: '1px solid var(--border)',
-      borderRadius: 12, overflow: 'hidden',
-      opacity: plan.status === 'paused' ? 0.7 : 1,
-      borderLeft: plan.status === 'active' ? '3px solid var(--primary)' : '3px solid var(--border)',
-    }}>
-      {/* Card header */}
-      <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
-        <div style={{
-          width: 44, height: 44, borderRadius: 10, flexShrink: 0,
-          background: 'var(--bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 11, fontWeight: 700, color: 'var(--primary)', fontFamily: 'var(--font-mono)',
-          letterSpacing: '0.04em',
-        }}>
-          {plan.ticker || (plan.asset_name?.[0] ?? '?')}
-        </div>
+    <section
+      className="card"
+      style={{ opacity: plan.status === 'paused' ? 0.72 : 1 }}
+    >
+      {/* Canonical card header */}
+      <div className="card-header">
+        <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {tickerKey && (
+            <span style={{
+              fontFamily: 'Geist Mono, ui-monospace, Menlo, monospace',
+              fontSize: 10.5, fontWeight: 700, color: 'var(--accent)',
+              letterSpacing: '0.04em', padding: '2px 6px',
+              background: 'var(--accent-soft)', borderRadius: 4,
+            }}>{tickerKey}</span>
+          )}
+          <span style={{ color: 'var(--accent)' }}>{plan.name}</span>
+          {plan.status === 'paused' && (
+            <span style={{
+              fontSize: 10, fontWeight: 600, letterSpacing: '0.14em',
+              background: 'var(--border)', color: 'var(--text-tertiary)',
+              padding: '2px 6px', borderRadius: 4,
+            }}>PAUSE</span>
+          )}
+        </h3>
+        <span className="card-meta">
+          {fmt(plan.amount)} / {FREQ_LABEL[plan.frequency]}
+          {acc && <> · {acc.name}</>}
+          {plan.start_date && <> · depuis {new Date(plan.start_date).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}</>}
+          {quote && <> · cours {fmt(quote.price)}</>}
+        </span>
+      </div>
 
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-primary)', marginBottom: 2 }}>
-            {plan.name}
-            {plan.status === 'paused' && (
-              <span style={{ marginLeft: 8, fontSize: 10, background: 'var(--border)', color: 'var(--text-tertiary)', padding: '2px 6px', borderRadius: 4 }}>PAUSE</span>
-            )}
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <span style={{ color: 'var(--primary)', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
-              {fmt(plan.amount)} / {FREQ_LABEL[plan.frequency]}
-            </span>
-            {acc && <span>· {acc.name}</span>}
-            {plan.start_date && <span>· depuis {new Date(plan.start_date).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}</span>}
-            {quote && <span style={{ color: 'var(--success)' }}>· {fmt(quote.price)}</span>}
-          </div>
-        </div>
-
-        {/* KPIs inline */}
-        <div style={{ display: 'flex', gap: 20, textAlign: 'right', flexShrink: 0 }}>
+      {/* Body — KPI row + actions */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 28, flex: 1, minWidth: 0 }}>
           <div>
-            <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 2 }}>INVESTI</div>
-            <div style={{ fontWeight: 700, fontSize: 14, fontVariantNumeric: 'tabular-nums' }}>{fmt(invested)}</div>
+            <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 5 }}>Investi</div>
+            <div style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.015em', fontVariantNumeric: 'tabular-nums', color: 'var(--ink)' }}>{fmt(currentInvested)}</div>
           </div>
           <div>
-            <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 2 }}>PROJETÉ {horizon}A</div>
-            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--primary)', fontVariantNumeric: 'tabular-nums' }}>{fmt(fv)}</div>
+            <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 5 }}>
+              {isReal ? 'Valeur actuelle' : 'Valeur théorique'}
+            </div>
+            <div style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.015em', fontVariantNumeric: 'tabular-nums', color: 'var(--accent)' }}>
+              {fmt(currentValue)}
+            </div>
           </div>
           <div>
-            <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 2 }}>×</div>
-            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--success)' }}>×{multiplier.toFixed(1)}</div>
+            <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 5 }}>+/− value</div>
+            <div style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.015em', fontVariantNumeric: 'tabular-nums', color: currentGain >= 0 ? 'var(--positive)' : 'var(--negative)' }}>
+              {currentGain >= 0 ? '+' : ''}{fmt(currentGain)}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 5 }}>Projeté {horizon}a</div>
+            <div style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.015em', fontVariantNumeric: 'tabular-nums', color: 'var(--ink)' }}>{fmt(fv)} <span style={{ color: 'var(--positive)', fontSize: 13, marginLeft: 4 }}>×{multiplier.toFixed(1)}</span></div>
           </div>
         </div>
 
@@ -371,7 +413,7 @@ function PlanCard({ plan, accounts, quotes, onEdit, onToggle, onDelete }) {
 
       {/* Expanded — projection chart */}
       {expanded && (
-        <div style={{ borderTop: '1px solid var(--border)', padding: '16px 20px 20px' }}>
+        <div style={{ borderTop: '1px dotted var(--border)', marginTop: 16, paddingTop: 16 }}>
           {/* Horizon tabs */}
           <div style={{ display: 'flex', gap: 6, marginBottom: 16, alignItems: 'center' }}>
             <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginRight: 4 }}>Horizon</span>
@@ -442,12 +484,12 @@ function PlanCard({ plan, accounts, quotes, onEdit, onToggle, onDelete }) {
           )}
         </div>
       )}
-    </div>
+    </section>
   );
 }
 
 // ── Aggregated projection hero ───────────────────────────────────────────────
-function ProjectionHero({ plans, fmt0 }) {
+function ProjectionHero({ plans, quotes, fmt0 }) {
   const [horizon, setHorizon] = useState(10);
   // Plan filter: Set of plan IDs to include. null = all plans.
   const [selectedIds, setSelectedIds] = useState(null);
@@ -460,16 +502,22 @@ function ProjectionHero({ plans, fmt0 }) {
   const data = useMemo(() => aggregateProjections(includedPlans, horizon), [includedPlans, horizon]);
   const last = data[data.length - 1] || { invested: 0, portfolio: 0, gains: 0 };
 
-  // Current state aggregated across included plans
+  // Current state aggregated across included plans — prefer real quote when
+  // available, fall back to the theoretical compound projection otherwise.
   const today = useMemo(() => {
-    return includedPlans.reduce(
+    let allReal = includedPlans.length > 0;
+    const agg = includedPlans.reduce(
       (acc, p) => {
-        const s = currentState(p);
+        const tk = (p.ticker || '').trim().toUpperCase();
+        const q = tk ? quotes?.[tk] : null;
+        const s = q ? realCurrentState(p, q.price) : currentState(p);
+        if (!q) allReal = false;
         return { invested: acc.invested + s.invested, value: acc.value + s.value, gain: acc.gain + s.gain };
       },
       { invested: 0, value: 0, gain: 0 }
     );
-  }, [includedPlans]);
+    return { ...agg, allReal };
+  }, [includedPlans, quotes]);
 
   // Aggregated monthly equivalent contribution for included plans
   const monthlyEquiv = useMemo(
@@ -549,7 +597,7 @@ function ProjectionHero({ plans, fmt0 }) {
                   <div className="dca-state-kpi-value">{fmt0(today.invested)}</div>
                 </div>
                 <div className="dca-state-kpi">
-                  <div className="dca-state-kpi-label">Valeur estimée</div>
+                  <div className="dca-state-kpi-label">{today.allReal ? 'Valeur actuelle' : 'Valeur théorique'}</div>
                   <div className="dca-state-kpi-value is-accent">{fmt0(today.value)}</div>
                 </div>
                 <div className="dca-state-kpi">
@@ -700,7 +748,7 @@ export function DCAView({ accounts = [], members = [], dcaPlans = [], onPlansCha
         </button>
       </div>
 
-      <ProjectionHero plans={activePlans.filter(p => p.status === 'active')} fmt0={fmt0}/>
+      <ProjectionHero plans={activePlans.filter(p => p.status === 'active')} quotes={quotes} fmt0={fmt0}/>
 
       <section className="card">
         <div className="card-header">
