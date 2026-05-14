@@ -33,6 +33,39 @@ function fvPmt(pmt, annualPct, months) {
   return pmt * ((Math.pow(1 + r, months) - 1) / r) * (1 + r);
 }
 
+/** Format a Date as YYYY-MM (local time, matches user expectations). */
+function monthKey(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  return `${y}-${m}`;
+}
+
+/** Is the contribution due in this elapsed month treated as paid?
+ *  Missing key = paid (default). Explicit false = skipped. */
+function isMonthPaid(executions, key) {
+  if (!executions) return true;
+  return executions[key] !== false;
+}
+
+/** List of month keys (YYYY-MM) where a contribution was due between
+ *  start_date and today, given the frequency. The first contribution is at
+ *  start_date's month, then every freqM months. */
+function dueMonthKeys(plan) {
+  if (!plan.start_date) return [];
+  const start = new Date(plan.start_date);
+  const startY = start.getFullYear();
+  const startM = start.getMonth();
+  const now = new Date();
+  const elapsed = Math.max(0, (now.getFullYear() - startY) * 12 + (now.getMonth() - startM));
+  const freqM = FREQ_MONTHS[plan.frequency] || 1;
+  const keys = [];
+  for (let i = 0; i <= elapsed; i += freqM) {
+    const d = new Date(startY, startM + i, 1);
+    keys.push(monthKey(d));
+  }
+  return keys;
+}
+
 /** Build month-by-month projection data for a plan */
 function buildProjection(plan, horizonYears) {
   const freqM = FREQ_MONTHS[plan.frequency] || 1;
@@ -105,15 +138,26 @@ function nextPaymentDate(dayOfMonth, frequency) {
  *  number of months elapsed, applying compound returns each month. Returns
  *  { invested, value, gain } based on what the user has actually paid in. */
 function currentState(plan) {
+  if (!plan.start_date) return { invested: 0, value: 0, gain: 0 };
   const months = monthsElapsed(plan.start_date);
   const freqM = FREQ_MONTHS[plan.frequency] || 1;
   const r = (plan.expected_return || 0) / 100 / 12;
+  const start = new Date(plan.start_date);
+  const startY = start.getFullYear();
+  const startM = start.getMonth();
+  const exec = plan.executions || {};
   let invested = 0;
   let portfolio = 0;
   for (let m = 1; m <= months; m++) {
     if (m % freqM === 0) {
-      invested += plan.amount;
-      portfolio = r > 0 ? portfolio * (1 + r) + plan.amount : portfolio + plan.amount;
+      const d = new Date(startY, startM + m, 1);
+      const key = monthKey(d);
+      if (isMonthPaid(exec, key)) {
+        invested += plan.amount;
+        portfolio = r > 0 ? portfolio * (1 + r) + plan.amount : portfolio + plan.amount;
+      } else if (r > 0) {
+        portfolio *= (1 + r);
+      }
     } else if (r > 0) {
       portfolio *= (1 + r);
     }
@@ -137,13 +181,21 @@ function capitalInvested(plan) {
  *  expected_return, and diverges to reflect actual market moves otherwise. */
 function realCurrentState(plan, price) {
   if (!price || price <= 0) return null;
+  if (!plan.start_date) return { invested: 0, value: 0, gain: 0, shares: 0 };
   const months = monthsElapsed(plan.start_date);
   const freqM = FREQ_MONTHS[plan.frequency] || 1;
   const r = (plan.expected_return || 0) / 100 / 12;
+  const start = new Date(plan.start_date);
+  const startY = start.getFullYear();
+  const startM = start.getMonth();
+  const exec = plan.executions || {};
   let invested = 0;
   let shares = 0;
   for (let m = 1; m <= months; m++) {
     if (m % freqM === 0) {
+      const d = new Date(startY, startM + m, 1);
+      const key = monthKey(d);
+      if (!isMonthPaid(exec, key)) continue;
       invested += plan.amount;
       // months elapsed since this contribution = months - m
       const estPriceThen = r > 0 ? price / Math.pow(1 + r, months - m) : price;
@@ -315,9 +367,24 @@ function PlanModal({ plan, accounts, members, onSave, onClose }) {
 }
 
 // ── Plan card ────────────────────────────────────────────────────────────────
-function PlanCard({ plan, accounts, quotes, onEdit, onToggle, onDelete }) {
+function PlanCard({ plan, accounts, quotes, onEdit, onToggle, onDelete, onSetExecutions }) {
   const [expanded, setExpanded] = useState(false);
   const [horizon, setHorizon] = useState(plan.target_years || 10);
+
+  const executions = plan.executions || {};
+  const skippedCount = Object.values(executions).filter(v => v === false).length;
+
+  const dueKeys = useMemo(() => dueMonthKeys(plan), [plan.start_date, plan.frequency]);
+  // Last 12 due months (or all if shorter), ordered oldest → newest
+  const timelineKeys = dueKeys.slice(-12);
+
+  const toggleMonth = (key) => {
+    const next = { ...executions };
+    // Default = paid (true). Click = mark as skipped. Click again = back to paid.
+    if (next[key] === false) delete next[key];
+    else next[key] = false;
+    onSetExecutions?.(plan, next);
+  };
 
   const acc = accounts?.find(a => a.id === plan.account_id);
   const tickerKey = (plan.ticker || '').trim().toUpperCase();
@@ -366,6 +433,11 @@ function PlanCard({ plan, accounts, quotes, onEdit, onToggle, onDelete }) {
           {acc && <> · {acc.name}</>}
           {plan.start_date && <> · depuis {new Date(plan.start_date).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}</>}
           {quote && <> · cours {fmt(quote.price)}</>}
+          {skippedCount > 0 && (
+            <> · <span style={{ color: 'var(--warning)', fontWeight: 600 }}>
+              {skippedCount} mois sauté{skippedCount > 1 ? 's' : ''}
+            </span></>
+          )}
         </span>
       </div>
 
@@ -476,6 +548,53 @@ function PlanCard({ plan, accounts, quotes, onEdit, onToggle, onDelete }) {
               </div>
             ))}
           </div>
+
+          {/* Versements — timeline des derniers 12 mois dus */}
+          {timelineKeys.length > 0 && onSetExecutions && (
+            <div style={{ marginTop: 18 }}>
+              <div style={{
+                fontSize: 10.5, fontWeight: 600, letterSpacing: '0.14em',
+                textTransform: 'uppercase', color: 'var(--text-tertiary)',
+                marginBottom: 8,
+              }}>
+                Versements
+                {skippedCount > 0 && (
+                  <span style={{ color: 'var(--warning)', marginLeft: 8, letterSpacing: '0.02em', textTransform: 'none', fontWeight: 500 }}>
+                    · {skippedCount} sauté{skippedCount > 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {timelineKeys.map(key => {
+                  const paid = isMonthPaid(executions, key);
+                  const [y, m] = key.split('-').map(Number);
+                  const label = new Date(y, m - 1, 1).toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => toggleMonth(key)}
+                      title={paid ? 'Versement payé — cliquer pour marquer comme sauté' : 'Versement sauté — cliquer pour rétablir'}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                        padding: '4px 8px', borderRadius: 6, fontSize: 11.5,
+                        fontFamily: 'inherit', cursor: 'pointer',
+                        border: `1px solid ${paid ? 'var(--border)' : 'var(--negative)'}`,
+                        background: paid ? 'var(--bg-elev)' : 'transparent',
+                        color: paid ? 'var(--ink)' : 'var(--negative)',
+                        fontVariantNumeric: 'tabular-nums',
+                      }}
+                    >
+                      {paid
+                        ? <Check size={11} style={{ color: 'var(--accent)' }}/>
+                        : <X size={11} style={{ color: 'var(--negative)' }}/>}
+                      <span>{label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {plan.notes && (
             <div style={{ marginTop: 12, fontSize: 12, color: 'var(--text-tertiary)', fontStyle: 'italic' }}>
@@ -709,6 +828,17 @@ export function DCAView({ accounts = [], members = [], dcaPlans = [], onPlansCha
     } catch (e) { notify(e.message, false); }
   };
 
+  const handleSetExecutions = async (plan, executions) => {
+    // Optimistic update so the timeline reacts instantly.
+    onPlansChange(dcaPlans.map(p => p.id === plan.id ? { ...p, executions } : p));
+    try {
+      await dcaApi.setExecutions(plan.id, executions);
+    } catch (e) {
+      notify(e.message, false);
+      await reload();
+    }
+  };
+
   const handleDelete = async (plan) => {
     if (!confirm(`Supprimer "${plan.name}" ?`)) return;
     try {
@@ -767,7 +897,8 @@ export function DCAView({ accounts = [], members = [], dcaPlans = [], onPlansCha
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {activePlans.map(p => (
               <PlanCard key={p.id} plan={p} accounts={accounts} quotes={quotes}
-                onEdit={setModal} onToggle={handleToggle} onDelete={handleDelete}/>
+                onEdit={setModal} onToggle={handleToggle} onDelete={handleDelete}
+                onSetExecutions={handleSetExecutions}/>
             ))}
           </div>
         )}

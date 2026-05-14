@@ -172,5 +172,12 @@
     "emailExists": "This email is already in use",
     "tokenExpired": "Link expired or already used. Request a new one.",
     "generic": "Something went wrong. Try again."
+  },
+  "dca": {
+    "executions": "Contributions",
+    "skipped": "Skipped",
+    "paid": "Paid",
+    "monthsSkipped_one": "{{count}} month skipped",
+    "monthsSkipped_other": "{{count}} months skipped"
   }
 }

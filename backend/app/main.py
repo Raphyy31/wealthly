@@ -161,6 +161,9 @@ def _run_lightweight_migrations() -> None:
             # wealth_item_uuid — Option A++ unification preparation (2026-05-13)
             "ALTER TABLE accounts ADD COLUMN IF NOT EXISTS wealth_item_uuid VARCHAR",
             "ALTER TABLE assets   ADD COLUMN IF NOT EXISTS wealth_item_uuid VARCHAR",
+            # DCA plans — per-month execution map. Lets the user mark months
+            # as paid/skipped vs the simulated default. Missing keys = paid.
+            "ALTER TABLE dca_plans ADD COLUMN IF NOT EXISTS executions JSON DEFAULT '{}'::json NOT NULL",
         ]
     with engine.begin() as conn:
         for stmt in statements:

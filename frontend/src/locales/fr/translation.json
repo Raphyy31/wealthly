@@ -172,5 +172,12 @@
     "emailExists": "Cet email est déjà utilisé",
     "tokenExpired": "Lien expiré ou déjà utilisé. Demandez un nouveau lien.",
     "generic": "Une erreur est survenue. Réessayez."
+  },
+  "dca": {
+    "executions": "Versements",
+    "skipped": "Sauté",
+    "paid": "Payé",
+    "monthsSkipped_one": "{{count}} mois sauté",
+    "monthsSkipped_other": "{{count}} mois sautés"
   }
 }
