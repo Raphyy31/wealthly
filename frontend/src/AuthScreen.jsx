@@ -10,6 +10,7 @@
 // localStorage côté token de session.
 // ============================================================================
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Mail, Lock, User, Home, Eye, EyeOff, AlertCircle, ArrowLeft, Check, Sparkles } from 'lucide-react';
 import { auth } from './api.js';
 import { enableDemoMode } from './demoData.js';
@@ -22,6 +23,7 @@ function readResetTokenFromUrl() {
 }
 
 export default function AuthScreen({ onAuth, onTryDemo, onBackToLanding, initialMode = 'login' }) {
+  const { t } = useTranslation();
   const initialResetToken = readResetTokenFromUrl();
   const [mode, setMode] = useState(initialResetToken ? 'reset' : initialMode);
   const [email, setEmail] = useState('');
@@ -70,14 +72,14 @@ export default function AuthScreen({ onAuth, onTryDemo, onBackToLanding, initial
         await auth.login(email, password);
         onAuth();
       } else if (mode === 'register') {
-        await auth.register(email, password, fullName, householdName || 'Mon foyer');
+        await auth.register(email, password, fullName, householdName || t('auth.defaultHousehold'));
         onAuth();
       } else if (mode === 'forgot') {
         await auth.forgotPassword(email);
-        setInfo("Si cet email existe, un lien de réinitialisation vient d'être envoyé. Vérifiez votre boîte (et vos spams).");
+        setInfo(t('auth.forgotInfo'));
       } else if (mode === 'reset') {
-        if (password.length < 10) throw new Error("Le mot de passe doit faire au moins 10 caractères.");
-        if (password !== confirmPassword) throw new Error("Les deux mots de passe ne correspondent pas.");
+        if (password.length < 10) throw new Error(t('auth.errPwdShort'));
+        if (password !== confirmPassword) throw new Error(t('auth.errPwdMismatch'));
         await auth.resetPassword(resetToken, password);
         onAuth();
       }
@@ -100,7 +102,7 @@ export default function AuthScreen({ onAuth, onTryDemo, onBackToLanding, initial
           <div className="auth-strip-actions">
             {onBackToLanding && (
               <button type="button" onClick={onBackToLanding} className="auth-strip-link">
-                <ArrowLeft size={12}/> Retour
+                <ArrowLeft size={12}/> {t('auth.back')}
               </button>
             )}
           </div>
@@ -109,16 +111,16 @@ export default function AuthScreen({ onAuth, onTryDemo, onBackToLanding, initial
         {/* MASTHEAD compact — titre serif + deck */}
         <div className="auth-masthead">
           <h1 className="auth-title">
-            {mode === 'login'    && <>Bon <em>retour.</em></>}
-            {mode === 'register' && <>Créer <em>votre compte.</em></>}
-            {mode === 'forgot'   && <>Récupérer <em>votre accès.</em></>}
-            {mode === 'reset'    && <>Choisir <em>un nouveau mot de passe.</em></>}
+            {mode === 'login'    && <>{t('auth.titleLogin1')} <em>{t('auth.titleLogin2')}</em></>}
+            {mode === 'register' && <>{t('auth.titleRegister1')} <em>{t('auth.titleRegister2')}</em></>}
+            {mode === 'forgot'   && <>{t('auth.titleForgot1')} <em>{t('auth.titleForgot2')}</em></>}
+            {mode === 'reset'    && <>{t('auth.titleReset1')} <em>{t('auth.titleReset2')}</em></>}
           </h1>
           <p className="auth-deck">
-            {mode === 'login'    && 'Identifiez-vous pour accéder à votre tableau de bord.'}
-            {mode === 'register' && <>Email et mot de passe. <strong>Pas de carte bleue, pas d'engagement.</strong></>}
-            {mode === 'forgot'   && 'Renseignez votre email — vous recevrez un lien pour choisir un nouveau mot de passe.'}
-            {mode === 'reset'    && 'Choisissez un mot de passe que vous saurez retenir.'}
+            {mode === 'login'    && t('auth.deckLogin')}
+            {mode === 'register' && <>{t('auth.deckRegisterIntro')} <strong>{t('auth.deckRegisterStrong')}</strong></>}
+            {mode === 'forgot'   && t('auth.deckForgot')}
+            {mode === 'reset'    && t('auth.deckReset')}
           </p>
         </div>
 
@@ -130,18 +132,18 @@ export default function AuthScreen({ onAuth, onTryDemo, onBackToLanding, initial
                 type="button"
                 className={mode === 'login' ? 'on' : ''}
                 onClick={() => switchMode('login')}
-              >Connexion</button>
+              >{t('auth.tabLogin')}</button>
               <button
                 type="button"
                 className={mode === 'register' ? 'on' : ''}
                 onClick={() => switchMode('register')}
-              >Créer un compte</button>
+              >{t('auth.tabRegister')}</button>
             </div>
           )}
 
           {(mode === 'forgot' || mode === 'reset') && mode !== 'reset' && (
             <button type="button" onClick={() => switchMode('login')} className="auth-back-link">
-              <ArrowLeft size={12}/> Retour à la connexion
+              <ArrowLeft size={12}/> {t('auth.backToLogin')}
             </button>
           )}
 
@@ -149,33 +151,33 @@ export default function AuthScreen({ onAuth, onTryDemo, onBackToLanding, initial
             {mode === 'register' && (
               <>
                 <Field
-                  label="Votre prénom"
+                  label={t('auth.firstName')}
                   icon={<User size={13}/>}
                   type="text"
                   value={fullName}
                   onChange={setFullName}
-                  placeholder="Antoine"
+                  placeholder={t('auth.firstNamePh')}
                   required autoFocus
                 />
                 <Field
-                  label={<>Nom du foyer <em className="auth-optional">(optionnel)</em></>}
+                  label={<>{t('auth.householdName')} <em className="auth-optional">{t('auth.optional')}</em></>}
                   icon={<Home size={13}/>}
                   type="text"
                   value={householdName}
                   onChange={setHouseholdName}
-                  placeholder="Famille Dupont"
+                  placeholder={t('auth.householdPh')}
                 />
               </>
             )}
 
             {(mode === 'login' || mode === 'register' || mode === 'forgot') && (
               <Field
-                label="Email"
+                label={t('auth.email')}
                 icon={<Mail size={13}/>}
                 type="email"
                 value={email}
                 onChange={setEmail}
-                placeholder="vous@exemple.fr"
+                placeholder={t('auth.emailPh')}
                 required
                 autoFocus={mode === 'login' || mode === 'forgot'}
               />
@@ -183,12 +185,12 @@ export default function AuthScreen({ onAuth, onTryDemo, onBackToLanding, initial
 
             {(mode === 'login' || mode === 'register' || mode === 'reset') && (
               <Field
-                label={mode === 'reset' ? 'Nouveau mot de passe' : 'Mot de passe'}
+                label={mode === 'reset' ? t('auth.newPassword') : t('auth.password')}
                 icon={<Lock size={13}/>}
                 type={showPwd ? 'text' : 'password'}
                 value={password}
                 onChange={setPassword}
-                placeholder={mode === 'login' ? '••••••••' : 'Au moins 10 caractères'}
+                placeholder={mode === 'login' ? t('auth.passwordPhLogin') : t('auth.passwordPhNew')}
                 minLength={mode === 'login' ? undefined : 10}
                 required
                 autoFocus={mode === 'reset'}
@@ -197,7 +199,7 @@ export default function AuthScreen({ onAuth, onTryDemo, onBackToLanding, initial
                     type="button"
                     className="auth-pwd-toggle"
                     onClick={() => setShowPwd(!showPwd)}
-                    aria-label="Afficher / masquer le mot de passe"
+                    aria-label={t('auth.togglePwd')}
                   >
                     {showPwd ? <EyeOff size={14}/> : <Eye size={14}/>}
                   </button>
@@ -207,12 +209,12 @@ export default function AuthScreen({ onAuth, onTryDemo, onBackToLanding, initial
 
             {mode === 'reset' && (
               <Field
-                label="Confirmer le mot de passe"
+                label={t('auth.confirmPwd')}
                 icon={<Lock size={13}/>}
                 type={showPwd ? 'text' : 'password'}
                 value={confirmPassword}
                 onChange={setConfirmPassword}
-                placeholder="Retapez le même mot de passe"
+                placeholder={t('auth.confirmPwdPh')}
                 minLength={10}
                 required
               />
@@ -230,11 +232,11 @@ export default function AuthScreen({ onAuth, onTryDemo, onBackToLanding, initial
             )}
 
             <button type="submit" className="auth-submit" disabled={loading}>
-              {loading ? 'Patientez…' :
-               mode === 'login'    ? 'Se connecter' :
-               mode === 'register' ? 'Créer mon compte' :
-               mode === 'forgot'   ? 'Envoyer le lien' :
-                                     'Définir le mot de passe'}
+              {loading ? t('auth.submitting') :
+               mode === 'login'    ? t('auth.submitLogin') :
+               mode === 'register' ? t('auth.submitRegister') :
+               mode === 'forgot'   ? t('auth.submitForgot') :
+                                     t('auth.submitReset')}
             </button>
           </form>
 
@@ -243,20 +245,20 @@ export default function AuthScreen({ onAuth, onTryDemo, onBackToLanding, initial
             {mode === 'login' && (
               <>
                 <button type="button" onClick={() => switchMode('forgot')} className="auth-link">
-                  Mot de passe oublié ?
+                  {t('auth.forgotLink')}
                 </button>
               </>
             )}
             {mode === 'register' && (
               <span className="auth-secondary-note">
-                Déjà inscrit ?{' '}
-                <button type="button" onClick={() => switchMode('login')} className="auth-link">Se connecter</button>
+                {t('auth.alreadyRegistered')}{' '}
+                <button type="button" onClick={() => switchMode('login')} className="auth-link">{t('auth.login')}</button>
               </span>
             )}
             {mode === 'forgot' && (
               <span className="auth-secondary-note">
-                Vous vous souvenez ?{' '}
-                <button type="button" onClick={() => switchMode('login')} className="auth-link">Se connecter</button>
+                {t('auth.rememberQ')}{' '}
+                <button type="button" onClick={() => switchMode('login')} className="auth-link">{t('auth.login')}</button>
               </span>
             )}
           </div>
@@ -267,7 +269,7 @@ export default function AuthScreen({ onAuth, onTryDemo, onBackToLanding, initial
               onClick={() => { enableDemoMode(); onTryDemo(); }}
               className="auth-demo"
             >
-              <Sparkles size={13}/> Essayer avec un jeu de démo
+              <Sparkles size={13}/> {t('auth.tryDemo')}
             </button>
           )}
         </div>
@@ -276,8 +278,8 @@ export default function AuthScreen({ onAuth, onTryDemo, onBackToLanding, initial
         <div className="auth-colophon">
           <span>© {new Date().getFullYear()} Wealthly</span>
           <span className="auth-legal">
-            <button onClick={() => setLegal('cgu')}>CGU</button>
-            <button onClick={() => setLegal('privacy')}>Confidentialité</button>
+            <button onClick={() => setLegal('cgu')}>{t('auth.legalTerms')}</button>
+            <button onClick={() => setLegal('privacy')}>{t('auth.legalPrivacy')}</button>
           </span>
         </div>
       </div>

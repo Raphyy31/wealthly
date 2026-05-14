@@ -39,13 +39,13 @@ import * as api from '../api.js';
 // v6 unified subviews — driven by the canonical WealthCategory taxonomy
 // (types/wealth.js). 'all' shows everything; the others filter by category.
 const WEALTH_SUBVIEWS = [
-  { key: 'all',             label: 'Tout',                          categories: null,                  icon: BarChart3 },
-  { key: 'liquidites',      label: CATEGORY_LABELS.liquidites,      categories: ['liquidites'],        icon: Wallet },
-  { key: 'investissements', label: CATEGORY_LABELS.investissements, categories: ['investissements'],   icon: TrendingUp },
-  { key: 'immobilier',      label: CATEGORY_LABELS.immobilier,      categories: ['immobilier'],        icon: Home },
-  { key: 'cryptos',         label: CATEGORY_LABELS.cryptos,         categories: ['cryptos'],           icon: Bitcoin },
-  { key: 'autres',          label: CATEGORY_LABELS.autres,          categories: ['autres'],            icon: Sparkles },
-  { key: 'emprunts',        label: CATEGORY_LABELS.emprunts,        categories: ['emprunts'],          icon: CreditCard },
+  { key: 'all',             labelKey: 'wealth.subnav.all',             categories: null,                  icon: BarChart3 },
+  { key: 'liquidites',      labelKey: 'wealth.subnav.liquidites',      categories: ['liquidites'],        icon: Wallet },
+  { key: 'investissements', labelKey: 'wealth.subnav.investissements', categories: ['investissements'],   icon: TrendingUp },
+  { key: 'immobilier',      labelKey: 'wealth.subnav.immobilier',      categories: ['immobilier'],        icon: Home },
+  { key: 'cryptos',         labelKey: 'wealth.subnav.cryptos',         categories: ['cryptos'],           icon: Bitcoin },
+  { key: 'autres',          labelKey: 'wealth.subnav.autres',          categories: ['autres'],            icon: Sparkles },
+  { key: 'emprunts',        labelKey: 'wealth.subnav.emprunts',        categories: ['emprunts'],          icon: CreditCard },
 ];
 
 export function Wealth({ assets, liabilities, members, activeMemberId, visibleAssets, visibleLiabilities, saveAsset, deleteAsset, saveLiability, deleteLiability, memberShare, fmt, wealthHistory = [], accounts = [], accountBalances = {}, transactions = [], onOpenAddWizard, reload }) {
@@ -137,7 +137,7 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
               onClick={() => setSubview(s.key)}
             >
               <Icon size={14}/>
-              <span>{s.label}</span>
+              <span>{t(s.labelKey)}</span>
               {count > 0 && <span className="wealth-subnav-count">{count}</span>}
             </button>
           );
@@ -148,7 +148,7 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
       {!isAll && (
         <section className="card subview-hero">
           <div className="subview-hero-info">
-            <div className="subview-hero-label">{currentSub.label}</div>
+            <div className="subview-hero-label">{t(currentSub.labelKey)}</div>
             <div className="subview-hero-value">{fmt(isLiabilitiesOnly ? subviewLiabTotal : subviewTotal)}</div>
             <div className="subview-hero-meta">
               {isLiabilitiesOnly
@@ -170,29 +170,29 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
       {isAll && totalAssets > 0 && (
         <section className="wealth-kpis">
           <div className="wk-card">
-            <div className="wk-label">Actif net</div>
+            <div className="wk-label">{t('wealth.netAssets')}</div>
             <div className="wk-value">{fmt(netWealthAssets)}</div>
-            <div className="wk-meta">{fmt(totalAssets)} d'actifs</div>
+            <div className="wk-meta">{t('wealth.ofAssets', { amount: fmt(totalAssets) })}</div>
           </div>
           {debtRatioWealth !== null && (
             <div className={`wk-card ${debtRatioWealth > 50 ? 'warn' : ''}`}>
-              <div className="wk-label">Ratio d'endettement</div>
+              <div className="wk-label">{t('wealth.debtRatio')}</div>
               <div className="wk-value">{debtRatioWealth.toFixed(1)}%</div>
-              <div className="wk-meta">{debtRatioWealth < 30 ? 'Faible' : debtRatioWealth < 50 ? 'Modéré' : 'Élevé'}</div>
+              <div className="wk-meta">{debtRatioWealth < 30 ? t('wealth.low') : debtRatioWealth < 50 ? t('wealth.moderate') : t('wealth.high')}</div>
             </div>
           )}
           {illiquidRatio !== null && (
             <div className="wk-card">
-              <div className="wk-label">Part immobilier</div>
+              <div className="wk-label">{t('wealth.realEstateShare')}</div>
               <div className="wk-value">{illiquidRatio.toFixed(1)}%</div>
-              <div className="wk-meta">{illiquidRatio > 70 ? 'Peu diversifié' : 'Équilibré'}</div>
+              <div className="wk-meta">{illiquidRatio > 70 ? t('wealth.concentrated') : t('wealth.balanced')}</div>
             </div>
           )}
           {totalMonthlyDebt > 0 && (
             <div className="wk-card">
-              <div className="wk-label">Mensualités totales</div>
+              <div className="wk-label">{t('wealth.totalMonthly')}</div>
               <div className="wk-value">{fmt(totalMonthlyDebt)}</div>
-              <div className="wk-meta">/mois (tous prêts)</div>
+              <div className="wk-meta">{t('wealth.perMonthAllLoans')}</div>
             </div>
           )}
         </section>
@@ -206,7 +206,7 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
       {/* Asset class allocation — only on 'all' */}
       {isAll && classAllocation.length > 0 && (
         <section className="card allocation-card">
-          <div className="card-header"><h3><BarChart3 size={16}/> Allocation par classe d'actifs</h3></div>
+          <div className="card-header"><h3><BarChart3 size={16}/> {t('wealth.allocationByClass')}</h3></div>
           <div className="allocation-body">
             <ResponsiveContainer width={200} height={200}>
               <PieChart>
@@ -235,7 +235,7 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
           <div className="ws-card positive">
             <div className="ws-icon"><Landmark size={20}/></div>
             <div className="ws-content">
-              <div className="ws-label">Total actifs</div>
+              <div className="ws-label">{t('wealth.totalAssets')}</div>
               <div className="ws-value"><AnimatedNumber value={totalAssets} format={(v) => fmt(v)}/></div>
               <div className="ws-meta">{visibleAssets.length} actif{visibleAssets.length > 1 ? 's' : ''}</div>
             </div>
@@ -243,7 +243,7 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
           <div className="ws-card negative">
             <div className="ws-icon"><CreditCard size={20}/></div>
             <div className="ws-content">
-              <div className="ws-label">Total passifs</div>
+              <div className="ws-label">{t('wealth.totalLiabilities')}</div>
               <div className="ws-value"><AnimatedNumber value={totalLiabilities} format={(v) => fmt(v)}/></div>
               <div className="ws-meta">{visibleLiabilities.length} prêt{visibleLiabilities.length > 1 ? 's' : ''}</div>
             </div>
@@ -267,7 +267,7 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
 
         {filteredItems.length === 0 ? (
           <div className="wealth-empty-state">
-            <p>Aucun élément dans <em>{currentSub.label.toLowerCase()}</em>.</p>
+            <p>{t('wealth.emptyCategory', { category: t(currentSub.labelKey).toLowerCase() })}</p>
             <button className="primary-btn" onClick={() => (onOpenAddWizard ? onOpenAddWizard() : setShowAddPicker(true))}>
               <Plus size={14}/> Ajouter
             </button>
