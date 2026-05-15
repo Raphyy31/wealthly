@@ -844,8 +844,21 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
         return;
       }
       const headers = raw[0].map(h => String(h).trim());
+      // SheetJS lit les dates en UTC (serial Excel → Date UTC minuit), donc
+      // getUTCFullYear/Month/Date évite le décalage d'un jour selon le fuseau.
+      const cellToString = (v) => {
+        if (v === undefined || v === null) return '';
+        if (v instanceof Date) {
+          if (Number.isNaN(v.getTime())) return '';
+          const y = v.getUTCFullYear();
+          const m = String(v.getUTCMonth() + 1).padStart(2, '0');
+          const d = String(v.getUTCDate()).padStart(2, '0');
+          return `${y}-${m}-${d}`;
+        }
+        return String(v);
+      };
       const rows = raw.slice(1).map(row =>
-        Object.fromEntries(headers.map((h, i) => [h, row[i] !== undefined ? String(row[i]) : '']))
+        Object.fromEntries(headers.map((h, i) => [h, cellToString(row[i])]))
       );
       parsed = { headers, rows, delimiter: 'xlsx' };
     } else {
