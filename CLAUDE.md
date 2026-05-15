@@ -7,6 +7,31 @@ Notes for Claude (and any future AI tooling) picking the project back up.
 
 ---
 
+## Session 2026-05-15 — Raphyy31 + Claude (Opus 4.7) — catégories user + règles dual-select + Mois type modal
+
+Commit unique `1ec712f` mergé directement sur `main` (workflow no-PR).
+
+**Livré** :
+
+| Domaine | Changement |
+|---|---|
+| **Catégories user (backend)** | Nouveaux endpoints `POST /categories` et `DELETE /categories/{slug}` dans `routers/other.py`. Création avec slugify ASCII (`unicodedata.normalize` + `re`), suffixage `-2/-3` si collision, validation parent existant + interdiction sous-sous-catégorie (taxonomie 2 niveaux preservée). Delete cascade : détache `Transaction.category_id`, drop `CategorisationRule` + `Budget` pointant vers le slug ou ses enfants. `CategoryCreate` schema dans `schemas.py`. |
+| **Catégories user (frontend)** | `api.categories.create` / `api.categories.delete`. Nouvelle section `MyCategoriesSection` en haut de la sous-vue Réglages → « Catégories & règles » : liste hiérarchique avec chip parent + chips sous-cat, bouton « + Catégorie » (top-level) et « + » par parent (sous-cat). Modale `CategoryCreateModal` avec picker icône (20 emojis), couleur (12 swatches issus des dataviz d1..d7) et type (dépense/revenu/virement) ; sous-cat hérite du type parent. Confirmation native sur delete. `reloadCategories` passé depuis WealthlyApp pour re-fetch après mutation. |
+| **Règles dual-select** | Formulaire « + règle » dans `CustomRulesSection` (Settings.jsx) refait : grid 4 colonnes `pattern + Catégorie + Détail + Add`. `newTopId` / `newSubId` séparés, `targetSlug = newSubId \|\| newTopId`. Détail optionnel — si vide, la règle cible le top-level. Liste des règles affiche maintenant `Parent › Détail` (chevron `›`) au lieu du slug brut. |
+| **CreateRuleModal refait** | Modale post-recatégorisation manuelle : ajout des deux selects Catégorie + Détail (Détail désactivé si pas de sous-cat). `onConfirm` signature changée `(keyword) → ({ keyword, categoryId })`. WealthlyApp.applyRule recat la tx déclencheur si l'utilisateur a choisi un slug différent de celui appliqué initialement. `countRuleMatches` accepte un slug cible. |
+| **Filtre Transactions** | Ligne « ❓ Non catégorisé » ajoutée explicitement dans le filtre header de la colonne Catégorie (était filtrable via le panneau avancé mais pas dans le picker rapide). Compte `catCounts['uncategorized']` réutilisé. |
+| **Mois type modal** | `RefMonthEditor` passé du drawer latéral 520px à une grosse modale centrée 1080px (`.modal-backdrop` + `.modal.rm-modal`), layout 2 colonnes : Entrées + Épargne à gauche (`0.95fr`), Dépenses à droite (`1.15fr`). Single column sous 880px. Header de section enrichi : icône + label + total agrégé à droite. Inputs labellisés agrandis (font 14px, padding 8×10, border + focus accent-soft, radius 8). Empty-state en dashed border centré. Anciennes classes `.ref-month-backdrop` / `.ref-month-drawer` retirées d'`index.css`. |
+
+**Pas touché à** : la couche de catégorisation regex/IA elle-même (Payees + Learning + builtin rules) — le user a un prompt prêt pour la prochaine session. La sync GoCardless / l'import CSV / `PATCH /transactions` reconnaissent automatiquement les slugs user-créés via `_resolve_category_id` (lookup `Category.slug == ?` scopé `household_id`).
+
+**Reste à faire** :
+- 2FA TOTP (toujours)
+- Cron Railway auto-sync GoCardless + email re-consent J-7
+- Refonte catégorisation **Payees + Category Learning + 120 règles builtin** (prompt rédigé par l'utilisateur, à exécuter dans une session dédiée)
+- i18n EN : la section MyCategoriesSection + le CreateRuleModal sont 100% FR pour l'instant
+
+---
+
 ## Session 2026-05-14 — Raphyy31 + Claude (Sonnet 4.6 puis Opus 4.7) — parallel agents salve
 
 Session conduite avec 4 puis 3 agents en parallèle dans des worktrees (`feature/comparer-mois`, `feature/dca-polish`, `feature/i18n-audit`, `feature/jwt-cleanup`, puis `feature/dca-tracking`, `feature/comparer-tune`, `feature/i18n-sweep`).

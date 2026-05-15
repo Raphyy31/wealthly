@@ -1,10 +1,23 @@
 # Wealthly — Roadmap
 
-État au **2026-05-14** — session parallel agents (JWT cleanup + DCA polish/tracking + Comparer mois + i18n EN sweep + Admin cleanup + Wizard emprunt complet).
+État au **2026-05-15** — catégories utilisateur + dual-select règles + Mois type modal.
 
 ---
 
-## 🆕 Session 2026-05-14 — Raphyy31 + Claude (Sonnet 4.6 → Opus 4.7)
+## 🆕 Session 2026-05-15 — Raphyy31 + Claude (Opus 4.7)
+
+Commit `1ec712f` push direct sur `main`. Voir `CLAUDE.md` pour le détail complet.
+
+- [x] **Catégories utilisateurs** — créer / supprimer Catégorie (niveau 1) et Détail (niveau 2) depuis Réglages → Catégories & règles. Backend `POST/DELETE /categories` avec slugify + cascade rules/budgets/transactions.
+- [x] **Règles dual-select** — formulaire et modale `CreateRuleModal` repensés : choix Catégorie + Détail (optionnel). Liste affiche `Parent › Détail`.
+- [x] **Filtre Transactions** — `❓ Non catégorisé` ajouté dans le picker rapide de la colonne Catégorie.
+- [x] **Mois type modal** — drawer latéral 520px remplacé par modale centrée 1080px, layout 2 colonnes (Entrées + Épargne / Dépenses), inputs agrandis, totaux par section.
+
+**Prochaine grosse session prévue** : refonte du moteur de catégorisation (Payees canoniques + Category Learning + 120 règles builtin inspirées d'Actual Budget). Prompt déjà rédigé.
+
+---
+
+## Session 2026-05-14 — Raphyy31 + Claude (Sonnet 4.6 → Opus 4.7)
 
 Salve menée avec 4 puis 3 agents en parallèle dans des worktrees. Voir `CLAUDE.md` pour le détail.
 
