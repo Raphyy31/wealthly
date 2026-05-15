@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import { Activity } from 'lucide-react';
 import { formatCurrency, formatDate } from '../utils.js';
+import { ChipSelect } from './ChipSelect.jsx';
 
 const NW_PERIODS = [
   { key: '1M',  months: 1 },
@@ -20,9 +21,9 @@ const NW_PERIODS = [
 ];
 
 const NW_MODES = [
-  { key: 'net',       label: 'Patrimoine net' },
-  { key: 'gross',     label: 'Patrimoine brut' },
-  { key: 'financial', label: 'Patrimoine financier' },
+  { value: 'net',       label: 'Patrimoine net' },
+  { value: 'gross',     label: 'Patrimoine brut' },
+  { value: 'financial', label: 'Patrimoine financier' },
 ];
 
 export const NetWorthChart = React.memo(function NetWorthChart({ snapshots = [], fmt }) {
@@ -80,9 +81,7 @@ export const NetWorthChart = React.memo(function NetWorthChart({ snapshots = [],
     <div className="nw-chart">
       <div className="nw-header">
         <div className="nw-header-left">
-          <select className="nw-mode-select" value={mode} onChange={(e) => setMode(e.target.value)}>
-            {NW_MODES.map(m => <option key={m.key} value={m.key}>{m.label}</option>)}
-          </select>
+          <ChipSelect options={NW_MODES} value={mode} onChange={setMode} small/>
           <div className="nw-current">
             <div className="nw-current-value">{fmt(last.value)}</div>
             <div className={`nw-current-delta ${delta >= 0 ? 'positive' : 'negative'}`}>

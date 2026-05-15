@@ -1350,9 +1350,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 /* Net worth chart */
 .nw-chart { display: flex; flex-direction: column; gap: 18px; }
 .nw-header { display: flex; justify-content: space-between; align-items: flex-end; gap: 18px; flex-wrap: wrap; }
-.nw-header-left { display: flex; flex-direction: column; gap: 6px; }
-.nw-mode-select { background: transparent; border: none; color: var(--text-secondary); font-size: 13px; font-weight: 500; padding: 4px 0; cursor: pointer; font-family: inherit; outline: none; max-width: max-content; }
-.nw-mode-select:hover { color: var(--text-primary); }
+.nw-header-left { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
 .nw-current-value { font-size: 36px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--text-primary); line-height: 1.1; }
 .nw-current-delta { font-size: 13px; font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .nw-current-delta.positive { color: var(--success); }
