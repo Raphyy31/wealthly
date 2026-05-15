@@ -206,6 +206,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     currentValue: a.current_value,
     currency: a.currency || 'EUR',
     ticker: a.ticker || '',
+    isin: a.isin || '',
     quantity: a.quantity ?? null,
     notes: a.notes || '',
     memberIds: a.member_ids || [],
