@@ -19,7 +19,61 @@ const EMPTY_FILTERS = {
   amountMin: '',     // string for input control, parsed at filter time
   amountMax: '',
   type: 'all',       // all | income | expense
+  month: '',         // YYYY-MM
 };
+
+function CatPicker({ categories, currentId, onSelect, onClose }) {
+  const [search, setSearch] = useState('');
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose(); };
+    // small delay to avoid immediate close on the opening click
+    const tid = setTimeout(() => window.addEventListener('mousedown', handler), 80);
+    return () => { clearTimeout(tid); window.removeEventListener('mousedown', handler); };
+  }, [onClose]);
+
+  const q = search.toLowerCase();
+  const filtered = categories.filter(c =>
+    c.id !== 'uncategorized' &&
+    (q === '' || c.name.toLowerCase().includes(q))
+  );
+  const income = filtered.filter(c => c.type === 'income');
+  const expense = filtered.filter(c => c.type === 'expense');
+  const transfer = filtered.filter(c => c.type === 'transfer');
+
+  const Row = ({ c }) => (
+    <button
+      key={c.id}
+      className={`cat-picker-item ${currentId === c.id ? 'active' : ''}`}
+      onClick={() => { onSelect(c.id); onClose(); }}
+    >
+      <span className="cat-picker-icon">{c.icon}</span>
+      <span>{c.name}</span>
+    </button>
+  );
+
+  return (
+    <div className="cat-picker" ref={ref}>
+      <div className="cat-picker-search">
+        <Search size={12} />
+        <input
+          autoFocus
+          placeholder="Rechercher…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Escape') onClose(); }}
+        />
+      </div>
+      <div className="cat-picker-list">
+        {income.length > 0 && <><div className="cat-picker-group">Revenus</div>{income.map(c => <Row key={c.id} c={c}/>)}</>}
+        {expense.length > 0 && <><div className="cat-picker-group">Dépenses</div>{expense.map(c => <Row key={c.id} c={c}/>)}</>}
+        {transfer.length > 0 && <><div className="cat-picker-group">Transferts</div>{transfer.map(c => <Row key={c.id} c={c}/>)}</>}
+        {filtered.length === 0 && <div className="cat-picker-empty">Aucune catégorie trouvée</div>}
+      </div>
+    </div>
+  );
+}
 
 export function Transactions({ transactions, accounts, categories, members = [], recurringIds, toggleRecurring, transferIds = new Set(), setTransferOverride, updateCategory, deleteTransaction, fmt, initialAccountFilter, onConsumeInitialFilter }) {
   const { t } = useTranslation();
@@ -30,6 +84,7 @@ export function Transactions({ transactions, accounts, categories, members = [],
     initialAccountFilter ? { ...EMPTY_FILTERS, accs: [initialAccountFilter] } : EMPTY_FILTERS
   );
   const [showPanel, setShowPanel] = useState(false);
+  const [catFilterSearch, setCatFilterSearch] = useState('');
 
   // Consume the initial filter so it doesn't re-apply on subsequent navigations
   // back to this view.
@@ -62,8 +117,15 @@ export function Transactions({ transactions, accounts, categories, members = [],
   // Per-category transaction counts (shown next to each checkbox in the panel).
   const catCounts = useMemo(() => {
     const c = {};
-    transactions.forEach(t => { c[t.categoryId || 'uncategorized'] = (c[t.categoryId || 'uncategorized'] || 0) + 1; });
+    transactions.forEach(tx => { c[tx.categoryId || 'uncategorized'] = (c[tx.categoryId || 'uncategorized'] || 0) + 1; });
     return c;
+  }, [transactions]);
+
+  // Available months for the month filter bar.
+  const availableMonths = useMemo(() => {
+    const set = new Set();
+    transactions.forEach(tx => { if (tx.date) set.add(tx.date.slice(0, 7)); });
+    return [...set].sort().reverse();
   }, [transactions]);
 
   const filtered = useMemo(() => {
@@ -71,20 +133,21 @@ export function Transactions({ transactions, accounts, categories, members = [],
     const min = filters.amountMin === '' ? null : parseFloat(filters.amountMin);
     const max = filters.amountMax === '' ? null : parseFloat(filters.amountMax);
     return transactions
-      .filter(t => {
-        if (q && !(t.label || '').toLowerCase().includes(q)) return false;
-        if (filters.cats.length > 0 && !filters.cats.includes(t.categoryId || 'uncategorized')) return false;
-        if (filters.accs.length > 0 && !filters.accs.includes(t.accountId)) return false;
+      .filter(tx => {
+        if (q && !(tx.label || '').toLowerCase().includes(q)) return false;
+        if (filters.cats.length > 0 && !filters.cats.includes(tx.categoryId || 'uncategorized')) return false;
+        if (filters.accs.length > 0 && !filters.accs.includes(tx.accountId)) return false;
         if (filters.members.length > 0) {
-          const owners = accountMembers[t.accountId] || [];
+          const owners = accountMembers[tx.accountId] || [];
           if (!filters.members.some(m => owners.includes(m))) return false;
         }
-        if (filters.dateFrom && t.date < filters.dateFrom) return false;
-        if (filters.dateTo && t.date > filters.dateTo) return false;
-        if (min != null && Math.abs(t.amount) < min) return false;
-        if (max != null && Math.abs(t.amount) > max) return false;
-        if (filters.type === 'income' && t.amount < 0) return false;
-        if (filters.type === 'expense' && t.amount >= 0) return false;
+        if (filters.dateFrom && tx.date < filters.dateFrom) return false;
+        if (filters.dateTo && tx.date > filters.dateTo) return false;
+        if (min != null && Math.abs(tx.amount) < min) return false;
+        if (max != null && Math.abs(tx.amount) > max) return false;
+        if (filters.type === 'income' && tx.amount < 0) return false;
+        if (filters.type === 'expense' && tx.amount >= 0) return false;
+        if (filters.month && !tx.date.startsWith(filters.month)) return false;
         return true;
       })
       .sort((a, b) => {
@@ -120,10 +183,12 @@ export function Transactions({ transactions, accounts, categories, members = [],
     (filters.dateTo ? 1 : 0) +
     (filters.amountMin !== '' ? 1 : 0) +
     (filters.amountMax !== '' ? 1 : 0) +
-    (filters.type !== 'all' ? 1 : 0);
+    (filters.type !== 'all' ? 1 : 0) +
+    (filters.month ? 1 : 0);
 
-  const expenseCats = categories.filter(c => c.type === 'expense');
-  const incomeCats = categories.filter(c => c.type === 'income');
+  const catSearchQ = catFilterSearch.toLowerCase();
+  const expenseCats = categories.filter(c => c.type === 'expense' && (catSearchQ === '' || c.name.toLowerCase().includes(catSearchQ)));
+  const incomeCats = categories.filter(c => c.type === 'income' && (catSearchQ === '' || c.name.toLowerCase().includes(catSearchQ)));
 
   return (
     <div className="transactions-view">
@@ -234,6 +299,12 @@ export function Transactions({ transactions, accounts, categories, members = [],
 
             <div className="tx-filter-section">
               <div className="tx-filter-label">Catégories</div>
+              <input
+                className="tx-filter-search-input"
+                placeholder="Filtrer les catégories…"
+                value={catFilterSearch}
+                onChange={e => setCatFilterSearch(e.target.value)}
+              />
               {incomeCats.length > 0 && (
                 <>
                   <div className="tx-filter-sublabel">Revenus</div>
@@ -278,6 +349,24 @@ export function Transactions({ transactions, accounts, categories, members = [],
         )}
       </div>
 
+      {availableMonths.length > 0 && (
+        <div className="tx-month-bar">
+          <button
+            className={`tx-month-chip ${!filters.month ? 'active' : ''}`}
+            onClick={() => setField('month', '')}
+          >Tous</button>
+          {availableMonths.slice(0, 18).map(m => (
+            <button
+              key={m}
+              className={`tx-month-chip ${filters.month === m ? 'active' : ''}`}
+              onClick={() => setField('month', filters.month === m ? '' : m)}
+            >
+              {new Intl.DateTimeFormat('fr-FR', { month: 'short', year: '2-digit' }).format(new Date(m + '-02'))}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="tx-table">
         <div className="tx-header">
           <div className="th sortable" onClick={() => toggleSort('date')}>Date <ArrowUpDown size={12}/></div>
@@ -316,11 +405,14 @@ export function Transactions({ transactions, accounts, categories, members = [],
                     <Repeat size={11}/>
                   </button>
                 </div>
-                <div className="td td-cat">
+                <div className="td td-cat" style={{ position: 'relative' }}>
                   {editingTx === tx.id ? (
-                    <select autoFocus defaultValue={tx.categoryId || ''} onBlur={() => setEditingTx(null)} onChange={(e) => { updateCategory(tx.id, e.target.value); setEditingTx(null); }}>
-                      {categories.map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
-                    </select>
+                    <CatPicker
+                      categories={categories}
+                      currentId={tx.categoryId}
+                      onSelect={(catId) => { updateCategory(tx.id, catId); }}
+                      onClose={() => setEditingTx(null)}
+                    />
                   ) : isTransfer ? (
                     <button className="cat-pill" style={{ background: 'var(--primary-soft)', color: 'var(--primary)' }} onClick={() => setEditingTx(tx.id)} title="Cliquez pour catégoriser malgré tout">
                       ↔ Virement interne

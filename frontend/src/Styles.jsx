@@ -2284,6 +2284,28 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 @keyframes _spin { to { transform: rotate(360deg); } }
 .spin { animation: _spin .65s linear infinite; display: inline-block; vertical-align: middle; }
 .primary-btn:disabled, .secondary-btn:disabled { opacity: .55; cursor: not-allowed; pointer-events: none; }
+
+/* ─── CatPicker inline ─── */
+.cat-picker { position: absolute; top: calc(100% + 4px); left: 0; z-index: 200; background: var(--bg-elev); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 8px 24px -4px rgba(0,0,0,.12); width: 220px; display: flex; flex-direction: column; overflow: hidden; }
+.cat-picker-search { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+.cat-picker-search input { flex: 1; border: none; background: transparent; font-family: inherit; font-size: 13px; color: var(--ink); outline: none; }
+.cat-picker-list { max-height: 260px; overflow-y: auto; padding: 4px; }
+.cat-picker-group { padding: 6px 8px 2px; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-3); font-weight: 600; }
+.cat-picker-item { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 8px; border: none; background: transparent; border-radius: 6px; font-family: inherit; font-size: 13px; color: var(--ink-2); cursor: pointer; text-align: left; transition: background .1s; }
+.cat-picker-item:hover, .cat-picker-item.active { background: var(--accent-soft); color: var(--accent); }
+.cat-picker-icon { font-size: 14px; width: 18px; text-align: center; flex-shrink: 0; }
+.cat-picker-empty { padding: 14px; font-size: 12px; color: var(--ink-3); text-align: center; }
+
+/* ─── Month filter bar ─── */
+.tx-month-bar { display: flex; gap: 6px; flex-wrap: wrap; padding: 10px 0 4px; overflow-x: auto; scrollbar-width: none; }
+.tx-month-bar::-webkit-scrollbar { display: none; }
+.tx-month-chip { padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg); color: var(--ink-2); font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: border-color .15s, background .15s, color .15s; font-family: inherit; }
+.tx-month-chip:hover { border-color: var(--accent); color: var(--accent); }
+.tx-month-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* ─── Category filter search input ─── */
+.tx-filter-search-input { width: 100%; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); font-family: inherit; font-size: 13px; color: var(--ink); outline: none; margin-bottom: 8px; }
+.tx-filter-search-input:focus { border-color: var(--accent); }
 `;
   return <style>{css}</style>;
 }
