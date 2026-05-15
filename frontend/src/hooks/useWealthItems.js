@@ -55,7 +55,12 @@ const assetToWealthItem = (a, childAssets = []) => {
       lastPrice: (c.quantity && c.currentValue) ? parseFloat(c.currentValue) / parseFloat(c.quantity) : null,
       value: parseFloat(c.currentValue ?? 0),
     }));
-    value = positions.reduce((s, p) => s + (p.value || 0), 0);
+    const positionsSum = positions.reduce((s, p) => s + (p.value || 0), 0);
+    // Le parent stocke la valorisation totale du compte (positions + liquidités).
+    // On l'utilise comme valeur de référence ; on retombe sur la somme des
+    // positions seulement si le parent n'a pas de currentValue explicite.
+    const parentExplicit = parseFloat(a.currentValue ?? 0);
+    value = parentExplicit > 0 ? parentExplicit : positionsSum;
     const cbSum = childAssets.reduce((s, c) => s + (c.purchasePrice != null && c.quantity != null
       ? parseFloat(c.purchasePrice) * parseFloat(c.quantity) : 0), 0);
     costBasis = cbSum > 0 ? cbSum : null;
