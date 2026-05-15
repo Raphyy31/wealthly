@@ -160,6 +160,7 @@ class AssetBase(BaseModel):
     # Live-pricing: when ticker + quantity are set, the frontend overrides
     # current_value with quantity × live_price (Yahoo Finance via /quotes).
     ticker: Optional[str] = None
+    isin: Optional[str] = None        # ISO 6166 — e.g. FR0007054358
     quantity: Optional[float] = None
     notes: Optional[str] = ""
     # Real estate enrichment — all optional, used by the immo wizard
@@ -189,6 +190,7 @@ class AssetUpdate(BaseModel):
     current_value: Optional[float] = None
     currency: Optional[str] = None
     ticker: Optional[str] = None
+    isin: Optional[str] = None
     quantity: Optional[float] = None
     notes: Optional[str] = None
     member_ids: Optional[List[str]] = None

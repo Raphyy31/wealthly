@@ -250,6 +250,7 @@ class Asset(Base):
     # ticker means the asset stays manually-valued (real estate, livret, …).
     # Examples: AAPL, MSFT, CW8.PA (Amundi MSCI World on Euronext), BTC-EUR.
     ticker = Column(String, nullable=True, index=True)
+    isin   = Column(String, nullable=True)             # ISO 6166 — e.g. FR0007054358
     quantity = Column(Float, nullable=True)
     notes = Column(Text, nullable=True, default="")
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
