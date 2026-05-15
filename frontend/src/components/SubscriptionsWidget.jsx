@@ -98,12 +98,19 @@ export function SubscriptionsWidget({ transactions, categories, recurringIds, fm
   );
 }
 
-// Strip FR banking prefixes and pick the merchant token.
+// Strip FR banking prefixes + payment processors (PayPal, Stripe…) and pick
+// the merchant token. Keeps "NESPRESSO" instead of "PAYPAL" for "PAYPAL *NESPRESSO".
 function normalizeMerchant(label) {
+  const PROCESSORS = ['paypal', 'sumup', 'adyen', 'stripe', 'square', 'payplug', 'lyfpay', 'alma', 'klarna', 'paylib', 'lydia', 'qonto', 'shopify', 'wise', 'apple pay', 'google pay'];
+  const procRe = new RegExp(`\\b(${PROCESSORS.join('|')})\\b\\s*\\*+\\s*`, 'gi');
   const stripped = label
     .replace(/^(paiement par carte|prélèvement|prelevement|virement émis|virement emis|paiement|achat cb)\s+/i, '')
     .replace(/PAIEMENT PAR CARTE\s+[Xx]?\d{4,}\**\s*/gi, '')
-    .replace(/\s+\d{2}\/\d{2}(\/\d{2,4})?(\s+|$)/g, ' ')
+    .replace(procRe, '')
+    .replace(/^[*\s]+/, '')
+    .replace(/\s+\d{2}\/\d{2}(\/\d{2,4})?(\s|$).*$/g, '')
+    .replace(/\s+(LU|FR|EN|US|GB|DE|ES|IT|BE|CH|NL|IE)\b.*$/i, '')
+    .replace(/\s+\d{4,}.*$/, '')
     .replace(/\s{2,}/g, ' ')
     .trim();
   return stripped.length > 30 ? stripped.slice(0, 30) + '…' : stripped;

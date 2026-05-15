@@ -994,30 +994,58 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       showToast(t('toasts.genericError', { message: err.message }), 'error');
       return;
     }
-    // Extract merchant token from label (FR bank prefixes stripped)
+    // Extract merchant token from label. We strip three layers of noise so the
+    // *real* merchant surfaces (not "PAYPAL" or "STRIPE"):
+    //   1. FR bank prefixes ("Paiement par carte", "Prélèvement"…)
+    //   2. Card masks ("PAIEMENT PAR CARTE X8987")
+    //   3. Payment processors that prefix the actual merchant via " * "
+    //      (PAYPAL *NESPRESSO, SUMUP *MAGASIN, STRIPE *…, ADYEN *…)
+    //   4. Dates, trailing places, generic stop tokens (LU, FR, COM…)
     if (!tx?.label) return;
+    const PROCESSORS = ['paypal', 'sumup', 'adyen', 'stripe', 'square', 'payplug', 'lyfpay', 'alma', 'klarna', 'paylib', 'lydia', 'qonto', 'shopify', 'wise', 'revolut', 'apple pay', 'apple\\.com', 'google pay', 'g pay', 'gp\\*', 'gp \\*'];
+    const procRe = new RegExp(`\\b(${PROCESSORS.join('|')})\\b\\s*\\*+\\s*`, 'gi');
     const stripped = tx.label
       .replace(/^(paiement par carte|prélèvement|prelevement|virement émis|virement emis|virement en votre faveur|virement recu de|virement reçu de|paiement|retrait dab|retrait|versement|avoir)\s+/i, '')
       .replace(/PAIEMENT PAR CARTE\s+[Xx]?\d{4,}\**\s*/gi, '')
-      .replace(/\s+\d{2}\/\d{2}(\s+|$)/g, ' ')
+      .replace(procRe, '')              // strip "PAYPAL * ", "STRIPE *", etc.
+      .replace(/^[*\s]+/, '')             // leading stars / spaces
+      .replace(/\s+\d{2}\/\d{2}(\/\d{2,4})?(\s|$).*$/g, '')   // dates 30/04 (and everything after)
+      .replace(/\s+(LU|FR|EN|US|GB|DE|ES|IT|BE|CH|NL|IE)\b.*$/i, '')  // trailing country code + everything after
+      .replace(/\s+\d{4,}.*$/, '')                              // long trailing numeric refs
       .trim();
-    const words = stripped.split(/\s+/).filter(w => w.length >= 4);
+    const STOPWORDS = new Set([
+      'SARL', 'SAS', 'SASU', 'EURL', 'COM', 'WWW', 'HTTPS', 'HTTP', 'CARTE', 'CB',
+      'SEPA', 'INST', 'INSTANT', 'INTERNE', 'TELECOM', 'TELECOMS',
+      'VIREMENT', 'VIRMNT', 'EMIS', 'RECU', 'RECUS', 'REGLT', 'REGLEMENT', 'PRELEVEMENT', 'PRLV', 'PAIEMENT', 'ACHAT',
+      'PARIS', 'LYON', 'MARSEILLE', 'TOULOUSE', 'BORDEAUX', 'NANTES', 'LILLE', 'NICE', 'STRASBOURG',
+      'FRANCE', 'EUROPE', 'STORE', 'SHOP', 'ONLINE', 'WEB', 'INTERNET', 'DRIVE',
+    ]);
+    const words = stripped
+      .split(/\s+/)
+      .map(w => w.replace(/^\*+|[*.,;:!?]+$/g, ''))            // strip leading * and trailing punct
+      .filter(w => w.length >= 3 && !STOPWORDS.has(w.toUpperCase()) && !/^\d+$/.test(w) && !/^[Xx]\d+$/.test(w));
     if (!words.length) return;
-    const merchant = words.find(w => w === w.toUpperCase() && /[A-Z]{3}/.test(w)) || words[0];
+    // Prefer the FIRST all-caps alphabetic token (FR statements put merchant
+    // FIRST after stripping the bank/processor prefix). Fallback: first word.
+    const allCaps = words.filter(w => w === w.toUpperCase() && /^[A-ZÀ-Ÿ&'-]{3,}$/.test(w));
+    const merchant = allCaps[0] || words[0];
     const pattern = merchant.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     if (customRules.some(r => r.pattern.toLowerCase() === pattern.toLowerCase() && r.categoryId === categoryId)) return;
-    // Count matching candidates
+    // Find all matching txs that aren't manually categorized AND aren't
+    // already in the target category (no churn). We reclassify auto-categorized
+    // wrong matches too, not just uncategorized ones — when the user fixes
+    // ONE NESPRESSO transaction, ALL NESPRESSO transactions should follow.
     const regex = new RegExp(pattern, 'i');
     const toUpdate = transactions.filter(x =>
       x.id !== txId &&
       !x.isManualCategory &&
-      (!x.categoryId || x.categoryId === 'uncategorized') &&
+      x.categoryId !== categoryId &&
       regex.test(x.label || '')
     );
     const cat = categories.find(c => c.id === categoryId);
     const catName = cat?.name || categoryId;
     const msg = toUpdate.length > 0
-      ? `Créer une règle « ${merchant} » → ${catName} ?\n\n${toUpdate.length} transaction${toUpdate.length > 1 ? 's' : ''} non catégorisée${toUpdate.length > 1 ? 's' : ''} similaire${toUpdate.length > 1 ? 's' : ''} ser${toUpdate.length > 1 ? 'ont' : 'a'} reclassée${toUpdate.length > 1 ? 's' : ''} automatiquement.`
+      ? `Créer une règle « ${merchant} » → ${catName} ?\n\n${toUpdate.length} transaction${toUpdate.length > 1 ? 's' : ''} similaire${toUpdate.length > 1 ? 's' : ''} (non catégorisée${toUpdate.length > 1 ? 's' : ''} manuellement) ser${toUpdate.length > 1 ? 'ont' : 'a'} reclassée${toUpdate.length > 1 ? 's' : ''} automatiquement vers ${catName}.`
       : `Créer une règle « ${merchant} » → ${catName} ?\n\nLes futures transactions contenant « ${merchant} » seront classées automatiquement.`;
     if (!window.confirm(msg)) return;
     try {
