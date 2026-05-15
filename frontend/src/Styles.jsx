@@ -1063,8 +1063,8 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .th { position: relative; display: flex; align-items: center; gap: 6px; }
 .th.right { justify-content: flex-end; }
 .th-filter-wrap { display: inline-flex; align-items: center; position: relative; margin-left: 2px; }
-.th-filter-btn { background: transparent; border: none; padding: 3px; color: var(--ink-3); cursor: pointer; border-radius: 4px; opacity: 0; transition: opacity 0.15s, color 0.15s, background 0.15s; display: inline-flex; align-items: center; }
-.th:hover .th-filter-btn, .th-filter-btn.active { opacity: 1; }
+.th-filter-btn { background: transparent; border: none; padding: 3px; color: var(--ink-3); cursor: pointer; border-radius: 4px; opacity: 0.4; transition: opacity 0.15s, color 0.15s, background 0.15s; display: inline-flex; align-items: center; }
+.th:hover .th-filter-btn { opacity: 1; }
 .th-filter-btn:hover { color: var(--accent); background: var(--accent-soft); }
 .th-filter-btn.active { color: var(--accent); opacity: 1; background: var(--accent-soft); }
 .th-filter-popover {
@@ -1814,8 +1814,10 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
   font-weight: 600; font-size: 13px;
 }
 .wealth-item-name { font-weight: 600; font-size: 14px; color: var(--ink); }
-.wealth-item-meta { font-size: 11px; color: var(--ink-2); margin-top: 2px; }
+.wealth-item-meta { font-size: 11px; color: var(--ink-2); margin-top: 2px; display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .wealth-item-meta-muted { color: var(--ink-3); }
+.wealth-item-bank { font-weight: 500; color: var(--ink); letter-spacing: 0.01em; }
+.wealth-item-bank::after { content: '·'; margin-left: 6px; color: var(--ink-3); }
 .badge {
   padding: 2px 6px;
   border-radius: 4px;

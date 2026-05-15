@@ -128,7 +128,7 @@
     "analysis": {
       "title": "Your",
       "titleAccent": "analytics.",
-      "subtitle": "Merchants, categories and spending trends over time.",
+      "subtitle": "Monthly trends and spending breakdown by category.",
       "empty": "No transactions to analyse",
       "emptyData": "No data"
     },
@@ -332,7 +332,7 @@
       "titleAccent": "profile.",
       "intro": "The information that identifies your Wealthly account.",
       "fullName": "Full name",
-      "fullNameHint": "Will soon be editable from this page.",
+      "fullNameHint": "Shown in your exports and PDF reports.",
       "changeName": "Change my name",
       "uiLanguage": "Interface language",
       "uiLanguageHint": "Affects labels and date formats.",
@@ -468,8 +468,8 @@
       "emprunts": "Loans"
     },
     "emptyCategory": "No items in {{category}}",
-    "netAssets": "Net assets",
-    "ofAssets": "{{amount}} in assets",
+    "netAssets": "Assets (excl. cash) − liabilities",
+    "ofAssets": "out of {{amount}} in assets",
     "debtRatio": "Debt ratio",
     "low": "Low",
     "moderate": "Moderate",

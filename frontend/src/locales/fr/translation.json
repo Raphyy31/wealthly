@@ -128,7 +128,7 @@
     "analysis": {
       "title": "Vos",
       "titleAccent": "analyses.",
-      "subtitle": "Marchands, catégories et tendances de vos dépenses sur la durée.",
+      "subtitle": "Évolution mensuelle et tendances de vos dépenses par catégorie.",
       "empty": "Aucune transaction à analyser",
       "emptyData": "Aucune donnée"
     },
@@ -332,7 +332,7 @@
       "titleAccent": "profil.",
       "intro": "Les informations qui identifient votre compte Wealthly.",
       "fullName": "Nom complet",
-      "fullNameHint": "Bientôt modifiable depuis cette page.",
+      "fullNameHint": "Apparaît dans vos exports et bilans PDF.",
       "changeName": "Changer mon nom",
       "uiLanguage": "Langue de l'interface",
       "uiLanguageHint": "Affecte les libellés et formats de date.",
@@ -468,8 +468,8 @@
       "emprunts": "Emprunts"
     },
     "emptyCategory": "Aucun élément dans {{category}}",
-    "netAssets": "Actif net",
-    "ofAssets": "{{amount}} d'actifs",
+    "netAssets": "Actifs hors liquidités − dettes",
+    "ofAssets": "sur {{amount}} d'actifs",
     "debtRatio": "Ratio d'endettement",
     "low": "Faible",
     "moderate": "Modéré",

@@ -8,7 +8,7 @@
 // Suggestion d'historique : médiane sur les 3 derniers mois complets,
 // par (category_id, kind). Min 2 mois avec ≥1 tx pour suggérer.
 // ============================================================================
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X, RotateCcw, Lock, Unlock, Plus, Trash2, TrendingUp, TrendingDown, PiggyBank } from 'lucide-react';
 import { monthKey } from '../utils.js';
@@ -36,7 +36,10 @@ function SuggestionHover({ sug, fmt }) {
         <span className="rm-suggest-pop">
           <span className="rm-suggest-pop-head">
             <span><strong>Moyenne</strong> {fmt(sug.mean)} · <strong>Médiane</strong> {fmt(sug.median)}</span>
-            <span className="ds-micro">{sug.txs.length} opération{sug.txs.length > 1 ? 's' : ''} · {sug.months} mois</span>
+            <span className="ds-micro">
+              {sug.txs.length} opération{sug.txs.length > 1 ? 's' : ''} · {sug.months} mois
+              {sug.outlierCount > 0 && <> · {sug.outlierCount} valeur{sug.outlierCount > 1 ? 's' : ''} exceptionnelle{sug.outlierCount > 1 ? 's' : ''} exclue{sug.outlierCount > 1 ? 's' : ''} (moyenne brute {fmt(sug.meanRaw)})</>}
+            </span>
           </span>
           <span className="rm-suggest-pop-list">
             {sample.map(t => (
@@ -107,14 +110,23 @@ function buildHistorySuggestions({ transactions, accounts, memberShare, transfer
   }
 
   // Build final stats — keep entries with ≥2 months of data.
+  // We exclude outliers from the *suggested* mean (months whose total > 2× the
+  // median of the others), so a one-off bonus / refund doesn't inflate the
+  // recurring budget. Both raw and trimmed means are exposed so the popover
+  // can show "moyenne ajustée" + "moyenne brute".
   const result = {};
   for (const [k, a] of Object.entries(agg)) {
     const values = Object.values(a.byMonth).filter(v => v > 0);
     if (values.length < 2) continue;
+    const med = medianOf(values);
+    const trimmed = med > 0 ? values.filter(v => v <= 2 * med) : values;
+    const outliers = values.filter(v => v > 2 * med);
     result[k] = {
-      mean: Math.round(meanOf(values)),
-      median: Math.round(medianOf(values)),
+      mean: Math.round(meanOf(trimmed)),         // used for auto-fill (recurring budget)
+      meanRaw: Math.round(meanOf(values)),       // shown as info in popover
+      median: Math.round(med),
       months: values.length,
+      outlierCount: outliers.length,
       txs: a.txs.sort((x, y) => y.date.localeCompare(x.date)),
     };
   }
@@ -191,7 +203,18 @@ export function RefMonthEditor({
     const existing = refMonth?.lines || [];
     return existing.length > 0 ? existing : _buildStarter();
   });
+  // Snapshot of the initial state for dirty-check on close.
+  const initialSnapshot = useRef(JSON.stringify(refMonth?.lines || []));
   const [saving, setSaving] = useState(false);
+
+  // Intercept close: if dirty, ask confirmation before discarding edits.
+  const handleClose = () => {
+    const currentSerialized = JSON.stringify(draft);
+    if (currentSerialized !== initialSnapshot.current) {
+      if (!window.confirm('Vous avez des modifications non sauvegardées. Les abandonner ?')) return;
+    }
+    onClose && onClose();
+  };
 
   // Re-sync draft if refMonth prop changes from outside (after save).
   useEffect(() => {
@@ -296,14 +319,14 @@ export function RefMonthEditor({
 
   return (
     <>
-      <div className="ref-month-backdrop" onClick={onClose}/>
+      <div className="ref-month-backdrop" onClick={handleClose}/>
       <aside className="ref-month-drawer" role="dialog" aria-label="Éditer mon mois type">
         <div className="rm-head">
           <div>
             <h2>Mois type <em>de référence</em></h2>
             <p className="ds-micro">Le budget mensuel auquel l'app compare chaque mois.</p>
           </div>
-          <button className="ds-icon-btn" onClick={onClose} aria-label="Fermer"><X size={16}/></button>
+          <button className="ds-icon-btn" onClick={handleClose} aria-label="Fermer"><X size={16}/></button>
         </div>
 
         <div className="rm-toolbar">
@@ -400,7 +423,7 @@ export function RefMonthEditor({
             <div className="rm-balance"><span className="ds-micro">Balance</span><span className="num">{totals.balance >= 0 ? '+' : ''}{fmt(totals.balance)}</span></div>
           </div>
           <div className="rm-actions">
-            <button className="ds-btn ghost" onClick={onClose}>Annuler</button>
+            <button className="ds-btn ghost" onClick={handleClose}>Annuler</button>
             <button className="ds-btn primary" onClick={handleSave} disabled={saving}>
               {saving ? 'Enregistrement…' : 'Enregistrer'}
             </button>

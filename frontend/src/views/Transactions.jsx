@@ -573,6 +573,13 @@ export function Transactions({ transactions, accounts, categories, members = [],
         </div>
       )}
 
+      {/* Shared datalist for tx tag autocomplete — populated with every tag
+          already in use across the household. The id is referenced by each
+          TxTagsInline input via list="tx-tag-suggestions". */}
+      <datalist id="tx-tag-suggestions">
+        {allTags.map(tag => <option key={tag} value={tag}/>)}
+      </datalist>
+
       <div className="tx-table">
         <div className="tx-header">
           {/* Date — filter: range from/to */}
@@ -762,7 +769,7 @@ export function Transactions({ transactions, accounts, categories, members = [],
                     <Repeat size={11}/>
                   </button>
                   {updateTags && (
-                    <TxTagsInline tags={tx.tags || []} onChange={(next) => updateTags(tx.id, next)}/>
+                    <TxTagsInline tags={tx.tags || []} allTags={allTags} onChange={(next) => updateTags(tx.id, next)}/>
                   )}
                 </div>
                 <div className="td td-cat" style={{ position: 'relative' }}>

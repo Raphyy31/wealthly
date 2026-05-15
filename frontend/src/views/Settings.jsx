@@ -179,8 +179,16 @@ export function SettingsView({ members, accounts, accountBalances, saveMember, d
 // ============================================================================
 function ProfilSection({ currentUser, baseCurrency, setBaseCurrency }) {
   const { t, i18n: i18nHook } = useTranslation();
-  const initials = (currentUser?.full_name || currentUser?.email || '?')
-    .split(/\s+/).map(s => s[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
+  // Avatar fallback chain: full_name initials → email first char → "U" (User).
+  // Never show "?" — confusing and unfriendly.
+  const initials = (() => {
+    if (currentUser?.full_name) {
+      const parts = currentUser.full_name.split(/\s+/).map(s => s[0]).filter(Boolean).slice(0, 2).join('');
+      if (parts) return parts.toUpperCase();
+    }
+    if (currentUser?.email) return currentUser.email[0].toUpperCase();
+    return 'U';
+  })();
   const currentLang = (i18nHook.resolvedLanguage || i18nHook.language || 'fr').slice(0, 2);
 
   return (

@@ -16,6 +16,12 @@ export function ImportFlow({ step, parsedData, mapping, setMapping, account, set
     return (
       <div className="import-flow">
         <div className="import-header">
+          <div className="import-progress">
+            <span className="step active"><div className="step-num">1</div>Fichier</span>
+            <span className="step"><div className="step-num">2</div>Colonnes</span>
+            <span className="step"><div className="step-num">3</div>Compte</span>
+            <span className="step"><div className="step-num">4</div>Aperçu</span>
+          </div>
           <h2>Importer un <em>relevé CSV</em></h2>
           <p>Glissez votre fichier ou cliquez pour le sélectionner</p>
         </div>
@@ -29,6 +35,9 @@ export function ImportFlow({ step, parsedData, mapping, setMapping, account, set
           <Lightbulb size={14}/>
           <span><strong>Crédit Agricole :</strong> exportez en PDF puis convertissez via OFXpress.fr ou BankStatementLab. Le CSV natif est instable.</span>
         </div>
+        <div className="flow-actions" style={{ justifyContent: 'flex-start' }}>
+          <button className="secondary-btn" onClick={cancelImport}>Annuler</button>
+        </div>
       </div>
     );
   }
@@ -37,9 +46,10 @@ export function ImportFlow({ step, parsedData, mapping, setMapping, account, set
       <div className="import-flow">
         <div className="import-header">
           <div className="import-progress">
-            <span className="step active"><div className="step-num">1</div>Colonnes</span>
-            <span className="step"><div className="step-num">2</div>Compte</span>
-            <span className="step"><div className="step-num">3</div>Aperçu</span>
+            <span className="step done"><div className="step-num"><Check size={11}/></div>Fichier</span>
+            <span className="step active"><div className="step-num">2</div>Colonnes</span>
+            <span className="step"><div className="step-num">3</div>Compte</span>
+            <span className="step"><div className="step-num">4</div>Aperçu</span>
           </div>
           <h2>Vérifiez <em>le mapping</em></h2>
           <p>{parsedData?.rows.length} lignes détectées{parsedData?.delimiter !== 'xlsx' && ` · délimiteur "${parsedData?.delimiter === '\t' ? 'TAB' : parsedData?.delimiter}"`}</p>
@@ -80,9 +90,10 @@ export function ImportFlow({ step, parsedData, mapping, setMapping, account, set
       <div className="import-flow">
         <div className="import-header">
           <div className="import-progress">
+            <span className="step done"><div className="step-num"><Check size={11}/></div>Fichier</span>
             <span className="step done"><div className="step-num"><Check size={11}/></div>Colonnes</span>
-            <span className="step active"><div className="step-num">2</div>Compte</span>
-            <span className="step"><div className="step-num">3</div>Aperçu</span>
+            <span className="step active"><div className="step-num">3</div>Compte</span>
+            <span className="step"><div className="step-num">4</div>Aperçu</span>
           </div>
           <h2>À quel <em>compte</em> appartiennent ces transactions ?</h2>
         </div>
@@ -136,9 +147,10 @@ export function ImportFlow({ step, parsedData, mapping, setMapping, account, set
       <div className="import-flow">
         <div className="import-header">
           <div className="import-progress">
+            <span className="step done"><div className="step-num"><Check size={11}/></div>Fichier</span>
             <span className="step done"><div className="step-num"><Check size={11}/></div>Colonnes</span>
             <span className="step done"><div className="step-num"><Check size={11}/></div>Compte</span>
-            <span className="step active"><div className="step-num">3</div>Aperçu</span>
+            <span className="step active"><div className="step-num">4</div>Aperçu</span>
           </div>
           <h2>Vérification <em>avant import</em></h2>
           <p><strong>{preview.length}</strong> transactions vers <strong>{account.name}</strong> · Net : <strong>{fmt(total, { sign: true })}</strong></p>

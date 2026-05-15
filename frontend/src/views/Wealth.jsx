@@ -1576,6 +1576,7 @@ function WealthItemRow({ item, fmt, onClick, onDelete }) {
         <div>
           <div className="wealth-item-name">{item.name}</div>
           <div className="wealth-item-meta">
+            {item.meta?.bank && <span className="wealth-item-bank">{item.meta.bank}</span>}
             <span className={`badge badge-${item.syncMode}`}>
               {item.syncMode === 'synced' ? 'Synchronisé' : 'Manuel'}
             </span>
