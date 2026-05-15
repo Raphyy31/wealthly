@@ -931,13 +931,19 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .state-over .reg-caps-remaining { color: var(--danger-text); font-weight: 600; }
 
 .liability-list { display: flex; flex-direction: column; gap: 12px; }
-.liability-card-v2 { padding: 14px; background: var(--bg-subtle); border-radius: 12px; }
+.liability-card-v2 { padding: 14px; background: var(--bg-subtle); border-radius: 12px; border: 1px solid transparent; }
 .lia-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
 .lia-icon { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .lia-name-block { flex: 1; min-width: 0; }
 .lia-name { font-size: 14px; font-weight: 700; display: block; }
 .lia-type { font-size: 11px; color: var(--text-tertiary); }
 .lia-actions { display: flex; gap: 4px; }
+.loan-unlink-btn { margin-left: auto; flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 6px; border: none; background: transparent; color: var(--ink-3); cursor: pointer; transition: color .15s, background .15s; }
+.loan-unlink-btn:hover { color: var(--negative); background: color-mix(in srgb, var(--negative) 10%, transparent); }
+.loan-link-btn { margin-left: auto; flex-shrink: 0; font-size: 12px; font-weight: 500; color: var(--accent); padding: 3px 8px; border-radius: 6px; background: var(--accent-soft); }
+.liability-card-v2.loan-available { border: 1px dashed var(--border); background: var(--bg); transition: border-color .15s, background .15s; }
+.liability-card-v2.loan-available:hover { border-color: var(--accent); background: var(--accent-soft); }
+.liability-card-v2.loan-available .lia-header { margin-bottom: 0; }
 .lia-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; padding: 10px; background: var(--bg-card); border-radius: 8px; margin-bottom: 10px; }
 .lia-stat { display: flex; flex-direction: column; gap: 2px; }
 .lia-label { font-size: 10px; color: var(--text-tertiary); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }

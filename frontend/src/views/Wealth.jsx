@@ -371,7 +371,7 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
         )}
       </section>
 
-      {editingAsset && <AssetEditor asset={editingAsset} members={members} liabilities={visibleLiabilities} onSave={(a) => { saveAsset(a); setEditingAsset(null); }} onCancel={() => setEditingAsset(null)}/>}
+      {editingAsset && <AssetEditor asset={editingAsset} members={members} liabilities={visibleLiabilities} onSave={async (a) => { const saved = await saveAsset(a); setEditingAsset(null); return saved; }} onCancel={() => setEditingAsset(null)}/>}
       {editingLia && <LiabilityEditor liability={editingLia} members={members} assets={assets} onSave={(l) => { saveLiability(l); setEditingLia(null); }} onCancel={() => setEditingLia(null)}/>}
       {viewingLia && (
         <LiabilityDetail
@@ -791,18 +791,43 @@ function RealEstateEditor({ asset, members, liabilities, onSave, onCancel }) {
     currentValue: asset.currentValue ?? '',
   });
   const [stepIdx, setStepIdx] = useState(0);
+  // Liens emprunt ↔ bien gérés localement (optimistic) puis persistés à la sauvegarde
+  const [loanLinks, setLoanLinks] = useState(() => {
+    const linked = new Set((liabilities || []).filter(l => l.linkedAssetId === asset.id).map(l => l.id));
+    return linked;
+  });
   const step = RE_STEPS[stepIdx].key;
   const set = (k, v) => setDraft({ ...draft, [k]: v });
   const toggleMember = (mid) => {
     const ids = draft.memberIds || [];
     set('memberIds', ids.includes(mid) ? ids.filter(i => i !== mid) : [...ids, mid]);
   };
-  const linkedLoans = (liabilities || []).filter(l => l.linkedAssetId === asset.id);
+  const toggleLoanLink = async (loanId) => {
+    const willLink = !loanLinks.has(loanId);
+    setLoanLinks(prev => {
+      const next = new Set(prev);
+      willLink ? next.add(loanId) : next.delete(loanId);
+      return next;
+    });
+    // Si le bien existe déjà, persiste immédiatement
+    if (asset.id) {
+      await api.liabilities.update(loanId, { linked_asset_id: willLink ? asset.id : null }).catch(() => {});
+    }
+  };
+  const linkedLoans = (liabilities || []).filter(l => loanLinks.has(l.id));
+  const availableLoans = (liabilities || []).filter(l => !loanLinks.has(l.id));
 
   const canSave = draft.name && (draft.memberIds || []).length > 0;
-  const submit = () => {
+  const submit = async () => {
     if (!canSave) { alert('Renseigne un nom et au moins un propriétaire.'); return; }
-    onSave({ ...draft, updatedAt: new Date().toISOString() });
+    const saved = await onSave({ ...draft, updatedAt: new Date().toISOString() });
+    // Pour un nouveau bien, persiste les liens emprunt maintenant qu'on a l'ID
+    const newId = saved?.id || asset.id;
+    if (newId && loanLinks.size > 0) {
+      await Promise.all(
+        [...loanLinks].map(lid => api.liabilities.update(lid, { linked_asset_id: newId }).catch(() => {}))
+      );
+    }
   };
 
   // Auto-suggest current value when not set (purchase + works + furniture)
@@ -921,29 +946,58 @@ function RealEstateEditor({ asset, members, liabilities, onSave, onCancel }) {
 
             {step === 'loans' && (
               <>
-                <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
-                  Les emprunts rattachés à ce bien apparaissent ici. Pour lier un nouveau crédit, ajoute-le depuis Patrimoine → Emprunts et sélectionne ce bien dans l'étape "Actifs liés" du wizard.
-                </p>
-                {linkedLoans.length === 0 ? (
-                  <div className="empty-mini" style={{ padding: '32px 0' }}>
-                    <CreditCard size={24}/>
-                    <p>Aucun emprunt rattaché à ce bien.</p>
-                  </div>
-                ) : (
-                  <div className="liability-list">
-                    {linkedLoans.map(l => (
-                      <div key={l.id} className="liability-card-v2" style={{ cursor: 'default' }}>
-                        <div className="lia-header">
-                          <div className="lia-icon" style={{ background: '#7c2d1222', color: '#7c2d12' }}><Home size={14}/></div>
-                          <div className="lia-name-block">
-                            <span className="lia-name">{l.name}</span>
-                            <span className="lia-type">Restant dû : {Math.round(l.remainingCapital || 0).toLocaleString('fr-FR')} €</span>
+                {linkedLoans.length > 0 && (
+                  <>
+                    <p style={{ color: 'var(--ink-3)', fontSize: 12, marginBottom: 8 }}>Emprunts rattachés à ce bien</p>
+                    <div className="liability-list" style={{ marginBottom: 16 }}>
+                      {linkedLoans.map(l => (
+                        <div key={l.id} className="liability-card-v2" style={{ cursor: 'default' }}>
+                          <div className="lia-header">
+                            <div className="lia-icon" style={{ background: '#7c2d1222', color: '#7c2d12' }}><Home size={14}/></div>
+                            <div className="lia-name-block">
+                              <span className="lia-name">{l.name}</span>
+                              <span className="lia-type">Restant dû : {Math.round(l.remainingCapital || 0).toLocaleString('fr-FR')} €</span>
+                            </div>
+                            <button
+                              type="button"
+                              className="loan-unlink-btn"
+                              onClick={() => toggleLoanLink(l.id)}
+                              title="Détacher cet emprunt"
+                            >
+                              <X size={14}/>
+                            </button>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  </>
                 )}
+                {availableLoans.length > 0 ? (
+                  <>
+                    <p style={{ color: 'var(--ink-3)', fontSize: 12, marginBottom: 8 }}>
+                      {linkedLoans.length > 0 ? 'Autres emprunts disponibles' : 'Sélectionne les emprunts à rattacher'}
+                    </p>
+                    <div className="liability-list">
+                      {availableLoans.map(l => (
+                        <div key={l.id} className="liability-card-v2 loan-available" style={{ cursor: 'pointer' }} onClick={() => toggleLoanLink(l.id)}>
+                          <div className="lia-header">
+                            <div className="lia-icon" style={{ background: 'var(--bg-sunk)', color: 'var(--ink-3)' }}><CreditCard size={14}/></div>
+                            <div className="lia-name-block">
+                              <span className="lia-name">{l.name}</span>
+                              <span className="lia-type">Restant dû : {Math.round(l.remainingCapital || 0).toLocaleString('fr-FR')} €</span>
+                            </div>
+                            <span className="loan-link-btn">+ Lier</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : linkedLoans.length === 0 ? (
+                  <div className="empty-mini" style={{ padding: '32px 0' }}>
+                    <CreditCard size={24}/>
+                    <p>Aucun emprunt disponible.<br/>Ajoute un emprunt depuis Patrimoine → Emprunts.</p>
+                  </div>
+                ) : null}
               </>
             )}
           </div>
