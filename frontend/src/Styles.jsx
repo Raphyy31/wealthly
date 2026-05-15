@@ -1700,7 +1700,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 }
 .badge-synced { background: var(--accent-soft); color: var(--accent); }
 .badge-manual { background: var(--bg-sunk); color: var(--ink-2); }
-.wealth-item-row-right { text-align: right; }
+.wealth-item-row-right { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
 .wealth-item-value {
   font-family: 'Newsreader', Georgia, serif;
   font-style: italic;
@@ -1711,6 +1711,14 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .wealth-item-delta { font-size: 11px; margin-top: 2px; }
 .wealth-item-delta.up { color: var(--positive); }
 .wealth-item-delta.down { color: var(--negative); }
+.wealth-item-delete-btn {
+  display: none; align-items: center; justify-content: center;
+  width: 24px; height: 24px; border-radius: 6px; border: none;
+  background: transparent; color: var(--negative); cursor: pointer;
+  margin-top: 2px; opacity: .7; transition: opacity .15s, background .15s;
+}
+.wealth-item-delete-btn:hover { background: color-mix(in srgb, var(--negative) 10%, transparent); opacity: 1; }
+.wealth-item-row:hover .wealth-item-delete-btn { display: flex; }
 .wealth-empty-state {
   text-align: center;
   padding: 60px 24px;

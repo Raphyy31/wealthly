@@ -16,7 +16,7 @@ import {
 import {
   Plus, Edit3, Check, ChevronLeft, ChevronRight, Home, Landmark,
   Wallet, CreditCard, Users, Sparkles, Lightbulb, BarChart3,
-  Bitcoin, TrendingUp, X,
+  Bitcoin, TrendingUp, X, Trash2,
 } from 'lucide-react';
 import {
   ASSET_TYPES, ASSET_CLASS_MAP, LIABILITY_TYPES,
@@ -340,6 +340,10 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
                 key={item.id}
                 item={item}
                 fmt={fmt}
+                onDelete={(it) => {
+                  if (it.sourceTable === 'asset')     deleteAsset(it.sourceId);
+                  if (it.sourceTable === 'liability') deleteLiability(it.sourceId);
+                }}
                 onClick={(it) => {
                   if (it.sourceTable === 'liability') {
                     const l = liabilities.find(x => x.id === it.sourceId);
@@ -1500,7 +1504,7 @@ function LiabilityPatchStyles() {
 // ============================================================================
 // WealthItemRow — unified row for accounts + assets + liabilities (v6)
 // ============================================================================
-function WealthItemRow({ item, fmt, onClick }) {
+function WealthItemRow({ item, fmt, onClick, onDelete }) {
   const positive = (item.plLatente || 0) >= 0;
   return (
     <div
@@ -1531,6 +1535,15 @@ function WealthItemRow({ item, fmt, onClick }) {
             {item.plLatentePct !== null && item.plLatentePct !== undefined &&
               ` · ${positive ? '+' : ''}${item.plLatentePct.toFixed(1)}%`}
           </div>
+        )}
+        {onDelete && item.sourceTable !== 'account' && (
+          <button
+            className="wealth-item-delete-btn"
+            title="Supprimer"
+            onClick={(e) => { e.stopPropagation(); onDelete(item); }}
+          >
+            <Trash2 size={13}/>
+          </button>
         )}
       </div>
     </div>
