@@ -79,6 +79,7 @@ export const BACKEND_TO_SUBTYPE = {
   joint: 'compte_courant',
   professional: 'compte_courant',
   // Asset.type
+  checking_account: 'compte_courant',
   savings_account: 'livret',
   per: 'per',
   stocks: 'cto',

@@ -9,7 +9,7 @@
 
 import {
   Home, Heart, BarChart3, Target, PiggyBank, Bitcoin, Landmark, Coins,
-  CreditCard, Banknote,
+  CreditCard, Banknote, Wallet,
 } from 'lucide-react';
 
 export const APP_NAME = 'Wealthly';
@@ -323,11 +323,12 @@ export const BANK_PROFILES = {
 };
 
 export const ASSET_TYPES = [
+  { id: 'checking_account', name: 'Compte courant', icon: Wallet, color: '#3b82f6', description: 'Compte chèque, dépôts à vue' },
+  { id: 'savings_account', name: 'Livret épargne', icon: PiggyBank, color: '#0891b2', description: 'Livret A, LDDS, LEP, PEL' },
   { id: 'real_estate', name: 'Immobilier', icon: Home, color: '#f97316', description: 'Résidence principale, locatif' },
   { id: 'life_insurance', name: 'Assurance vie', icon: Heart, color: '#ec4899', description: 'Contrats AV (multi-supports, fonds €)' },
   { id: 'pea', name: 'PEA', icon: BarChart3, color: '#10b981', description: 'Plan Épargne Actions (max 150k€)' },
   { id: 'per', name: 'PER', icon: Target, color: '#06b6d4', description: 'Plan Épargne Retraite' },
-  { id: 'savings_account', name: 'Livret épargne', icon: PiggyBank, color: '#0891b2', description: 'Livret A, LDDS, LEP, PEL' },
   { id: 'crypto', name: 'Cryptomonnaies', icon: Bitcoin, color: '#f59e0b', description: 'BTC, ETH, autres' },
   { id: 'stocks', name: 'Titres / CTO', icon: Landmark, color: '#3b82f6', description: 'Compte-titres ordinaire' },
   { id: 'other_asset', name: 'Autre actif', icon: Coins, color: '#6b7280', description: 'Or, art, parts SCPI…' },
@@ -335,6 +336,7 @@ export const ASSET_TYPES = [
 
 // Maps asset type → broad class used by the wealth allocation donut.
 export const ASSET_CLASS_MAP = {
+  checking_account:{ class: 'Liquidités',   color: '#3b82f6' },
   real_estate:     { class: 'Immobilier',   color: '#f97316' },
   life_insurance:  { class: 'Épargne',      color: '#ec4899' },
   pea:             { class: 'Placements',   color: '#10b981' },
