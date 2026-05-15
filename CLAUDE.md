@@ -7,28 +7,37 @@ Notes for Claude (and any future AI tooling) picking the project back up.
 
 ---
 
-## Session 2026-05-15 — Raphyy31 + Claude (Opus 4.7) — catégories user + règles dual-select + Mois type modal
+## Session 2026-05-15 — Raphyy31 + Claude (Opus 4.7) — catégories user + règles dual-select + Mois type modal + Compte courant
 
-Commit unique `1ec712f` mergé directement sur `main` (workflow no-PR).
+6 commits push directs sur `main` (workflow no-PR). Commit principal `1ec712f`, suivi de 5 itérations ciblées suite aux retours user en live (UX feedback, cohérence cross-app).
 
 **Livré** :
 
 | Domaine | Changement |
 |---|---|
 | **Catégories user (backend)** | Nouveaux endpoints `POST /categories` et `DELETE /categories/{slug}` dans `routers/other.py`. Création avec slugify ASCII (`unicodedata.normalize` + `re`), suffixage `-2/-3` si collision, validation parent existant + interdiction sous-sous-catégorie (taxonomie 2 niveaux preservée). Delete cascade : détache `Transaction.category_id`, drop `CategorisationRule` + `Budget` pointant vers le slug ou ses enfants. `CategoryCreate` schema dans `schemas.py`. |
-| **Catégories user (frontend)** | `api.categories.create` / `api.categories.delete`. Nouvelle section `MyCategoriesSection` en haut de la sous-vue Réglages → « Catégories & règles » : liste hiérarchique avec chip parent + chips sous-cat, bouton « + Catégorie » (top-level) et « + » par parent (sous-cat). Modale `CategoryCreateModal` avec picker icône (20 emojis), couleur (12 swatches issus des dataviz d1..d7) et type (dépense/revenu/virement) ; sous-cat hérite du type parent. Confirmation native sur delete. `reloadCategories` passé depuis WealthlyApp pour re-fetch après mutation. |
+| **Catégories user (frontend)** | `api.categories.create` / `api.categories.delete`. Nouvelle section `MyCategoriesSection` en haut de la sous-vue Réglages → « Catégories & règles » : liste hiérarchique avec chip parent + chips sous-cat, bouton « + Catégorie » (top-level) et « + » par parent (sous-cat). Modale `CategoryCreateModal` avec picker icône (20 emojis), couleur (12 swatches issus des dataviz d1..d7) et type (dépense/revenu/virement) ; sous-cat hérite du type parent. Confirmation native sur delete. |
+| **Toast + optimistic update** | `showToast` passé à SettingsView. Sur create/delete, `onCategoryCreated(apiCat)` / `onCategoryDeleted(slug)` patchent l'array `categories` localement **avant** le re-fetch GET — UX instantanée même quand Railway cold-start (le user voyait un délai de 30s avant ce fix). `reloadCategories` reste comme filet de sécurité en background (sans `await`). Toast vert "Catégorie X créée" / "Détail Y créé" / "Z supprimée". |
 | **Règles dual-select** | Formulaire « + règle » dans `CustomRulesSection` (Settings.jsx) refait : grid 4 colonnes `pattern + Catégorie + Détail + Add`. `newTopId` / `newSubId` séparés, `targetSlug = newSubId \|\| newTopId`. Détail optionnel — si vide, la règle cible le top-level. Liste des règles affiche maintenant `Parent › Détail` (chevron `›`) au lieu du slug brut. |
-| **CreateRuleModal refait** | Modale post-recatégorisation manuelle : ajout des deux selects Catégorie + Détail (Détail désactivé si pas de sous-cat). `onConfirm` signature changée `(keyword) → ({ keyword, categoryId })`. WealthlyApp.applyRule recat la tx déclencheur si l'utilisateur a choisi un slug différent de celui appliqué initialement. `countRuleMatches` accepte un slug cible. |
+| **CreateRuleModal refait** | Modale post-recatégorisation manuelle : ajout des deux selects Catégorie + Détail (Détail désactivé si pas de sous-cat). `onConfirm` signature changée `(keyword) → ({ keyword, categoryId })`. `WealthlyApp.applyRule` recat la tx déclencheur si l'utilisateur a choisi un slug différent de celui appliqué initialement. `countRuleMatches` accepte un slug cible. |
 | **Filtre Transactions** | Ligne « ❓ Non catégorisé » ajoutée explicitement dans le filtre header de la colonne Catégorie (était filtrable via le panneau avancé mais pas dans le picker rapide). Compte `catCounts['uncategorized']` réutilisé. |
 | **Mois type modal** | `RefMonthEditor` passé du drawer latéral 520px à une grosse modale centrée 1080px (`.modal-backdrop` + `.modal.rm-modal`), layout 2 colonnes : Entrées + Épargne à gauche (`0.95fr`), Dépenses à droite (`1.15fr`). Single column sous 880px. Header de section enrichi : icône + label + total agrégé à droite. Inputs labellisés agrandis (font 14px, padding 8×10, border + focus accent-soft, radius 8). Empty-state en dashed border centré. Anciennes classes `.ref-month-backdrop` / `.ref-month-drawer` retirées d'`index.css`. |
+| **Compte courant (Patrimoine)** | Nouveau type `checking_account` (icône Wallet, cobalt) en tête de `ASSET_TYPES` dans `constants.js`. Mappé sur la classe Liquidités dans `ASSET_CLASS_MAP` et sur le subtype canonique `compte_courant` dans `BACKEND_TO_SUBTYPE`. Le donut Patrimoine agrège correctement. |
+| **Fix 50/30/20 bucket Mois type** | `FiftyThirtyTwentyModal.bucketRefMonth()` lisait un set hardcodé de slugs `['housing','utilities','insurance',...]` pour classer Besoins/Envies/Épargne. Les catégories user-créées tombaient toujours en "Envies" peu importe le `kind` choisi. `classify(catId, categories)` lit maintenant `cat.kind` (source de vérité), fallback sur les slugs si pas dispo. `categories` propagé depuis Monthly.jsx. Note : le bucket "mois courant" lisait déjà `cat.kind` correctement dans `fiftyThirtyTwenty` (WealthlyApp), seul le bucket "Mois type" avait le bug. |
 
-**Pas touché à** : la couche de catégorisation regex/IA elle-même (Payees + Learning + builtin rules) — le user a un prompt prêt pour la prochaine session. La sync GoCardless / l'import CSV / `PATCH /transactions` reconnaissent automatiquement les slugs user-créés via `_resolve_category_id` (lookup `Category.slug == ?` scopé `household_id`).
+**Audit cohérence cross-app** validé : les user-cats sont propagées correctement dans Transactions (filtre + picker + recherche), Analyse, Mois type, CreateRuleModal, ImportFlow, Dashboard, Cashflow, Monthly, sync GoCardless, import CSV, PATCH /transactions (résolution par slug scopé household via `_resolve_category_id`).
+
+**Pas touché à** : la couche de catégorisation regex/IA elle-même (Payees + Learning + builtin rules) — le user a un prompt prêt pour la prochaine session.
+
+**Limitations connues** (à traiter dans session i18n / refonte catego) :
+- `MyCategoriesSection` + `CreateRuleModal` + dual-select rules form sont **100% FR** (pas de clés `t()`).
+- `RefMonthEditor.STARTER_TEMPLATE` seed avec slugs hardcodés (`'salary','housing',…`). Si l'user supprime ces cats par défaut, le seed pointera vers rien (modale gère le cas — picker vide).
 
 **Reste à faire** :
 - 2FA TOTP (toujours)
 - Cron Railway auto-sync GoCardless + email re-consent J-7
-- Refonte catégorisation **Payees + Category Learning + 120 règles builtin** (prompt rédigé par l'utilisateur, à exécuter dans une session dédiée)
-- i18n EN : la section MyCategoriesSection + le CreateRuleModal sont 100% FR pour l'instant
+- **Refonte catégorisation Payees + Category Learning + 120 règles builtin** (prompt complet rédigé par l'utilisateur, à exécuter dans une session dédiée) — c'est le prochain gros chantier
+- i18n EN pour les composants 100% FR de cette session
 
 ---
 

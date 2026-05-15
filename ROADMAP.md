@@ -6,14 +6,19 @@
 
 ## 🆕 Session 2026-05-15 — Raphyy31 + Claude (Opus 4.7)
 
-Commit `1ec712f` push direct sur `main`. Voir `CLAUDE.md` pour le détail complet.
+6 commits push directs sur `main` (`1ec712f` … `0ef3513`). Voir `CLAUDE.md` pour le détail complet.
 
-- [x] **Catégories utilisateurs** — créer / supprimer Catégorie (niveau 1) et Détail (niveau 2) depuis Réglages → Catégories & règles. Backend `POST/DELETE /categories` avec slugify + cascade rules/budgets/transactions.
+- [x] **Catégories utilisateurs** — créer / supprimer Catégorie (niveau 1) et Détail (niveau 2) depuis Réglages → Catégories & règles. Backend `POST/DELETE /categories` avec slugify + cascade rules/budgets/transactions. Modale de création avec picker icône + couleur + type.
+- [x] **Toast + optimistic update** — feedback instantané sur create/delete (la liste ne dépendait plus du re-fetch, cold-start Railway invisible pour le user).
 - [x] **Règles dual-select** — formulaire et modale `CreateRuleModal` repensés : choix Catégorie + Détail (optionnel). Liste affiche `Parent › Détail`.
 - [x] **Filtre Transactions** — `❓ Non catégorisé` ajouté dans le picker rapide de la colonne Catégorie.
 - [x] **Mois type modal** — drawer latéral 520px remplacé par modale centrée 1080px, layout 2 colonnes (Entrées + Épargne / Dépenses), inputs agrandis, totaux par section.
+- [x] **Compte courant** — nouveau type `checking_account` (Wallet, cobalt) en tête d'ASSET_TYPES, agrégé sous Liquidités dans le donut Patrimoine.
+- [x] **Fix 50/30/20** — `FiftyThirtyTwentyModal` lit maintenant `cat.kind` (au lieu d'un set hardcodé) pour bucketer le Mois type. Les user-cats avec `kind=needs/wants/savings` choisi à la création tombent enfin dans le bon bucket.
 
-**Prochaine grosse session prévue** : refonte du moteur de catégorisation (Payees canoniques + Category Learning + 120 règles builtin inspirées d'Actual Budget). Prompt déjà rédigé.
+**Prochaine grosse session prévue (P0)** : **refonte du moteur de catégorisation** — Payees canoniques + Category Learning + 120 règles builtin inspirées d'Actual Budget. Prompt complet rédigé par l'utilisateur, à exécuter dans une session dédiée (multi-heures, backend + frontend + DB migration).
+
+**Autres reste à faire** : 2FA TOTP, cron auto-sync GoCardless nightly + email re-consent J-7, i18n EN sur les composants 100% FR de cette session (`MyCategoriesSection`, `CreateRuleModal`, dual-select rules form).
 
 ---
 
