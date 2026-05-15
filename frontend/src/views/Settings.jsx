@@ -44,7 +44,7 @@ function readHashSection() {
   return null;
 }
 
-export function SettingsView({ members, accounts, accountBalances, saveMember, deleteMember, deleteAccount, updateAccount, transactions = [], exportData, importData, resetAllData, categories = [], fmt, baseCurrency = 'EUR', setBaseCurrency, rates, ratesDate, currentUser, onImport, recategorizeUncategorized }) {
+export function SettingsView({ members, accounts, accountBalances, saveMember, deleteMember, deleteAccount, updateAccount, transactions = [], exportData, importData, resetAllData, categories = [], reloadCategories, fmt, baseCurrency = 'EUR', setBaseCurrency, rates, ratesDate, currentUser, onImport, recategorizeUncategorized }) {
   const { t } = useTranslation();
   const [editingMember, setEditingMember] = useState(null);
   const [activeSection, setActiveSection] = useState(() => readHashSection() || 'profil');
@@ -147,6 +147,7 @@ export function SettingsView({ members, accounts, accountBalances, saveMember, d
                   </span>
                 </div>
               )}
+              <MyCategoriesSection categories={categories} reloadCategories={reloadCategories} />
               <CustomRulesSection categories={categories} />
             </section>
           )}
@@ -675,7 +676,8 @@ function CustomRulesSection({ categories }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [newPattern, setNewPattern] = useState('');
-  const [newCategory, setNewCategory] = useState('');
+  const [newTopId, setNewTopId] = useState('');     // niveau 1 (Catégorie)
+  const [newSubId, setNewSubId] = useState('');     // niveau 2 (Détail, optionnel)
   const [submitting, setSubmitting] = useState(false);
 
   const refresh = useCallback(async () => {
@@ -693,14 +695,19 @@ function CustomRulesSection({ categories }) {
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  const expenseCategories = useMemo(
-    () => categories.filter((c) => c.type !== 'income'),
+  const topCategories = useMemo(
+    () => categories.filter((c) => !c.parent && c.id !== 'uncategorized' && c.type !== 'income'),
     [categories]
   );
+  const subCategories = useMemo(
+    () => categories.filter((c) => c.parent === newTopId),
+    [categories, newTopId]
+  );
+  const targetSlug = newSubId || newTopId;
 
   const onAdd = async (e) => {
     e.preventDefault();
-    if (!newPattern.trim() || !newCategory) return;
+    if (!newPattern.trim() || !targetSlug) return;
     try {
       setSubmitting(true);
       // Validate the regex client-side first — fail fast with a clear message.
@@ -709,9 +716,10 @@ function CustomRulesSection({ categories }) {
         setSubmitting(false);
         return;
       }
-      await api.rules.create({ pattern: newPattern.trim(), category_slug: newCategory });
+      await api.rules.create({ pattern: newPattern.trim(), category_slug: targetSlug });
       setNewPattern('');
-      setNewCategory('');
+      setNewTopId('');
+      setNewSubId('');
       setError(null);
       await refresh();
     } catch (err) {
@@ -741,30 +749,40 @@ function CustomRulesSection({ categories }) {
         {t('settings.rules.lead')}
       </p>
 
-      {/* Add form */}
-      <form onSubmit={onAdd} style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+      {/* Add form — pattern + niveau 1 (Catégorie) + niveau 2 (Détail, optionnel) */}
+      <form onSubmit={onAdd} style={{ display: 'grid', gap: 8, marginBottom: 16, gridTemplateColumns: 'minmax(180px, 2fr) minmax(140px, 1fr) minmax(140px, 1fr) auto' }}>
         <input
           type="text"
           value={newPattern}
           onChange={(e) => setNewPattern(e.target.value)}
           placeholder={t('settings.rules.patternPh')}
-          style={{ flex: '2 1 220px', minWidth: 0 }}
+          style={{ minWidth: 0 }}
         />
-        <div style={{ flex: '1 1 160px', minWidth: 0 }}>
-          <Combobox
-            value={newCategory}
-            onChange={(val) => setNewCategory(val)}
-            placeholder={t('settings.rules.targetCategory')}
-            options={[
-              { value: '', label: t('settings.rules.targetCategory') },
-              ...expenseCategories.map(c => ({ value: c.id, label: c.name, icon: c.icon })),
-            ]}
-          />
-        </div>
+        <select
+          value={newTopId}
+          onChange={(e) => { setNewTopId(e.target.value); setNewSubId(''); }}
+          style={{ minWidth: 0 }}
+        >
+          <option value="">Catégorie…</option>
+          {topCategories.map(c => (
+            <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+          ))}
+        </select>
+        <select
+          value={newSubId}
+          onChange={(e) => setNewSubId(e.target.value)}
+          disabled={!newTopId || subCategories.length === 0}
+          style={{ minWidth: 0 }}
+        >
+          <option value="">{subCategories.length === 0 ? 'Aucun détail' : 'Détail (optionnel)'}</option>
+          {subCategories.map(c => (
+            <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+          ))}
+        </select>
         <button
           type="submit"
           className="primary-btn"
-          disabled={submitting || !newPattern.trim() || !newCategory}
+          disabled={submitting || !newPattern.trim() || !targetSlug}
         >
           <Plus size={14}/> {t('actions.add')}
         </button>
@@ -789,6 +807,7 @@ function CustomRulesSection({ categories }) {
           {rules.map((r) => {
             const slug = r.category_slug || r.categoryId;
             const cat = categories.find((c) => c.id === slug);
+            const parentCat = cat?.parent ? categories.find((c) => c.id === cat.parent) : null;
             return (
               <div
                 key={r.id}
@@ -831,7 +850,9 @@ function CustomRulesSection({ categories }) {
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  {cat?.icon} {cat?.name || slug}
+                  {parentCat
+                    ? <>{parentCat.icon} {parentCat.name} <span style={{ opacity: 0.6 }}>›</span> {cat.icon} {cat.name}</>
+                    : <>{cat?.icon} {cat?.name || slug}</>}
                 </span>
                 <button className="icon-btn-sm" onClick={() => onDelete(r.id)} title={t('actions.delete')}>
                   <Trash2 size={13}/>
@@ -1068,6 +1089,202 @@ function MemberEditor({ member, onSave, onCancel }) {
         <div className="modal-footer">
           <button className="secondary-btn" onClick={onCancel}>{t('actions.cancel')}</button>
           <BusyButton className="primary-btn" onClick={async () => { if (draft.name) await onSave(draft); }}><Check size={14}/> {t('actions.save')}</BusyButton>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// ============================================================================
+// MY CATEGORIES SECTION — create / delete user-owned categories (level 1 + 2)
+// ============================================================================
+const CATEGORY_PALETTE = [
+  '#2540D9', '#136D3E', '#B0392B', '#8E641A',
+  '#7E5A9B', '#C76A8A', '#6B7280', '#0F766E',
+  '#A16207', '#9333EA', '#0EA5E9', '#DC2626',
+];
+const COMMON_ICONS = ['🏷️', '🛒', '🍽️', '🚗', '🏠', '💡', '📱', '🎬', '🎵', '🏥', '🎁', '✈️', '🎓', '👶', '💼', '💰', '☕', '🐶', '🎨', '🛠️'];
+
+function MyCategoriesSection({ categories, reloadCategories }) {
+  const [creating, setCreating] = useState(null); // null | { parent: string|null }
+  const [error, setError] = useState(null);
+  const [busyId, setBusyId] = useState(null);
+
+  const topCats = useMemo(
+    () => categories.filter(c => !c.parent && c.id !== 'uncategorized'),
+    [categories]
+  );
+
+  const onDelete = async (slug, label) => {
+    if (!window.confirm(`Supprimer « ${label} » ? Les transactions et règles liées seront détachées.`)) return;
+    try {
+      setBusyId(slug);
+      await api.categories.delete(slug);
+      if (reloadCategories) await reloadCategories();
+    } catch (err) {
+      setError(err.message || 'Suppression impossible');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const onCreate = async (draft) => {
+    try {
+      await api.categories.create({
+        name: draft.name,
+        color: draft.color,
+        icon: draft.icon,
+        type: draft.type,
+        kind: draft.kind,
+        parent_slug: draft.parent_slug || null,
+      });
+      setCreating(null);
+      setError(null);
+      if (reloadCategories) await reloadCategories();
+    } catch (err) {
+      setError(err.message || 'Création impossible');
+    }
+  };
+
+  return (
+    <section className="card" style={{ marginBottom: 16 }}>
+      <div className="card-header">
+        <h3><Sparkles size={16}/> Mes catégories</h3>
+        <button className="ds-btn" onClick={() => setCreating({ parent: null })}>
+          <Plus size={14}/> Catégorie
+        </button>
+      </div>
+      <p style={{ fontSize: 12.5, color: 'var(--text-tertiary)', margin: '0 0 14px', lineHeight: 1.55, maxWidth: 640 }}>
+        Ajoute tes propres catégories (niveau 1) et leurs détails (niveau 2). Les transactions et règles peuvent ensuite cibler n'importe lequel des deux niveaux.
+      </p>
+
+      {error && (
+        <div style={{ padding: '8px 12px', background: 'var(--danger-soft)', color: 'var(--danger-text)', borderRadius: 6, fontSize: 12, marginBottom: 12 }}>
+          <AlertCircle size={12} style={{ verticalAlign: 'text-bottom', marginRight: 4 }}/> {error}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {topCats.map(top => {
+          const subs = categories.filter(c => c.parent === top.id);
+          return (
+            <div key={top.id} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px', background: 'var(--bg-subtle)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 16 }}>{top.icon}</span>
+                <strong style={{ flex: 1, fontSize: 13.5 }}>{top.name}</strong>
+                <span style={{ fontSize: 10.5, padding: '2px 6px', borderRadius: 4, background: 'var(--bg-elev)', color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  {top.type === 'income' ? 'Revenu' : top.type === 'transfer' ? 'Virement' : 'Dépense'}
+                </span>
+                <button className="icon-btn-sm" title="Ajouter un détail" onClick={() => setCreating({ parent: top.id, parentName: top.name, type: top.type })}>
+                  <Plus size={13}/>
+                </button>
+                <button className="icon-btn-sm" title="Supprimer" disabled={busyId === top.id} onClick={() => onDelete(top.id, top.name)}>
+                  <Trash2 size={13}/>
+                </button>
+              </div>
+              {subs.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10, paddingLeft: 26 }}>
+                  {subs.map(sub => (
+                    <span key={sub.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 8px', borderRadius: 6, background: 'var(--bg-elev)', border: '1px solid var(--border)', fontSize: 12 }}>
+                      {sub.icon} {sub.name}
+                      <button className="icon-btn-sm" style={{ padding: 2 }} disabled={busyId === sub.id} onClick={() => onDelete(sub.id, sub.name)}>
+                        <X size={11}/>
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {creating && (
+        <CategoryCreateModal
+          parent={creating.parent}
+          parentName={creating.parentName}
+          forcedType={creating.type}
+          onSave={onCreate}
+          onCancel={() => setCreating(null)}
+        />
+      )}
+    </section>
+  );
+}
+
+function CategoryCreateModal({ parent, parentName, forcedType, onSave, onCancel }) {
+  const [draft, setDraft] = useState({
+    name: '',
+    color: CATEGORY_PALETTE[0],
+    icon: COMMON_ICONS[0],
+    type: forcedType || 'expense',
+    kind: 'needs',
+    parent_slug: parent || null,
+  });
+  const canSave = draft.name.trim().length >= 2;
+
+  return (
+    <div className="modal-backdrop" onClick={onCancel}>
+      <div className="modal" style={{ maxWidth: 480 }} onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>{parent ? <>Nouveau <em>détail</em></> : <>Nouvelle <em>catégorie</em></>}</h2>
+          <button className="icon-btn" onClick={onCancel}><X size={18}/></button>
+        </div>
+        <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {parent && (
+            <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>Rattaché à <strong style={{ color: 'var(--ink)' }}>{parentName}</strong></div>
+          )}
+          <label>
+            <span style={{ fontSize: 11, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Nom</span>
+            <input
+              type="text"
+              value={draft.name}
+              onChange={e => setDraft({ ...draft, name: e.target.value })}
+              placeholder={parent ? 'ex : Vacances été' : 'ex : Mes loisirs'}
+              autoFocus
+              style={{ width: '100%' }}
+            />
+          </label>
+
+          <div>
+            <div style={{ fontSize: 11, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>Icône</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {COMMON_ICONS.map(ic => (
+                <button key={ic} type="button" onClick={() => setDraft({ ...draft, icon: ic })}
+                  style={{ width: 30, height: 30, fontSize: 16, borderRadius: 6, border: '1px solid ' + (draft.icon === ic ? 'var(--accent)' : 'var(--border)'), background: draft.icon === ic ? 'var(--accent-soft)' : 'var(--bg-elev)', cursor: 'pointer' }}>
+                  {ic}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <div style={{ fontSize: 11, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>Couleur</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {CATEGORY_PALETTE.map(co => (
+                <button key={co} type="button" onClick={() => setDraft({ ...draft, color: co })}
+                  style={{ width: 26, height: 26, borderRadius: '50%', border: draft.color === co ? '3px solid var(--ink)' : '1px solid var(--border)', background: co, cursor: 'pointer' }}/>
+              ))}
+            </div>
+          </div>
+
+          {!parent && !forcedType && (
+            <label>
+              <span style={{ fontSize: 11, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Type</span>
+              <select value={draft.type} onChange={e => setDraft({ ...draft, type: e.target.value })} style={{ width: '100%' }}>
+                <option value="expense">Dépense</option>
+                <option value="income">Revenu</option>
+                <option value="transfer">Virement</option>
+              </select>
+            </label>
+          )}
+        </div>
+        <div className="modal-footer">
+          <button className="secondary-btn" onClick={onCancel}>Annuler</button>
+          <button className="primary-btn" disabled={!canSave} onClick={() => onSave(draft)}>
+            <Check size={14}/> Créer
+          </button>
         </div>
       </div>
     </div>

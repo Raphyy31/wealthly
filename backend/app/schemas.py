@@ -296,6 +296,15 @@ class CategoryUpdate(BaseModel):
     kind: Optional[str] = None
 
 
+class CategoryCreate(BaseModel):
+    name: str
+    color: str = "#9ca3af"
+    icon: str = "🏷️"
+    type: str = "expense"  # income | expense | transfer
+    kind: str = "needs"    # needs | wants | savings
+    parent_slug: Optional[str] = None  # None = top-level, else slug of parent
+
+
 # ============================================================================
 # BUDGETS
 # ============================================================================

@@ -634,6 +634,14 @@ export function Transactions({ transactions, accounts, categories, members = [],
                       <span className="th-filter-chk-count">{catCounts[c.id] || 0}</span>
                     </label>
                   ))}
+                  {(catFilterSearch === '' || 'non catégorisé'.includes(catFilterSearch) || 'non categorise'.includes(catFilterSearch)) && (
+                    <label className={`th-filter-chk ${filters.cats.includes('uncategorized') ? 'active' : ''}`}>
+                      <input type="checkbox" checked={filters.cats.includes('uncategorized')} onChange={() => toggleInList('cats', 'uncategorized')}/>
+                      <span className="th-filter-chk-icon">❓</span>
+                      <span>Non catégorisé</span>
+                      <span className="th-filter-chk-count">{catCounts['uncategorized'] || 0}</span>
+                    </label>
+                  )}
                 </div>
               )}
             </HeaderFilter>

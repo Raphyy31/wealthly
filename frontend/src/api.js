@@ -163,7 +163,9 @@ export const wealthSnapshots = {
 // ============================================================================
 export const categories = {
   list: () => get('/categories'),
+  create: (c) => post('/categories', c),
   update: (slug, c) => put(`/categories/${slug}`, c),
+  delete: (slug) => del(`/categories/${slug}`),
 };
 
 export const budgets = {

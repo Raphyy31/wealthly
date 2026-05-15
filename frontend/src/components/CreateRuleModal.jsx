@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Check, X, Sparkles } from 'lucide-react';
 
 // Modal that lets the user create (and edit) a categorization rule.
@@ -9,34 +9,57 @@ import { Check, X, Sparkles } from 'lucide-react';
 // Props:
 //  - open: boolean
 //  - suggested: string — the auto-extracted merchant token
-//  - categoryName: string — display name of the target category
+//  - categories: full categories list (with parent field for sub-cats)
+//  - initialCategoryId: slug of the initially selected category (top or sub)
 //  - matchCount: (kw: string) => number — live count of matching txs
-//  - onConfirm: (keyword: string) => Promise<void>
+//  - onConfirm: ({ keyword, categoryId }) => Promise<void>
 //  - onClose: () => void
-export function CreateRuleModal({ open, suggested = '', categoryName, matchCount, onConfirm, onClose }) {
+export function CreateRuleModal({ open, suggested = '', categories = [], initialCategoryId = '', matchCount, onConfirm, onClose }) {
   const [keyword, setKeyword] = useState(suggested);
   const [submitting, setSubmitting] = useState(false);
   const inputRef = useRef(null);
 
-  useEffect(() => { if (open) setKeyword(suggested); }, [open, suggested]);
+  // Resolve initial top-level + sub-level from the suggested category.
+  const initial = useMemo(() => {
+    const cat = categories.find(c => c.id === initialCategoryId);
+    if (!cat) return { top: '', sub: '' };
+    if (cat.parent) return { top: cat.parent, sub: cat.id };
+    return { top: cat.id, sub: '' };
+  }, [initialCategoryId, categories]);
+
+  const [topId, setTopId] = useState(initial.top);
+  const [subId, setSubId] = useState(initial.sub);
+
+  useEffect(() => {
+    if (open) {
+      setKeyword(suggested);
+      setTopId(initial.top);
+      setSubId(initial.sub);
+    }
+  }, [open, suggested, initial.top, initial.sub]);
   useEffect(() => { if (open && inputRef.current) inputRef.current.focus(); }, [open]);
 
   if (!open) return null;
 
+  const topCats = categories.filter(c => !c.parent && c.id !== 'uncategorized' && c.type !== 'income');
+  const subCats = categories.filter(c => c.parent === topId);
+  const targetId = subId || topId;
+  const targetCat = categories.find(c => c.id === targetId);
+
   const trimmed = keyword.trim();
-  const count = trimmed.length >= 2 ? matchCount(trimmed) : 0;
-  const canSubmit = trimmed.length >= 2 && !submitting;
+  const count = trimmed.length >= 2 && targetId ? matchCount(trimmed, targetId) : 0;
+  const canSubmit = trimmed.length >= 2 && !!targetId && !submitting;
 
   const submit = async () => {
     if (!canSubmit) return;
     setSubmitting(true);
-    try { await onConfirm(trimmed); }
+    try { await onConfirm({ keyword: trimmed, categoryId: targetId }); }
     finally { setSubmitting(false); }
   };
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" style={{ maxWidth: 480 }} onClick={e => e.stopPropagation()}>
+      <div className="modal" style={{ maxWidth: 520 }} onClick={e => e.stopPropagation()}>
         <CreateRuleStyles/>
         <div className="modal-header">
           <h2 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -47,7 +70,8 @@ export function CreateRuleModal({ open, suggested = '', categoryName, matchCount
         </div>
         <div className="modal-body">
           <p className="rule-modal-intro">
-            Toutes les transactions dont le libellé contient ce mot-clé seront classées automatiquement en <strong>{categoryName}</strong>.
+            Toutes les transactions dont le libellé contient ce mot-clé seront classées automatiquement
+            {targetCat ? <> en <strong>{targetCat.icon} {targetCat.name}</strong></> : null}.
           </p>
           <label className="rule-modal-label">
             <span>Mot-clé</span>
@@ -63,12 +87,45 @@ export function CreateRuleModal({ open, suggested = '', categoryName, matchCount
               Recherche insensible à la casse, n'importe où dans le libellé.
             </div>
           </label>
+
+          <div className="rule-modal-row">
+            <label className="rule-modal-label">
+              <span>Catégorie</span>
+              <select
+                className="rule-modal-input"
+                value={topId}
+                onChange={e => { setTopId(e.target.value); setSubId(''); }}
+              >
+                <option value="">— Choisir —</option>
+                {topCats.map(c => (
+                  <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+                ))}
+              </select>
+            </label>
+            <label className="rule-modal-label">
+              <span>Détail <span className="rule-modal-optional">(optionnel)</span></span>
+              <select
+                className="rule-modal-input"
+                value={subId}
+                onChange={e => setSubId(e.target.value)}
+                disabled={!topId || subCats.length === 0}
+              >
+                <option value="">{subCats.length === 0 ? 'Aucun détail' : '— Aucun —'}</option>
+                {subCats.map(c => (
+                  <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+
           <div className={`rule-modal-count ${count > 0 ? 'has' : 'none'}`}>
             {trimmed.length < 2
               ? 'Tape au moins 2 caractères'
-              : count === 0
-                ? <>Aucune transaction existante ne correspond. La règle s'appliquera aux <em>futures</em> transactions.</>
-                : <><strong>{count}</strong> transaction{count > 1 ? 's' : ''} similaire{count > 1 ? 's' : ''} {count > 1 ? 'seront' : 'sera'} reclassée{count > 1 ? 's' : ''} maintenant.</>
+              : !targetId
+                ? 'Choisis une catégorie cible'
+                : count === 0
+                  ? <>Aucune transaction existante ne correspond. La règle s'appliquera aux <em>futures</em> transactions.</>
+                  : <><strong>{count}</strong> transaction{count > 1 ? 's' : ''} similaire{count > 1 ? 's' : ''} {count > 1 ? 'seront' : 'sera'} reclassée{count > 1 ? 's' : ''} maintenant.</>
             }
           </div>
         </div>
@@ -90,9 +147,12 @@ function CreateRuleStyles() {
       .rule-modal-intro strong { color: var(--ink); }
       .rule-modal-label { display: flex; flex-direction: column; gap: 6px; }
       .rule-modal-label > span { font-size: 11px; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 500; }
-      .rule-modal-input { font-size: 15px; padding: 10px 12px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--bg-elev); color: var(--ink); font-family: var(--font-mono, monospace); letter-spacing: 0.02em; }
+      .rule-modal-optional { text-transform: none; letter-spacing: 0; color: var(--ink-3); font-weight: 400; }
+      .rule-modal-input { font-size: 15px; padding: 10px 12px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--bg-elev); color: var(--ink); font-family: inherit; }
       .rule-modal-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
       .rule-modal-hint { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+      .rule-modal-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+      @media (max-width: 540px) { .rule-modal-row { grid-template-columns: 1fr; } }
       .rule-modal-count { margin-top: 14px; padding: 10px 12px; border-radius: 8px; font-size: 12px; line-height: 1.5; }
       .rule-modal-count.has { background: var(--accent-soft); color: var(--accent); }
       .rule-modal-count.none { background: var(--bg-subtle, var(--bg-sunk)); color: var(--ink-2); }

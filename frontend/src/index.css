@@ -893,23 +893,43 @@ html, body {
 }
 
 /* ============================================================================
-   RefMonthEditor drawer
+   RefMonthEditor — wide centered modal (Mois type editor)
    ============================================================================ */
-.ref-month-backdrop {
-  position: fixed; inset: 0; z-index: 90;
-  background: rgba(15, 14, 12, 0.45);
-  backdrop-filter: blur(2px);
-}
-.ref-month-drawer {
-  position: fixed; top: 0; right: 0; bottom: 0; z-index: 100;
-  width: min(520px, 100vw);
-  background: var(--bg-elev);
-  border-left: 1px solid var(--border);
-  box-shadow: -16px 0 40px rgba(15,14,12,.18);
+.rm-backdrop { align-items: center; }
+.rm-modal {
+  width: min(1080px, 96vw);
+  max-width: none !important;
+  max-height: 92vh;
   display: flex; flex-direction: column;
-  animation: rm-slide 220ms ease-out;
+  padding: 0 !important;
+  overflow: hidden;
+  animation: rm-pop 200ms ease-out;
 }
-@keyframes rm-slide { from { transform: translateX(40px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes rm-pop { from { transform: translateY(8px) scale(0.985); opacity: 0; } to { transform: none; opacity: 1; } }
+.rm-col { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+.rm-body-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.15fr);
+  gap: 24px;
+  padding: 22px 26px !important;
+}
+@media (max-width: 880px) {
+  .rm-body-grid { grid-template-columns: 1fr; gap: 18px; padding: 18px !important; }
+  .rm-modal { width: 100vw; max-height: 100vh; border-radius: 0; }
+}
+.rm-section-title { flex: 1; font: 600 11px var(--font-sans); text-transform: uppercase; letter-spacing: 0.1em; }
+.rm-section-total { font-variant-numeric: tabular-nums; font: 600 13px var(--font-mono); }
+.rm-empty {
+  margin: 0 0 8px;
+  padding: 14px 14px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  text-align: center;
+  background: var(--bg-sunk);
+}
+.rm-toolbar-meta { margin-left: auto; }
 .rm-head {
   padding: 22px 24px 14px;
   display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;
@@ -925,12 +945,10 @@ html, body {
   background: var(--bg-sunk);
 }
 .rm-body {
-  flex: 1; overflow-y: auto;
-  padding: 20px 24px;
-  display: flex; flex-direction: column; gap: 28px;
+  flex: 1; overflow-y: auto; min-height: 0;
 }
 .rm-section-head {
-  display: inline-flex; align-items: center; gap: 10px;
+  display: flex; align-items: center; gap: 10px;
   margin: 0 0 12px;
   font: 600 10px var(--font-sans); text-transform: uppercase; letter-spacing: 0.1em;
 }
@@ -968,24 +986,24 @@ html, body {
 .rm-cat-total { color: var(--ink-2); font-size: 12px; }
 .rm-line {
   display: grid;
-  grid-template-columns: 1.4fr 110px auto auto;
-  gap: 8px; align-items: center;
-  padding: 8px 12px;
+  grid-template-columns: minmax(0, 1.6fr) 130px auto auto;
+  gap: 10px; align-items: center;
+  padding: 10px 14px;
   border-bottom: 1px dashed var(--border);
 }
 .rm-line:last-child { border-bottom: none; }
 .rm-line-label {
-  border: 1px solid transparent; background: transparent;
-  padding: 4px 6px; font: 500 13px var(--font-sans); color: var(--ink);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--bg-elev);
+  padding: 8px 10px; font: 500 14px var(--font-sans); color: var(--ink);
+  border-radius: 8px; min-width: 0;
 }
-.rm-line-label:focus { outline: none; border-color: var(--accent); background: var(--bg-elev); }
+.rm-line-label:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .rm-line-input { display: flex; align-items: center; gap: 4px; }
 .rm-line-input input {
   flex: 1; width: 100%;
   border: 1px solid var(--border); background: var(--bg-elev);
-  padding: 6px 8px; font: 500 13px var(--font-mono);
-  border-radius: var(--radius-sm); text-align: right;
+  padding: 8px 10px; font: 600 14px var(--font-mono);
+  border-radius: 8px; text-align: right;
 }
 .rm-line-input input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .rm-currency { color: var(--ink-3); font-size: 12px; }

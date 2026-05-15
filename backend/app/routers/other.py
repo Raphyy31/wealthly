@@ -14,10 +14,11 @@ from app.models import (
     BankConnection, FixedCharge, DcaPlan, WealthSnapshot,
 )
 from app.schemas import (
-    CategoryOut, CategoryUpdate, BudgetSet, BudgetOut,
+    CategoryOut, CategoryUpdate, CategoryCreate, BudgetSet, BudgetOut,
     GoalCreate, GoalUpdate, GoalOut,
     AchievementOut, RuleCreate, RuleOut,
 )
+import re
 from app.auth import get_current_user
 from app.defaults import DEFAULT_CATEGORIES
 
@@ -64,6 +65,102 @@ def update_category(slug: str, payload: CategoryUpdate, db: Session = Depends(ge
     db.commit()
     db.refresh(cat)
     return cat
+
+
+def _slugify(name: str) -> str:
+    """Kebab-case ASCII slug, stripped of accents and punctuation."""
+    import unicodedata
+    s = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode("ascii")
+    s = s.lower().strip()
+    s = re.sub(r"[^a-z0-9]+", "-", s).strip("-")
+    return s or "categorie"
+
+
+@router.post("/categories", response_model=CategoryOut, status_code=201)
+def create_category(payload: CategoryCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Create a household-scoped category. parent_slug = None means top-level (niveau 1);
+    otherwise it must reference an existing top-level slug in the same household."""
+    _ensure_default_categories(db, user.household_id)
+
+    name = (payload.name or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Nom de catégorie requis")
+
+    # Validate parent (if any) exists and is itself top-level.
+    if payload.parent_slug:
+        parent = db.query(Category).filter(
+            Category.slug == payload.parent_slug,
+            Category.household_id == user.household_id,
+        ).first()
+        if not parent:
+            raise HTTPException(status_code=404, detail="Catégorie parente introuvable")
+        if parent.parent_slug:
+            raise HTTPException(status_code=400, detail="On ne peut pas créer de sous-sous-catégorie (taxonomie 2 niveaux)")
+
+    # Generate unique slug. user-created suffix lets us identify user rows.
+    base = _slugify(name)
+    if payload.parent_slug:
+        base = f"{payload.parent_slug}-{base}"
+    existing_slugs = {s for (s,) in db.query(Category.slug).filter(Category.household_id == user.household_id).all()}
+    slug = base
+    i = 2
+    while slug in existing_slugs:
+        slug = f"{base}-{i}"
+        i += 1
+
+    cat = Category(
+        household_id=user.household_id,
+        slug=slug,
+        name=name,
+        color=payload.color,
+        icon=payload.icon,
+        type=payload.type,
+        kind=payload.kind,
+        parent_slug=payload.parent_slug,
+    )
+    db.add(cat)
+    db.commit()
+    db.refresh(cat)
+    return cat
+
+
+@router.delete("/categories/{slug}", status_code=204)
+def delete_category(slug: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Delete a category. Children (sub-categories) and dependent rules/budgets are
+    detached/cleaned. Transactions pointing to this category fall back to None."""
+    cat = db.query(Category).filter(Category.slug == slug, Category.household_id == user.household_id).first()
+    if not cat:
+        raise HTTPException(status_code=404, detail="Catégorie non trouvée")
+
+    # Drop child sub-categories first (recursively, but the model is 2-level so one pass).
+    children = db.query(Category).filter(
+        Category.parent_slug == slug,
+        Category.household_id == user.household_id,
+    ).all()
+    child_slugs = [c.slug for c in children]
+    all_slugs = [slug] + child_slugs
+
+    # Clear transactions that pointed to any of these (category_id is a uuid FK to categories.id).
+    affected_ids = [c.id for c in children] + [cat.id]
+    db.query(Transaction).filter(
+        Transaction.household_id == user.household_id,
+        Transaction.category_id.in_(affected_ids),
+    ).update({Transaction.category_id: None}, synchronize_session=False)
+
+    # Drop rules + budgets targeting these slugs.
+    db.query(CategorisationRule).filter(
+        CategorisationRule.household_id == user.household_id,
+        CategorisationRule.category_slug.in_(all_slugs),
+    ).delete(synchronize_session=False)
+    db.query(Budget).filter(
+        Budget.household_id == user.household_id,
+        Budget.category_slug.in_(all_slugs),
+    ).delete(synchronize_session=False)
+
+    for c in children:
+        db.delete(c)
+    db.delete(cat)
+    db.commit()
 
 
 # ============================================================================

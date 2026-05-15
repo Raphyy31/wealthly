@@ -317,102 +317,114 @@ export function RefMonthEditor({
   const incomeCats = categories.filter(c => c.type === 'income');
   const expenseCats = categories.filter(c => c.type === 'expense' && c.id !== 'uncategorized');
 
+  // 2-column layout: Entrées + Épargne on the left, Dépenses on the right
+  // (the biggest bucket gets its own column). Falls back to single column on
+  // narrow screens via CSS.
+  const renderKind = (kind) => {
+    const groups = grouped.filter(g => g.kind === kind);
+    const cats = kind === 'income' ? incomeCats : expenseCats;
+    const total = totals[kind] || 0;
+    return (
+      <section key={kind} className={`rm-section rm-section-${kind}`}>
+        <header className="rm-section-head" style={{ color: KIND_COLOR[kind] }}>
+          <span className="rm-section-icon" style={{ color: KIND_COLOR[kind] }}>{KIND_ICON[kind]}</span>
+          <span className="rm-section-title">{KIND_LABEL[kind]}</span>
+          <span className="rm-section-total num" style={{ color: KIND_COLOR[kind] }}>{fmt(total)}</span>
+        </header>
+        {groups.length === 0 && (
+          <p className="rm-empty">
+            Ajoutez votre première ligne pour démarrer.
+          </p>
+        )}
+        {groups.map(g => {
+          const cat = catFor(g.category_id);
+          const catColor = cat?.color || 'var(--border-strong)';
+          return (
+            <div key={`${kind}-${g.category_id}`} className="rm-group" style={{ borderLeftColor: catColor }}>
+              <div className="rm-group-head">
+                <span className="rm-cat-name">
+                  <span className="rm-cat-icon" aria-hidden="true">{cat?.icon || '•'}</span>
+                  {cat?.name || g.category_id}
+                </span>
+                <span className="rm-cat-total num">{fmt(g.lines.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0))}</span>
+              </div>
+              {g.lines.map(line => {
+                const sugKey = `${line.kind}::${line.category_id || 'uncategorized'}`;
+                const sug = suggestions[sugKey];
+                return (
+                  <div key={line.id} className="rm-line">
+                    <input
+                      className="rm-line-label"
+                      value={line.label}
+                      onChange={e => updateLine(line.id, { label: e.target.value })}
+                      placeholder="Libellé (ex : Loyer)"
+                    />
+                    <div className="rm-line-input">
+                      <input
+                        className="num"
+                        type="number"
+                        step="0.01"
+                        value={line.amount}
+                        onChange={e => updateLine(line.id, { amount: e.target.value, locked: true })}
+                        placeholder="0"
+                      />
+                      <span className="rm-currency">€</span>
+                    </div>
+                    <button
+                      className="ds-icon-btn"
+                      onClick={() => updateLine(line.id, { locked: !line.locked })}
+                      title={line.locked ? 'Déverrouiller (laissera la synchro écraser cette valeur)' : 'Verrouiller (la synchro ne touche plus à cette valeur)'}
+                    >
+                      {line.locked ? <Lock size={14}/> : <Unlock size={14}/>}
+                    </button>
+                    <button className="ds-icon-btn rm-trash" onClick={() => removeLine(line.id)} aria-label="Supprimer">
+                      <Trash2 size={14}/>
+                    </button>
+                    <div className="rm-suggest">
+                      <SuggestionHover sug={sug} fmt={fmt}/>
+                    </div>
+                  </div>
+                );
+              })}
+              <button className="rm-add-sub" onClick={() => addLine({ kind, category_id: g.category_id })}>
+                <Plus size={12}/> Ajouter une sous-ligne
+              </button>
+            </div>
+          );
+        })}
+        <RefMonthAddCategory kind={kind} cats={cats} onAdd={(catId) => addLine({ kind, category_id: catId })}/>
+      </section>
+    );
+  };
+
   return (
-    <>
-      <div className="ref-month-backdrop" onClick={handleClose}/>
-      <aside className="ref-month-drawer" role="dialog" aria-label="Éditer mon mois type">
+    <div className="modal-backdrop rm-backdrop" onClick={handleClose}>
+      <div className="modal rm-modal" onClick={e => e.stopPropagation()} role="dialog" aria-label="Éditer mon mois type">
         <div className="rm-head">
           <div>
-            <h2>Mois type <em>de référence</em></h2>
-            <p className="ds-micro">Le budget mensuel auquel l'app compare chaque mois.</p>
+            <h2>Mon <em>mois type</em></h2>
+            <p className="ds-micro">Définissez votre budget mensuel de référence. L'app comparera chaque mois à ce modèle.</p>
           </div>
-          <button className="ds-icon-btn" onClick={handleClose} aria-label="Fermer"><X size={16}/></button>
+          <button className="ds-icon-btn" onClick={handleClose} aria-label="Fermer"><X size={18}/></button>
         </div>
 
         <div className="rm-toolbar">
           <button className="ds-btn ghost" onClick={resyncAll}>
             <RotateCcw size={14}/> Synchroniser depuis l'historique
           </button>
-          <span className="ds-micro" style={{ marginLeft: 'auto' }}>
+          <span className="ds-micro rm-toolbar-meta">
             {refMonth?.updated_at ? `Maj ${refMonth.updated_at}` : 'Jamais enregistré'}
           </span>
         </div>
 
-        <div className="rm-body">
-          {KIND_ORDER.map(kind => {
-            const groups = grouped.filter(g => g.kind === kind);
-            const cats = kind === 'income' ? incomeCats : expenseCats;
-            return (
-              <section key={kind} className="rm-section">
-                <h3 className="rm-section-head" style={{ color: KIND_COLOR[kind] }}>
-                  <span className="rm-section-icon" style={{ color: KIND_COLOR[kind] }}>{KIND_ICON[kind]}</span>
-                  {KIND_LABEL[kind]}
-                </h3>
-                {groups.length === 0 && (
-                  <p className="ds-micro" style={{ padding: '6px 0', color: 'var(--ink-3)' }}>
-                    Aucune ligne — ajoutez-en pour démarrer.
-                  </p>
-                )}
-                {groups.map(g => {
-                  const cat = catFor(g.category_id);
-                  const catColor = cat?.color || 'var(--border-strong)';
-                  return (
-                    <div key={`${kind}-${g.category_id}`} className="rm-group" style={{ borderLeftColor: catColor }}>
-                      <div className="rm-group-head">
-                        <span className="rm-cat-name">
-                          <span className="rm-cat-icon" aria-hidden="true">{cat?.icon || '•'}</span>
-                          {cat?.name || g.category_id}
-                        </span>
-                        <span className="rm-cat-total num">{fmt(g.lines.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0))}</span>
-                      </div>
-                      {g.lines.map(line => {
-                        const sugKey = `${line.kind}::${line.category_id || 'uncategorized'}`;
-                        const sug = suggestions[sugKey];
-                        return (
-                          <div key={line.id} className="rm-line">
-                            <input
-                              className="rm-line-label"
-                              value={line.label}
-                              onChange={e => updateLine(line.id, { label: e.target.value })}
-                              placeholder="Libellé"
-                            />
-                            <div className="rm-line-input">
-                              <input
-                                className="num"
-                                type="number"
-                                step="0.01"
-                                value={line.amount}
-                                onChange={e => updateLine(line.id, { amount: e.target.value, locked: true })}
-                                placeholder="0"
-                              />
-                              <span className="rm-currency">€</span>
-                            </div>
-                            <button
-                              className="ds-icon-btn"
-                              onClick={() => updateLine(line.id, { locked: !line.locked })}
-                              title={line.locked ? 'Déverrouiller (laissera la synchro écraser cette valeur)' : 'Verrouiller (la synchro ne touche plus à cette valeur)'}
-                            >
-                              {line.locked ? <Lock size={14}/> : <Unlock size={14}/>}
-                            </button>
-                            <button className="ds-icon-btn rm-trash" onClick={() => removeLine(line.id)} aria-label="Supprimer">
-                              <Trash2 size={14}/>
-                            </button>
-                            <div className="rm-suggest">
-                              <SuggestionHover sug={sug} fmt={fmt}/>
-                            </div>
-                          </div>
-                        );
-                      })}
-                      <button className="rm-add-sub" onClick={() => addLine({ kind, category_id: g.category_id })}>
-                        <Plus size={12}/> Ajouter une sous-ligne
-                      </button>
-                    </div>
-                  );
-                })}
-                <RefMonthAddCategory kind={kind} cats={cats} onAdd={(catId) => addLine({ kind, category_id: catId })}/>
-              </section>
-            );
-          })}
+        <div className="rm-body rm-body-grid">
+          <div className="rm-col rm-col-left">
+            {renderKind('income')}
+            {renderKind('saving')}
+          </div>
+          <div className="rm-col rm-col-right">
+            {renderKind('expense')}
+          </div>
         </div>
 
         <div className="rm-footer">
@@ -429,8 +441,8 @@ export function RefMonthEditor({
             </button>
           </div>
         </div>
-      </aside>
-    </>
+      </div>
+    </div>
   );
 }
 

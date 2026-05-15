@@ -1031,28 +1031,40 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
 
   // Confirm callback from CreateRuleModal — actually creates the rule and
   // applies it retroactively to non-manually-categorized matching txs.
-  const applyRule = async (keyword) => {
+  // chosen = { keyword, categoryId } where categoryId is the target slug
+  // (sub-category if user picked one, else the top-level).
+  const applyRule = async (chosen) => {
     if (!ruleModal) return;
-    const { txId, categoryId, categoryName } = ruleModal;
+    const { txId } = ruleModal;
+    const keyword = (chosen?.keyword || '').trim();
+    const targetSlug = chosen?.categoryId;
+    if (!keyword || !targetSlug) { setRuleModal(null); return; }
+    const targetCat = categories.find(c => c.id === targetSlug);
+    const targetName = targetCat?.name || targetSlug;
     const pattern = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const regex = new RegExp(pattern, 'i');
     const toUpdate = transactions.filter(x =>
       x.id !== txId &&
       !x.isManualCategory &&
-      x.categoryId !== categoryId &&
+      x.categoryId !== targetSlug &&
       regex.test(x.label || '')
     );
     try {
-      const newRule = await api.rules.create({ pattern, category_slug: categoryId, source: 'learned' });
-      setCustomRules(prev => [...prev, { pattern, categoryId, source: 'learned', _id: newRule.id }]);
+      const newRule = await api.rules.create({ pattern, category_slug: targetSlug, source: 'learned' });
+      setCustomRules(prev => [...prev, { pattern, categoryId: targetSlug, source: 'learned', _id: newRule.id }]);
+      // Also re-assign the trigger tx if the user picked a different cat than the one already applied.
+      if (ruleModal.categoryId !== targetSlug) {
+        try { await api.transactions.update(txId, { category_slug: targetSlug, is_manual_category: true }); } catch { /* tolerated */ }
+        setTransactions(prev => prev.map(x => x.id === txId ? { ...x, categoryId: targetSlug, isManualCategory: true } : x));
+      }
       if (toUpdate.length > 0) {
         await Promise.allSettled(toUpdate.map(x =>
-          api.transactions.update(x.id, { category_slug: categoryId })
+          api.transactions.update(x.id, { category_slug: targetSlug })
         ));
         setTransactions(prev => prev.map(x =>
-          toUpdate.some(u => u.id === x.id) ? { ...x, categoryId } : x
+          toUpdate.some(u => u.id === x.id) ? { ...x, categoryId: targetSlug } : x
         ));
-        showToast(`Règle « ${keyword} » → ${categoryName} appliquée à ${toUpdate.length + 1} transaction${toUpdate.length + 1 > 1 ? 's' : ''}.`, 'success');
+        showToast(`Règle « ${keyword} » → ${targetName} appliquée à ${toUpdate.length + 1} transaction${toUpdate.length + 1 > 1 ? 's' : ''}.`, 'success');
       } else {
         showToast(`Règle « ${keyword} » créée.`, 'success');
       }
@@ -1064,15 +1076,16 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   };
 
   // Live count of matching txs for the rule modal preview.
-  const countRuleMatches = (keyword) => {
+  const countRuleMatches = (keyword, targetSlug) => {
     if (!keyword || keyword.length < 2 || !ruleModal) return 0;
+    const slug = targetSlug || ruleModal.categoryId;
     try {
       const pattern = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const regex = new RegExp(pattern, 'i');
       return transactions.filter(x =>
         x.id !== ruleModal.txId &&
         !x.isManualCategory &&
-        x.categoryId !== ruleModal.categoryId &&
+        x.categoryId !== slug &&
         regex.test(x.label || '')
       ).length;
     } catch { return 0; }
@@ -1779,6 +1792,12 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             syncBankConnection={syncBankConnection}
             deleteBankConnection={deleteBankConnection}
             categories={categories}
+            reloadCategories={async () => {
+              try {
+                const list = await api.categories.list();
+                if (Array.isArray(list)) setCategories(list.map(categoryFromApi));
+              } catch (err) { showToast(t('toasts.loadError', { message: err.message }), 'error'); }
+            }}
             fmt={fmt}
             baseCurrency={baseCurrency} setBaseCurrency={setBaseCurrency}
             rates={rates} ratesDate={ratesDate}
@@ -1903,7 +1922,8 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       <CreateRuleModal
         open={!!ruleModal}
         suggested={ruleModal?.suggested || ''}
-        categoryName={ruleModal?.categoryName || ''}
+        categories={categories}
+        initialCategoryId={ruleModal?.categoryId || ''}
         matchCount={countRuleMatches}
         onConfirm={applyRule}
         onClose={() => setRuleModal(null)}
