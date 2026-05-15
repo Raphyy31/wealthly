@@ -1021,6 +1021,18 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .tx-transfer-toggle { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; padding: 0; font-size: 11px; color: var(--text-tertiary); background: transparent; border: 1px solid var(--border); border-radius: 3px; cursor: pointer; flex-shrink: 0; opacity: 0; transition: opacity .15s, color .15s, border-color .15s; font-family: inherit; }
 .tx-row:hover .tx-transfer-toggle { opacity: 1; }
 .tx-transfer-toggle:hover { color: var(--primary); border-color: var(--primary); }
+.tx-tags-inline { display: inline-flex; gap: 4px; align-items: center; flex-wrap: wrap; margin-left: 6px; }
+.tx-tag-chip { background: var(--accent-soft); color: var(--accent); font-size: 10px; padding: 1px 7px; border-radius: 10px; border: none; cursor: pointer; font-family: inherit; line-height: 1.6; letter-spacing: 0.01em; }
+.tx-tag-chip:hover { background: var(--accent); color: white; }
+.tx-tag-add { background: transparent; color: var(--ink-3); font-size: 10px; padding: 1px 6px; border: 1px dashed var(--border); border-radius: 10px; cursor: pointer; font-family: inherit; opacity: 0; transition: opacity 0.15s; }
+.tx-row:hover .tx-tag-add { opacity: 0.7; }
+.tx-tag-add:hover { opacity: 1; color: var(--accent); border-color: var(--accent); }
+.tx-tag-input { background: var(--bg-elev); border: 1px solid var(--accent); border-radius: 10px; padding: 1px 6px; font-size: 10px; width: 80px; outline: none; font-family: inherit; color: var(--ink); }
+.tx-filter-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tx-filter-tag { background: var(--bg-subtle); color: var(--ink-2); border: 1px solid var(--border); padding: 4px 10px; border-radius: 16px; font-size: 12px; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 6px; }
+.tx-filter-tag:hover { border-color: var(--accent); color: var(--accent); }
+.tx-filter-tag.active { background: var(--accent); color: white; border-color: var(--accent); }
+.tx-filter-tag-count { font-size: 10px; opacity: 0.7; font-variant-numeric: tabular-nums; }
 .td { font-size: 13px; }
 .td-date { color: var(--text-tertiary); font-size: 12px; font-variant-numeric: tabular-nums; }
 .td-label { display: flex; align-items: center; gap: 8px; min-width: 0; }

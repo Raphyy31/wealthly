@@ -170,6 +170,14 @@ def _run_lightweight_migrations() -> None:
             # ISIN code (ISO 6166) for stock / ETF positions — stored alongside
             # ticker so both are available for display and future lookups.
             "ALTER TABLE assets ADD COLUMN IF NOT EXISTS isin VARCHAR",
+            # Two-level category taxonomy (2026-05-15) — parent_slug groups
+            # sub-categories under a top-level category. NULL = top-level.
+            "ALTER TABLE categories ADD COLUMN IF NOT EXISTS parent_slug VARCHAR",
+            "CREATE INDEX IF NOT EXISTS ix_categories_parent_slug ON categories (parent_slug)",
+            # Transverse tags on transactions (free-form labels: #vacances, #pro…).
+            # JSON array — empty list by default. Lets users tag a tx across
+            # multiple dimensions without exploding the category taxonomy.
+            "ALTER TABLE transactions ADD COLUMN IF NOT EXISTS tags JSON NOT NULL DEFAULT '[]'::json",
         ]
     with engine.begin() as conn:
         for stmt in statements:

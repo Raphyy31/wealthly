@@ -26,6 +26,7 @@ import { formatCurrency, formatDate, monthKey } from '../utils.js';
 import { useIsNarrow } from '../hooks/useIsNarrow.js';
 import { RefMonthEditor } from '../components/RefMonthEditor.jsx';
 import { FiftyThirtyTwentyModal } from '../components/FiftyThirtyTwentyModal.jsx';
+import { SubscriptionsWidget } from '../components/SubscriptionsWidget.jsx';
 
 const SAVING_SLUGS = new Set(['savings']);
 
@@ -477,6 +478,11 @@ export function Monthly({
           onClose={() => setShowEvolution(false)}
         />
       )}
+
+      {/* ── Subscriptions widget ────────────────────────────────────── */}
+      <div style={{ marginTop: 16 }}>
+        <SubscriptionsWidget transactions={transactions} categories={categories} fmt={fmt}/>
+      </div>
     </div>
   );
 }

@@ -14,6 +14,7 @@ const EMPTY_FILTERS = {
   cats: [],          // string[] — empty means "all"
   accs: [],          // string[]
   members: [],       // string[]
+  tags: [],          // string[] — transverse tags filter
   dateFrom: '',      // YYYY-MM-DD
   dateTo: '',
   amountMin: '',     // string for input control, parsed at filter time
@@ -21,6 +22,48 @@ const EMPTY_FILTERS = {
   type: 'all',       // all | income | expense
   month: '',         // YYYY-MM
 };
+
+// Inline tags editor for a single transaction. Tags are normalized to
+// lowercase kebab-case (vacances-2026, pro, cadeau-anniv) for stable filtering.
+function TxTagsInline({ tags = [], allTags = [], onChange }) {
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState('');
+  const normalize = (s) => s.toLowerCase().trim().replace(/[\s_]+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 30);
+  const commit = (raw) => {
+    const t = normalize(raw);
+    if (!t) { setAdding(false); setDraft(''); return; }
+    if (tags.includes(t)) { setAdding(false); setDraft(''); return; }
+    onChange([...tags, t]);
+    setAdding(false); setDraft('');
+  };
+  const remove = (t) => onChange(tags.filter(x => x !== t));
+  return (
+    <span className="tx-tags-inline">
+      {tags.map(t => (
+        <button key={t} className="tx-tag-chip" onClick={(e) => { e.stopPropagation(); remove(t); }} title="Cliquer pour retirer">
+          #{t}
+        </button>
+      ))}
+      {adding ? (
+        <input
+          autoFocus
+          className="tx-tag-input"
+          list="tx-tag-suggestions"
+          placeholder="tag"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={() => commit(draft)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') { e.preventDefault(); commit(draft); }
+            if (e.key === 'Escape') { setAdding(false); setDraft(''); }
+          }}
+        />
+      ) : (
+        <button className="tx-tag-add" onClick={(e) => { e.stopPropagation(); setAdding(true); }} title="Ajouter un tag">+ tag</button>
+      )}
+    </span>
+  );
+}
 
 function CatPicker({ categories, currentId, onSelect, onClose }) {
   const [search, setSearch] = useState('');
@@ -34,19 +77,25 @@ function CatPicker({ categories, currentId, onSelect, onClose }) {
   }, [onClose]);
 
   const q = search.toLowerCase();
-  const filtered = categories.filter(c =>
-    c.id !== 'uncategorized' &&
-    (q === '' || c.name.toLowerCase().includes(q))
-  );
-  const income = filtered.filter(c => c.type === 'income');
-  const expense = filtered.filter(c => c.type === 'expense');
-  const transfer = filtered.filter(c => c.type === 'transfer');
+  const matchesSearch = (c) => q === '' || c.name.toLowerCase().includes(q);
+  // Group by top-level parent. Categories with parent=null are top-level.
+  // A search hit on a sub-cat surfaces its parent group; a hit on a top-level
+  // surfaces all its sub-cats.
+  const tops = categories.filter(c => !c.parent && c.id !== 'uncategorized');
+  const groups = tops.map(top => {
+    const subs = categories.filter(c => c.parent === top.id);
+    const topHits = matchesSearch(top);
+    const matchingSubs = subs.filter(matchesSearch);
+    if (q && !topHits && matchingSubs.length === 0) return null;
+    return { top, subs: q && !topHits ? matchingSubs : subs };
+  }).filter(Boolean);
 
-  const Row = ({ c }) => (
+  const Row = ({ c, indent = false }) => (
     <button
       key={c.id}
       className={`cat-picker-item ${currentId === c.id ? 'active' : ''}`}
       onClick={() => { onSelect(c.id); onClose(); }}
+      style={indent ? { paddingLeft: 28 } : undefined}
     >
       <span className="cat-picker-icon">{c.icon}</span>
       <span>{c.name}</span>
@@ -66,16 +115,19 @@ function CatPicker({ categories, currentId, onSelect, onClose }) {
         />
       </div>
       <div className="cat-picker-list">
-        {income.length > 0 && <><div className="cat-picker-group">Revenus</div>{income.map(c => <Row key={c.id} c={c}/>)}</>}
-        {expense.length > 0 && <><div className="cat-picker-group">Dépenses</div>{expense.map(c => <Row key={c.id} c={c}/>)}</>}
-        {transfer.length > 0 && <><div className="cat-picker-group">Transferts</div>{transfer.map(c => <Row key={c.id} c={c}/>)}</>}
-        {filtered.length === 0 && <div className="cat-picker-empty">Aucune catégorie trouvée</div>}
+        {groups.map(({ top, subs }) => (
+          <div key={top.id}>
+            <Row c={top}/>
+            {subs.map(s => <Row key={s.id} c={s} indent/>)}
+          </div>
+        ))}
+        {groups.length === 0 && <div className="cat-picker-empty">Aucune catégorie trouvée</div>}
       </div>
     </div>
   );
 }
 
-export function Transactions({ transactions, accounts, categories, members = [], recurringIds, toggleRecurring, transferIds = new Set(), setTransferOverride, updateCategory, deleteTransaction, fmt, initialAccountFilter, onConsumeInitialFilter }) {
+export function Transactions({ transactions, accounts, categories, members = [], recurringIds, toggleRecurring, transferIds = new Set(), setTransferOverride, updateCategory, updateTags, deleteTransaction, fmt, initialAccountFilter, onConsumeInitialFilter }) {
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
   // Seed the account filter on mount if the parent passed one (e.g. coming
@@ -121,6 +173,14 @@ export function Transactions({ transactions, accounts, categories, members = [],
     return c;
   }, [transactions]);
 
+  // All tags in use across the household, with counts. Sorted by frequency desc.
+  const { allTags, tagCounts } = useMemo(() => {
+    const counts = {};
+    transactions.forEach(tx => (tx.tags || []).forEach(tag => { counts[tag] = (counts[tag] || 0) + 1; }));
+    const sorted = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+    return { allTags: sorted, tagCounts: counts };
+  }, [transactions]);
+
   // Available months for the month filter bar.
   const availableMonths = useMemo(() => {
     const set = new Set();
@@ -148,6 +208,10 @@ export function Transactions({ transactions, accounts, categories, members = [],
         if (filters.type === 'income' && tx.amount < 0) return false;
         if (filters.type === 'expense' && tx.amount >= 0) return false;
         if (filters.month && !tx.date.startsWith(filters.month)) return false;
+        if (filters.tags.length > 0) {
+          const txTags = tx.tags || [];
+          if (!filters.tags.every(tag => txTags.includes(tag))) return false;
+        }
         return true;
       })
       .sort((a, b) => {
@@ -179,6 +243,7 @@ export function Transactions({ transactions, accounts, categories, members = [],
     filters.cats.length +
     filters.accs.length +
     filters.members.length +
+    filters.tags.length +
     (filters.dateFrom ? 1 : 0) +
     (filters.dateTo ? 1 : 0) +
     (filters.amountMin !== '' ? 1 : 0) +
@@ -337,6 +402,23 @@ export function Transactions({ transactions, accounts, categories, members = [],
               )}
             </div>
 
+            {allTags.length > 0 && (
+              <div className="tx-filter-section">
+                <div className="tx-filter-label">Tags</div>
+                <div className="tx-filter-tags">
+                  {allTags.map(tag => (
+                    <button
+                      key={tag}
+                      className={`tx-filter-tag ${filters.tags.includes(tag) ? 'active' : ''}`}
+                      onClick={() => toggleInList('tags', tag)}
+                    >
+                      #{tag} <span className="tx-filter-tag-count">{tagCounts[tag] || 0}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="tx-filter-panel-footer">
               <button className="secondary-btn" onClick={resetFilters}>
                 <RotateCcw size={13}/> Réinitialiser
@@ -404,6 +486,9 @@ export function Transactions({ transactions, accounts, categories, members = [],
                   <button className={`recurring-toggle ${isRecurring ? 'active' : ''}`} onClick={() => toggleRecurring(tx.id, !isRecurring)} title={isRecurring ? 'Marquer comme non-récurrent' : 'Marquer comme récurrent'}>
                     <Repeat size={11}/>
                   </button>
+                  {updateTags && (
+                    <TxTagsInline tags={tx.tags || []} onChange={(next) => updateTags(tx.id, next)}/>
+                  )}
                 </div>
                 <div className="td td-cat" style={{ position: 'relative' }}>
                   {editingTx === tx.id ? (

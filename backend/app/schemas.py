@@ -116,6 +116,7 @@ class TransactionBase(BaseModel):
     is_recurring_override: Optional[bool] = None
     is_transfer_override: Optional[bool] = None
     notes: Optional[str] = ""
+    tags: List[str] = []
 
 
 class TransactionCreate(TransactionBase):
@@ -129,6 +130,7 @@ class TransactionUpdate(BaseModel):
     is_recurring_override: Optional[bool] = None
     is_transfer_override: Optional[bool] = None
     notes: Optional[str] = None
+    tags: Optional[List[str]] = None
 
 
 class TransactionOut(TransactionBase):
@@ -283,6 +285,7 @@ class CategoryOut(BaseModel):
     icon: str
     type: str
     kind: str
+    parent_slug: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 

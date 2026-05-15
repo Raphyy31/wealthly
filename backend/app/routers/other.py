@@ -19,6 +19,7 @@ from app.schemas import (
     AchievementOut, RuleCreate, RuleOut,
 )
 from app.auth import get_current_user
+from app.defaults import DEFAULT_CATEGORIES
 
 router = APIRouter(tags=["other"])
 
@@ -27,8 +28,29 @@ router = APIRouter(tags=["other"])
 # CATEGORIES
 # ============================================================================
 
+def _ensure_default_categories(db: Session, household_id: str) -> None:
+    """Idempotent — add any DEFAULT_CATEGORIES missing from this household.
+    Also backfills parent_slug on existing rows whose slug appears in defaults.
+    Safe to call on every request; no-op if everything is already seeded."""
+    existing = {c.slug: c for c in db.query(Category).filter(Category.household_id == household_id).all()}
+    changed = False
+    for cat in DEFAULT_CATEGORIES:
+        if cat["slug"] not in existing:
+            db.add(Category(household_id=household_id, **cat))
+            changed = True
+        else:
+            # Backfill parent_slug if it was created before the 2-level taxonomy
+            row = existing[cat["slug"]]
+            if getattr(row, "parent_slug", None) is None and cat.get("parent_slug"):
+                row.parent_slug = cat["parent_slug"]
+                changed = True
+    if changed:
+        db.commit()
+
+
 @router.get("/categories", response_model=List[CategoryOut])
 def list_categories(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    _ensure_default_categories(db, user.household_id)
     return db.query(Category).filter(Category.household_id == user.household_id).all()
 
 

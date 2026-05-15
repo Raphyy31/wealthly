@@ -288,7 +288,7 @@ function FoyerSection({ members, setEditingMember, deleteMember, COLORS }) {
                 <div className="member-card-role">{m.role === 'adult' ? t('settings.household.adult') : t('settings.household.child')}</div>
               </div>
               <button className="icon-btn-sm" onClick={() => setEditingMember(m)}><Edit3 size={13}/></button>
-              <button className="icon-btn-sm" onClick={() => deleteMember(m.id)}><Trash2 size={13}/></button>
+              <BusyButton className="icon-btn-sm" iconOnly spinnerSize={13} onClick={() => deleteMember(m.id)} title="Supprimer ce membre"><Trash2 size={13}/></BusyButton>
             </div>
           ))}
         </div>
@@ -370,7 +370,7 @@ function ComptesSection({ accounts, accountBalances, members, transactions, upda
                     />
                   </div>
                 )}
-                <button className="icon-btn-sm" onClick={() => deleteAccount(a.id)}><Trash2 size={13}/></button>
+                <BusyButton className="icon-btn-sm" iconOnly spinnerSize={13} onClick={() => deleteAccount(a.id)} title="Supprimer ce compte"><Trash2 size={13}/></BusyButton>
               </div>
             );
           })}
@@ -613,10 +613,10 @@ function DevisesSection({ baseCurrency, setBaseCurrency, ratesDate }) {
 // ============================================================================
 function DonneesSection({ exportData, importData, resetAllData }) {
   const { t } = useTranslation();
-  const onReset = () => {
+  const onReset = async () => {
     if (!window.confirm(t('confirms.resetSettings1'))) return;
     if (!window.confirm(t('confirms.resetSettings2'))) return;
-    resetAllData && resetAllData();
+    if (resetAllData) await resetAllData();
   };
   return (
     <section className="settings-panel">
@@ -644,9 +644,9 @@ function DonneesSection({ exportData, importData, resetAllData }) {
       <div className="settings-danger-zone">
         <h3>{t('settings.data.dangerZone')}</h3>
         <p dangerouslySetInnerHTML={{ __html: t('settings.data.dangerBody') }} />
-        <button className="danger-btn" onClick={onReset}>
+        <BusyButton className="danger-btn" onClick={onReset}>
           <Trash2 size={14}/> {t('settings.data.resetAll')}
-        </button>
+        </BusyButton>
       </div>
     </section>
   );

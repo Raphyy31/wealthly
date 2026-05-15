@@ -188,6 +188,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     isRecurringOverride: t.is_recurring_override,
     isTransferOverride: t.is_transfer_override ?? null,
     notes: t.notes || '',
+    tags: t.tags || [],
   });
   const txToApi = (t) => ({
     account_id: t.accountId,
@@ -199,6 +200,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     is_recurring_override: t.isRecurringOverride ?? null,
     is_transfer_override: t.isTransferOverride ?? null,
     notes: t.notes || '',
+    tags: t.tags || [],
   });
   // Assets
   const assetFromApi = (a) => ({
@@ -316,6 +318,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     icon: c.icon,
     type: c.type,
     kind: c.kind,
+    parent: c.parent_slug || null,
   });
 
   // Sync view + activeMember → URL hash, so refresh / back / forward / share work.
@@ -1088,6 +1091,13 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     catch (err) { showToast(t('toasts.genericError', { message: err.message }), 'error'); }
   };
 
+  // Update transverse tags on a transaction. tags is the full new array.
+  const updateTransactionTags = async (txId, tags) => {
+    setTransactions(prev => prev.map(t => t.id === txId ? { ...t, tags } : t));
+    try { await api.transactions.update(txId, { tags }); }
+    catch (err) { showToast(t('toasts.genericError', { message: err.message }), 'error'); }
+  };
+
   const deleteTransaction = async (txId) => {
     if (!confirm(t('confirms.deleteTransaction'))) return;
     try {
@@ -1704,7 +1714,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             members={members}
             recurringIds={recurringIds} toggleRecurring={toggleRecurring}
             transferIds={transferIds} setTransferOverride={setTransferOverride}
-            updateCategory={updateTransactionCategory} deleteTransaction={deleteTransaction} fmt={fmt}
+            updateCategory={updateTransactionCategory} updateTags={updateTransactionTags} deleteTransaction={deleteTransaction} fmt={fmt}
             initialAccountFilter={txInitialAccountFilter}
             onConsumeInitialFilter={() => setTxInitialAccountFilter(null)}
           />

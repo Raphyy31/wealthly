@@ -66,6 +66,7 @@ def _to_out(tx: Transaction, db: Session) -> dict:
         "is_recurring_override": tx.is_recurring_override,
         "is_transfer_override": tx.is_transfer_override,
         "notes": tx.notes or "",
+        "tags": tx.tags or [],
         "household_id": tx.household_id,
     }
 
@@ -118,6 +119,7 @@ def create_transaction(payload: TransactionCreate, db: Session = Depends(get_db)
         is_recurring_override=payload.is_recurring_override,
         is_transfer_override=payload.is_transfer_override,
         notes=payload.notes or "",
+        tags=payload.tags or [],
         dedup_hash=dedup,
     )
     db.add(tx)
@@ -163,6 +165,7 @@ def bulk_import(payload: TransactionImport, db: Session = Depends(get_db), user:
             is_recurring_override=t.is_recurring_override,
             is_transfer_override=t.is_transfer_override,
             notes=t.notes or "",
+            tags=t.tags or [],
             dedup_hash=dedup,
         )
         db.add(tx)

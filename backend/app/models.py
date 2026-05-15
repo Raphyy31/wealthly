@@ -207,6 +207,7 @@ class Transaction(Base):
     is_recurring_override = Column(Boolean, nullable=True)  # null = auto-detect, true/false = manual override
     is_transfer_override = Column(Boolean, nullable=True)   # null = auto-detect, true/false = manual override on internal-transfer detection
     notes = Column(Text, nullable=True, default="")
+    tags = Column(JSON, nullable=False, default=list)  # transverse tags: ["vacances-2026", "pro", "cadeau"]
     # Hash for deduplication on import: account_id|date|amount|label_truncated
     dedup_hash = Column(String, nullable=False, index=True)
     # Source of the transaction: csv | manual | gocardless
@@ -321,7 +322,9 @@ class Liability(Base):
 
 
 class Category(Base):
-    """Spending category. Each household gets a default set on creation."""
+    """Spending category. Each household gets a default set on creation.
+    parent_slug is the slug of the parent top-level category — NULL means
+    this row IS a top-level category. Two-level taxonomy only (no grandparents)."""
     __tablename__ = "categories"
 
     id = Column(String, primary_key=True, default=_uuid)
@@ -331,6 +334,7 @@ class Category(Base):
     icon = Column(String, nullable=False, default="❓")
     type = Column(String, nullable=False)  # income | expense | transfer
     kind = Column(String, nullable=False, default="needs")  # needs | wants | savings (for 50/30/20)
+    parent_slug = Column(String, nullable=True)  # parent category slug, NULL = top-level
 
     household_id = Column(String, ForeignKey("households.id", ondelete="CASCADE"), nullable=False)
     household = relationship("Household", back_populates="categories")
