@@ -17,6 +17,43 @@ function _uuid() {
   return 'rm-' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 }
 
+// Hoverable suggestion chip — shows mean by default, expands to a popover
+// listing the contributing transactions on hover. Helps the user understand
+// "where does this 39 €/mois come from?".
+function SuggestionHover({ sug, fmt }) {
+  const [open, setOpen] = useState(false);
+  if (!sug) return <span className="ds-micro">Pas assez d'historique</span>;
+  const sample = sug.txs.slice(0, 10);
+  const more = Math.max(0, sug.txs.length - sample.length);
+  return (
+    <span
+      className={`rm-suggest-chip ${open ? 'open' : ''}`}
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      ≈ {fmt(sug.mean)}/mois <span className="ds-micro">· moyenne {sug.months} mois</span>
+      {open && (
+        <span className="rm-suggest-pop">
+          <span className="rm-suggest-pop-head">
+            <span><strong>Moyenne</strong> {fmt(sug.mean)} · <strong>Médiane</strong> {fmt(sug.median)}</span>
+            <span className="ds-micro">{sug.txs.length} opération{sug.txs.length > 1 ? 's' : ''} · {sug.months} mois</span>
+          </span>
+          <span className="rm-suggest-pop-list">
+            {sample.map(t => (
+              <span key={t.id} className="rm-suggest-pop-row">
+                <span className="rm-suggest-pop-date">{t.date.slice(5)}</span>
+                <span className="rm-suggest-pop-label">{t.label || 'Sans libellé'}</span>
+                <span className="rm-suggest-pop-amount num">{fmt(t.amount)}</span>
+              </span>
+            ))}
+            {more > 0 && <span className="rm-suggest-pop-more">+ {more} autre{more > 1 ? 's' : ''}</span>}
+          </span>
+        </span>
+      )}
+    </span>
+  );
+}
+
 function medianOf(arr) {
   if (!arr.length) return 0;
   const sorted = [...arr].sort((a, b) => a - b);
@@ -24,9 +61,17 @@ function medianOf(arr) {
   return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
+function meanOf(arr) {
+  if (!arr.length) return 0;
+  return arr.reduce((s, v) => s + v, 0) / arr.length;
+}
+
 /**
- * Compute median amount per (category_id, kind) over the last 3 complete months.
- * Returns: { [`${kind}::${categoryId}`]: { median, months } }
+ * Compute mean + median + contributing transactions per (category_id, kind)
+ * over the last 3 complete months.
+ * Returns: {
+ *   [`${kind}::${categoryId}`]: { mean, median, months, txs: [{id,date,label,amount}] }
+ * }
  */
 function buildHistorySuggestions({ transactions, accounts, memberShare, transferIds, currentMonth, fixedCharges = [], saving_slugs }) {
   if (!transactions || !currentMonth) return {};
@@ -39,8 +84,8 @@ function buildHistorySuggestions({ transactions, accounts, memberShare, transfer
     months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
   }
 
-  // Per (catId, kind, month) → total amount this month.
-  const perMonth = new Map();
+  // Per (kind, catId) → { byMonth: {month: amount}, txs: [...] }
+  const agg = {};
   for (const t of transactions) {
     const mk = monthKey(t.date);
     if (!months.includes(mk)) continue;
@@ -50,36 +95,28 @@ function buildHistorySuggestions({ transactions, accounts, memberShare, transfer
     const amt = (t.amount || 0) * share;
     const catId = t.categoryId || 'uncategorized';
     const kind = amt >= 0 ? 'income' : (saving_slugs && saving_slugs.has(catId) ? 'saving' : 'expense');
-    const k = `${kind}::${catId}::${mk}`;
-    perMonth.set(k, (perMonth.get(k) || 0) + Math.abs(amt));
+    const k = `${kind}::${catId}`;
+    if (!agg[k]) agg[k] = { byMonth: {}, txs: [] };
+    agg[k].byMonth[mk] = (agg[k].byMonth[mk] || 0) + Math.abs(amt);
+    agg[k].txs.push({
+      id: t.id,
+      date: t.date,
+      label: t.label || '',
+      amount: amt,
+    });
   }
 
-  // Aggregate per (catId, kind) over months → median + months with data.
-  const out = {};
-  for (const m of months) {
-    for (const t of transactions) {
-      const mk = monthKey(t.date);
-      if (mk !== m) continue;
-      if (transferIds && transferIds.has(t.id)) continue;
-      const catId = t.categoryId || 'uncategorized';
-      const amt = (t.amount || 0);
-      const kind = amt >= 0 ? 'income' : (saving_slugs && saving_slugs.has(catId) ? 'saving' : 'expense');
-      const k = `${kind}::${catId}`;
-      out[k] = out[k] || { byMonth: {}, months: 0 };
-      const monthKey2 = `${kind}::${catId}::${m}`;
-      if (out[k].byMonth[m] == null) {
-        out[k].byMonth[m] = perMonth.get(monthKey2) || 0;
-        if (out[k].byMonth[m] > 0) out[k].months += 1;
-      }
-    }
-  }
-
-  // Build final → median over months with data.
+  // Build final stats — keep entries with ≥2 months of data.
   const result = {};
-  for (const [k, agg] of Object.entries(out)) {
-    const values = Object.values(agg.byMonth).filter(v => v > 0);
-    if (values.length < 2) continue; // need at least 2 months with data
-    result[k] = { median: Math.round(medianOf(values)), months: values.length };
+  for (const [k, a] of Object.entries(agg)) {
+    const values = Object.values(a.byMonth).filter(v => v > 0);
+    if (values.length < 2) continue;
+    result[k] = {
+      mean: Math.round(meanOf(values)),
+      median: Math.round(medianOf(values)),
+      months: values.length,
+      txs: a.txs.sort((x, y) => y.date.localeCompare(x.date)),
+    };
   }
   return result;
 }
@@ -222,7 +259,7 @@ export function RefMonthEditor({
       if (line.locked) { seenKeys.add(k); continue; }
       const sug = suggestions[k];
       if (sug && !seenKeys.has(k)) {
-        line.amount = sug.median;
+        line.amount = sug.mean;
         seenKeys.add(k);
       }
     }
@@ -236,7 +273,7 @@ export function RefMonthEditor({
         category_id,
         kind,
         label: cat?.name || (kind === 'income' ? 'Entrée' : 'Ligne'),
-        amount: sug.median,
+        amount: sug.mean,
         locked: false,
       });
     }
@@ -338,9 +375,7 @@ export function RefMonthEditor({
                               <Trash2 size={14}/>
                             </button>
                             <div className="rm-suggest">
-                              {sug
-                                ? <>≈ {fmt(sug.median)}/mois <span className="ds-micro">· médiane {sug.months} mois</span></>
-                                : <span className="ds-micro">Pas assez d'historique</span>}
+                              <SuggestionHover sug={sug} fmt={fmt}/>
                             </div>
                           </div>
                         );

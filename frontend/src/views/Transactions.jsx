@@ -280,13 +280,31 @@ export function Transactions({ transactions, accounts, categories, members = [],
     return [...set].sort().reverse();
   }, [transactions]);
 
+  // Pre-index category names (top + parent) by slug, lowercased — used so the
+  // search bar also matches when the user types a category name (e.g.
+  // "Carburant") instead of just the raw bank label.
+  const catSearchIndex = useMemo(() => {
+    const m = {};
+    categories.forEach(c => {
+      const parent = c.parent ? categories.find(p => p.id === c.parent) : null;
+      const tokens = [c.name];
+      if (parent) tokens.push(parent.name);
+      m[c.id] = tokens.join(' ').toLowerCase();
+    });
+    return m;
+  }, [categories]);
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
     const min = filters.amountMin === '' ? null : parseFloat(filters.amountMin);
     const max = filters.amountMax === '' ? null : parseFloat(filters.amountMax);
     return transactions
       .filter(tx => {
-        if (q && !(tx.label || '').toLowerCase().includes(q)) return false;
+        if (q) {
+          const labelHit = (tx.label || '').toLowerCase().includes(q);
+          const catHit = tx.categoryId ? (catSearchIndex[tx.categoryId] || '').includes(q) : false;
+          if (!labelHit && !catHit) return false;
+        }
         if (filters.cats.length > 0 && !filters.cats.includes(tx.categoryId || 'uncategorized')) return false;
         if (filters.accs.length > 0 && !filters.accs.includes(tx.accountId)) return false;
         if (filters.members.length > 0) {
@@ -313,7 +331,7 @@ export function Transactions({ transactions, accounts, categories, members = [],
         else if (sortKey === 'label') cmp = (a.label || '').localeCompare(b.label || '');
         return sortDir === 'asc' ? cmp : -cmp;
       });
-  }, [transactions, search, filters, sortKey, sortDir, accountMembers]);
+  }, [transactions, search, filters, sortKey, sortDir, accountMembers, catSearchIndex]);
 
   const toggleSort = (key) => {
     if (sortKey === key) setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
