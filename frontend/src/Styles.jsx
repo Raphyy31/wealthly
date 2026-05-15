@@ -1007,12 +1007,58 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .result-count { font-size: 11px; color: var(--text-tertiary); margin-left: auto; }
 .tx-table { background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; box-shadow: var(--shadow-sm); }
 .tx-header, .tx-row { display: grid; grid-template-columns: 90px minmax(240px, 2fr) 140px 140px 130px 110px 50px; gap: 10px; padding: 10px 16px; align-items: center; }
-.td-label { min-width: 0; }
+.td-label { min-width: 0; position: relative; }
 .td-label-text { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
-.tx-row:hover .td-label-text { white-space: normal; overflow: visible; }
+/* Fintech-style floating tooltip — shows full label on hover, positioned above row.
+   We disable the native browser title tooltip by removing it; this CSS one is prettier
+   and never causes layout shift. */
+.td-label[data-tooltip] { cursor: default; }
+.td-label[data-tooltip]::before,
+.td-label[data-tooltip]::after { opacity: 0; pointer-events: none; transition: opacity 0.12s ease-out, transform 0.12s ease-out; }
+.td-label[data-tooltip]::before {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  max-width: 520px;
+  width: max-content;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--ink, #16150F);
+  color: var(--bg, #F7F6F2);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  line-height: 1.45;
+  white-space: normal;
+  box-shadow: 0 10px 30px -10px rgba(0,0,0,0.35), 0 4px 8px -4px rgba(0,0,0,0.15);
+  z-index: 100;
+  transform: translateY(2px);
+  font-family: inherit;
+}
+.td-label[data-tooltip]::after {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 14px;
+  width: 0; height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid var(--ink, #16150F);
+  z-index: 100;
+}
+.td-label[data-tooltip]:hover::before,
+.td-label[data-tooltip]:hover::after { opacity: 1; transform: translateY(0); transition-delay: 0.25s; }
 .cat-pill-sub { background: var(--bg-subtle, var(--bg-sunk)); color: var(--ink-2); border: 1px solid var(--border); font-size: 11px !important; padding: 3px 8px !important; border-radius: 6px !important; cursor: pointer; font-family: inherit; }
 .cat-pill-sub:hover { border-color: var(--accent); color: var(--accent); }
-.cat-pill-empty { color: var(--ink-3); font-size: 12px; opacity: 0.5; }
+.cat-pill-add-sub { background: transparent; color: var(--ink-3); border: 1px dashed var(--border); font-size: 10px; padding: 3px 8px; border-radius: 6px; cursor: pointer; font-family: inherit; opacity: 0.6; transition: opacity 0.15s, color 0.15s, border-color 0.15s; }
+.tx-row:hover .cat-pill-add-sub { opacity: 1; }
+.cat-pill-add-sub:hover { color: var(--accent); border-color: var(--accent); }
+.cat-pill-empty { color: var(--ink-3); font-size: 12px; opacity: 0.4; padding-left: 4px; }
+.subcat-picker { min-width: 240px; }
+.subcat-picker-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 11px; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.08em; background: var(--bg-sunk, var(--bg-subtle)); border-top-left-radius: 8px; border-top-right-radius: 8px; }
+.subcat-picker-head strong { color: var(--ink); text-transform: none; font-weight: 500; letter-spacing: 0.01em; font-size: 12px; }
+.subcat-picker-icon { font-size: 14px; }
 .ds-btn-badge { background: rgba(255,255,255,0.25); color: inherit; font-size: 10px; padding: 1px 6px; border-radius: 8px; margin-left: 6px; font-variant-numeric: tabular-nums; font-weight: 600; }
 .ds-btn.ghost .ds-btn-badge { background: var(--accent-soft); color: var(--accent); }
 .tx-header { background: var(--bg-subtle); border-bottom: 1px solid var(--border); font-size: 11px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; }

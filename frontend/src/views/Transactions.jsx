@@ -23,6 +23,56 @@ const EMPTY_FILTERS = {
   month: '',         // YYYY-MM
 };
 
+// Scoped sub-category picker — shows only direct children of a given top-level
+// category. Used by the "Détail" column so the user gets a focused list
+// instead of the full taxonomy.
+function SubCatPicker({ categories, topSlug, currentId, onSelect, onClose }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose(); };
+    const tid = setTimeout(() => window.addEventListener('mousedown', handler), 80);
+    return () => { clearTimeout(tid); window.removeEventListener('mousedown', handler); };
+  }, [onClose]);
+
+  const subs = categories.filter(c => c.parent === topSlug);
+  const top = categories.find(c => c.id === topSlug);
+
+  return (
+    <div className="cat-picker subcat-picker" ref={ref}>
+      <div className="subcat-picker-head">
+        <span className="subcat-picker-icon" style={{ color: top?.color }}>{top?.icon}</span>
+        <span>Détail · <strong>{top?.name}</strong></span>
+      </div>
+      <div className="cat-picker-list">
+        {subs.length === 0 ? (
+          <div className="cat-picker-empty">Aucun détail disponible pour cette catégorie.</div>
+        ) : (
+          <>
+            <button
+              className={`cat-picker-item ${currentId === topSlug ? 'active' : ''}`}
+              onClick={() => { onSelect(topSlug); onClose(); }}
+              style={{ fontStyle: 'italic', color: 'var(--ink-3)' }}
+            >
+              <span className="cat-picker-icon">·</span>
+              <span>Aucun détail</span>
+            </button>
+            {subs.map(s => (
+              <button
+                key={s.id}
+                className={`cat-picker-item ${currentId === s.id ? 'active' : ''}`}
+                onClick={() => { onSelect(s.id); onClose(); }}
+              >
+                <span className="cat-picker-icon">{s.icon}</span>
+                <span>{s.name}</span>
+              </button>
+            ))}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // Inline tags editor for a single transaction. Tags are normalized to
 // lowercase kebab-case (vacances-2026, pro, cadeau-anniv) for stable filtering.
 function TxTagsInline({ tags = [], allTags = [], onChange }) {
@@ -147,6 +197,7 @@ export function Transactions({ transactions, accounts, categories, members = [],
   const [sortKey, setSortKey] = useState('date');
   const [sortDir, setSortDir] = useState('desc');
   const [editingTx, setEditingTx] = useState(null);
+  const [editingSubcat, setEditingSubcat] = useState(null);  // tx.id whose Détail picker is open
   const panelRef = useRef(null);
 
   // Close the filter panel on outside click.
@@ -482,7 +533,7 @@ export function Transactions({ transactions, accounts, categories, members = [],
             return (
               <div key={tx.id} className={`tx-row ${isTransfer ? 'tx-row-transfer' : ''}`}>
                 <div className="td td-date">{formatDate(tx.date)}</div>
-                <div className="td td-label" title={tx.label || 'Sans libellé'}>
+                <div className="td td-label" data-tooltip={tx.label || 'Sans libellé'}>
                   <span className="td-label-text">{tx.label || 'Sans libellé'}</span>
                   {isTransfer && (
                     <button
@@ -528,15 +579,38 @@ export function Transactions({ transactions, accounts, categories, members = [],
                     );
                   })()}
                 </div>
-                <div className="td td-subcat">
-                  {!isTransfer && cat?.parent && (
-                    <button className="cat-pill cat-pill-sub" onClick={() => setEditingTx(tx.id)} title="Sous-catégorie">
-                      {cat.icon} {cat.name}
-                    </button>
-                  )}
-                  {!isTransfer && !cat?.parent && cat && (
-                    <span className="cat-pill-empty">—</span>
-                  )}
+                <div className="td td-subcat" style={{ position: 'relative' }}>
+                  {(() => {
+                    if (isTransfer) return <span className="cat-pill-empty">—</span>;
+                    if (!cat) return <span className="cat-pill-empty">—</span>;
+                    // Determine which top-level the picker should scope to.
+                    const topSlug = cat.parent || cat.id;
+                    if (editingSubcat === tx.id) {
+                      return (
+                        <SubCatPicker
+                          categories={categories}
+                          topSlug={topSlug}
+                          currentId={cat.id}
+                          onSelect={(catId) => { updateCategory(tx.id, catId); }}
+                          onClose={() => setEditingSubcat(null)}
+                        />
+                      );
+                    }
+                    if (cat.parent) {
+                      return (
+                        <button className="cat-pill cat-pill-sub" onClick={() => setEditingSubcat(tx.id)} title={`Détail · cliquer pour changer`}>
+                          {cat.icon} {cat.name}
+                        </button>
+                      );
+                    }
+                    // Top-level cat, no sub yet — show "+ détail" hint button
+                    const hasSubs = categories.some(c => c.parent === cat.id);
+                    return hasSubs ? (
+                      <button className="cat-pill-add-sub" onClick={() => setEditingSubcat(tx.id)} title="Ajouter un détail">
+                        + détail
+                      </button>
+                    ) : <span className="cat-pill-empty">—</span>;
+                  })()}
                 </div>
                 <div className="td td-acc">{acc?.name || '—'}</div>
                 <div className={`td td-amount right ${tx.amount >= 0 ? 'positive' : ''}`}>{fmt(tx.amount, { sign: true })}</div>
