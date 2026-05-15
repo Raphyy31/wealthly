@@ -928,7 +928,10 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     }
   };
 
+  const [importing, setImporting] = useState(false);
   const confirmImport = async () => {
+    if (importing) return;
+    setImporting(true);
     try {
       let accountId;
       const existing = accounts.find(a => a.name === importAccount.name && a.bank === importAccount.bank);
@@ -965,6 +968,8 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       setView('dashboard');
     } catch (err) {
       showToast(t('toasts.importError', { message: err.message }), 'error');
+    } finally {
+      setImporting(false);
     }
   };
 
@@ -1707,7 +1712,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             knownMappings={columnMappings} detectedBank={detectedBank}
             handleFileUpload={handleFileUpload} proceedToAccountStep={proceedToAccountStep}
             proceedToPreview={proceedToPreview} confirmImport={confirmImport} cancelImport={cancelImport}
-            setStep={setImportStep} fmt={fmt}
+            importing={importing} setStep={setImportStep} fmt={fmt}
           />
         )}
           </main>

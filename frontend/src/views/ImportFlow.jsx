@@ -5,13 +5,13 @@
 // current step and emits the navigation callbacks. MappingField is local —
 // only used by the mapping step.
 // ============================================================================
-import { Upload, Check, ChevronRight, Sparkles, Lightbulb } from 'lucide-react';
+import { Upload, Check, ChevronRight, Sparkles, Lightbulb, Loader2 } from 'lucide-react';
 import { formatDate } from '../utils.js';
 
 // ============================================================================
 // IMPORT FLOW
 // ============================================================================
-export function ImportFlow({ step, parsedData, mapping, setMapping, account, setAccount, preview, categories, members, existingAccounts, knownMappings, detectedBank, handleFileUpload, proceedToAccountStep, proceedToPreview, confirmImport, cancelImport, setStep, fmt }) {
+export function ImportFlow({ step, parsedData, mapping, setMapping, account, setAccount, preview, categories, members, existingAccounts, knownMappings, detectedBank, handleFileUpload, proceedToAccountStep, proceedToPreview, confirmImport, cancelImport, importing, setStep, fmt }) {
   if (step === 'upload') {
     return (
       <div className="import-flow">
@@ -162,7 +162,9 @@ export function ImportFlow({ step, parsedData, mapping, setMapping, account, set
         </div>
         <div className="flow-actions">
           <button className="secondary-btn" onClick={() => setStep('account')}>Retour</button>
-          <button className="primary-btn" onClick={confirmImport}><Check size={14}/> Confirmer l'import</button>
+          <button className="primary-btn" onClick={confirmImport} disabled={importing}>
+            {importing ? <><Loader2 size={14} className="spin"/> Import en cours…</> : <><Check size={14}/> Confirmer l'import</>}
+          </button>
         </div>
       </div>
     );
