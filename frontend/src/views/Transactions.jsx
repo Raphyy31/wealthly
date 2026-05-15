@@ -23,6 +23,47 @@ const EMPTY_FILTERS = {
   month: '',         // YYYY-MM
 };
 
+// Generic per-column header filter popover. Renders a small filter icon next
+// to the sort arrow; click → popover anchored to the header cell. The icon
+// turns accent if `active` is true (i.e. the column has an active filter).
+// `children` is the popover content (caller-supplied — multi-select, range, etc.).
+function HeaderFilter({ active, align = 'left', onReset, children }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const onClick = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); };
+    const onEsc = (e) => { if (e.key === 'Escape') setOpen(false); };
+    const tid = setTimeout(() => { window.addEventListener('mousedown', onClick); window.addEventListener('keydown', onEsc); }, 50);
+    return () => { clearTimeout(tid); window.removeEventListener('mousedown', onClick); window.removeEventListener('keydown', onEsc); };
+  }, [open]);
+  return (
+    <span className="th-filter-wrap" ref={wrapRef} onClick={e => e.stopPropagation()}>
+      <button
+        className={`th-filter-btn ${active ? 'active' : ''}`}
+        onClick={() => setOpen(o => !o)}
+        aria-label="Filtrer cette colonne"
+        title={active ? 'Filtre actif — cliquer pour modifier' : 'Filtrer'}
+        type="button"
+      >
+        <Filter size={11}/>
+      </button>
+      {open && (
+        <div className={`th-filter-popover th-filter-popover-${align}`}>
+          {children({ close: () => setOpen(false) })}
+          {active && onReset && (
+            <div className="th-filter-foot">
+              <button className="th-filter-reset" onClick={() => { onReset(); setOpen(false); }}>
+                <RotateCcw size={11}/> Réinitialiser
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </span>
+  );
+}
+
 // Scoped sub-category picker — shows only direct children of a given top-level
 // category. Used by the "Détail" column so the user gets a focused list
 // instead of the full taxonomy.
@@ -516,12 +557,162 @@ export function Transactions({ transactions, accounts, categories, members = [],
 
       <div className="tx-table">
         <div className="tx-header">
-          <div className="th sortable" onClick={() => toggleSort('date')}>Date <ArrowUpDown size={12}/></div>
+          {/* Date — filter: range from/to */}
+          <div className="th sortable" onClick={() => toggleSort('date')}>
+            Date <ArrowUpDown size={12}/>
+            <HeaderFilter
+              active={!!filters.dateFrom || !!filters.dateTo}
+              onReset={() => { setField('dateFrom', ''); setField('dateTo', ''); }}
+            >
+              {() => (
+                <div className="th-filter-section">
+                  <label className="th-filter-row">
+                    <span>Du</span>
+                    <input type="date" value={filters.dateFrom} onChange={(e) => setField('dateFrom', e.target.value)}/>
+                  </label>
+                  <label className="th-filter-row">
+                    <span>Au</span>
+                    <input type="date" value={filters.dateTo} onChange={(e) => setField('dateTo', e.target.value)}/>
+                  </label>
+                </div>
+              )}
+            </HeaderFilter>
+          </div>
+          {/* Libellé — keeps the top-bar search; no column filter */}
           <div className="th sortable" onClick={() => toggleSort('label')}>Libellé <ArrowUpDown size={12}/></div>
-          <div className="th">Catégorie</div>
-          <div className="th">Détail</div>
-          <div className="th">Compte</div>
-          <div className="th right sortable" onClick={() => toggleSort('amount')}>Montant <ArrowUpDown size={12}/></div>
+          {/* Catégorie — multi-select top-levels */}
+          <div className="th">
+            Catégorie
+            <HeaderFilter
+              active={filters.cats.some(id => {
+                const c = categories.find(x => x.id === id);
+                return c && !c.parent;
+              })}
+              onReset={() => {
+                const sub = filters.cats.filter(id => { const c = categories.find(x => x.id === id); return c && c.parent; });
+                setField('cats', sub);
+              }}
+            >
+              {() => (
+                <div className="th-filter-section">
+                  <input
+                    className="th-filter-search"
+                    placeholder="Filtrer…"
+                    value={catFilterSearch}
+                    onChange={e => setCatFilterSearch(e.target.value)}
+                  />
+                  {categories.filter(c => !c.parent && c.id !== 'uncategorized' && (catFilterSearch === '' || c.name.toLowerCase().includes(catFilterSearch))).map(c => (
+                    <label key={c.id} className={`th-filter-chk ${filters.cats.includes(c.id) ? 'active' : ''}`}>
+                      <input type="checkbox" checked={filters.cats.includes(c.id)} onChange={() => toggleInList('cats', c.id)}/>
+                      <span className="th-filter-chk-icon">{c.icon}</span>
+                      <span>{c.name}</span>
+                      <span className="th-filter-chk-count">{catCounts[c.id] || 0}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </HeaderFilter>
+          </div>
+          {/* Détail — multi-select sub-cats */}
+          <div className="th">
+            Détail
+            <HeaderFilter
+              active={filters.cats.some(id => {
+                const c = categories.find(x => x.id === id);
+                return c && c.parent;
+              })}
+              onReset={() => {
+                const top = filters.cats.filter(id => { const c = categories.find(x => x.id === id); return c && !c.parent; });
+                setField('cats', top);
+              }}
+            >
+              {() => {
+                const subs = categories.filter(c => c.parent && (catFilterSearch === '' || c.name.toLowerCase().includes(catFilterSearch)));
+                // Group by parent for clarity
+                const byParent = new Map();
+                subs.forEach(s => {
+                  const p = categories.find(c => c.id === s.parent);
+                  if (!p) return;
+                  if (!byParent.has(p.id)) byParent.set(p.id, { parent: p, subs: [] });
+                  byParent.get(p.id).subs.push(s);
+                });
+                return (
+                  <div className="th-filter-section">
+                    <input
+                      className="th-filter-search"
+                      placeholder="Filtrer…"
+                      value={catFilterSearch}
+                      onChange={e => setCatFilterSearch(e.target.value)}
+                    />
+                    {[...byParent.values()].map(({ parent, subs }) => (
+                      <div key={parent.id}>
+                        <div className="th-filter-group">{parent.icon} {parent.name}</div>
+                        {subs.map(s => (
+                          <label key={s.id} className={`th-filter-chk ${filters.cats.includes(s.id) ? 'active' : ''}`}>
+                            <input type="checkbox" checked={filters.cats.includes(s.id)} onChange={() => toggleInList('cats', s.id)}/>
+                            <span className="th-filter-chk-icon">{s.icon}</span>
+                            <span>{s.name}</span>
+                            <span className="th-filter-chk-count">{catCounts[s.id] || 0}</span>
+                          </label>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                );
+              }}
+            </HeaderFilter>
+          </div>
+          {/* Compte — multi-select */}
+          <div className="th">
+            Compte
+            <HeaderFilter
+              active={filters.accs.length > 0}
+              onReset={() => setField('accs', [])}
+            >
+              {() => (
+                <div className="th-filter-section">
+                  {accounts.map(a => (
+                    <label key={a.id} className={`th-filter-chk ${filters.accs.includes(a.id) ? 'active' : ''}`}>
+                      <input type="checkbox" checked={filters.accs.includes(a.id)} onChange={() => toggleInList('accs', a.id)}/>
+                      <span>{a.bank} — {a.name}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </HeaderFilter>
+          </div>
+          {/* Montant — type radio + min/max range */}
+          <div className="th right sortable" onClick={() => toggleSort('amount')}>
+            Montant <ArrowUpDown size={12}/>
+            <HeaderFilter
+              align="right"
+              active={filters.type !== 'all' || filters.amountMin !== '' || filters.amountMax !== ''}
+              onReset={() => { setField('type', 'all'); setField('amountMin', ''); setField('amountMax', ''); }}
+            >
+              {() => (
+                <div className="th-filter-section">
+                  <div className="th-filter-segmented">
+                    {[['all', 'Tout'], ['income', 'Recettes'], ['expense', 'Dépenses']].map(([id, label]) => (
+                      <button
+                        key={id}
+                        type="button"
+                        className={`th-filter-seg ${filters.type === id ? 'active' : ''}`}
+                        onClick={() => setField('type', id)}
+                      >{label}</button>
+                    ))}
+                  </div>
+                  <label className="th-filter-row">
+                    <span>Min €</span>
+                    <input type="number" value={filters.amountMin} onChange={e => setField('amountMin', e.target.value)} placeholder="0"/>
+                  </label>
+                  <label className="th-filter-row">
+                    <span>Max €</span>
+                    <input type="number" value={filters.amountMax} onChange={e => setField('amountMax', e.target.value)} placeholder="∞"/>
+                  </label>
+                </div>
+              )}
+            </HeaderFilter>
+          </div>
           <div className="th"></div>
         </div>
         <div className="tx-body">
