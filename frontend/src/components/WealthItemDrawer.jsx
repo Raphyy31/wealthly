@@ -67,7 +67,9 @@ function PositionsSection({ item, fmt, onImportCSV }) {
         </thead>
         <tbody>
           {item.positions.map(p => {
-            const pl = ((p.lastPrice || 0) - (p.costBasis || 0)) * (p.quantity || 0);
+            const hasCost = p.costBasis != null && p.costBasis > 0;
+            const pl     = hasCost ? ((p.lastPrice || 0) - p.costBasis) * (p.quantity || 0) : null;
+            const plPct  = hasCost && p.costBasis > 0 ? ((p.lastPrice || 0) - p.costBasis) / p.costBasis * 100 : null;
             return (
               <tr key={p.id}>
                 <td>
@@ -75,11 +77,16 @@ function PositionsSection({ item, fmt, onImportCSV }) {
                   <div className="pos-isin">{p.isin || p.ticker || ''}</div>
                 </td>
                 <td className="r w-num">{p.quantity}</td>
-                <td className="r w-num">{p.costBasis ? fmt(p.costBasis) : '—'}</td>
+                <td className="r w-num">{hasCost ? fmt(p.costBasis) : '—'}</td>
                 <td className="r w-num">{p.lastPrice ? fmt(p.lastPrice) : '—'}</td>
                 <td className="r w-num">{fmt(p.value)}</td>
-                <td className={`r w-num ${pl >= 0 ? 'pl-up' : 'pl-down'}`}>
-                  {pl >= 0 ? '+' : ''}{fmt(pl)}
+                <td className={`r w-num ${pl == null ? '' : pl >= 0 ? 'pl-up' : 'pl-down'}`}>
+                  {pl == null ? '—' : (
+                    <>
+                      <span>{pl >= 0 ? '+' : ''}{fmt(pl)}</span>
+                      <span className="pos-pl-pct">{plPct >= 0 ? '+' : ''}{plPct.toFixed(2)} %</span>
+                    </>
+                  )}
                 </td>
               </tr>
             );
