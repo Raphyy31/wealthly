@@ -2257,8 +2257,9 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
   display: flex; align-items: center; justify-content: center; font-size: 12px;
 }
 .cmb-it-raw-ic { font-size: 14px; flex-shrink: 0; }
-.cmb-it-lbl { flex: 1; }
-.cmb-it-meta { font-size: 11px; color: var(--ink-3); font-family: 'Geist Mono', monospace; }
+.cmb-it-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cmb-it-lbl { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cmb-it-meta { font-size: 11px; color: var(--ink-3); font-family: 'Geist Mono', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cmb-it-chk { color: var(--accent); flex-shrink: 0; }
 .cmb-empty { padding: 14px 12px; font-size: 12.5px; color: var(--ink-3); text-align: center; }
 `;

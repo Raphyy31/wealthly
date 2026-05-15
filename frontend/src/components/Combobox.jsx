@@ -138,8 +138,10 @@ export function Combobox({
               ) : row.icon != null ? (
                 <span className="cmb-it-raw-ic">{row.icon}</span>
               ) : null}
-              <span className="cmb-it-lbl">{row.label}</span>
-              {row.meta && <span className="cmb-it-meta">{row.meta}</span>}
+              <div className="cmb-it-body">
+                <span className="cmb-it-lbl">{row.label}</span>
+                {row.meta && <span className="cmb-it-meta">{row.meta}</span>}
+              </div>
               {row.value === value && <Check size={13} className="cmb-it-chk" />}
             </div>
           )
