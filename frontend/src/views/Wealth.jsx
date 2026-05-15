@@ -32,6 +32,8 @@ import { ImportPositionsModal } from '../components/ImportPositionsModal.jsx';
 import { useLiveQuotes, cryptoToYahoo, relTimeFromTs } from '../utils/marketPrices.js';
 import { RefreshCw, Upload } from 'lucide-react';
 import * as api from '../api.js';
+import { ChipSelect } from '../components/ChipSelect.jsx';
+import { Combobox } from '../components/Combobox.jsx';
 
 // ============================================================================
 // WEALTH (Assets + Liabilities)
@@ -645,17 +647,24 @@ function SimpleAssetEditor({ asset, members, onSave, onCancel }) {
         <div className="modal-body">
           <div className="field-row">
             <label><span>Type</span>
-              <select value={draft.type} onChange={(e) => setDraft({ ...draft, type: e.target.value })}>
-                {ASSET_TYPES.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-              </select>
+              <Combobox
+                value={draft.type}
+                onChange={(val) => setDraft({ ...draft, type: val })}
+                options={ASSET_TYPES.map(t => ({ value: t.id, label: t.name, meta: t.description }))}
+              />
             </label>
             <label><span>Devise</span>
-              <select value={draft.currency || 'EUR'} onChange={(e) => setDraft({ ...draft, currency: e.target.value })}>
-                <option value="EUR">🇪🇺 EUR</option>
-                <option value="USD">🇺🇸 USD</option>
-                <option value="GBP">🇬🇧 GBP</option>
-                <option value="CHF">🇨🇭 CHF</option>
-              </select>
+              <ChipSelect
+                value={draft.currency || 'EUR'}
+                onChange={(val) => setDraft({ ...draft, currency: val })}
+                small
+                options={[
+                  { value: 'EUR', label: '🇪🇺 EUR' },
+                  { value: 'USD', label: '🇺🇸 USD' },
+                  { value: 'GBP', label: '🇬🇧 GBP' },
+                  { value: 'CHF', label: '🇨🇭 CHF' },
+                ]}
+              />
             </label>
           </div>
           {type && <div className="field-help">{type.description}</div>}
@@ -829,9 +838,11 @@ function RealEstateEditor({ asset, members, liabilities, onSave, onCancel }) {
                   <input value={draft.address} onChange={(e) => set('address', e.target.value)} placeholder="58bis Cité Durmar, 75011 Paris"/>
                 </label>
                 <label><span>Catégorie</span>
-                  <select value={draft.subtype} onChange={(e) => set('subtype', e.target.value)}>
-                    {RE_SUBTYPES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
-                  </select>
+                  <Combobox
+                    value={draft.subtype}
+                    onChange={(val) => set('subtype', val)}
+                    options={RE_SUBTYPES.map(s => ({ value: s.key, label: s.label }))}
+                  />
                 </label>
                 <label><span>Propriétaires</span>
                   <div className="member-checks">
@@ -1017,17 +1028,24 @@ function LiabilityEditor({ liability, members, assets = [], onSave, onCancel }) 
                 </label>
                 <div className="field-row">
                   <label><span>Type</span>
-                    <select value={draft.type} onChange={(e) => set('type', e.target.value)}>
-                      {LIABILITY_TYPES.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                    </select>
+                    <Combobox
+                      value={draft.type}
+                      onChange={(val) => set('type', val)}
+                      options={LIABILITY_TYPES.map(t => ({ value: t.id, label: t.name }))}
+                    />
                   </label>
                   <label><span>Devise</span>
-                    <select value={draft.currency || 'EUR'} onChange={(e) => set('currency', e.target.value)}>
-                      <option value="EUR">🇪🇺 EUR</option>
-                      <option value="USD">🇺🇸 USD</option>
-                      <option value="GBP">🇬🇧 GBP</option>
-                      <option value="CHF">🇨🇭 CHF</option>
-                    </select>
+                    <ChipSelect
+                      value={draft.currency || 'EUR'}
+                      onChange={(val) => set('currency', val)}
+                      small
+                      options={[
+                        { value: 'EUR', label: '🇪🇺 EUR' },
+                        { value: 'USD', label: '🇺🇸 USD' },
+                        { value: 'GBP', label: '🇬🇧 GBP' },
+                        { value: 'CHF', label: '🇨🇭 CHF' },
+                      ]}
+                    />
                   </label>
                 </div>
                 <div className="field-row">
@@ -1110,10 +1128,15 @@ function LiabilityEditor({ liability, members, assets = [], onSave, onCancel }) 
             {step === 'linked' && (
               <>
                 <label><span>Actif lié <em>optionnel</em></span>
-                  <select value={draft.linkedAssetId || ''} onChange={(e) => set('linkedAssetId', e.target.value)}>
-                    <option value="">— Aucun —</option>
-                    {assets.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                  </select>
+                  <Combobox
+                    value={draft.linkedAssetId || ''}
+                    onChange={(val) => set('linkedAssetId', val)}
+                    placeholder="— Aucun —"
+                    options={[
+                      { value: '', label: '— Aucun —' },
+                      ...assets.map(a => ({ value: a.id, label: a.name })),
+                    ]}
+                  />
                 </label>
                 <div className="settings-info">
                   <Lightbulb size={14}/>

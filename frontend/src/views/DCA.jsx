@@ -3,6 +3,8 @@
 // Plans DCA (Dollar Cost Averaging) : création, suivi, projection compound.
 // ============================================================================
 import { useState, useMemo, useCallback } from 'react';
+import { ChipSelect } from '../components/ChipSelect.jsx';
+import { Combobox } from '../components/Combobox.jsx';
 import { useTranslation } from 'react-i18next';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -294,22 +296,30 @@ function PlanModal({ plan, accounts, members, onSave, onClose }) {
                 placeholder="300" step="any" min="1"/>
             </label>
             <label><span>{t('dca.currency')}</span>
-              <select value={d.currency} onChange={e => set('currency', e.target.value)}>
-                <option value="EUR">🇪🇺 EUR</option>
-                <option value="USD">🇺🇸 USD</option>
-                <option value="GBP">🇬🇧 GBP</option>
-                <option value="CHF">🇨🇭 CHF</option>
-              </select>
+              <Combobox
+                value={d.currency}
+                onChange={val => set('currency', val)}
+                options={[
+                  { value: 'EUR', label: 'EUR', icon: '🇪🇺' },
+                  { value: 'USD', label: 'USD', icon: '🇺🇸' },
+                  { value: 'GBP', label: 'GBP', icon: '🇬🇧' },
+                  { value: 'CHF', label: 'CHF', icon: '🇨🇭' },
+                ]}
+              />
             </label>
           </div>
 
           <div className="field-row">
             <label><span>{t('dca.frequency')}</span>
-              <select value={d.frequency} onChange={e => set('frequency', e.target.value)}>
-                <option value="monthly">{t('dca.frequencyMonthly')}</option>
-                <option value="quarterly">{t('dca.frequencyQuarterly')}</option>
-                <option value="annual">{t('dca.frequencyAnnual')}</option>
-              </select>
+              <ChipSelect
+                value={d.frequency}
+                onChange={val => set('frequency', val)}
+                options={[
+                  { value: 'monthly',   label: t('dca.frequencyMonthly') },
+                  { value: 'quarterly', label: t('dca.frequencyQuarterly') },
+                  { value: 'annual',    label: t('dca.frequencyAnnual') },
+                ]}
+              />
             </label>
             <label><span>{t('dca.dayOfMonth')}</span>
               <input type="number" value={d.day_of_month} onChange={e => set('day_of_month', e.target.value)}
@@ -319,10 +329,15 @@ function PlanModal({ plan, accounts, members, onSave, onClose }) {
 
           <div className="field-row">
             <label><span>{t('dca.debitAccount')}</span>
-              <select value={d.account_id} onChange={e => set('account_id', e.target.value)}>
-                <option value="">{t('dca.noneOption')}</option>
-                {(accounts || []).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-              </select>
+              <Combobox
+                value={d.account_id}
+                onChange={val => set('account_id', val)}
+                placeholder={t('dca.noneOption')}
+                options={[
+                  { value: '', label: t('dca.noneOption') },
+                  ...(accounts || []).map(a => ({ value: a.id, label: a.name, icon: '🏦' })),
+                ]}
+              />
             </label>
             <label><span>{t('dca.startDate')}</span>
               <input type="date" value={d.start_date} onChange={e => set('start_date', e.target.value)}/>

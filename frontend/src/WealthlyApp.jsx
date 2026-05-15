@@ -23,6 +23,7 @@ import {
 import { useRates } from './hooks/useRates.js';
 import { useBaseCurrency } from './hooks/useBaseCurrency.js';
 import { useQuotes } from './hooks/useQuotes.js';
+import { Combobox } from './components/Combobox.jsx';
 import { Styles } from './Styles.jsx';
 import { Toast } from './components/Toast.jsx';
 import { AnimatedNumber } from './components/AnimatedNumber.jsx';
@@ -1969,17 +1970,12 @@ function AddAccountModal({ members = [], onSave, onClose, initialStep = 'choice'
                 style={{ flex: 1 }}
                 autoFocus
               />
-              <select
+              <Combobox
                 value={country}
-                onChange={e => { setCountry(e.target.value); setBanks([]); setSearch(''); }}
-                style={{
-                  background: 'var(--bg-input, var(--bg-card))', border: '1px solid var(--border)',
-                  borderRadius: 8, padding: '8px 10px', color: 'var(--text-primary)',
-                  fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
-                }}
-              >
-                {BANK_COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
-              </select>
+                onChange={val => { setCountry(val); setBanks([]); setSearch(''); }}
+                options={BANK_COUNTRIES.map(c => ({ value: c.code, label: c.name }))}
+                placeholder="Pays…"
+              />
             </div>
 
             {banks.length === 0 && !loadingBanks && (
@@ -2042,9 +2038,11 @@ function AddAccountModal({ members = [], onSave, onClose, initialStep = 'choice'
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <div>
                   <label className="form-label">Type</label>
-                  <select className="form-input" value={form.type} onChange={e => setField('type', e.target.value)}>
-                    {ACCOUNT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                  </select>
+                  <Combobox
+                    value={form.type}
+                    onChange={val => setField('type', val)}
+                    options={ACCOUNT_TYPES.map(t => ({ value: t.value, label: t.label }))}
+                  />
                   {(() => {
                     const t = ACCOUNT_TYPES.find(t => t.value === form.type);
                     if (!t) return null;
@@ -2058,12 +2056,16 @@ function AddAccountModal({ members = [], onSave, onClose, initialStep = 'choice'
                 </div>
                 <div>
                   <label className="form-label">Devise</label>
-                  <select className="form-input" value={form.currency} onChange={e => setField('currency', e.target.value)}>
-                    <option value="EUR">🇪🇺 EUR — Euro</option>
-                    <option value="USD">🇺🇸 USD — Dollar US</option>
-                    <option value="GBP">🇬🇧 GBP — Livre sterling</option>
-                    <option value="CHF">🇨🇭 CHF — Franc suisse</option>
-                  </select>
+                  <Combobox
+                    value={form.currency}
+                    onChange={val => setField('currency', val)}
+                    options={[
+                      { value: 'EUR', label: 'EUR — Euro',           icon: '🇪🇺' },
+                      { value: 'USD', label: 'USD — Dollar US',      icon: '🇺🇸' },
+                      { value: 'GBP', label: 'GBP — Livre sterling', icon: '🇬🇧' },
+                      { value: 'CHF', label: 'CHF — Franc suisse',   icon: '🇨🇭' },
+                    ]}
+                  />
                 </div>
               </div>
               <div>

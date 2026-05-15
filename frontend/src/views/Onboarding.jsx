@@ -2,6 +2,7 @@
 // Onboarding — 3-step wizard shown on first launch (Bienvenue / Famille / Done)
 // ============================================================================
 import { useState } from 'react';
+import { ChipSelect } from '../components/ChipSelect.jsx';
 import {
   Check, Users, Sparkles, Activity, Landmark, Play, X, Plus, Lightbulb,
   ChevronLeft, ChevronRight,
@@ -120,10 +121,15 @@ export function Onboarding({ onComplete }) {
 
             <div className="add-member-form">
               <input placeholder="Prénom" value={memberDraft.name} onChange={(e) => setMemberDraft({ ...memberDraft, name: e.target.value })} onKeyDown={(e) => e.key === 'Enter' && addMember()} autoFocus/>
-              <select value={memberDraft.role} onChange={(e) => setMemberDraft({ ...memberDraft, role: e.target.value })}>
-                <option value="adult">Adulte</option>
-                <option value="child">Enfant</option>
-              </select>
+              <ChipSelect
+                value={memberDraft.role}
+                onChange={(val) => setMemberDraft({ ...memberDraft, role: val })}
+                small
+                options={[
+                  { value: 'adult', label: 'Adulte' },
+                  { value: 'child', label: 'Enfant' },
+                ]}
+              />
               <button className="primary-btn" onClick={addMember}><Plus size={14}/></button>
             </div>
 

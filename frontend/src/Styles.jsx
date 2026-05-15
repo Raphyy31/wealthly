@@ -2153,6 +2153,114 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
   .settings-rail-item { flex-shrink: 0; padding: 8px 12px; }
   .settings-rail-item.active::before { display: none; }
 }
+
+/* ── ChipSelect (Lydia-style pill toggle) ── */
+.chip-sel {
+  display: inline-flex;
+  background: var(--bg-sunk);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+}
+.chip-sel-sm { border-radius: 6px; }
+.chip-sel-btn {
+  font-family: 'Geist', sans-serif;
+  font-size: 12.5px; font-weight: 500;
+  padding: 6px 13px;
+  border-radius: 6px; border: none;
+  background: transparent; color: var(--ink-2);
+  cursor: pointer; white-space: nowrap;
+  display: flex; align-items: center; gap: 5px;
+  transition: background .12s, color .12s, box-shadow .12s;
+}
+.chip-sel-sm .chip-sel-btn { font-size: 12px; padding: 5px 10px; }
+.chip-sel-btn:hover { color: var(--ink); }
+.chip-sel-btn.active {
+  background: var(--bg-elev); color: var(--ink);
+  box-shadow: 0 1px 3px rgba(22,21,15,.1);
+}
+.chip-sel-icon { font-size: 13px; line-height: 1; }
+
+/* ── Combobox (Finary-style grouped dropdown) ── */
+.cmb-wrap { position: relative; display: inline-block; width: 100%; }
+.cmb-trigger {
+  width: 100%; display: flex; align-items: center; gap: 8px;
+  padding: 9px 12px; border-radius: 8px;
+  border: 1.5px solid var(--border); background: var(--bg-elev);
+  color: var(--ink); font-family: 'Geist', sans-serif; font-size: 13px;
+  cursor: pointer; text-align: left;
+  transition: border-color .15s, box-shadow .15s;
+}
+.cmb-trigger:hover:not(.disabled) { border-color: var(--border-strong); }
+.cmb-trigger.open {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.cmb-trigger.disabled { opacity: .5; cursor: not-allowed; }
+.cmb-trigger-ic {
+  width: 22px; height: 22px; border-radius: 6px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 12px;
+}
+.cmb-trigger-raw-ic { font-size: 14px; flex-shrink: 0; }
+.cmb-trigger-lbl { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cmb-trigger-lbl.placeholder { color: var(--ink-3); }
+.cmb-chev { color: var(--ink-3); flex-shrink: 0; transition: transform .18s; }
+.cmb-chev.open { transform: rotate(180deg); }
+
+/* panel rendered in portal (fixed positioning) */
+.cmb-panel {
+  background: var(--bg-elev);
+  border: 1.5px solid var(--accent);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px -4px rgba(22,21,15,.15), 0 4px 12px -4px rgba(22,21,15,.08);
+  overflow: hidden;
+  min-width: 160px;
+}
+.cmb-search-row {
+  display: flex; align-items: center; gap: 7px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.cmb-si { color: var(--ink-3); flex-shrink: 0; }
+.cmb-si-input {
+  flex: 1; border: none; outline: none; background: transparent;
+  font-family: 'Geist', sans-serif; font-size: 13px; color: var(--ink);
+}
+.cmb-si-input::placeholder { color: var(--ink-3); }
+.cmb-si-clear {
+  border: none; background: none; cursor: pointer; padding: 1px;
+  color: var(--ink-3); display: flex; align-items: center;
+  border-radius: 4px; transition: color .1s;
+}
+.cmb-si-clear:hover { color: var(--ink); }
+.cmb-list { max-height: 248px; overflow-y: auto; }
+.cmb-list::-webkit-scrollbar { width: 4px; }
+.cmb-list::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 2px; }
+.cmb-gh {
+  font-size: 10px; font-weight: 600;
+  font-family: 'Geist Mono', monospace;
+  letter-spacing: .08em; text-transform: uppercase;
+  color: var(--ink-3); padding: 9px 12px 4px;
+  border-top: 1px solid var(--border);
+}
+.cmb-gh:first-child { border-top: none; }
+.cmb-it {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 12px; font-size: 13px; cursor: pointer;
+  color: var(--ink); transition: background .1s;
+}
+.cmb-it:hover { background: var(--bg-sunk); }
+.cmb-it.sel { background: var(--accent-soft); color: var(--accent); font-weight: 500; }
+.cmb-it-ic {
+  width: 22px; height: 22px; border-radius: 6px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 12px;
+}
+.cmb-it-raw-ic { font-size: 14px; flex-shrink: 0; }
+.cmb-it-lbl { flex: 1; }
+.cmb-it-meta { font-size: 11px; color: var(--ink-3); font-family: 'Geist Mono', monospace; }
+.cmb-it-chk { color: var(--accent); flex-shrink: 0; }
+.cmb-empty { padding: 14px 12px; font-size: 12.5px; color: var(--ink-3); text-align: center; }
 `;
   return <style>{css}</style>;
 }

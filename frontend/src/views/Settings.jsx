@@ -7,6 +7,8 @@
 // CRUD callbacks.
 // ============================================================================
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { ChipSelect } from '../components/ChipSelect.jsx';
+import { Combobox } from '../components/Combobox.jsx';
 import {
   Plus, Trash2, Edit3, Check, Upload, Download, Users, Wallet,
   Sparkles, Activity, AlertCircle, RefreshCw, Link2, Unlink, X, Cloud,
@@ -206,13 +208,14 @@ function ProfilSection({ currentUser, baseCurrency, setBaseCurrency }) {
             <div className="settings-field-hint">{t('settings.profile.uiLanguageHint')}</div>
           </div>
           <div className="settings-field-control">
-            <select
+            <ChipSelect
               value={currentLang}
-              onChange={(e) => i18nHook.changeLanguage(e.target.value)}
-            >
-              <option value="fr">Français</option>
-              <option value="en">English</option>
-            </select>
+              onChange={(val) => i18nHook.changeLanguage(val)}
+              options={[
+                { value: 'fr', label: 'Français' },
+                { value: 'en', label: 'English' },
+              ]}
+            />
           </div>
         </div>
 
@@ -222,15 +225,12 @@ function ProfilSection({ currentUser, baseCurrency, setBaseCurrency }) {
             <div className="settings-field-hint">{t('settings.profile.refCurrencyHint')}</div>
           </div>
           <div className="settings-field-control">
-            <select
+            <Combobox
               value={baseCurrency}
-              onChange={(e) => setBaseCurrency && setBaseCurrency(e.target.value)}
+              onChange={(val) => setBaseCurrency && setBaseCurrency(val)}
               disabled={!setBaseCurrency}
-            >
-              {SUPPORTED_CURRENCIES.map(c => (
-                <option key={c} value={c}>{CURRENCY_FLAGS[c]} {c} — {CURRENCY_NAMES[c]}</option>
-              ))}
-            </select>
+              options={SUPPORTED_CURRENCIES.map(c => ({ value: c, label: `${c} — ${CURRENCY_NAMES[c]}`, icon: CURRENCY_FLAGS[c] }))}
+            />
           </div>
         </div>
       </div>
@@ -347,24 +347,16 @@ function ComptesSection({ accounts, accountBalances, members, transactions, upda
                 </div>
                 {updateAccount && (
                   <div className="member-card-actions">
-                    <select
+                    <Combobox
                       value={role}
-                      onChange={(e) => updateAccount(a.id, { role: e.target.value })}
-                      title={roleMeta.desc}
-                    >
-                      {ACCOUNT_ROLE_KEYS.map(k => (
-                        <option key={k} value={k}>{ACCOUNT_ROLES[k].label}</option>
-                      ))}
-                    </select>
-                    <select
+                      onChange={(val) => updateAccount(a.id, { role: val })}
+                      options={ACCOUNT_ROLE_KEYS.map(k => ({ value: k, label: ACCOUNT_ROLES[k].label, meta: ACCOUNT_ROLES[k].desc.split('—')[0].trim() }))}
+                    />
+                    <Combobox
                       value={a.currency || 'EUR'}
-                      onChange={(e) => updateAccount(a.id, { currency: e.target.value })}
-                      title={t('settings.accounts.currencyTitle')}
-                    >
-                      {SUPPORTED_CURRENCIES.map(c => (
-                        <option key={c} value={c}>{CURRENCY_FLAGS[c]} {c}</option>
-                      ))}
-                    </select>
+                      onChange={(val) => updateAccount(a.id, { currency: val })}
+                      options={SUPPORTED_CURRENCIES.map(c => ({ value: c, label: `${CURRENCY_FLAGS[c]} ${c}` }))}
+                    />
                   </div>
                 )}
                 <button className="icon-btn-sm" onClick={() => deleteAccount(a.id)}><Trash2 size={13}/></button>
@@ -575,15 +567,12 @@ function DevisesSection({ baseCurrency, setBaseCurrency, ratesDate }) {
             </div>
           </div>
           <div className="settings-field-control">
-            <select
+            <Combobox
               value={baseCurrency}
-              onChange={(e) => setBaseCurrency && setBaseCurrency(e.target.value)}
+              onChange={(val) => setBaseCurrency && setBaseCurrency(val)}
               disabled={!setBaseCurrency}
-            >
-              {SUPPORTED_CURRENCIES.map(c => (
-                <option key={c} value={c}>{CURRENCY_FLAGS[c]} {c} — {CURRENCY_NAMES[c]}</option>
-              ))}
-            </select>
+              options={SUPPORTED_CURRENCIES.map(c => ({ value: c, label: `${c} — ${CURRENCY_NAMES[c]}`, icon: CURRENCY_FLAGS[c] }))}
+            />
           </div>
         </div>
 
@@ -593,13 +582,14 @@ function DevisesSection({ baseCurrency, setBaseCurrency, ratesDate }) {
             <div className="settings-field-hint">{t('settings.currency.uiLangHint')}</div>
           </div>
           <div className="settings-field-control">
-            <select
+            <ChipSelect
               value={currentLang}
-              onChange={(e) => i18nHook.changeLanguage(e.target.value)}
-            >
-              <option value="fr">Français</option>
-              <option value="en">English</option>
-            </select>
+              onChange={(val) => i18nHook.changeLanguage(val)}
+              options={[
+                { value: 'fr', label: 'Français' },
+                { value: 'en', label: 'English' },
+              ]}
+            />
           </div>
         </div>
       </div>
@@ -741,16 +731,17 @@ function CustomRulesSection({ categories }) {
           placeholder={t('settings.rules.patternPh')}
           style={{ flex: '2 1 220px', minWidth: 0 }}
         />
-        <select
-          value={newCategory}
-          onChange={(e) => setNewCategory(e.target.value)}
-          style={{ flex: '1 1 160px', minWidth: 0 }}
-        >
-          <option value="">{t('settings.rules.targetCategory')}</option>
-          {expenseCategories.map((c) => (
-            <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
-          ))}
-        </select>
+        <div style={{ flex: '1 1 160px', minWidth: 0 }}>
+          <Combobox
+            value={newCategory}
+            onChange={(val) => setNewCategory(val)}
+            placeholder={t('settings.rules.targetCategory')}
+            options={[
+              { value: '', label: t('settings.rules.targetCategory') },
+              ...expenseCategories.map(c => ({ value: c.id, label: c.name, icon: c.icon })),
+            ]}
+          />
+        </div>
         <button
           type="submit"
           className="primary-btn"
@@ -1038,10 +1029,14 @@ function MemberEditor({ member, onSave, onCancel }) {
         <div className="modal-body">
           <label><span>{t('settings.household.firstName')}</span><input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })}/></label>
           <label><span>{t('settings.household.role')}</span>
-            <select value={draft.role} onChange={(e) => setDraft({ ...draft, role: e.target.value })}>
-              <option value="adult">{t('settings.household.adult')}</option>
-              <option value="child">{t('settings.household.child')}</option>
-            </select>
+            <ChipSelect
+              value={draft.role}
+              onChange={(val) => setDraft({ ...draft, role: val })}
+              options={[
+                { value: 'adult', label: t('settings.household.adult') },
+                { value: 'child', label: t('settings.household.child') },
+              ]}
+            />
           </label>
           <label><span>{t('settings.household.color')}</span>
             <div className="color-picker">
