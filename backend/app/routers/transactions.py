@@ -10,6 +10,7 @@ from sqlalchemy import and_
 
 from app.database import get_db
 from app.models import User, Transaction, Account, Category
+from app.defaults import DEFAULT_CATEGORIES
 from app.schemas import (
     TransactionCreate, TransactionUpdate, TransactionOut,
     TransactionImport, TransactionImportResult,
@@ -25,6 +26,9 @@ def _make_dedup_hash(account_id: str, dt: date_type, amount: float, label: str) 
     return f"{account_id}|{dt.isoformat()}|{amount:.2f}|{label_part}"
 
 
+_DEFAULT_CAT_BY_SLUG = {c["slug"]: c for c in DEFAULT_CATEGORIES}
+
+
 def _resolve_category_id(db: Session, household_id: str, slug: Optional[str]) -> Optional[str]:
     if not slug:
         return None
@@ -32,7 +36,18 @@ def _resolve_category_id(db: Session, household_id: str, slug: Optional[str]) ->
         Category.household_id == household_id,
         Category.slug == slug,
     ).first()
-    return cat.id if cat else None
+    if cat:
+        return cat.id
+    # Lazy-seed: if this slug exists in DEFAULT_CATEGORIES but the household
+    # is missing it (legacy account or partial seed), create it now so the
+    # import doesn't silently lose the category.
+    default = _DEFAULT_CAT_BY_SLUG.get(slug)
+    if default:
+        cat = Category(household_id=household_id, **default)
+        db.add(cat)
+        db.flush()
+        return cat.id
+    return None
 
 
 def _to_out(tx: Transaction, db: Session) -> dict:

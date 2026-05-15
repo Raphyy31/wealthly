@@ -291,30 +291,15 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
       )}
 
       {isAll && (
-        <section className="wealth-summary">
-          <div className="ws-card positive">
-            <div className="ws-icon"><Landmark size={20}/></div>
-            <div className="ws-content">
-              <div className="ws-label">{t('wealth.totalAssets')}</div>
-              <div className="ws-value"><AnimatedNumber value={totalAssets} format={(v) => fmt(v)}/></div>
-              <div className="ws-meta">{visibleAssets.length} actif{visibleAssets.length > 1 ? 's' : ''}</div>
-            </div>
-          </div>
-          <div className="ws-card negative">
-            <div className="ws-icon"><CreditCard size={20}/></div>
-            <div className="ws-content">
-              <div className="ws-label">{t('wealth.totalLiabilities')}</div>
-              <div className="ws-value"><AnimatedNumber value={totalLiabilities} format={(v) => fmt(v)}/></div>
-              <div className="ws-meta">{visibleLiabilities.length} prêt{visibleLiabilities.length > 1 ? 's' : ''}</div>
-            </div>
-          </div>
-          <div className="ws-card net">
-            <div className="ws-icon"><Sparkles size={20}/></div>
-            <div className="ws-content">
-              <div className="ws-label">Patrimoine brut</div>
-              <div className="ws-value"><AnimatedNumber value={liquidWealth + totalAssets} format={(v) => fmt(v)}/></div>
-              <div className="ws-meta">liquidités + actifs</div>
-            </div>
+        <section className="wealth-summary-net">
+          <div className="wsn-card">
+            <div className="wsn-label">{t('wealth.netWorthHero', { defaultValue: 'Patrimoine net' })}</div>
+            <div className="wsn-value"><AnimatedNumber value={totalAssets - totalLiabilities} format={(v) => fmt(v)}/></div>
+            {totalLiabilities > 0 && (
+              <div className="wsn-debt-mini num">
+                {t('wealth.totalLiabilities')} · {fmt(-totalLiabilities)} ({visibleLiabilities.length} prêt{visibleLiabilities.length > 1 ? 's' : ''})
+              </div>
+            )}
           </div>
         </section>
       )}

@@ -838,6 +838,11 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .alloc-pct { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text-secondary); min-width: 42px; text-align: right; }
 .alloc-val { font-size: 13px; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--text-tertiary); min-width: 90px; text-align: right; }
 .wealth-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.wealth-summary-net { margin-bottom: 14px; }
+.wsn-card { padding: 22px 24px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; display: flex; flex-direction: column; gap: 4px; }
+.wsn-label { font-size: 10px; color: var(--text-tertiary); text-transform: uppercase; font-weight: 500; letter-spacing: 0.16em; }
+.wsn-value { font-size: 36px; font-weight: 500; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; line-height: 1.1; color: var(--text-primary); margin-top: 2px; }
+.wsn-debt-mini { font-size: 12px; color: var(--ink-3, var(--text-tertiary)); margin-top: 4px; letter-spacing: 0.02em; }
 .ws-card { display: flex; align-items: center; gap: 14px; padding: 18px 20px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; transition: border-color .2s; }
 .ws-card:hover { border-color: var(--border-strong); }
 .ws-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }

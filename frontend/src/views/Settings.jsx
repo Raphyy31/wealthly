@@ -19,6 +19,7 @@ import * as api from '../api.js';
 import { MEMBER_PALETTE } from '../constants.js';
 import { ACCOUNT_ROLES, ACCOUNT_ROLE_KEYS, suggestAccountRole, SUPPORTED_CURRENCIES } from '../utils.js';
 import { BankConnectModal } from '../components/BankConnectModal.jsx';
+import { BusyButton } from '../components/ui/BusyButton.jsx';
 
 const CURRENCY_FLAGS = { EUR: '🇪🇺', USD: '🇺🇸', GBP: '🇬🇧', CHF: '🇨🇭' };
 const CURRENCY_NAMES = { EUR: 'Euro', USD: 'Dollar US', GBP: 'Livre sterling', CHF: 'Franc suisse' };
@@ -1058,7 +1059,7 @@ function MemberEditor({ member, onSave, onCancel }) {
         </div>
         <div className="modal-footer">
           <button className="secondary-btn" onClick={onCancel}>{t('actions.cancel')}</button>
-          <button className="primary-btn" onClick={() => { if (draft.name) onSave(draft); }}><Check size={14}/> {t('actions.save')}</button>
+          <BusyButton className="primary-btn" onClick={async () => { if (draft.name) await onSave(draft); }}><Check size={14}/> {t('actions.save')}</BusyButton>
         </div>
       </div>
     </div>

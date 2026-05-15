@@ -149,6 +149,8 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   const [currentMapping, setCurrentMapping] = useState({});
   const [importAccount, setImportAccount] = useState({ name: '', bank: '', memberIds: [], type: 'checking', initialBalance: 0 });
   const [importPreview, setImportPreview] = useState([]);
+  const [aiCategorizing, setAiCategorizing] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   // ============================================================================
   // API â†" Frontend mapping helpers (snake_case â†" camelCase)
@@ -903,7 +905,8 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     const uncategorized = txs.filter(t => t.categoryId === 'uncategorized' && t.label);
     if (uncategorized.length > 0) {
       setImportStep('preview');
-      setImportPreview(txs); // show immediately while AI runs
+      setImportPreview(txs.map(x => ({ ...x }))); // show immediately while AI runs (clone so React tracks)
+      setAiCategorizing(true);
       try {
         const res = await api.categorizeAI.categorize(
           uncategorized.map(t => ({ label: t.label, amount: t.amount }))
@@ -921,16 +924,17 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       } catch {
         // AI unavailable — silent fallback, uncategorized stays as-is
       }
-      setImportPreview([...txs]);
+      // Replace with cloned objects so React re-renders with the new categories
+      setImportPreview(txs.map(x => ({ ...x })));
+      setAiCategorizing(false);
     } else {
       setImportPreview(txs);
       setImportStep('preview');
     }
   };
 
-  const [importing, setImporting] = useState(false);
   const confirmImport = async () => {
-    if (importing) return;
+    if (importing || aiCategorizing) return;
     setImporting(true);
     try {
       let accountId;
@@ -979,56 +983,57 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   };
 
   const updateTransactionCategory = async (txId, categoryId) => {
+    const tx = transactions.find(x => x.id === txId);
     try {
       await api.transactions.update(txId, { category_slug: categoryId, is_manual_category: true });
-      setTransactions(prev => prev.map(tx => tx.id === txId ? { ...tx, categoryId, isManualCategory: true } : tx));
-
-      // Extract merchant name from label for rule creation
-      const srcTx = transactions.find(tx => tx.id === txId);
-      if (!srcTx?.label) return;
-
-      // Strip common French bank label prefixes, then take first meaningful word
-      const stripped = srcTx.label
-        .replace(/^(paiement par carte|prélèvement|prelevement|virement émis|virement emis|virement en votre faveur|virement recu de|virement reçu de|paiement|retrait dab|retrait|versement|avoir)\s+/i, '')
-        .replace(/PAIEMENT PAR CARTE\s+[Xx]?\d{4,}\**\s*/gi, '')
-        .replace(/\s+\d{2}\/\d{2}(\s+|$)/g, ' ')
-        .trim();
-
-      const words = stripped.split(/\s+/).filter(w => w.length >= 4);
-      if (!words.length) return;
-
-      // Prefer all-uppercase words (merchant names in FR bank statements)
-      const merchant = words.find(w => w === w.toUpperCase() && /[A-Z]{3}/.test(w)) || words[0];
-      const pattern = merchant.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-      // Create/update rule in DB (visible in Settings > Règles)
-      const exists = customRules.some(r => r.pattern.toLowerCase() === pattern.toLowerCase() && r.categoryId === categoryId);
-      if (!exists) {
-        try {
-          const newRule = await api.rules.create({ pattern, category_slug: categoryId, source: 'learned' });
-          setCustomRules(prev => [...prev, { pattern, categoryId, source: 'learned', _id: newRule.id }]);
-        } catch { /* ignore rule creation failure */ }
-      }
-
-      // Apply retroactively to ALL uncategorized matching transactions
-      const regex = new RegExp(pattern, 'i');
-      const toUpdate = transactions.filter(tx =>
-        tx.id !== txId &&
-        !tx.isManualCategory &&
-        (!tx.categoryId || tx.categoryId === 'uncategorized') &&
-        regex.test(tx.label || '')
-      );
-
+      setTransactions(prev => prev.map(x => x.id === txId ? { ...x, categoryId, isManualCategory: true } : x));
+    } catch (err) {
+      showToast(t('toasts.genericError', { message: err.message }), 'error');
+      return;
+    }
+    // Extract merchant token from label (FR bank prefixes stripped)
+    if (!tx?.label) return;
+    const stripped = tx.label
+      .replace(/^(paiement par carte|prélèvement|prelevement|virement émis|virement emis|virement en votre faveur|virement recu de|virement reçu de|paiement|retrait dab|retrait|versement|avoir)\s+/i, '')
+      .replace(/PAIEMENT PAR CARTE\s+[Xx]?\d{4,}\**\s*/gi, '')
+      .replace(/\s+\d{2}\/\d{2}(\s+|$)/g, ' ')
+      .trim();
+    const words = stripped.split(/\s+/).filter(w => w.length >= 4);
+    if (!words.length) return;
+    const merchant = words.find(w => w === w.toUpperCase() && /[A-Z]{3}/.test(w)) || words[0];
+    const pattern = merchant.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (customRules.some(r => r.pattern.toLowerCase() === pattern.toLowerCase() && r.categoryId === categoryId)) return;
+    // Count matching candidates
+    const regex = new RegExp(pattern, 'i');
+    const toUpdate = transactions.filter(x =>
+      x.id !== txId &&
+      !x.isManualCategory &&
+      (!x.categoryId || x.categoryId === 'uncategorized') &&
+      regex.test(x.label || '')
+    );
+    const cat = categories.find(c => c.id === categoryId);
+    const catName = cat?.name || categoryId;
+    const msg = toUpdate.length > 0
+      ? `Créer une règle « ${merchant} » → ${catName} ?\n\n${toUpdate.length} transaction${toUpdate.length > 1 ? 's' : ''} non catégorisée${toUpdate.length > 1 ? 's' : ''} similaire${toUpdate.length > 1 ? 's' : ''} ser${toUpdate.length > 1 ? 'ont' : 'a'} reclassée${toUpdate.length > 1 ? 's' : ''} automatiquement.`
+      : `Créer une règle « ${merchant} » → ${catName} ?\n\nLes futures transactions contenant « ${merchant} » seront classées automatiquement.`;
+    if (!window.confirm(msg)) return;
+    try {
+      const newRule = await api.rules.create({ pattern, category_slug: categoryId, source: 'learned' });
+      setCustomRules(prev => [...prev, { pattern, categoryId, source: 'learned', _id: newRule.id }]);
       if (toUpdate.length > 0) {
-        await Promise.allSettled(toUpdate.map(tx =>
-          api.transactions.update(tx.id, { category_slug: categoryId })
+        await Promise.allSettled(toUpdate.map(x =>
+          api.transactions.update(x.id, { category_slug: categoryId })
         ));
-        setTransactions(prev => prev.map(tx =>
-          toUpdate.some(u => u.id === tx.id) ? { ...tx, categoryId } : tx
+        setTransactions(prev => prev.map(x =>
+          toUpdate.some(u => u.id === x.id) ? { ...x, categoryId } : x
         ));
-        showToast(`Règle « ${merchant} » → ${categoryId} appliquée à ${toUpdate.length + 1} transaction(s)`, 'success');
+        showToast(`Règle « ${merchant} » → ${catName} appliquée à ${toUpdate.length + 1} transaction${toUpdate.length + 1 > 1 ? 's' : ''}.`, 'success');
+      } else {
+        showToast(`Règle « ${merchant} » créée.`, 'success');
       }
-    } catch (err) { showToast(t('toasts.genericError', { message: err.message }), 'error'); }
+    } catch (err) {
+      showToast(t('toasts.genericError', { message: err.message }), 'error');
+    }
   };
 
   // Re-applique categorize() aux transactions actuellement non catégorisées.
@@ -1743,7 +1748,8 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             knownMappings={columnMappings} detectedBank={detectedBank}
             handleFileUpload={handleFileUpload} proceedToAccountStep={proceedToAccountStep}
             proceedToPreview={proceedToPreview} confirmImport={confirmImport} cancelImport={cancelImport}
-            importing={importing} setStep={setImportStep} fmt={fmt}
+            setStep={setImportStep} fmt={fmt}
+            aiCategorizing={aiCategorizing} importing={importing}
           />
         )}
           </main>

@@ -39,26 +39,6 @@ export function Analysis({ transactions, categories, recurringIds, recurringGrou
     return Object.entries(data).map(([month, amount]) => ({ month, amount })).sort((a, b) => a.month.localeCompare(b.month));
   }, [transactions, selectedCat, accounts, memberShare, transferIds]);
 
-  const topMerchants = useMemo(() => {
-    const m = {};
-    transactions.forEach(t => {
-      if (t.amount >= 0) return;
-      if (transferIds.has(t.id)) return;
-      // Virements internes (catégorie 'transfer') et auto-virements
-      // "VIREMENT EMIS POUR…" pollueraient le top — on les écarte aussi
-      // par label au cas où l'auto-détection n'aurait pas matché.
-      if (t.categoryId === 'transfer') return;
-      if (/^vir(ement)?\s+(emis|recu|re[cç]u|inst|sepa)\b/i.test(t.label || '')) return;
-      const acc = accounts.find(a => a.id === t.accountId);
-      const share = acc ? memberShare(acc) : 1;
-      const key = (t.label || '').slice(0, 30);
-      if (!m[key]) m[key] = { label: key, total: 0, count: 0 };
-      m[key].total += Math.abs(t.amount) * share;
-      m[key].count += 1;
-    });
-    return Object.values(m).sort((a, b) => b.total - a.total).slice(0, 10);
-  }, [transactions, accounts, memberShare, transferIds]);
-
   return (
     <div className="analysis-view-v3">
       <AnalysisStyles/>
@@ -95,30 +75,6 @@ export function Analysis({ transactions, categories, recurringIds, recurringGrou
       </section>
 
       <div className="ana-grid">
-        <section className="ds-panel">
-          <div className="ds-panel-head">
-            <div>
-              <div className="ds-panel-title">Top marchands</div>
-              <div className="ds-panel-sub">Sur toute la période</div>
-            </div>
-          </div>
-          <div className="ana-merchants">
-            {topMerchants.length === 0 && (
-              <div className="ana-empty">{t('views.analysis.empty')}</div>
-            )}
-            {topMerchants.map((m, idx) => (
-              <div key={idx} className="ana-merchant-row">
-                <div className="ana-merchant-rank mono">{String(idx + 1).padStart(2, '0')}</div>
-                <div className="ana-merchant-info">
-                  <div className="ana-merchant-name">{m.label || 'Sans libellé'}</div>
-                  <div className="ana-merchant-meta">{m.count} transaction{m.count > 1 ? 's' : ''}</div>
-                </div>
-                <div className="ana-merchant-total num">{fmt(m.total)}</div>
-              </div>
-            ))}
-          </div>
-        </section>
-
         <section className="ds-panel">
           <div className="ds-panel-head">
             <div>

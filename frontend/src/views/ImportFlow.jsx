@@ -11,7 +11,7 @@ import { formatDate } from '../utils.js';
 // ============================================================================
 // IMPORT FLOW
 // ============================================================================
-export function ImportFlow({ step, parsedData, mapping, setMapping, account, setAccount, preview, categories, members, existingAccounts, knownMappings, detectedBank, handleFileUpload, proceedToAccountStep, proceedToPreview, confirmImport, cancelImport, importing, setStep, fmt }) {
+export function ImportFlow({ step, parsedData, mapping, setMapping, account, setAccount, preview, categories, members, existingAccounts, knownMappings, detectedBank, handleFileUpload, proceedToAccountStep, proceedToPreview, confirmImport, cancelImport, setStep, fmt, aiCategorizing = false, importing = false }) {
   if (step === 'upload') {
     return (
       <div className="import-flow">
@@ -142,6 +142,11 @@ export function ImportFlow({ step, parsedData, mapping, setMapping, account, set
           </div>
           <h2>Vérification <em>avant import</em></h2>
           <p><strong>{preview.length}</strong> transactions vers <strong>{account.name}</strong> · Net : <strong>{fmt(total, { sign: true })}</strong></p>
+          {aiCategorizing && (
+            <div className="detection-badge">
+              <Loader2 size={14} className="spin"/> Catégorisation IA en cours… patientez avant de confirmer
+            </div>
+          )}
         </div>
         <div className="preview-list">
           {preview.slice(0, 30).map(tx => {
@@ -161,9 +166,14 @@ export function ImportFlow({ step, parsedData, mapping, setMapping, account, set
           {preview.length > 30 && <div className="preview-more">+ {preview.length - 30} autres</div>}
         </div>
         <div className="flow-actions">
-          <button className="secondary-btn" onClick={() => setStep('account')}>Retour</button>
-          <button className="primary-btn" onClick={confirmImport} disabled={importing}>
-            {importing ? <><Loader2 size={14} className="spin"/> Import en cours…</> : <><Check size={14}/> Confirmer l'import</>}
+          <button className="secondary-btn" onClick={() => setStep('account')} disabled={importing}>Retour</button>
+          <button className="primary-btn" onClick={confirmImport} disabled={aiCategorizing || importing} style={{ opacity: (aiCategorizing || importing) ? 0.6 : 1 }}>
+            {importing
+              ? <><Loader2 size={14} className="spin"/> Import en cours…</>
+              : aiCategorizing
+                ? <><Loader2 size={14} className="spin"/> Catégorisation…</>
+                : <><Check size={14}/> Confirmer l'import</>
+            }
           </button>
         </div>
       </div>
