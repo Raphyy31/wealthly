@@ -1135,6 +1135,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       const mapped = assetFromApi(saved);
       setAssets(prev => asset.id ? prev.map(a => a.id === asset.id ? mapped : a) : [...prev, mapped]);
       showToast(t('toasts.assetSaved'), 'success');
+      return mapped;
     } catch (err) { showToast(t('toasts.genericError', { message: err.message }), 'error'); }
   };
 
