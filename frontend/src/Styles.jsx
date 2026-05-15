@@ -2279,6 +2279,11 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .cmb-it.sel .cmb-it-meta { color: var(--accent-2); opacity: .8; }
 .cmb-it-chk { color: var(--accent); flex-shrink: 0; }
 .cmb-empty { padding: 14px 12px; font-size: 12.5px; color: var(--ink-3); text-align: center; }
+
+/* Spinner — utilisé sur tous les boutons async (import, save…) */
+@keyframes _spin { to { transform: rotate(360deg); } }
+.spin { animation: _spin .65s linear infinite; display: inline-block; vertical-align: middle; }
+.primary-btn:disabled, .secondary-btn:disabled { opacity: .55; cursor: not-allowed; pointer-events: none; }
 `;
   return <style>{css}</style>;
 }

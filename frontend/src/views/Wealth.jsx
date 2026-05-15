@@ -16,7 +16,7 @@ import {
 import {
   Plus, Edit3, Check, ChevronLeft, ChevronRight, Home, Landmark,
   Wallet, CreditCard, Users, Sparkles, Lightbulb, BarChart3,
-  Bitcoin, TrendingUp, X, Trash2,
+  Bitcoin, TrendingUp, X, Trash2, Loader2,
 } from 'lucide-react';
 import {
   ASSET_TYPES, ASSET_CLASS_MAP, LIABILITY_TYPES,
@@ -631,10 +631,14 @@ function AssetEditor({ asset, members, liabilities = [], onSave, onCancel }) {
 
 function SimpleAssetEditor({ asset, members, onSave, onCancel }) {
   const [draft, setDraft] = useState(asset);
-  const handleSave = () => {
+  const [saving, setSaving] = useState(false);
+  const handleSave = async () => {
     if (!draft.name) { alert('Donnez un nom à cet actif'); return; }
     if (!draft.memberIds || draft.memberIds.length === 0) { alert('Assignez à au moins un membre'); return; }
-    onSave({ ...draft, updatedAt: new Date().toISOString() });
+    if (saving) return;
+    setSaving(true);
+    try { await onSave({ ...draft, updatedAt: new Date().toISOString() }); }
+    finally { setSaving(false); }
   };
   const toggleMember = (mid) => {
     const ids = draft.memberIds || [];
@@ -747,8 +751,10 @@ function SimpleAssetEditor({ asset, members, onSave, onCancel }) {
           </label>
         </div>
         <div className="modal-footer">
-          <button className="secondary-btn" onClick={onCancel}>Annuler</button>
-          <button className="primary-btn" onClick={handleSave}><Check size={14}/> Enregistrer</button>
+          <button className="secondary-btn" onClick={onCancel} disabled={saving}>Annuler</button>
+          <button className="primary-btn" onClick={handleSave} disabled={saving}>
+            {saving ? <><Loader2 size={14} className="spin"/> Enregistrement…</> : <><Check size={14}/> Enregistrer</>}
+          </button>
         </div>
       </div>
     </div>
@@ -816,17 +822,22 @@ function RealEstateEditor({ asset, members, liabilities, onSave, onCancel }) {
   const linkedLoans = (liabilities || []).filter(l => loanLinks.has(l.id));
   const availableLoans = (liabilities || []).filter(l => !loanLinks.has(l.id));
 
+  const [saving, setSaving] = useState(false);
   const canSave = draft.name && (draft.memberIds || []).length > 0;
   const submit = async () => {
     if (!canSave) { alert('Renseigne un nom et au moins un propriétaire.'); return; }
-    const saved = await onSave({ ...draft, updatedAt: new Date().toISOString() });
-    // Pour un nouveau bien, persiste les liens emprunt maintenant qu'on a l'ID
-    const newId = saved?.id || asset.id;
-    if (newId && loanLinks.size > 0) {
-      await Promise.all(
-        [...loanLinks].map(lid => api.liabilities.update(lid, { linked_asset_id: newId }).catch(() => {}))
-      );
-    }
+    if (saving) return;
+    setSaving(true);
+    try {
+      const saved = await onSave({ ...draft, updatedAt: new Date().toISOString() });
+      // Pour un nouveau bien, persiste les liens emprunt maintenant qu'on a l'ID
+      const newId = saved?.id || asset.id;
+      if (newId && loanLinks.size > 0) {
+        await Promise.all(
+          [...loanLinks].map(lid => api.liabilities.update(lid, { linked_asset_id: newId }).catch(() => {}))
+        );
+      }
+    } finally { setSaving(false); }
   };
 
   // Auto-suggest current value when not set (purchase + works + furniture)
@@ -1002,13 +1013,15 @@ function RealEstateEditor({ asset, members, liabilities, onSave, onCancel }) {
           </div>
         </div>
         <div className="modal-footer wizard-footer">
-          <button className="secondary-btn" onClick={onCancel}>Annuler</button>
+          <button className="secondary-btn" onClick={onCancel} disabled={saving}>Annuler</button>
           <div style={{ flex: 1 }}/>
-          {stepIdx > 0 && <button className="secondary-btn" onClick={() => setStepIdx(stepIdx - 1)}><ChevronLeft size={14}/> Retour</button>}
+          {stepIdx > 0 && <button className="secondary-btn" onClick={() => setStepIdx(stepIdx - 1)} disabled={saving}><ChevronLeft size={14}/> Retour</button>}
           {stepIdx < RE_STEPS.length - 1 ? (
             <button className="primary-btn" onClick={() => setStepIdx(stepIdx + 1)}>Suivant <ChevronRight size={14}/></button>
           ) : (
-            <button className="primary-btn" onClick={submit} disabled={!canSave}><Check size={14}/> Enregistrer</button>
+            <button className="primary-btn" onClick={submit} disabled={!canSave || saving}>
+              {saving ? <><Loader2 size={14} className="spin"/> Enregistrement…</> : <><Check size={14}/> Enregistrer</>}
+            </button>
           )}
         </div>
       </div>
@@ -1052,10 +1065,14 @@ function LiabilityEditor({ liability, members, assets = [], onSave, onCancel }) 
     set('memberIds', ids.includes(mid) ? ids.filter(i => i !== mid) : [...ids, mid]);
   };
 
+  const [saving, setSaving] = useState(false);
   const canSave = draft.name && (draft.memberIds || []).length > 0;
-  const submit = () => {
+  const submit = async () => {
     if (!canSave) { alert('Renseigne au moins un nom et un emprunteur.'); return; }
-    onSave(draft);
+    if (saving) return;
+    setSaving(true);
+    try { await onSave(draft); }
+    finally { setSaving(false); }
   };
 
   return (
@@ -1205,13 +1222,15 @@ function LiabilityEditor({ liability, members, assets = [], onSave, onCancel }) 
           </div>
         </div>
         <div className="modal-footer wizard-footer">
-          <button className="secondary-btn" onClick={onCancel}>Annuler</button>
+          <button className="secondary-btn" onClick={onCancel} disabled={saving}>Annuler</button>
           <div style={{ flex: 1 }}/>
-          {stepIdx > 0 && <button className="secondary-btn" onClick={() => setStepIdx(stepIdx - 1)}><ChevronLeft size={14}/> Retour</button>}
+          {stepIdx > 0 && <button className="secondary-btn" onClick={() => setStepIdx(stepIdx - 1)} disabled={saving}><ChevronLeft size={14}/> Retour</button>}
           {stepIdx < LIABILITY_STEPS.length - 1 ? (
             <button className="primary-btn" onClick={() => setStepIdx(stepIdx + 1)}>Suivant <ChevronRight size={14}/></button>
           ) : (
-            <button className="primary-btn" onClick={submit} disabled={!canSave}><Check size={14}/> Enregistrer</button>
+            <button className="primary-btn" onClick={submit} disabled={!canSave || saving}>
+              {saving ? <><Loader2 size={14} className="spin"/> Enregistrement…</> : <><Check size={14}/> Enregistrer</>}
+            </button>
           )}
         </div>
       </div>
