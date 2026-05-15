@@ -2247,7 +2247,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .cmb-gh:first-child { border-top: none; }
 .cmb-it {
   display: flex; align-items: center; gap: 9px;
-  padding: 8px 12px; font-size: 13px; cursor: pointer;
+  padding: 7px 12px; font-size: 13px; cursor: pointer;
   color: var(--ink); transition: background .1s;
 }
 .cmb-it:hover { background: var(--bg-sunk); }
@@ -2257,9 +2257,11 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
   display: flex; align-items: center; justify-content: center; font-size: 12px;
 }
 .cmb-it-raw-ic { font-size: 14px; flex-shrink: 0; }
-.cmb-it-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+/* label + meta empilés verticalement */
+.cmb-it-content { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .cmb-it-lbl { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cmb-it-meta { font-size: 11px; color: var(--ink-3); font-family: 'Geist Mono', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cmb-it.sel .cmb-it-meta { color: var(--accent-2); opacity: .8; }
 .cmb-it-chk { color: var(--accent); flex-shrink: 0; }
 .cmb-empty { padding: 14px 12px; font-size: 12.5px; color: var(--ink-3); text-align: center; }
 `;

@@ -94,7 +94,9 @@ export function Combobox({
         position: 'fixed',
         top: panelRect.bottom + 4,
         left: panelRect.left,
-        width: panelRect.width,
+        // au moins 260px pour que label + meta soient lisibles,
+        // mais jamais plus large que le viewport
+        width: Math.min(Math.max(panelRect.width, 260), window.innerWidth - panelRect.left - 12),
         zIndex: 9999,
       }}
     >
@@ -138,10 +140,10 @@ export function Combobox({
               ) : row.icon != null ? (
                 <span className="cmb-it-raw-ic">{row.icon}</span>
               ) : null}
-              <div className="cmb-it-body">
+              <span className="cmb-it-content">
                 <span className="cmb-it-lbl">{row.label}</span>
                 {row.meta && <span className="cmb-it-meta">{row.meta}</span>}
-              </div>
+              </span>
               {row.value === value && <Check size={13} className="cmb-it-chk" />}
             </div>
           )
