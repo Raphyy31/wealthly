@@ -981,21 +981,52 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   const updateTransactionCategory = async (txId, categoryId) => {
     try {
       await api.transactions.update(txId, { category_slug: categoryId, is_manual_category: true });
-      setTransactions(prev => prev.map(t => t.id === txId ? { ...t, categoryId, isManualCategory: true } : t));
-      // Learn rule for similar future transactions
-      const tx = transactions.find(t => t.id === txId);
-      if (tx && tx.label) {
-        const keyword = tx.label.split(/\s+/).filter(w => w.length > 4).slice(0, 1)[0];
-        if (keyword) {
-          const pattern = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          const exists = customRules.some(r => r.pattern === pattern && r.categoryId === categoryId);
-          if (!exists) {
-            try {
-              const newRule = await api.rules.create({ pattern, category_slug: categoryId, source: 'learned' });
-              setCustomRules(prev => [...prev, { pattern, categoryId, source: 'learned', _id: newRule.id }]);
-            } catch {}
-          }
-        }
+      setTransactions(prev => prev.map(tx => tx.id === txId ? { ...tx, categoryId, isManualCategory: true } : tx));
+
+      // Extract merchant name from label for rule creation
+      const srcTx = transactions.find(tx => tx.id === txId);
+      if (!srcTx?.label) return;
+
+      // Strip common French bank label prefixes, then take first meaningful word
+      const stripped = srcTx.label
+        .replace(/^(paiement par carte|prélèvement|prelevement|virement émis|virement emis|virement en votre faveur|virement recu de|virement reçu de|paiement|retrait dab|retrait|versement|avoir)\s+/i, '')
+        .replace(/PAIEMENT PAR CARTE\s+[Xx]?\d{4,}\**\s*/gi, '')
+        .replace(/\s+\d{2}\/\d{2}(\s+|$)/g, ' ')
+        .trim();
+
+      const words = stripped.split(/\s+/).filter(w => w.length >= 4);
+      if (!words.length) return;
+
+      // Prefer all-uppercase words (merchant names in FR bank statements)
+      const merchant = words.find(w => w === w.toUpperCase() && /[A-Z]{3}/.test(w)) || words[0];
+      const pattern = merchant.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+      // Create/update rule in DB (visible in Settings > Règles)
+      const exists = customRules.some(r => r.pattern.toLowerCase() === pattern.toLowerCase() && r.categoryId === categoryId);
+      if (!exists) {
+        try {
+          const newRule = await api.rules.create({ pattern, category_slug: categoryId, source: 'learned' });
+          setCustomRules(prev => [...prev, { pattern, categoryId, source: 'learned', _id: newRule.id }]);
+        } catch { /* ignore rule creation failure */ }
+      }
+
+      // Apply retroactively to ALL uncategorized matching transactions
+      const regex = new RegExp(pattern, 'i');
+      const toUpdate = transactions.filter(tx =>
+        tx.id !== txId &&
+        !tx.isManualCategory &&
+        (!tx.categoryId || tx.categoryId === 'uncategorized') &&
+        regex.test(tx.label || '')
+      );
+
+      if (toUpdate.length > 0) {
+        await Promise.allSettled(toUpdate.map(tx =>
+          api.transactions.update(tx.id, { category_slug: categoryId })
+        ));
+        setTransactions(prev => prev.map(tx =>
+          toUpdate.some(u => u.id === tx.id) ? { ...tx, categoryId } : tx
+        ));
+        showToast(`Règle « ${merchant} » → ${categoryId} appliquée à ${toUpdate.length + 1} transaction(s)`, 'success');
       }
     } catch (err) { showToast(t('toasts.genericError', { message: err.message }), 'error'); }
   };
