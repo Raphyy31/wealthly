@@ -1793,6 +1793,17 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             deleteBankConnection={deleteBankConnection}
             categories={categories}
             showToast={showToast}
+            onCategoryCreated={(apiCat) => {
+              if (!apiCat) return;
+              const mapped = categoryFromApi(apiCat);
+              setCategories(prev => {
+                if (prev.some(c => c.id === mapped.id)) return prev;
+                return [...prev, mapped];
+              });
+            }}
+            onCategoryDeleted={(slug) => {
+              setCategories(prev => prev.filter(c => c.id !== slug && c.parent !== slug));
+            }}
             reloadCategories={async () => {
               try {
                 const list = await api.categories.list();

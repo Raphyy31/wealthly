@@ -44,7 +44,7 @@ function readHashSection() {
   return null;
 }
 
-export function SettingsView({ members, accounts, accountBalances, saveMember, deleteMember, deleteAccount, updateAccount, transactions = [], exportData, importData, resetAllData, categories = [], reloadCategories, showToast, fmt, baseCurrency = 'EUR', setBaseCurrency, rates, ratesDate, currentUser, onImport, recategorizeUncategorized }) {
+export function SettingsView({ members, accounts, accountBalances, saveMember, deleteMember, deleteAccount, updateAccount, transactions = [], exportData, importData, resetAllData, categories = [], reloadCategories, onCategoryCreated, onCategoryDeleted, showToast, fmt, baseCurrency = 'EUR', setBaseCurrency, rates, ratesDate, currentUser, onImport, recategorizeUncategorized }) {
   const { t } = useTranslation();
   const [editingMember, setEditingMember] = useState(null);
   const [activeSection, setActiveSection] = useState(() => readHashSection() || 'profil');
@@ -147,7 +147,13 @@ export function SettingsView({ members, accounts, accountBalances, saveMember, d
                   </span>
                 </div>
               )}
-              <MyCategoriesSection categories={categories} reloadCategories={reloadCategories} showToast={showToast} />
+              <MyCategoriesSection
+                categories={categories}
+                reloadCategories={reloadCategories}
+                onCategoryCreated={onCategoryCreated}
+                onCategoryDeleted={onCategoryDeleted}
+                showToast={showToast}
+              />
               <CustomRulesSection categories={categories} />
             </section>
           )}
@@ -1106,7 +1112,7 @@ const CATEGORY_PALETTE = [
 ];
 const COMMON_ICONS = ['🏷️', '🛒', '🍽️', '🚗', '🏠', '💡', '📱', '🎬', '🎵', '🏥', '🎁', '✈️', '🎓', '👶', '💼', '💰', '☕', '🐶', '🎨', '🛠️'];
 
-function MyCategoriesSection({ categories, reloadCategories, showToast }) {
+function MyCategoriesSection({ categories, reloadCategories, onCategoryCreated, onCategoryDeleted, showToast }) {
   const [creating, setCreating] = useState(null); // null | { parent: string|null }
   const [error, setError] = useState(null);
   const [busyId, setBusyId] = useState(null);
@@ -1122,8 +1128,11 @@ function MyCategoriesSection({ categories, reloadCategories, showToast }) {
     try {
       setBusyId(slug);
       await api.categories.delete(slug);
+      // Optimistic local update — instant UI feedback, no wait for refetch.
+      if (onCategoryDeleted) onCategoryDeleted(slug);
       toast(`« ${label} » supprimée`, 'success');
-      if (reloadCategories) await reloadCategories();
+      // Background safety re-sync (no await, doesn't block UI).
+      if (reloadCategories) reloadCategories();
     } catch (err) {
       setError(err.message || 'Suppression impossible');
       toast(err.message || 'Suppression impossible', 'error');
@@ -1142,11 +1151,14 @@ function MyCategoriesSection({ categories, reloadCategories, showToast }) {
         kind: draft.kind,
         parent_slug: draft.parent_slug || null,
       });
+      // Optimistic local update FIRST so the new chip pops in instantly.
+      if (onCategoryCreated && created) onCategoryCreated(created);
       setCreating(null);
       setError(null);
       const kindLabel = draft.parent_slug ? 'Détail' : 'Catégorie';
       toast(`${kindLabel} « ${created?.name || draft.name} » créé${draft.parent_slug ? '' : 'e'}`, 'success');
-      if (reloadCategories) await reloadCategories();
+      // Background safety re-sync (no await, doesn't block UI).
+      if (reloadCategories) reloadCategories();
     } catch (err) {
       setError(err.message || 'Création impossible');
       toast(err.message || 'Création impossible', 'error');
