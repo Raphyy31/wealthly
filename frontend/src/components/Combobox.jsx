@@ -72,8 +72,12 @@ export function Combobox({
       if (document.getElementById('_cmb_panel')?.contains(e.target)) return;
       doClose();
     };
-    // close on any scroll so the panel doesn't float away
-    const onScroll = () => doClose();
+    // Close on scroll only when it happens OUTSIDE the panel (page scroll, modal scroll)
+    const onScroll = (e) => {
+      const panel = document.getElementById('_cmb_panel');
+      if (panel && panel.contains(e.target)) return;
+      doClose();
+    };
     document.addEventListener('mousedown', onDown);
     window.addEventListener('scroll', onScroll, true);
     return () => {
