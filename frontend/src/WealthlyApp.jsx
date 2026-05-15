@@ -1913,6 +1913,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
         open={showAiPromptModal}
         transactions={visibleTransactions}
         categories={categories}
+        accounts={accounts}
         onApply={applyAiCategorizations}
         onClose={() => setShowAiPromptModal(false)}
       />

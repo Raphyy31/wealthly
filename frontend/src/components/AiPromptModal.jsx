@@ -8,7 +8,7 @@ import { Copy, Check, X, Sparkles, ChevronRight, ChevronLeft } from 'lucide-reac
 //
 // Aucune clé API requise — alternative au flow BYOK pour les users qui veulent
 // rester sous contrôle de leur quota et de leur LLM préféré.
-export function AiPromptModal({ open, transactions = [], categories = [], onApply, onClose }) {
+export function AiPromptModal({ open, transactions = [], categories = [], accounts = [], onApply, onClose }) {
   const [step, setStep] = useState(1);
   const [response, setResponse] = useState('');
   const [copied, setCopied] = useState(false);
@@ -36,11 +36,20 @@ export function AiPromptModal({ open, transactions = [], categories = [], onAppl
       .join('\n');
   }, [categories]);
 
+  const accountById = useMemo(() => {
+    const m = {};
+    accounts.forEach(a => { m[a.id] = a; });
+    return m;
+  }, [accounts]);
+
   const prompt = useMemo(() => {
     if (candidates.length === 0) return '';
     const txLines = candidates.map((tx, i) => {
       const amount = tx.amount >= 0 ? `+${tx.amount.toFixed(2)}` : tx.amount.toFixed(2);
-      return `${i + 1}. ${amount} €  ${tx.label}`;
+      const acc = accountById[tx.accountId];
+      const accLabel = acc ? `${acc.bank || ''} ${acc.name || ''}`.trim() : '';
+      const meta = [tx.date, accLabel].filter(Boolean).join(' · ');
+      return `${i + 1}. [${meta}] ${amount} €  ${tx.label}`;
     }).join('\n');
     return `Tu es un assistant qui catégorise des transactions bancaires françaises.
 
@@ -48,7 +57,7 @@ Voici les catégories disponibles (utilise EXACTEMENT le slug entre backticks, j
 
 ${slugList}
 
-Voici ${candidates.length} transaction${candidates.length > 1 ? 's' : ''} à catégoriser (format : numéro, montant, libellé) :
+Voici ${candidates.length} transaction${candidates.length > 1 ? 's' : ''} à catégoriser (format : numéro, [date · compte], montant, libellé brut) :
 
 ${txLines}
 
@@ -60,7 +69,9 @@ Règles :
 - Pour les transferts entre comptes du même propriétaire, mets "transfer".
 - Privilégie la sous-catégorie la plus spécifique (ex: "subs_video" plutôt que "subscriptions" pour Netflix).
 - Les libellés bancaires français contiennent souvent "PAIEMENT PAR CARTE", "PRELEVEMENT", "VIREMENT" — ignore ces préfixes pour identifier le marchand.
-- Les processeurs comme PAYPAL/STRIPE/SUMUP précèdent souvent le vrai marchand (ex: "PAYPAL *NESPRESSO" = Nespresso, donc subs_services ou subscriptions).`;
+- Les processeurs comme PAYPAL/STRIPE/SUMUP précèdent souvent le vrai marchand (ex: "PAYPAL *NESPRESSO" = Nespresso, donc subs_services ou subscriptions).
+- Les transactions récurrentes à montant identique chaque mois (même date approximative, même libellé) sont probablement des abonnements → privilégie subscriptions/subs_*.
+- Le compte source peut aider : un compte "Livret A" / "PEA" reçoit surtout des transferts d'épargne/investissement, un compte courant principal reçoit les salaires.`;
   }, [candidates, slugList]);
 
   if (!open) return null;

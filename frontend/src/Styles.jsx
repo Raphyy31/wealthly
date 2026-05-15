@@ -1013,6 +1013,8 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .cat-pill-sub { background: var(--bg-subtle, var(--bg-sunk)); color: var(--ink-2); border: 1px solid var(--border); font-size: 11px !important; padding: 3px 8px !important; border-radius: 6px !important; cursor: pointer; font-family: inherit; }
 .cat-pill-sub:hover { border-color: var(--accent); color: var(--accent); }
 .cat-pill-empty { color: var(--ink-3); font-size: 12px; opacity: 0.5; }
+.ds-btn-badge { background: rgba(255,255,255,0.25); color: inherit; font-size: 10px; padding: 1px 6px; border-radius: 8px; margin-left: 6px; font-variant-numeric: tabular-nums; font-weight: 600; }
+.ds-btn.ghost .ds-btn-badge { background: var(--accent-soft); color: var(--accent); }
 .tx-header { background: var(--bg-subtle); border-bottom: 1px solid var(--border); font-size: 11px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; }
 .tx-header .th { display: flex; align-items: center; gap: 4px; }
 .tx-header .th.right { justify-content: flex-end; }

@@ -262,11 +262,20 @@ export function Transactions({ transactions, accounts, categories, members = [],
           <h1>{t('views.transactions.title')} <em>{t('views.transactions.titleAccent')}</em></h1>
           <p>{t('views.transactions.subtitle')}</p>
         </div>
-        {onOpenAiPrompt && (
-          <button className="ds-btn ghost" onClick={onOpenAiPrompt} title="Génère un prompt à coller dans Claude/ChatGPT pour catégoriser en lot (sans clé API)">
-            <Sparkles size={14}/> Catégoriser via IA
-          </button>
-        )}
+        {onOpenAiPrompt && (() => {
+          const uncatCount = transactions.filter(tx => (!tx.categoryId || tx.categoryId === 'uncategorized') && (tx.label || '').trim()).length;
+          return (
+            <button
+              className={`ds-btn ${uncatCount > 0 ? 'primary' : 'ghost'}`}
+              onClick={onOpenAiPrompt}
+              title="Génère un prompt à coller dans Claude/ChatGPT pour catégoriser en lot (sans clé API)"
+              disabled={uncatCount === 0}
+            >
+              <Sparkles size={14}/> Catégoriser via IA
+              {uncatCount > 0 && <span className="ds-btn-badge">{uncatCount}</span>}
+            </button>
+          );
+        })()}
       </div>
 
       <div className="filters-bar" ref={panelRef}>
