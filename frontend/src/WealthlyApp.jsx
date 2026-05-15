@@ -1792,6 +1792,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             syncBankConnection={syncBankConnection}
             deleteBankConnection={deleteBankConnection}
             categories={categories}
+            showToast={showToast}
             reloadCategories={async () => {
               try {
                 const list = await api.categories.list();

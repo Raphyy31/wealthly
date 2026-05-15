@@ -44,7 +44,7 @@ function readHashSection() {
   return null;
 }
 
-export function SettingsView({ members, accounts, accountBalances, saveMember, deleteMember, deleteAccount, updateAccount, transactions = [], exportData, importData, resetAllData, categories = [], reloadCategories, fmt, baseCurrency = 'EUR', setBaseCurrency, rates, ratesDate, currentUser, onImport, recategorizeUncategorized }) {
+export function SettingsView({ members, accounts, accountBalances, saveMember, deleteMember, deleteAccount, updateAccount, transactions = [], exportData, importData, resetAllData, categories = [], reloadCategories, showToast, fmt, baseCurrency = 'EUR', setBaseCurrency, rates, ratesDate, currentUser, onImport, recategorizeUncategorized }) {
   const { t } = useTranslation();
   const [editingMember, setEditingMember] = useState(null);
   const [activeSection, setActiveSection] = useState(() => readHashSection() || 'profil');
@@ -147,7 +147,7 @@ export function SettingsView({ members, accounts, accountBalances, saveMember, d
                   </span>
                 </div>
               )}
-              <MyCategoriesSection categories={categories} reloadCategories={reloadCategories} />
+              <MyCategoriesSection categories={categories} reloadCategories={reloadCategories} showToast={showToast} />
               <CustomRulesSection categories={categories} />
             </section>
           )}
@@ -1106,10 +1106,11 @@ const CATEGORY_PALETTE = [
 ];
 const COMMON_ICONS = ['🏷️', '🛒', '🍽️', '🚗', '🏠', '💡', '📱', '🎬', '🎵', '🏥', '🎁', '✈️', '🎓', '👶', '💼', '💰', '☕', '🐶', '🎨', '🛠️'];
 
-function MyCategoriesSection({ categories, reloadCategories }) {
+function MyCategoriesSection({ categories, reloadCategories, showToast }) {
   const [creating, setCreating] = useState(null); // null | { parent: string|null }
   const [error, setError] = useState(null);
   const [busyId, setBusyId] = useState(null);
+  const toast = showToast || (() => {}); // safe fallback if not wired
 
   const topCats = useMemo(
     () => categories.filter(c => !c.parent && c.id !== 'uncategorized'),
@@ -1121,9 +1122,11 @@ function MyCategoriesSection({ categories, reloadCategories }) {
     try {
       setBusyId(slug);
       await api.categories.delete(slug);
+      toast(`« ${label} » supprimée`, 'success');
       if (reloadCategories) await reloadCategories();
     } catch (err) {
       setError(err.message || 'Suppression impossible');
+      toast(err.message || 'Suppression impossible', 'error');
     } finally {
       setBusyId(null);
     }
@@ -1131,7 +1134,7 @@ function MyCategoriesSection({ categories, reloadCategories }) {
 
   const onCreate = async (draft) => {
     try {
-      await api.categories.create({
+      const created = await api.categories.create({
         name: draft.name,
         color: draft.color,
         icon: draft.icon,
@@ -1141,9 +1144,12 @@ function MyCategoriesSection({ categories, reloadCategories }) {
       });
       setCreating(null);
       setError(null);
+      const kindLabel = draft.parent_slug ? 'Détail' : 'Catégorie';
+      toast(`${kindLabel} « ${created?.name || draft.name} » créé${draft.parent_slug ? '' : 'e'}`, 'success');
       if (reloadCategories) await reloadCategories();
     } catch (err) {
       setError(err.message || 'Création impossible');
+      toast(err.message || 'Création impossible', 'error');
     }
   };
 
