@@ -370,6 +370,17 @@ html, body {
 .ds-pill.neg { background: var(--negative-soft); color: var(--negative); }
 .ds-pill.warn { background: var(--warning-soft); color: var(--warning); }
 .ds-pill.accent { background: var(--accent-soft); color: var(--accent-2); }
+.ds-pill-sub {
+  display: inline-flex; align-items: center;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--ink-3);
+  background: transparent;
+  border: 1px dashed var(--border);
+  letter-spacing: 0.02em;
+}
 .ds-pill .dot {
   width: 6px; height: 6px; border-radius: 50%;
   background: currentColor; opacity: .8;

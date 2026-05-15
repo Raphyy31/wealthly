@@ -514,11 +514,19 @@ export function Dashboard({
                         color: tx.amount >= 0 ? 'var(--positive)' : 'var(--ink-2)',
                       }}>{INITIAL(tx.label)}</div>
                       <div className="tx-mid">
-                        <div className="tx-label">{tx.label || t('dashboard.noLabel')}</div>
+                        <div className="tx-label" title={tx.label || t('dashboard.noLabel')}>{tx.label || t('dashboard.noLabel')}</div>
                         <div className="tx-meta">
                           {isTransfer
                             ? <span className="ds-pill accent">{t('dashboard.transferPill')}</span>
-                            : <span className="ds-pill">{cat?.name || t('dashboard.uncategorized')}</span>}
+                            : (() => {
+                                const topCat = cat?.parent ? categories.find(c => c.id === cat.parent) : cat;
+                                return (
+                                  <>
+                                    <span className="ds-pill">{topCat?.name || t('dashboard.uncategorized')}</span>
+                                    {cat?.parent && <span className="ds-pill-sub">{cat.name}</span>}
+                                  </>
+                                );
+                              })()}
                           <span>{accountName(visibleAccounts, tx.accountId)}</span>
                         </div>
                       </div>

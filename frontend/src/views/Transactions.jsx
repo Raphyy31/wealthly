@@ -7,7 +7,7 @@
 // ============================================================================
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Search, ArrowUpDown, Repeat, Trash2, Filter, X, RotateCcw } from 'lucide-react';
+import { Search, ArrowUpDown, Repeat, Trash2, Filter, X, RotateCcw, Sparkles } from 'lucide-react';
 import { formatDate } from '../utils.js';
 
 const EMPTY_FILTERS = {
@@ -127,7 +127,7 @@ function CatPicker({ categories, currentId, onSelect, onClose }) {
   );
 }
 
-export function Transactions({ transactions, accounts, categories, members = [], recurringIds, toggleRecurring, transferIds = new Set(), setTransferOverride, updateCategory, updateTags, deleteTransaction, fmt, initialAccountFilter, onConsumeInitialFilter }) {
+export function Transactions({ transactions, accounts, categories, members = [], recurringIds, toggleRecurring, transferIds = new Set(), setTransferOverride, updateCategory, updateTags, deleteTransaction, fmt, initialAccountFilter, onConsumeInitialFilter, onOpenAiPrompt }) {
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
   // Seed the account filter on mount if the parent passed one (e.g. coming
@@ -262,6 +262,11 @@ export function Transactions({ transactions, accounts, categories, members = [],
           <h1>{t('views.transactions.title')} <em>{t('views.transactions.titleAccent')}</em></h1>
           <p>{t('views.transactions.subtitle')}</p>
         </div>
+        {onOpenAiPrompt && (
+          <button className="ds-btn ghost" onClick={onOpenAiPrompt} title="Génère un prompt à coller dans Claude/ChatGPT pour catégoriser en lot (sans clé API)">
+            <Sparkles size={14}/> Catégoriser via IA
+          </button>
+        )}
       </div>
 
       <div className="filters-bar" ref={panelRef}>
@@ -454,6 +459,7 @@ export function Transactions({ transactions, accounts, categories, members = [],
           <div className="th sortable" onClick={() => toggleSort('date')}>Date <ArrowUpDown size={12}/></div>
           <div className="th sortable" onClick={() => toggleSort('label')}>Libellé <ArrowUpDown size={12}/></div>
           <div className="th">Catégorie</div>
+          <div className="th">Détail</div>
           <div className="th">Compte</div>
           <div className="th right sortable" onClick={() => toggleSort('amount')}>Montant <ArrowUpDown size={12}/></div>
           <div className="th"></div>
@@ -467,8 +473,8 @@ export function Transactions({ transactions, accounts, categories, members = [],
             return (
               <div key={tx.id} className={`tx-row ${isTransfer ? 'tx-row-transfer' : ''}`}>
                 <div className="td td-date">{formatDate(tx.date)}</div>
-                <div className="td td-label">
-                  <span>{tx.label || 'Sans libellé'}</span>
+                <div className="td td-label" title={tx.label || 'Sans libellé'}>
+                  <span className="td-label-text">{tx.label || 'Sans libellé'}</span>
                   {isTransfer && (
                     <button
                       className="tx-transfer-badge"
@@ -502,10 +508,25 @@ export function Transactions({ transactions, accounts, categories, members = [],
                     <button className="cat-pill" style={{ background: 'var(--primary-soft)', color: 'var(--primary)' }} onClick={() => setEditingTx(tx.id)} title="Cliquez pour catégoriser malgré tout">
                       ↔ Virement interne
                     </button>
-                  ) : (
-                    <button className="cat-pill" style={{ background: (cat?.color || '#999') + '1f', color: cat?.color || '#666' }} onClick={() => setEditingTx(tx.id)}>
-                      {cat?.icon} {cat?.name || 'Non catégorisé'}
+                  ) : (() => {
+                    // Top-level category (parent if cat is a sub, else itself).
+                    const topCat = cat?.parent ? categories.find(c => c.id === cat.parent) : cat;
+                    const display = topCat || cat;
+                    return (
+                      <button className="cat-pill" style={{ background: (display?.color || '#999') + '1f', color: display?.color || '#666' }} onClick={() => setEditingTx(tx.id)}>
+                        {display?.icon} {display?.name || 'Non catégorisé'}
+                      </button>
+                    );
+                  })()}
+                </div>
+                <div className="td td-subcat">
+                  {!isTransfer && cat?.parent && (
+                    <button className="cat-pill cat-pill-sub" onClick={() => setEditingTx(tx.id)} title="Sous-catégorie">
+                      {cat.icon} {cat.name}
                     </button>
+                  )}
+                  {!isTransfer && !cat?.parent && cat && (
+                    <span className="cat-pill-empty">—</span>
                   )}
                 </div>
                 <div className="td td-acc">{acc?.name || '—'}</div>

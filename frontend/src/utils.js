@@ -452,6 +452,43 @@ export const applyMapping = (rows, mapping, accountId, options = {}) => {
 
 // ---- Categorization & recurring detection ----------------------------------
 
+// Extract the real merchant from a French bank transaction label, stripping:
+//   - FR bank prefixes ("Paiement par carte", "Prélèvement"…)
+//   - Card masks ("PAIEMENT PAR CARTE X8987")
+//   - Payment processors that prefix the actual merchant with " * "
+//     (PAYPAL *NESPRESSO → NESPRESSO, STRIPE *DOCTOLIB → DOCTOLIB)
+//   - Dates, trailing places, country codes, generic stop tokens
+// Returns the merchant token (uppercase preferred) or null if nothing matched.
+const _MERCHANT_PROCESSORS = ['paypal', 'sumup', 'adyen', 'stripe', 'square', 'payplug', 'lyfpay', 'alma', 'klarna', 'paylib', 'lydia', 'qonto', 'shopify', 'wise', 'revolut', 'apple pay', 'apple\\.com', 'google pay', 'g pay'];
+const _MERCHANT_STOPWORDS = new Set([
+  'SARL', 'SAS', 'SASU', 'EURL', 'COM', 'WWW', 'HTTPS', 'HTTP', 'CARTE', 'CB',
+  'SEPA', 'INST', 'INSTANT', 'INTERNE', 'TELECOM', 'TELECOMS',
+  'VIREMENT', 'VIRMNT', 'EMIS', 'RECU', 'RECUS', 'REGLT', 'REGLEMENT', 'PRELEVEMENT', 'PRLV', 'PAIEMENT', 'ACHAT',
+  'PARIS', 'LYON', 'MARSEILLE', 'TOULOUSE', 'BORDEAUX', 'NANTES', 'LILLE', 'NICE', 'STRASBOURG',
+  'FRANCE', 'EUROPE', 'STORE', 'SHOP', 'ONLINE', 'WEB', 'INTERNET', 'DRIVE',
+]);
+
+export const extractMerchantFromLabel = (label) => {
+  if (!label) return null;
+  const procRe = new RegExp(`\\b(${_MERCHANT_PROCESSORS.join('|')})\\b\\s*\\*+\\s*`, 'gi');
+  const stripped = label
+    .replace(/^(paiement par carte|prélèvement|prelevement|virement émis|virement emis|virement en votre faveur|virement recu de|virement reçu de|paiement|retrait dab|retrait|versement|avoir)\s+/i, '')
+    .replace(/PAIEMENT PAR CARTE\s+[Xx]?\d{4,}\**\s*/gi, '')
+    .replace(procRe, '')
+    .replace(/^[*\s]+/, '')
+    .replace(/\s+\d{2}\/\d{2}(\/\d{2,4})?(\s|$).*$/g, '')
+    .replace(/\s+(LU|FR|EN|US|GB|DE|ES|IT|BE|CH|NL|IE)\b.*$/i, '')
+    .replace(/\s+\d{4,}.*$/, '')
+    .trim();
+  const words = stripped
+    .split(/\s+/)
+    .map(w => w.replace(/^\*+|[*.,;:!?]+$/g, ''))
+    .filter(w => w.length >= 3 && !_MERCHANT_STOPWORDS.has(w.toUpperCase()) && !/^\d+$/.test(w) && !/^[Xx]\d+$/.test(w));
+  if (!words.length) return null;
+  const allCaps = words.filter(w => w === w.toUpperCase() && /^[A-ZÀ-Ÿ&'-]{3,}$/.test(w));
+  return allCaps[0] || words[0];
+};
+
 export const categorize = (tx, customRules = []) => {
   const allRules = [...customRules, ...DEFAULT_RULES];
   for (const rule of allRules) {

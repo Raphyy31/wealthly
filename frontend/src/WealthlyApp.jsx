@@ -16,7 +16,7 @@ import { storage } from './storage.js';
 import {
   formatCurrency, formatDate, monthKey, dayOfMonth, generateId, hashTransaction,
   parseCSV, detectBankProfile, autoDetectMapping, applyMapping,
-  categorize, detectRecurring,
+  categorize, detectRecurring, extractMerchantFromLabel,
   accountIncludeInNetWorth, accountCountsAsIncome, accountCountsAsExpense,
   detectInternalTransfers, convertCurrency, ACCOUNT_ROLES,
 } from './utils.js';
@@ -43,6 +43,8 @@ import { AccountDrawer } from './components/AccountDrawer.jsx';
 import { useTheme, ThemeToggle } from './components/ui/ThemeToggle.jsx';
 import Logo from './components/Logo.jsx';
 import { AddWealthModal } from './components/AddWealthModal.jsx';
+import { CreateRuleModal } from './components/CreateRuleModal.jsx';
+import { AiPromptModal } from './components/AiPromptModal.jsx';
 import { detectDuplicates } from './utils/duplicateDetector.js';
 import { DuplicateMergeModal } from './components/DuplicateMergeModal.jsx';
 import { useWealthItems } from './hooks/useWealthItems.js';
@@ -985,6 +987,23 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     setCurrentMapping({}); setImportPreview([]); setDetectedBank(null);
   };
 
+  // State for the rule-creation modal (set after a manual category change).
+  const [ruleModal, setRuleModal] = useState(null); // { txId, categoryId, suggested, categoryName }
+  const [showAiPromptModal, setShowAiPromptModal] = useState(false);
+
+  // Apply a batch of categorizations from the AI prompt response.
+  const applyAiCategorizations = async (updates) => {
+    // updates: [{ txId, slug }, ...]
+    await Promise.allSettled(updates.map(u =>
+      api.transactions.update(u.txId, { category_slug: u.slug })
+    ));
+    setTransactions(prev => prev.map(tx => {
+      const u = updates.find(x => x.txId === tx.id);
+      return u ? { ...tx, categoryId: u.slug } : tx;
+    }));
+    showToast(`${updates.length} transaction${updates.length > 1 ? 's' : ''} catégorisée${updates.length > 1 ? 's' : ''} via IA externe.`, 'success');
+  };
+
   const updateTransactionCategory = async (txId, categoryId) => {
     const tx = transactions.find(x => x.id === txId);
     try {
@@ -994,47 +1013,28 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       showToast(t('toasts.genericError', { message: err.message }), 'error');
       return;
     }
-    // Extract merchant token from label. We strip three layers of noise so the
-    // *real* merchant surfaces (not "PAYPAL" or "STRIPE"):
-    //   1. FR bank prefixes ("Paiement par carte", "Prélèvement"…)
-    //   2. Card masks ("PAIEMENT PAR CARTE X8987")
-    //   3. Payment processors that prefix the actual merchant via " * "
-    //      (PAYPAL *NESPRESSO, SUMUP *MAGASIN, STRIPE *…, ADYEN *…)
-    //   4. Dates, trailing places, generic stop tokens (LU, FR, COM…)
     if (!tx?.label) return;
-    const PROCESSORS = ['paypal', 'sumup', 'adyen', 'stripe', 'square', 'payplug', 'lyfpay', 'alma', 'klarna', 'paylib', 'lydia', 'qonto', 'shopify', 'wise', 'revolut', 'apple pay', 'apple\\.com', 'google pay', 'g pay', 'gp\\*', 'gp \\*'];
-    const procRe = new RegExp(`\\b(${PROCESSORS.join('|')})\\b\\s*\\*+\\s*`, 'gi');
-    const stripped = tx.label
-      .replace(/^(paiement par carte|prélèvement|prelevement|virement émis|virement emis|virement en votre faveur|virement recu de|virement reçu de|paiement|retrait dab|retrait|versement|avoir)\s+/i, '')
-      .replace(/PAIEMENT PAR CARTE\s+[Xx]?\d{4,}\**\s*/gi, '')
-      .replace(procRe, '')              // strip "PAYPAL * ", "STRIPE *", etc.
-      .replace(/^[*\s]+/, '')             // leading stars / spaces
-      .replace(/\s+\d{2}\/\d{2}(\/\d{2,4})?(\s|$).*$/g, '')   // dates 30/04 (and everything after)
-      .replace(/\s+(LU|FR|EN|US|GB|DE|ES|IT|BE|CH|NL|IE)\b.*$/i, '')  // trailing country code + everything after
-      .replace(/\s+\d{4,}.*$/, '')                              // long trailing numeric refs
-      .trim();
-    const STOPWORDS = new Set([
-      'SARL', 'SAS', 'SASU', 'EURL', 'COM', 'WWW', 'HTTPS', 'HTTP', 'CARTE', 'CB',
-      'SEPA', 'INST', 'INSTANT', 'INTERNE', 'TELECOM', 'TELECOMS',
-      'VIREMENT', 'VIRMNT', 'EMIS', 'RECU', 'RECUS', 'REGLT', 'REGLEMENT', 'PRELEVEMENT', 'PRLV', 'PAIEMENT', 'ACHAT',
-      'PARIS', 'LYON', 'MARSEILLE', 'TOULOUSE', 'BORDEAUX', 'NANTES', 'LILLE', 'NICE', 'STRASBOURG',
-      'FRANCE', 'EUROPE', 'STORE', 'SHOP', 'ONLINE', 'WEB', 'INTERNET', 'DRIVE',
-    ]);
-    const words = stripped
-      .split(/\s+/)
-      .map(w => w.replace(/^\*+|[*.,;:!?]+$/g, ''))            // strip leading * and trailing punct
-      .filter(w => w.length >= 3 && !STOPWORDS.has(w.toUpperCase()) && !/^\d+$/.test(w) && !/^[Xx]\d+$/.test(w));
-    if (!words.length) return;
-    // Prefer the FIRST all-caps alphabetic token (FR statements put merchant
-    // FIRST after stripping the bank/processor prefix). Fallback: first word.
-    const allCaps = words.filter(w => w === w.toUpperCase() && /^[A-ZÀ-Ÿ&'-]{3,}$/.test(w));
-    const merchant = allCaps[0] || words[0];
-    const pattern = merchant.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    if (customRules.some(r => r.pattern.toLowerCase() === pattern.toLowerCase() && r.categoryId === categoryId)) return;
-    // Find all matching txs that aren't manually categorized AND aren't
-    // already in the target category (no churn). We reclassify auto-categorized
-    // wrong matches too, not just uncategorized ones — when the user fixes
-    // ONE NESPRESSO transaction, ALL NESPRESSO transactions should follow.
+    const suggested = extractMerchantFromLabel(tx.label) || '';
+    // Don't offer a rule if we already have one for the same (suggested, target).
+    const existing = customRules.some(r =>
+      r.pattern.toLowerCase() === suggested.toLowerCase() && r.categoryId === categoryId
+    );
+    if (existing) return;
+    const cat = categories.find(c => c.id === categoryId);
+    setRuleModal({
+      txId,
+      categoryId,
+      suggested,
+      categoryName: cat?.name || categoryId,
+    });
+  };
+
+  // Confirm callback from CreateRuleModal — actually creates the rule and
+  // applies it retroactively to non-manually-categorized matching txs.
+  const applyRule = async (keyword) => {
+    if (!ruleModal) return;
+    const { txId, categoryId, categoryName } = ruleModal;
+    const pattern = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const regex = new RegExp(pattern, 'i');
     const toUpdate = transactions.filter(x =>
       x.id !== txId &&
@@ -1042,12 +1042,6 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       x.categoryId !== categoryId &&
       regex.test(x.label || '')
     );
-    const cat = categories.find(c => c.id === categoryId);
-    const catName = cat?.name || categoryId;
-    const msg = toUpdate.length > 0
-      ? `Créer une règle « ${merchant} » → ${catName} ?\n\n${toUpdate.length} transaction${toUpdate.length > 1 ? 's' : ''} similaire${toUpdate.length > 1 ? 's' : ''} (non catégorisée${toUpdate.length > 1 ? 's' : ''} manuellement) ser${toUpdate.length > 1 ? 'ont' : 'a'} reclassée${toUpdate.length > 1 ? 's' : ''} automatiquement vers ${catName}.`
-      : `Créer une règle « ${merchant} » → ${catName} ?\n\nLes futures transactions contenant « ${merchant} » seront classées automatiquement.`;
-    if (!window.confirm(msg)) return;
     try {
       const newRule = await api.rules.create({ pattern, category_slug: categoryId, source: 'learned' });
       setCustomRules(prev => [...prev, { pattern, categoryId, source: 'learned', _id: newRule.id }]);
@@ -1058,13 +1052,30 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
         setTransactions(prev => prev.map(x =>
           toUpdate.some(u => u.id === x.id) ? { ...x, categoryId } : x
         ));
-        showToast(`Règle « ${merchant} » → ${catName} appliquée à ${toUpdate.length + 1} transaction${toUpdate.length + 1 > 1 ? 's' : ''}.`, 'success');
+        showToast(`Règle « ${keyword} » → ${categoryName} appliquée à ${toUpdate.length + 1} transaction${toUpdate.length + 1 > 1 ? 's' : ''}.`, 'success');
       } else {
-        showToast(`Règle « ${merchant} » créée.`, 'success');
+        showToast(`Règle « ${keyword} » créée.`, 'success');
       }
     } catch (err) {
       showToast(t('toasts.genericError', { message: err.message }), 'error');
+    } finally {
+      setRuleModal(null);
     }
+  };
+
+  // Live count of matching txs for the rule modal preview.
+  const countRuleMatches = (keyword) => {
+    if (!keyword || keyword.length < 2 || !ruleModal) return 0;
+    try {
+      const pattern = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(pattern, 'i');
+      return transactions.filter(x =>
+        x.id !== ruleModal.txId &&
+        !x.isManualCategory &&
+        x.categoryId !== ruleModal.categoryId &&
+        regex.test(x.label || '')
+      ).length;
+    } catch { return 0; }
   };
 
   // Re-applique categorize() aux transactions actuellement non catégorisées.
@@ -1745,6 +1756,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             updateCategory={updateTransactionCategory} updateTags={updateTransactionTags} deleteTransaction={deleteTransaction} fmt={fmt}
             initialAccountFilter={txInitialAccountFilter}
             onConsumeInitialFilter={() => setTxInitialAccountFilter(null)}
+            onOpenAiPrompt={() => setShowAiPromptModal(true)}
           />
         )}
         {view === 'analysis' && (
@@ -1887,6 +1899,23 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
           onClose={() => { setShowDuplicates(false); setDuplicatesDismissed(true); }}
         />
       )}
+
+      <CreateRuleModal
+        open={!!ruleModal}
+        suggested={ruleModal?.suggested || ''}
+        categoryName={ruleModal?.categoryName || ''}
+        matchCount={countRuleMatches}
+        onConfirm={applyRule}
+        onClose={() => setRuleModal(null)}
+      />
+
+      <AiPromptModal
+        open={showAiPromptModal}
+        transactions={visibleTransactions}
+        categories={categories}
+        onApply={applyAiCategorizations}
+        onClose={() => setShowAiPromptModal(false)}
+      />
 
       {showAddAccount && (
         <AddWealthModal
