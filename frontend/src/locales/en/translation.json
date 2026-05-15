@@ -145,6 +145,8 @@
     "greetingNight": "Good night",
     "netWorth": "Net worth",
     "totalNetWorth": "Total net worth",
+    "totalGrossWealth": "Total gross wealth",
+    "includingDebts": "incl. debts",
     "allocation": "Wealth allocation",
     "allocCenterLabel": "Assets",
     "vsStart": "vs. start of period",

@@ -145,6 +145,8 @@
     "greetingNight": "Bonne nuit",
     "netWorth": "Patrimoine net",
     "totalNetWorth": "Patrimoine net total",
+    "totalGrossWealth": "Patrimoine brut total",
+    "includingDebts": "dont dettes",
     "allocation": "Allocation patrimoine",
     "allocCenterLabel": "Actifs",
     "vsStart": "vs. début période",

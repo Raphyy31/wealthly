@@ -131,6 +131,12 @@ export function Dashboard({
     return { abs: last - first, pct: first ? ((last - first) / Math.abs(first)) * 100 : 0 };
   }, [chartData]);
 
+  // Hero affiche le patrimoine brut (liquidités + actifs) plutôt que le net :
+  // quand l'utilisateur a un gros emprunt, le net paraît faussement bas par
+  // rapport aux actifs visibles dans la vue Patrimoine. Le netWorth reste
+  // calculé/utilisé pour les snapshots et le wealthHistory du chart.
+  const grossWealth = (liquidWealth || 0) + (assetsValue || 0);
+
   // KPI strip — 4 cellules : Actifs / Passifs / Liquidités / Épargne mois
   const monthSaving = (thisMonthStats?.income || 0) - (thisMonthStats?.expenses || 0);
   const kpis = [
@@ -349,7 +355,7 @@ export function Dashboard({
       <section className="dash-hero-row">
         <div className="hero-card">
           <div className="hero-top">
-            <span className="ds-caption">{t('dashboard.totalNetWorth')}</span>
+            <span className="ds-caption">{t('dashboard.totalGrossWealth')}</span>
             <div className="ds-range-tabs">
               {PERIODS.map(p => (
                 <button key={p.id}
@@ -362,7 +368,7 @@ export function Dashboard({
           </div>
 
           <div className="hero-number-row">
-            <Amount value={hover?.balance ?? netWorth} hero/>
+            <Amount value={hover?.balance ?? grossWealth} hero/>
             <div className="hero-delta">
               <span className={`ds-pill ${periodDelta.abs >= 0 ? 'pos' : 'neg'}`}>
                 {periodDelta.abs >= 0 ? <ArrowUp size={11}/> : <ArrowDown size={11}/>}
@@ -370,6 +376,9 @@ export function Dashboard({
               </span>
               <span style={{ color: 'var(--ink-2)', fontSize: 13 }}>{t('dashboard.vsStart')}</span>
             </div>
+          </div>
+          <div className="hero-sub-debts">
+            {t('dashboard.includingDebts')} : −{formatEUR(Math.abs(liabilitiesValue || 0))}
           </div>
 
           <HeroChart data={chartData} onHover={setHover} hover={hover}/>
@@ -800,6 +809,7 @@ function DashStyles() {
 .hero-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .hero-number-row { display: flex; align-items: baseline; gap: 16px; margin-top: 18px; flex-wrap: wrap; }
 .hero-delta { display: flex; align-items: center; gap: 8px; }
+.hero-sub-debts { margin-top: 6px; color: var(--ink-2); font-size: 13px; font-variant-numeric: tabular-nums; }
 .hero-chart { margin: 8px -4px 0; position: relative; cursor: crosshair; }
 .hero-axis { display: flex; justify-content: space-between; padding: 4px 8px 12px; color: var(--ink-3); font-size: 11px; }
 
