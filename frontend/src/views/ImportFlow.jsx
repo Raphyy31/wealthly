@@ -20,9 +20,9 @@ export function ImportFlow({ step, parsedData, mapping, setMapping, account, set
           <p>Glissez votre fichier ou cliquez pour le sélectionner</p>
         </div>
         <label className="upload-zone">
-          <input type="file" accept=".csv,.txt,.tsv" onChange={handleFileUpload} style={{ display: 'none' }}/>
+          <input type="file" accept=".csv,.txt,.tsv,.xlsx,.xls" onChange={handleFileUpload} style={{ display: 'none' }}/>
           <div className="upload-icon"><Upload size={36}/></div>
-          <span className="upload-main">Choisir un fichier CSV</span>
+          <span className="upload-main">Choisir un fichier CSV ou Excel</span>
           <span className="upload-sub">Détection auto Revolut, Crédit Agricole, Boursorama et autres</span>
         </label>
         <div className="import-tips">
@@ -42,7 +42,7 @@ export function ImportFlow({ step, parsedData, mapping, setMapping, account, set
             <span className="step"><div className="step-num">3</div>Aperçu</span>
           </div>
           <h2>Vérifiez <em>le mapping</em></h2>
-          <p>{parsedData?.rows.length} lignes détectées · délimiteur "{parsedData?.delimiter === '\t' ? 'TAB' : parsedData?.delimiter}"</p>
+          <p>{parsedData?.rows.length} lignes détectées{parsedData?.delimiter !== 'xlsx' && ` · délimiteur "${parsedData?.delimiter === '\t' ? 'TAB' : parsedData?.delimiter}"`}</p>
           {detectedBank && (
             <div className="detection-badge">
               <Sparkles size={14}/> Format <strong>{detectedBank.profile.name}</strong> détecté — mapping pré-rempli

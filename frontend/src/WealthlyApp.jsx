@@ -828,8 +828,31 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     const file = e.target.files[0];
     if (!file) return;
     setImportFile(file);
-    const text = await file.text();
-    const parsed = parseCSV(text);
+
+    let parsed;
+    if (file.name.toLowerCase().endsWith('.xlsx') || file.name.toLowerCase().endsWith('.xls')) {
+      // Parse Excel file with SheetJS
+      const XLSX = await import('xlsx');
+      const arrayBuffer = await file.arrayBuffer();
+      const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: true });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      // Convert to array of arrays (raw), preserving header row
+      const raw = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+      if (raw.length < 2) {
+        showToast('Le fichier Excel semble vide ou sans données', 'error');
+        return;
+      }
+      const headers = raw[0].map(h => String(h).trim());
+      const rows = raw.slice(1).map(row =>
+        Object.fromEntries(headers.map((h, i) => [h, row[i] !== undefined ? String(row[i]) : '']))
+      );
+      parsed = { headers, rows, delimiter: 'xlsx' };
+    } else {
+      const text = await file.text();
+      parsed = parseCSV(text);
+    }
+
     setParsedData(parsed);
     const detected = detectBankProfile(parsed.headers);
     setDetectedBank(detected);
