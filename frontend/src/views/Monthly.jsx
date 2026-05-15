@@ -466,6 +466,7 @@ export function Monthly({
         <FiftyThirtyTwentyModal
           refMonth={refMonth}
           fiftyThirtyTwenty={fiftyThirtyTwenty}
+          categories={categories}
           fmt={fmt}
           onClose={() => setShow5030(false)}
         />

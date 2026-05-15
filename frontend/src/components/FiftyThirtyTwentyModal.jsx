@@ -8,28 +8,39 @@
 import React, { useMemo } from 'react';
 import { X, Target } from 'lucide-react';
 
-const NEEDS_CATS = new Set([
+// Fallback slugs used only when categories[] isn't available (e.g. legacy
+// caller). With the categories list passed in, we read cat.kind which is the
+// source of truth (incl. user-created categories — they pick needs/wants/
+// savings in the create modal).
+const NEEDS_CATS_FALLBACK = new Set([
   'housing', 'utilities', 'insurance', 'health', 'groceries', 'food',
   'children', 'transport', 'fuel', 'taxes',
 ]);
-const SAVING_CATS = new Set(['savings']);
+const SAVING_CATS_FALLBACK = new Set(['savings']);
 
-function classify(catId) {
+function classify(catId, categories) {
   if (!catId) return 'wants';
-  const slug = catId.toLowerCase();
-  if (NEEDS_CATS.has(slug)) return 'needs';
-  if (SAVING_CATS.has(slug)) return 'savings';
+  if (categories && categories.length) {
+    const cat = categories.find(c => c.id === catId || c.slug === catId);
+    if (cat?.kind === 'needs') return 'needs';
+    if (cat?.kind === 'savings') return 'savings';
+    if (cat?.kind === 'wants') return 'wants';
+    // No kind set on the cat — fall back to slug heuristics below.
+  }
+  const slug = String(catId).toLowerCase();
+  if (NEEDS_CATS_FALLBACK.has(slug)) return 'needs';
+  if (SAVING_CATS_FALLBACK.has(slug)) return 'savings';
   return 'wants';
 }
 
-function bucketRefMonth(refMonth) {
+function bucketRefMonth(refMonth, categories) {
   const buckets = { needs: 0, wants: 0, savings: 0, income: 0 };
   for (const line of (refMonth?.lines || [])) {
     const amt = parseFloat(line.amount) || 0;
     if (line.kind === 'income') { buckets.income += amt; continue; }
     if (line.kind === 'saving') { buckets.savings += amt; continue; }
     // expense
-    const b = classify(line.category_id);
+    const b = classify(line.category_id, categories);
     if (b === 'savings') buckets.savings += amt;
     else if (b === 'needs') buckets.needs += amt;
     else buckets.wants += amt;
@@ -103,8 +114,8 @@ function Recommandation({ buckets, label }) {
   );
 }
 
-export function FiftyThirtyTwentyModal({ refMonth, fiftyThirtyTwenty, fmt, onClose }) {
-  const refBuckets = useMemo(() => bucketRefMonth(refMonth), [refMonth]);
+export function FiftyThirtyTwentyModal({ refMonth, fiftyThirtyTwenty, categories = [], fmt, onClose }) {
+  const refBuckets = useMemo(() => bucketRefMonth(refMonth, categories), [refMonth, categories]);
   const realBuckets = useMemo(() => bucketReal(fiftyThirtyTwenty), [fiftyThirtyTwenty]);
   return (
     <div className="ftt-overlay" onClick={onClose}>
