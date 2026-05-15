@@ -350,7 +350,7 @@ export function Dashboard({
       <section className="dash-hero-row">
         <div className="hero-card">
           <div className="hero-top">
-            <span className="ds-caption">{t('dashboard.totalGrossWealth')}</span>
+            <span className="ds-caption">{t('dashboard.totalNetWorth')}</span>
             <div className="ds-range-tabs">
               {PERIODS.map(p => (
                 <button key={p.id}
