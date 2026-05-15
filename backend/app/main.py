@@ -167,6 +167,9 @@ def _run_lightweight_migrations() -> None:
             # Mois type — JSON budget template stored per user. See
             # docs/superpowers/specs/2026-05-14-budget-mensuel-refonte-design.md.
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS ref_month JSON",
+            # ISIN code (ISO 6166) for stock / ETF positions — stored alongside
+            # ticker so both are available for display and future lookups.
+            "ALTER TABLE assets ADD COLUMN IF NOT EXISTS isin VARCHAR",
         ]
     with engine.begin() as conn:
         for stmt in statements:

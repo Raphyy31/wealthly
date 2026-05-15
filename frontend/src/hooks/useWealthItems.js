@@ -48,7 +48,7 @@ const assetToWealthItem = (a, childAssets = []) => {
     positions = childAssets.map(c => ({
       id: c.id,
       name: c.name,
-      isin: c.ticker || '',
+      isin: c.isin || '',
       ticker: c.ticker || '',
       quantity: c.quantity,
       costBasis: c.purchasePrice != null ? parseFloat(c.purchasePrice) : null,

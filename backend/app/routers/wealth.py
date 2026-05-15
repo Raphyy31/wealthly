@@ -29,6 +29,7 @@ def _asset_to_out(a: Asset) -> dict:
         "current_value": a.current_value,
         "currency": a.currency or "EUR",
         "ticker": a.ticker or "",
+        "isin": a.isin or "",
         "quantity": a.quantity,
         "notes": a.notes or "",
         "household_id": a.household_id,
