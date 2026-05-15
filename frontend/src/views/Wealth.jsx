@@ -77,7 +77,7 @@ const SUBTYPE_TO_EDITOR = {
   autre:  { kind: 'asset', type: 'other_asset' },
 };
 
-export function Wealth({ assets, liabilities, members, activeMemberId, visibleAssets, visibleLiabilities, saveAsset, deleteAsset, saveLiability, deleteLiability, memberShare, fmt, wealthHistory = [], accounts = [], accountBalances = {}, transactions = [], onOpenAddWizard, reload, seededNewItem, onSeededConsumed }) {
+export function Wealth({ assets, liabilities, members, activeMemberId, visibleAssets, visibleLiabilities, saveAsset, deleteAsset, saveLiability, deleteLiability, memberShare, fmt, wealthHistory = [], accounts = [], accountBalances = {}, transactions = [], liquidWealth = 0, onOpenAddWizard, reload, seededNewItem, onSeededConsumed }) {
   const { t } = useTranslation();
   const [editingAsset, setEditingAsset] = useState(null);
   const [editingLia, setEditingLia] = useState(null);
@@ -311,8 +311,9 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
           <div className="ws-card net">
             <div className="ws-icon"><Sparkles size={20}/></div>
             <div className="ws-content">
-              <div className="ws-label">Patrimoine (hors liquidités)</div>
-              <div className="ws-value"><AnimatedNumber value={totalAssets - totalLiabilities} format={(v) => fmt(v)}/></div>
+              <div className="ws-label">Patrimoine brut</div>
+              <div className="ws-value"><AnimatedNumber value={liquidWealth + totalAssets} format={(v) => fmt(v)}/></div>
+              <div className="ws-meta">liquidités + actifs</div>
             </div>
           </div>
         </section>

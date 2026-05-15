@@ -43,7 +43,7 @@ function readHashSection() {
   return null;
 }
 
-export function SettingsView({ members, accounts, accountBalances, saveMember, deleteMember, deleteAccount, updateAccount, transactions = [], exportData, importData, resetAllData, categories = [], fmt, baseCurrency = 'EUR', setBaseCurrency, rates, ratesDate, currentUser, onImport }) {
+export function SettingsView({ members, accounts, accountBalances, saveMember, deleteMember, deleteAccount, updateAccount, transactions = [], exportData, importData, resetAllData, categories = [], fmt, baseCurrency = 'EUR', setBaseCurrency, rates, ratesDate, currentUser, onImport, recategorizeUncategorized }) {
   const { t } = useTranslation();
   const [editingMember, setEditingMember] = useState(null);
   const [activeSection, setActiveSection] = useState(() => readHashSection() || 'profil');
@@ -136,6 +136,16 @@ export function SettingsView({ members, accounts, accountBalances, saveMember, d
                   {t('settings.rules.intro')}
                 </p>
               </header>
+              {recategorizeUncategorized && (
+                <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                  <button className="ds-btn" type="button" onClick={recategorizeUncategorized}>
+                    Re-catégoriser les transactions non catégorisées
+                  </button>
+                  <span style={{ color: 'var(--ink-2)', fontSize: 12 }}>
+                    Ré-applique les règles aux transactions actuellement en « Non catégorisé ».
+                  </span>
+                </div>
+              )}
               <CustomRulesSection categories={categories} />
             </section>
           )}

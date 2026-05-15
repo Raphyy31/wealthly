@@ -21,7 +21,7 @@ const TOOLTIP_STYLE = {
   boxShadow: 'var(--shadow-md)',
 };
 
-export function Analysis({ transactions, categories, recurringIds, recurringGroups, monthlyEvolution, accounts, memberShare, fmt }) {
+export function Analysis({ transactions, categories, recurringIds, recurringGroups, monthlyEvolution, accounts, memberShare, fmt, transferIds = new Set() }) {
   const { t } = useTranslation();
   const [selectedCat, setSelectedCat] = useState('all');
 
@@ -29,6 +29,7 @@ export function Analysis({ transactions, categories, recurringIds, recurringGrou
     const data = {};
     transactions.forEach(t => {
       if (t.amount >= 0) return;
+      if (transferIds.has(t.id)) return;
       if (selectedCat !== 'all' && t.categoryId !== selectedCat) return;
       const acc = accounts.find(a => a.id === t.accountId);
       const share = acc ? memberShare(acc) : 1;
@@ -36,12 +37,18 @@ export function Analysis({ transactions, categories, recurringIds, recurringGrou
       data[m] = (data[m] || 0) + Math.abs(t.amount) * share;
     });
     return Object.entries(data).map(([month, amount]) => ({ month, amount })).sort((a, b) => a.month.localeCompare(b.month));
-  }, [transactions, selectedCat, accounts, memberShare]);
+  }, [transactions, selectedCat, accounts, memberShare, transferIds]);
 
   const topMerchants = useMemo(() => {
     const m = {};
     transactions.forEach(t => {
       if (t.amount >= 0) return;
+      if (transferIds.has(t.id)) return;
+      // Virements internes (catégorie 'transfer') et auto-virements
+      // "VIREMENT EMIS POUR…" pollueraient le top — on les écarte aussi
+      // par label au cas où l'auto-détection n'aurait pas matché.
+      if (t.categoryId === 'transfer') return;
+      if (/^vir(ement)?\s+(emis|recu|re[cç]u|inst|sepa)\b/i.test(t.label || '')) return;
       const acc = accounts.find(a => a.id === t.accountId);
       const share = acc ? memberShare(acc) : 1;
       const key = (t.label || '').slice(0, 30);
@@ -50,7 +57,7 @@ export function Analysis({ transactions, categories, recurringIds, recurringGrou
       m[key].count += 1;
     });
     return Object.values(m).sort((a, b) => b.total - a.total).slice(0, 10);
-  }, [transactions, accounts, memberShare]);
+  }, [transactions, accounts, memberShare, transferIds]);
 
   return (
     <div className="analysis-view-v3">

@@ -994,6 +994,40 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     } catch (err) { showToast(t('toasts.genericError', { message: err.message }), 'error'); }
   };
 
+  // Re-applique categorize() aux transactions actuellement non catégorisées.
+  // Utile après un import où l'IA n'a pas tourné (pas de clé) ou après avoir
+  // étoffé les règles. Ne touche pas aux transactions déjà catégorisées
+  // manuellement ou automatiquement à un slug différent d'uncategorized.
+  const recategorizeUncategorized = async () => {
+    const candidates = transactions.filter(tx => !tx.categoryId || tx.categoryId === 'uncategorized');
+    if (candidates.length === 0) {
+      showToast('Aucune transaction non catégorisée.', 'info');
+      return;
+    }
+    const updates = [];
+    for (const tx of candidates) {
+      const newCat = categorize(tx, customRules);
+      if (newCat && newCat !== 'uncategorized' && newCat !== tx.categoryId) {
+        updates.push({ id: tx.id, categoryId: newCat });
+      }
+    }
+    if (updates.length === 0) {
+      showToast('Aucune correspondance trouvée — étoffe tes règles ou catégorise manuellement quelques transactions.', 'info');
+      return;
+    }
+    const results = await Promise.allSettled(
+      updates.map(u => api.transactions.update(u.id, { category_slug: u.categoryId }))
+    );
+    const ok = results.filter(r => r.status === 'fulfilled').length;
+    setTransactions(prev => prev.map(tx => {
+      const u = updates.find(uu => uu.id === tx.id);
+      return u && results[updates.indexOf(u)].status === 'fulfilled'
+        ? { ...tx, categoryId: u.categoryId }
+        : tx;
+    }));
+    showToast(`${ok} transactions re-catégorisées sur ${candidates.length} candidates.`, 'success');
+  };
+
   const toggleRecurring = async (txId, isFixed) => {
     // Stored locally as UI override (the backend has its own column but we keep this client-side for speed)
     const newOverrides = { ...recurringOverrides, [txId]: isFixed };
@@ -1048,7 +1082,20 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       await api.accounts.delete(accId);
       setAccounts(prev => prev.filter(a => a.id !== accId));
       setTransactions(prev => prev.filter(t => t.accountId !== accId));
-    } catch (err) { showToast(t('toasts.genericError', { message: err.message }), 'error'); }
+    } catch (err) {
+      // Compte fantôme : présent en state mais introuvable en DB (ex : DB
+      // reset, autre session, dédup raté). On nettoie quand même le state
+      // local et on resynchronise pour ne pas bloquer l'utilisateur.
+      const msg = String(err?.message || '');
+      if (/non trouv|not found|404/i.test(msg)) {
+        setAccounts(prev => prev.filter(a => a.id !== accId));
+        setTransactions(prev => prev.filter(t => t.accountId !== accId));
+        try { await reloadAll(); } catch {}
+        showToast(t('toasts.accountCleaned', { defaultValue: 'Compte fantôme retiré' }), 'success');
+      } else {
+        showToast(t('toasts.genericError', { message: err.message }), 'error');
+      }
+    }
   };
 
   const unlockAchievement = async (slug) => {
@@ -1601,6 +1648,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             saveLiability={saveLiability} deleteLiability={deleteLiability}
             memberShare={memberShare} fmt={fmt}
             wealthHistory={wealthHistory}
+            liquidWealth={liquidWealth}
             onOpenAddWizard={() => setShowAddAccount(true)}
             reload={reloadAll}
             seededNewItem={seededNewItem}
@@ -1623,6 +1671,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             transactions={visibleTransactions} categories={categories}
             recurringIds={recurringIds} recurringGroups={recurringGroups} monthlyEvolution={monthlyEvolution}
             accounts={accounts} memberShare={memberShare} fmt={fmt}
+            transferIds={transferIds}
           />
         )}
         {view === 'settings' && (
@@ -1642,6 +1691,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             rates={rates} ratesDate={ratesDate}
             currentUser={currentUser}
             onImport={() => { setView('import'); setImportStep('upload'); }}
+            recategorizeUncategorized={recategorizeUncategorized}
           />
         )}
         {view === 'admin' && currentUser?.is_admin && (

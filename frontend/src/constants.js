@@ -84,15 +84,23 @@ export const DEFAULT_RULES = [
   { pattern: /zalando|asos|h&m|zara|uniqlo|decathlon|sephora|nocibe|sport2000/i, categoryId: 'shopping' },
   { pattern: /cinema|ugc|pathe|gaumont|theatre|concert|fnac spectacles|ticketmaster/i, categoryId: 'leisure' },
   { pattern: /booking|airbnb|hotel|hotels\.com|expedia|ryanair|easyjet|air france|transavia|ifa hotels/i, categoryId: 'travel' },
-  { pattern: /salaire|virement employeur|paie /i, categoryId: 'salary' },
+  { pattern: /salaire|virement employeur|paie |paiement\s+salaire|net a payer/i, categoryId: 'salary' },
+  { pattern: /caf |allocation|allocataire|^apl\b|alloc\s+log/i, categoryId: 'other_income' },
+  { pattern: /pole emploi|france travail|assedic|are\s+/i, categoryId: 'other_income' },
+  { pattern: /cnav |carsat |pension|retraite\s+vers/i, categoryId: 'other_income' },
+  { pattern: /interets\s+crediteur|coupon|dividende|distribution\s+opcvm|rb\s+coupon/i, categoryId: 'invest_income' },
   { pattern: /impot|tresor public|dgfip|taxe foncier|taxe habitation|cfe /i, categoryId: 'taxes' },
-  { pattern: /retrait|dab |distributeur|retrait d.esp.ces/i, categoryId: 'cash' },
-  { pattern: /virement.*compte|vir compte|de:.*vers:|epargne|livret a|ldds|pel |pee |per |recharge sur apple pay/i, categoryId: 'savings' },
-  { pattern: /pea |bourse|action |titre |sicav|opcvm|etf /i, categoryId: 'investment' },
-  { pattern: /commission|frais|cotisation carte|agios/i, categoryId: 'fees' },
+  { pattern: /retrait|dab |distributeur|retrait d.esp.ces|^ret\s+(gab|cb|dab)/i, categoryId: 'cash' },
+  { pattern: /vers(ement)?\s+(livret|epargne|pel|pee|per\b)|virement.*(livret|epargne)|prelev.*epargne|alimentation.*compte/i, categoryId: 'savings' },
+  { pattern: /\b(epargne|livret a|ldds|lep |pel\b|pee\b|per\b)/i, categoryId: 'savings' },
+  { pattern: /pea |bourse|action |titre |sicav|opcvm|etf |trade\s+republic|degiro|interactive\s+broker|saxo /i, categoryId: 'investment' },
+  { pattern: /commission|cotisation\s+carte|agios|frais\s+(de\s+)?(tenue|gestion|dossier|bancaire|sur)|forfait\s+compte|interets\s+debiteurs/i, categoryId: 'fees' },
   { pattern: /ecole|creche|nounou|assistante mater|cantine|periscolaire|centre aere/i, categoryId: 'children' },
-  { pattern: /cultura|amazon kindle|udemy|coursera|formation/i, categoryId: 'education' },
-  { pattern: /virement (re[cç]u de|de la part de|en faveur de|au profit de|à |a |internet|sepa|instantan|inst |ordinaire|external|familial|interne)|virement\s+\w+|^vir\.?\s|prelevement.*virement|annulation virement/i, categoryId: 'transfer' },
+  { pattern: /cultura|amazon kindle|udemy|coursera|formation|skillshare|edx /i, categoryId: 'education' },
+  // Virements RECUS d'un tiers (souvent revenu ponctuel — remboursement, cadeau, freelance).
+  { pattern: /vir(ement)?\s+(re[cç]u|en\s+(votre|ma)\s+faveur|de\s+(la\s+part\s+de|m\.|mme|monsieur|madame))|virement.*re[cç]u/i, categoryId: 'other_income' },
+  // Virements EMIS / SEPA / INST / internes — catch-all transfer LAST.
+  { pattern: /vir(ement)?\s+(emis|sortant|sepa|inst|instantan|interne|permanent|programme)\b|^vir\.?\s+|prelevement.*virement|annulation\s+virement|virement\s+compte|de:.*vers:/i, categoryId: 'transfer' },
 ];
 
 export const BANK_PROFILES = {
