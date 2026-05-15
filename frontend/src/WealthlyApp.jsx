@@ -1269,12 +1269,16 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       // mais positions enfants ou liabilities restantes → patrimoine
       // négatif après "reset").
       await api.wipeHousehold();
-      // Purge aussi le state local et les caches localStorage
+      // Reset le ref snapshot pour éviter que l'auto-upsert re-poste
+      // des valeurs stales pendant le transitoire post-wipe.
+      lastSnapshotKeyRef.current = null;
+      // Purge le state local et les caches localStorage
       setMembers([]);
       setAccounts([]);
       setTransactions([]);
       setAssets([]);
       setLiabilities([]);
+      setCategories(DEFAULT_CATEGORIES);
       setGoals([]);
       setFixedCharges([]);
       setBudgets({});
