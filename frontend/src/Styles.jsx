@@ -1942,6 +1942,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 }
 .pl-up   { color: var(--positive); }
 .pl-down { color: var(--negative); }
+.pos-pl-pct { display: block; font-size: 11px; font-family: 'Geist Mono', monospace; opacity: .8; }
 
 .drawer-empty-inline {
   font-size: 13px; color: var(--ink-2);
