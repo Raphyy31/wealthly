@@ -7,6 +7,27 @@ Notes for Claude (and any future AI tooling) picking the project back up.
 
 ---
 
+## Session 2026-05-16 (suite) — Raphyy31 + Claude (Opus 4.7) — polish catégorisation + cron + vue récurrent + tests
+
+Après la grosse refonte du matin (Payees + Learning + 120 règles), 5 chantiers de polish sur la même journée pour fermer les trous structurels mentionnés en debrief :
+
+| Domaine | Changement |
+|---|---|
+| **Tests pytest moteur** | Nouveau `backend/tests/test_categorization.py` : 15 tests couvrant normalize (préfixes bancaires, dates, SEPA, accents, flags SELF_TRANSFER/LOAN_INSTALLMENT), engine builtin rules (Netflix → subs_video, Uber vs Uber Eats, Franprix, Revolut/AMEX règlement → transfer, marchand inconnu → uncategorized, EDF, ANTHROPIC, COTISATION Premium → fees), user_rule priority, Category Learning (création au seuil, pas de learning sans payee), apply-retroactively. Garde-fou anti-régression pour les prochains refactors. |
+| **Persistance règles transfer** | Le mode 'Virement interne' dans `CreateRuleModal` ne flag plus juste les tx existantes en one-shot — il persiste maintenant une `CategorisationRule(rule_type='transfer')` via `api.rules.create`. Le moteur backend (engine.py couche user_rule) reconnaît `rule_type='transfer'` et flag les futurs imports + syncs GoCardless automatiquement. Une seule action user → effet permanent. |
+| **Cron auto-sync GoCardless** | Refacto `_sync_one_connection()` helper réutilisable. Nouveau `POST /banking/cron/sync-all` qui itère toutes les connexions `status='authorized'` de TOUS les foyers, sync chacune (days_back=7 par défaut). Auth par header `X-Cron-Secret` matchant `settings.CRON_SECRET`. Script `backend/scripts/cron_sync_all.sh` curl wrapper pour Railway Scheduled Tasks. Sans ce cron, les données pourrissaient tant que l'user ne cliquait pas Sync. |
+| **Vue Charges récurrentes** | Nouvelle vue `views/Recurring.jsx` accessible via sidebar (groupe Gestion, icône Repeat). Liste tous les paiements récurrents du foyer (loyer, mutuelle, assurances, électricité, abonnements, prêts…) — différent de SubscriptionsWidget qui ne couvre que la branche subscriptions du Mois type. Hero summary (mensuel total / annuel projeté / nb marchands), filtres search + cat, sort par annuel/mensuel/freq/last, table responsive. Clic ligne → ouvre Transactions filtrées sur le compte. |
+| **Toggle apprentissage** | `Household.auto_learning_enabled` boolean default True. Endpoints `GET/PUT /learning/settings`. Composant `LearningToggle` en haut de Réglages → Catégories & règles. Si désactivé, `on_transaction_recategorized` retourne `None` sans créer de règle. |
+
+**Configuration requise sur Railway** pour activer le cron :
+1. Variables → `CRON_SECRET=<long_random_string>`
+2. Scheduled Tasks → `0 4 * * *` (04h UTC) → command : `bash backend/scripts/cron_sync_all.sh`
+3. Env du task : `BACKEND_URL=https://wealthly-production-45aa.up.railway.app` + `CRON_SECRET=<même valeur>`
+
+**Hotfix Railway de la matinée** : `unicodedata.normalize` à la place de `str.maketrans` (typo dans la table d'accents qui crashait le boot). Voir bloc précédent.
+
+---
+
 ## Session 2026-05-16 — Raphyy31 + Claude (Opus 4.7) — refonte moteur de catégorisation v2 (Payees + Learning + 120 règles builtin)
 
 Chantier majeur prévu depuis le 2026-05-15 (gros prompt rédigé par l'utilisateur inspiré d'Actual Budget). Mergé en plusieurs commits atomiques sur `main`. Une grosse régression au déploiement Railway (typo dans la table d'accents `maketrans`) a été corrigée en suivant.

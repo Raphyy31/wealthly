@@ -4,7 +4,29 @@
 
 ---
 
-## 🆕 Session 2026-05-16 — Raphyy31 + Claude (Opus 4.7) — moteur de catégorisation v2
+## 🆕 Session 2026-05-16 (suite) — polish post-catégorisation
+
+Après la refonte moteur catégorisation v2 du matin, 5 chantiers de polish pour fermer les trous structurels :
+
+- [x] **Tests pytest moteur** — 15 tests sur normalize + engine + Category Learning + apply-retroactively
+- [x] **Persistance règles transfer** — `rule_type='transfer'` créée en DB → futurs imports/syncs auto-flag
+- [x] **Cron auto-sync GoCardless** — endpoint `/banking/cron/sync-all` + script Railway nightly
+- [x] **Vue Charges récurrentes** — vue dédiée listant tous les paiements récurrents (loyer/assurances/abos/prêts)
+- [x] **Toggle Apprentissage auto** — `Household.auto_learning_enabled` + UI dans Réglages
+
+**Reste à faire (P1)** :
+- 2FA TOTP (toujours en attente depuis plusieurs sessions)
+- Email re-consent GoCardless J-7 avant expiration session (90j max)
+- Configuration Railway Scheduled Task pour le cron nightly
+
+**P2 / P3** :
+- i18n EN des composants ajoutés ces 3 dernières sessions
+- WealthlyApp.jsx découpe L3 (2200 lignes)
+- Bulk actions sur transactions (multi-select + categorize)
+
+---
+
+## Session 2026-05-16 — Raphyy31 + Claude (Opus 4.7) — moteur de catégorisation v2
 
 Chantier majeur. Voir `CLAUDE.md` pour le détail complet.
 
