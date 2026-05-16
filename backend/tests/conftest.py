@@ -41,6 +41,11 @@ def _validate_no_hibp(password: str, *, check_breach: bool = True) -> tuple:
     return True, None
 
 patch("app.security.validate_password", side_effect=_validate_no_hibp).start()
+# routers/auth.py does `from app.security import validate_password` which captures
+# the function reference at import time — patching only the source module
+# doesn't reach the bound reference. Patch both call sites to actually
+# intercept the HIBP check in CI.
+patch("app.routers.auth.validate_password", side_effect=_validate_no_hibp).start()
 
 
 @pytest.fixture()
