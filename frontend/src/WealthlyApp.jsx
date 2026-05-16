@@ -684,10 +684,16 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       // transfer (excluded from income/expense regardless of role), and
       // (2) the account's role for non-transfer flows.
       if (!isTransfer) {
+        // Manual category override : si l'user a explicitement catégorisé
+        // une transaction en income/expense sur un compte de rôle qui exclut
+        // ces flux par défaut (ex : cadeau Lydia sur un compte depenses,
+        // ou retrait manuel d'un livret), on respecte la volonté de l'user.
+        const isManualIncome = t.isManualCategory && cat?.type === 'income';
+        const isManualExpense = t.isManualCategory && cat?.type === 'expense';
         if (t.amount > 0) {
-          if (accountCountsAsIncome(role)) monthly[m].income += sharedAmount;
+          if (accountCountsAsIncome(role) || isManualIncome) monthly[m].income += sharedAmount;
         } else {
-          if (accountCountsAsExpense(role)) {
+          if (accountCountsAsExpense(role) || isManualExpense) {
             const absShared = Math.abs(sharedAmount);
             monthly[m].expenses += absShared;
             if (recurringIds.has(t.id)) monthly[m].fixed += absShared;
@@ -744,9 +750,12 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       if (t.amount >= 0) return;
       if (transferIds.has(t.id)) return; // skip internal transfers
       const acc = accounts.find(a => a.id === t.accountId);
+      const cat = categories.find(c => c.id === t.categoryId);
       // Honor the account's role: epargne / investissement / professionnel
-      // outflows are not real expenses, don't count them in the analysis.
-      if (acc && !accountCountsAsExpense(acc.role)) return;
+      // outflows are not real expenses — UNLESS the user explicitly tagged
+      // this transaction with an expense category (manual override).
+      const isManualExpense = t.isManualCategory && cat?.type === 'expense';
+      if (acc && !accountCountsAsExpense(acc.role) && !isManualExpense) return;
       const share = acc ? memberShare(acc) : 1;
       const m = monthKey(t.date);
       const abs = Math.abs(t.amount) * share;
@@ -1040,12 +1049,32 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     if (!ruleModal) return;
     const { txId } = ruleModal;
     const keyword = (chosen?.keyword || '').trim();
+    const mode = chosen?.mode || 'category';
     const targetSlug = chosen?.categoryId;
-    if (!keyword || !targetSlug) { setRuleModal(null); return; }
-    const targetCat = categories.find(c => c.id === targetSlug);
-    const targetName = targetCat?.name || targetSlug;
+    if (!keyword) { setRuleModal(null); return; }
+    if (mode === 'category' && !targetSlug) { setRuleModal(null); return; }
     const pattern = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const regex = new RegExp(pattern, 'i');
+
+    // ─── Mode 'transfer' : marque toutes les tx matching comme virement interne
+    // (manual override is_transfer_override=true). Pas de règle persistée pour
+    // l'instant — pour les futurs imports, l'user re-flag ou connecte le compte.
+    if (mode === 'transfer') {
+      const matches = transactions.filter(x => regex.test(x.label || ''));
+      try {
+        await Promise.allSettled(matches.map(x => setTransferOverride(x.id, true)));
+        showToast(`« ${keyword} » : ${matches.length} transaction${matches.length > 1 ? 's' : ''} marquée${matches.length > 1 ? 's' : ''} comme virement interne.`, 'success');
+      } catch (err) {
+        showToast(t('toasts.genericError', { message: err.message }), 'error');
+      } finally {
+        setRuleModal(null);
+      }
+      return;
+    }
+
+    // ─── Mode 'category' (comportement historique)
+    const targetCat = categories.find(c => c.id === targetSlug);
+    const targetName = targetCat?.name || targetSlug;
     const toUpdate = transactions.filter(x =>
       x.id !== txId &&
       !x.isManualCategory &&
@@ -1055,7 +1084,6 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     try {
       const newRule = await api.rules.create({ pattern, category_slug: targetSlug, source: 'learned' });
       setCustomRules(prev => [...prev, { pattern, categoryId: targetSlug, source: 'learned', _id: newRule.id }]);
-      // Also re-assign the trigger tx if the user picked a different cat than the one already applied.
       if (ruleModal.categoryId !== targetSlug) {
         try { await api.transactions.update(txId, { category_slug: targetSlug, is_manual_category: true }); } catch { /* tolerated */ }
         setTransactions(prev => prev.map(x => x.id === txId ? { ...x, categoryId: targetSlug, isManualCategory: true } : x));
@@ -1079,12 +1107,17 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   };
 
   // Live count of matching txs for the rule modal preview.
+  // targetSlug=null means "transfer mode" → count any tx matching the keyword
+  // (no exclusion by category) since we'll flag them all as internal transfer.
   const countRuleMatches = (keyword, targetSlug) => {
     if (!keyword || keyword.length < 2 || !ruleModal) return 0;
-    const slug = targetSlug || ruleModal.categoryId;
     try {
       const pattern = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const regex = new RegExp(pattern, 'i');
+      if (targetSlug === null) {
+        return transactions.filter(x => regex.test(x.label || '')).length;
+      }
+      const slug = targetSlug || ruleModal.categoryId;
       return transactions.filter(x =>
         x.id !== ruleModal.txId &&
         !x.isManualCategory &&
