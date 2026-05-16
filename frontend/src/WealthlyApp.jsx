@@ -118,6 +118,9 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     else document.documentElement.removeAttribute('data-hide-amounts');
   }, [hideAmounts]);
   const [toast, setToast] = useState(null);
+  // Persistent banner shown during long-running async ops (bank sync can take
+  // 10-30s; a 3.5s toast is gone before it finishes). null = idle, string = label.
+  const [syncBusy, setSyncBusy] = useState(null);
   const [sidebarMenuOpen, setSidebarMenuOpen] = useState(false);
 
   // Multi-currency: user's display currency + live FX rates (Frankfurter, 1h cache).
@@ -1221,14 +1224,18 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
         // Auto-sync the freshly-connected bank so the user doesn't have to
         // chase down a hidden Sync button to see their transactions.
         if (result.connection_id) {
+          // Persistent banner so the user knows we're working (3.5s toast
+          // disappears way before GC sync finishes — can take 10-30s).
+          setSyncBusy('Synchronisation de la banque… cela peut prendre 30 secondes.');
           try {
-            showToast(t('toasts.syncRunning'), 'info');
             const syncRes = await api.banking.sync(result.connection_id);
             showToast(t('toasts.syncImported', { count: syncRes.imported }), 'success');
             await reloadAll();
             if (syncRes.imported > 0) unlockAchievement('first_import');
           } catch (syncErr) {
             showToast(t('toasts.syncError', { message: syncErr.message }), 'error');
+          } finally {
+            setSyncBusy(null);
           }
         }
       } else {
@@ -1249,14 +1256,16 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   }, [bankingPendingState, loading, completeBankCallback]);
 
   const syncBankConnection = async (connectionId) => {
+    setSyncBusy('Synchronisation de la banque… cela peut prendre 30 secondes.');
     try {
-      showToast(t('toasts.syncRunning'), 'info');
       const result = await api.banking.sync(connectionId);
       showToast(t('toasts.syncImported', { count: result.imported }), 'success');
       await reloadAll();
       if (result.imported > 0) unlockAchievement('first_import');
     } catch (err) {
       showToast(t('toasts.syncError', { message: err.message }), 'error');
+    } finally {
+      setSyncBusy(null);
     }
   };
 
@@ -1265,18 +1274,24 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       showToast(t('toasts.noBankConnected'), 'info');
       return;
     }
-    showToast(t('toasts.syncAllStart'), 'info');
+    setSyncBusy(`Synchronisation de ${bankConnections.length} banque${bankConnections.length > 1 ? 's' : ''}…`);
     let totalImported = 0;
     let errors = 0;
-    for (const conn of bankConnections) {
-      try {
-        const result = await api.banking.sync(conn.id);
-        totalImported += result.imported || 0;
-      } catch {
-        errors++;
+    try {
+      for (let i = 0; i < bankConnections.length; i++) {
+        const conn = bankConnections[i];
+        setSyncBusy(`Synchronisation ${i + 1}/${bankConnections.length} — ${conn.bank_name || 'banque'}…`);
+        try {
+          const result = await api.banking.sync(conn.id);
+          totalImported += result.imported || 0;
+        } catch {
+          errors++;
+        }
       }
+      await reloadAll();
+    } finally {
+      setSyncBusy(null);
     }
-    await reloadAll();
     if (errors > 0 && totalImported === 0) {
       showToast(t('toasts.syncAllFail', { count: errors }), 'error');
     } else if (errors > 0) {
@@ -1548,6 +1563,12 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     <div className={`app theme-${theme}`}>
       <Styles theme={theme}/>
       {toast && <Toast message={toast.message} type={toast.type}/>}
+      {syncBusy && (
+        <div className="sync-busy-banner" role="status" aria-live="polite">
+          <RefreshCw size={14} className="spin"/>
+          <span>{syncBusy}</span>
+        </div>
+      )}
 
       {demoMode && (
         <div className="demo-banner">
