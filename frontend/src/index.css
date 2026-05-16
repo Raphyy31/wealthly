@@ -1755,3 +1755,57 @@ html, body {
   .rec-th:nth-child(2), .rec-th:nth-child(3), .rec-th:nth-child(6) { display: none; }
   .rec-cat, .rec-freq, .rec-last { display: none; }
 }
+
+/* ============================================================================
+   Plus-value latente — panel dans la fiche du prêt lié
+   ============================================================================ */
+.loan-pl-panel {
+  margin-top: 18px;
+  padding: 18px 20px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.loan-pl-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.loan-pl-intro { margin: 4px 0 0; font-size: 12.5px; color: var(--ink-3); line-height: 1.5; max-width: 480px; }
+.loan-pl-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+}
+@media (max-width: 720px) { .loan-pl-grid { grid-template-columns: 1fr; } }
+.loan-pl-card {
+  padding: 14px 16px;
+  background: var(--bg-sunk);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.loan-pl-card-label {
+  font: 600 10.5px var(--font-sans);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--ink-3);
+}
+.loan-pl-card-hint { font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 10.5px; opacity: 0.85; }
+.loan-pl-card-value {
+  font: 600 22px var(--font-mono);
+  letter-spacing: -0.02em;
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  font-variant-numeric: tabular-nums;
+  margin: 4px 0 8px;
+}
+.loan-pl-card-value.pl-up { color: var(--positive); }
+.loan-pl-card-value.pl-down { color: var(--negative); }
+.loan-pl-card-pct { font-size: 12.5px; font-weight: 500; opacity: 0.85; }
+.loan-pl-card-detail {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font: 500 12.5px var(--font-sans);
+  color: var(--ink-2);
+  padding: 2px 0;
+  border-top: 1px solid var(--border);
+}
+.loan-pl-card-detail:first-of-type { border-top: 1px solid var(--border-strong); margin-top: 4px; padding-top: 6px; }
+.loan-pl-card-detail.muted { color: var(--ink-3); font-weight: 400; }
+.loan-pl-footnote {
+  margin: 14px 0 0;
+  font-size: 11.5px; color: var(--ink-3); line-height: 1.55;
+}
+.loan-pl-footnote strong { color: var(--ink-2); font-weight: 600; }

@@ -1466,6 +1466,89 @@ function LiabilityDetail({ liability, assets, members, memberShare, fmt, onEdit,
                 </button>
               )}
 
+              {/* Plus-value latente : 2 calculs côte à côte avec détail
+                  - Brute  = Valeur actuelle − Prix d'achat (vision marché courante)
+                  - Nette  = Valeur actuelle − (Prix d'achat + notaire + agence + travaux + mobilier)
+                            (déductions fiscales à la cession) */}
+              {linkedAsset && (() => {
+                const cv = parseFloat(linkedAsset.currentValue) || 0;
+                const pp = parseFloat(linkedAsset.purchasePrice) || 0;
+                const notaryFees = parseFloat(linkedAsset.notaryFees) || 0;
+                const agencyFees = parseFloat(linkedAsset.agencyFees) || 0;
+                const worksFees = parseFloat(linkedAsset.worksFees) || 0;
+                const furnitureFees = parseFloat(linkedAsset.furnitureFees) || 0;
+                const acqExtra = notaryFees + agencyFees + worksFees + furnitureFees;
+                const acqTotal = pp + acqExtra;
+                if (cv <= 0 || pp <= 0) return null;
+                const plBrute = cv - pp;
+                const plBrutePct = (plBrute / pp) * 100;
+                const plNette = cv - acqTotal;
+                const plNettePct = acqTotal > 0 ? (plNette / acqTotal) * 100 : 0;
+                return (
+                  <div className="loan-pl-panel">
+                    <div className="loan-pl-head">
+                      <div>
+                        <div className="loan-monthly-label">PLUS-VALUE LATENTE</div>
+                        <p className="loan-pl-intro">
+                          Estimation de la valorisation du bien lié.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="loan-pl-grid">
+                      <div className="loan-pl-card">
+                        <div className="loan-pl-card-label">Plus-value brute <span className="loan-pl-card-hint">(marché)</span></div>
+                        <div className={`loan-pl-card-value w-num ${plBrute >= 0 ? 'pl-up' : 'pl-down'}`}>
+                          {plBrute >= 0 ? '+' : ''}{fmt(plBrute)}
+                          <span className="loan-pl-card-pct">{plBrute >= 0 ? '+' : ''}{plBrutePct.toFixed(1).replace('.', ',')} %</span>
+                        </div>
+                        <div className="loan-pl-card-detail">
+                          <span>Valeur actuelle</span><span className="w-num">{fmt(cv)}</span>
+                        </div>
+                        <div className="loan-pl-card-detail">
+                          <span>− Prix d'achat</span><span className="w-num">{fmt(pp)}</span>
+                        </div>
+                      </div>
+                      <div className="loan-pl-card">
+                        <div className="loan-pl-card-label">Plus-value nette <span className="loan-pl-card-hint">(fiscale, à la cession)</span></div>
+                        <div className={`loan-pl-card-value w-num ${plNette >= 0 ? 'pl-up' : 'pl-down'}`}>
+                          {plNette >= 0 ? '+' : ''}{fmt(plNette)}
+                          <span className="loan-pl-card-pct">{plNette >= 0 ? '+' : ''}{plNettePct.toFixed(1).replace('.', ',')} %</span>
+                        </div>
+                        <div className="loan-pl-card-detail">
+                          <span>Valeur actuelle</span><span className="w-num">{fmt(cv)}</span>
+                        </div>
+                        <div className="loan-pl-card-detail">
+                          <span>− Prix d'achat</span><span className="w-num">{fmt(pp)}</span>
+                        </div>
+                        {notaryFees > 0 && (
+                          <div className="loan-pl-card-detail muted">
+                            <span>− Frais notaire</span><span className="w-num">{fmt(notaryFees)}</span>
+                          </div>
+                        )}
+                        {agencyFees > 0 && (
+                          <div className="loan-pl-card-detail muted">
+                            <span>− Frais d'agence</span><span className="w-num">{fmt(agencyFees)}</span>
+                          </div>
+                        )}
+                        {worksFees > 0 && (
+                          <div className="loan-pl-card-detail muted">
+                            <span>− Travaux</span><span className="w-num">{fmt(worksFees)}</span>
+                          </div>
+                        )}
+                        {furnitureFees > 0 && (
+                          <div className="loan-pl-card-detail muted">
+                            <span>− Mobilier</span><span className="w-num">{fmt(furnitureFees)}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <p className="loan-pl-footnote">
+                      <strong>Brute</strong> reflète la performance courante de l'actif sur le marché. <strong>Nette</strong> sera la base imposable si tu vends — les frais de notaire, d'agence et les travaux justifiés se déduisent à la cession.
+                    </p>
+                  </div>
+                );
+              })()}
+
               {owners && (
                 <div className="loan-finary-meta">
                   <Users size={13}/> {owners}
@@ -1679,11 +1762,7 @@ function RealEstateDetail({ asset, liabilities = [], members = [], memberShare, 
             </div>
             <div className="drawer-total">
               <div className="drawer-total-val w-num">{fmt(currentValue)}</div>
-              {totalAcquisitionCost > 0 && (
-                <div className={`drawer-total-delta ${plLatente >= 0 ? 'up' : 'down'}`}>
-                  {plLatente >= 0 ? '+' : ''}{fmt(plLatente)} · {plLatente >= 0 ? '+' : ''}{plLatentePct.toFixed(1)}%
-                </div>
-              )}
+              {/* Plus-value latente déplacée sur la fiche du prêt lié */}
             </div>
           </div>
 
@@ -1745,22 +1824,11 @@ function RealEstateDetail({ asset, liabilities = [], members = [], memberShare, 
             </div>
           )}
 
-          {/* Plus-value latente (si data acquisition disponible) */}
-          {totalAcquisitionCost > 0 && (
-            <div className="re-pl-panel">
-              <div className="loan-monthly-label">PLUS-VALUE LATENTE</div>
-              <div className={`re-pl-value w-num ${plLatente >= 0 ? 'pl-up' : 'pl-down'}`}>
-                {plLatente >= 0 ? '+' : ''}{fmt(plLatente)}
-                <span className="re-pl-pct">{plLatente >= 0 ? '+' : ''}{plLatentePct.toFixed(1).replace('.', ',')} %</span>
-              </div>
-              {yieldAnnual !== 0 && (
-                <div className="re-pl-meta">
-                  Rendement annualisé : <strong className="w-num">{yieldAnnual >= 0 ? '+' : ''}{yieldAnnual.toFixed(1).replace('.', ',')} %/an</strong>
-                  <em> · avant fiscalité de cession</em>
-                </div>
-              )}
-            </div>
-          )}
+          {/* Plus-value latente : déplacée sur la fiche du prêt lié pour
+              éviter d'afficher un chiffre trompeur sur le bien (les frais
+              de notaire + travaux ne se déduisent qu'à la cession fiscale,
+              pas pour évaluer la performance courante du bien). Voir le
+              prêt rattaché pour le détail du calcul. */}
 
           {/* Détenteurs */}
           <div className="loan-finary-meta" style={{ marginTop: 4 }}>
