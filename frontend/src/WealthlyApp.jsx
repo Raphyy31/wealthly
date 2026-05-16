@@ -1010,12 +1010,20 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     }
     if (!tx?.label) return;
     const suggested = extractMerchantFromLabel(tx.label) || '';
+    if (suggested.length < 2) return; // not enough to build a meaningful rule
     // Don't offer a rule if we already have one for the same (suggested, target).
     const existing = customRules.some(r =>
       r.pattern.toLowerCase() === suggested.toLowerCase() && r.categoryId === categoryId
     );
     if (existing) return;
     const cat = categories.find(c => c.id === categoryId);
+    // Ask before popping the rule editor — was too aggressive when it opened
+    // systematically on every category change. User can say no and keep
+    // working; they can still create rules manually from Réglages.
+    const accept = window.confirm(
+      `Créer une règle pour catégoriser automatiquement les futures transactions « ${suggested} » en « ${cat?.name || categoryId} » ?`
+    );
+    if (!accept) return;
     setRuleModal({
       txId,
       categoryId,
