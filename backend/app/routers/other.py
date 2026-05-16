@@ -276,7 +276,13 @@ def list_rules(db: Session = Depends(get_db), user: User = Depends(get_current_u
 
 @router.post("/rules", response_model=RuleOut, status_code=201)
 def create_rule(payload: RuleCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    rule = CategorisationRule(household_id=user.household_id, **payload.model_dump())
+    data = payload.model_dump()
+    # Pour les règles de type 'transfer' (flag virement interne), le slug
+    # catégorie n'est pas utilisé mais la colonne DB est NOT NULL → on met
+    # une valeur sentinelle 'uncategorized' que le moteur ignore.
+    if data.get("rule_type") == "transfer" and not data.get("category_slug"):
+        data["category_slug"] = "uncategorized"
+    rule = CategorisationRule(household_id=user.household_id, **data)
     db.add(rule)
     db.commit()
     db.refresh(rule)

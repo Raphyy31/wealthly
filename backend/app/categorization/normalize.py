@@ -15,6 +15,7 @@ On extrait :
 quand l'extraction du merchant rate (regex matchent contre les deux).
 """
 import re
+import unicodedata
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -28,15 +29,16 @@ class NormalizedLabel:
     flags: set = field(default_factory=set)
 
 
-# Map ASCII pour _strip_accents — plus rapide que unicodedata.normalize.
-_ACCENTS = str.maketrans(
-    "àâäáãåèéêëìíîïòóôõöøùúûüýÿñçÀÂÄÁÃÅÈÉÊËÌÍÎÏÒÓÔÕÖØÙÚÛÜÝŸÑÇ",
-    "aaaaaaeeeeiiiiooooooouuuuyyncAAAAAAEEEEIIIIOOOOOOOUUUUYYNC",
-)
-
-
 def _strip_accents(s: str) -> str:
-    return s.translate(_ACCENTS)
+    """Désaccentue via décomposition NFKD + filtrage des marques combinantes.
+
+    Méthode canonique Python : robuste à tous les cas (français, espagnol,
+    allemand, scandinave) sans table de correspondance fragile.
+    """
+    return "".join(
+        c for c in unicodedata.normalize("NFKD", s)
+        if not unicodedata.combining(c)
+    )
 
 
 # ─── Préfixes verbaux à retirer pour extraire le merchant ────────────────────
