@@ -1076,14 +1076,29 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     const pattern = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const regex = new RegExp(pattern, 'i');
 
-    // ─── Mode 'transfer' : marque toutes les tx matching comme virement interne
-    // (manual override is_transfer_override=true). Pas de règle persistée pour
-    // l'instant — pour les futurs imports, l'user re-flag ou connecte le compte.
+    // ─── Mode 'transfer' : persiste une CategorisationRule(rule_type='transfer')
+    // + flag les tx existantes matching pour UX immédiate. Le moteur backend
+    // (engine.py couche user_rule) flag automatiquement les futurs imports
+    // ET les sync GoCardless via la même règle persistée.
     if (mode === 'transfer') {
       const matches = transactions.filter(x => regex.test(x.label || ''));
       try {
-        await Promise.allSettled(matches.map(x => setTransferOverride(x.id, true)));
-        showToast(`« ${keyword} » : ${matches.length} transaction${matches.length > 1 ? 's' : ''} marquée${matches.length > 1 ? 's' : ''} comme virement interne.`, 'success');
+        // 1) Persiste la règle pour les futurs imports
+        const newRule = await api.rules.create({
+          pattern, category_slug: 'uncategorized', source: 'learned',
+          created_by: 'user', rule_type: 'transfer', priority: 100,
+        });
+        setCustomRules(prev => [...prev, { pattern, categoryId: 'uncategorized', source: 'learned', _id: newRule.id, rule_type: 'transfer' }]);
+        // 2) Flag les tx existantes (instant feedback)
+        if (matches.length > 0) {
+          await Promise.allSettled(matches.map(x => setTransferOverride(x.id, true)));
+        }
+        showToast(
+          matches.length > 0
+            ? `Règle « ${keyword} » créée — ${matches.length} transaction${matches.length > 1 ? 's' : ''} marquée${matches.length > 1 ? 's' : ''} comme virement, futurs imports auto-flag.`
+            : `Règle « ${keyword} » créée — les futurs imports seront marqués comme virement interne.`,
+          'success'
+        );
       } catch (err) {
         showToast(t('toasts.genericError', { message: err.message }), 'error');
       } finally {
