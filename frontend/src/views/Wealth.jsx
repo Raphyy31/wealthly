@@ -152,6 +152,13 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
   const totalLiabilities = visibleLiabilities.reduce((s, l) => s + (parseFloat(l.remainingCapital) || 0) * memberShare(l), 0);
   const netWealthAssets = totalAssets - totalLiabilities;
 
+  // Patrimoine financier : exclut immobilier + prêts immo
+  const realEstateValue = visibleAssets.filter(a => a.type === 'real_estate')
+    .reduce((s, a) => s + (parseFloat(a.currentValue) || 0) * memberShare(a), 0);
+  const mortgageDebt = visibleLiabilities.filter(l => l.type === 'mortgage')
+    .reduce((s, l) => s + (parseFloat(l.remainingCapital) || 0) * memberShare(l), 0);
+  const financialWealthLocal = liquidWealth + (totalAssets - realEstateValue) - (totalLiabilities - mortgageDebt);
+
   // Asset class allocation for donut chart
   const classAllocation = useMemo(() => {
     const classes = {};
@@ -293,8 +300,8 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
       {isAll && (
         <section className="wealth-summary-net">
           <div className="wsn-card">
-            <div className="wsn-label">{t('wealth.netWorthHero', { defaultValue: 'Patrimoine net' })}</div>
-            <div className="wsn-value"><AnimatedNumber value={totalAssets - totalLiabilities} format={(v) => fmt(v)}/></div>
+            <div className="wsn-label">Patrimoine financier <span style={{ fontSize: '0.75em', color: 'var(--ink-3)', fontWeight: 400 }}>· hors immobilier</span></div>
+            <div className="wsn-value"><AnimatedNumber value={financialWealthLocal} format={(v) => fmt(v)}/></div>
             {totalLiabilities > 0 && (
               <div className="wsn-debt-mini num">
                 {t('wealth.totalLiabilities')} · {fmt(-totalLiabilities)} ({visibleLiabilities.length} prêt{visibleLiabilities.length > 1 ? 's' : ''})

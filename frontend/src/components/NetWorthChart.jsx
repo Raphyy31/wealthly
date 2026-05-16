@@ -27,7 +27,7 @@ const NW_MODES = [
 ];
 
 export const NetWorthChart = React.memo(function NetWorthChart({ snapshots = [], fmt }) {
-  const [mode, setMode] = useState('net');
+  const [mode, setMode] = useState('financial');
   const [view, setView] = useState('evolution'); // evolution | performance
   const [period, setPeriod] = useState('TOUT');
 
