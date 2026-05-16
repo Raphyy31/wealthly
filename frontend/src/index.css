@@ -1359,7 +1359,7 @@ html, body {
 
 .tx-feed {
   display: flex; flex-direction: column;
-  gap: 24px;
+  gap: 28px;
   margin-bottom: 32px;
 }
 .tx-feed-empty {
@@ -1385,23 +1385,23 @@ html, body {
 }
 .tx-day-head {
   display: flex; align-items: baseline; justify-content: space-between;
-  padding: 0 4px 10px;
+  padding: 8px 4px 12px;
   border-bottom: 1px solid var(--border);
   margin-bottom: 4px;
 }
 .tx-day-label {
-  font: 500 13px var(--font-sans);
-  color: var(--ink-2);
+  font: 600 14px var(--font-sans);
+  color: var(--ink);
   text-transform: capitalize;
-  letter-spacing: -0.005em;
+  letter-spacing: -0.01em;
 }
 .tx-day-total {
-  font: 600 14px var(--font-mono);
+  font: 600 15px var(--font-mono);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
 }
 .tx-day-total.positive { color: var(--positive); }
-.tx-day-total.negative { color: var(--ink-2); }
+.tx-day-total.negative { color: var(--negative); }
 .tx-day-total.neutral  { color: var(--ink-3); }
 
 .tx-day-rows {
@@ -1472,6 +1472,20 @@ html, body {
   /* overflow stays visible so the tooltip pseudo-element below isn't clipped.
      Truncation happens on the inner .tx-card-label-text span. */
 }
+.tx-card-payee { color: var(--ink-3); font-weight: 400; }
+.tx-cat-source-dot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 999px;
+  margin-left: 6px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+.tx-cat-source-dot.src-user_rule     { background: var(--positive); }
+.tx-cat-source-dot.src-payee_default { background: var(--accent); }
+.tx-cat-source-dot.src-learned_rule  { background: #B69BF2; }
+.tx-cat-source-dot.src-builtin_rule  { background: var(--ink-3); }
+.tx-cat-source-dot.src-llm           { background: #7E92FF; }
 .tx-card-label-text {
   display: block;
   font: 500 14px var(--font-sans);

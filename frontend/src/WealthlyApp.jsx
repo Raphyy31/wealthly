@@ -186,6 +186,9 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     isTransferOverride: t.is_transfer_override ?? null,
     notes: t.notes || '',
     tags: t.tags || [],
+    payeeId: t.payee_id || null,
+    payeeName: t.payee_name || null,
+    catSource: t.cat_source || null, // user_rule | payee_default | learned_rule | builtin_rule | llm | unknown
   });
   const txToApi = (t) => ({
     account_id: t.accountId,

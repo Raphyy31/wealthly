@@ -810,7 +810,19 @@ export function Transactions({ transactions, accounts, categories, members = [],
                             </div>
                           )}
                           <div className="tx-card-label" data-tooltip={tx.label || 'Sans libellé'}>
-                            <span className="tx-card-label-text">{tx.label || 'Sans libellé'}</span>
+                            <span className="tx-card-label-text">
+                              {tx.label || 'Sans libellé'}
+                              {tx.payeeName && <span className="tx-card-payee" title="Marchand canonique"> · {tx.payeeName}</span>}
+                            </span>
+                            {tx.catSource && tx.catSource !== 'unknown' && (
+                              <span className={`tx-cat-source-dot src-${tx.catSource}`} title={({
+                                'user_rule': 'Catégorisé via ta règle',
+                                'payee_default': 'Catégorie par défaut du marchand',
+                                'learned_rule': 'Règle apprise automatiquement',
+                                'builtin_rule': 'Règle intégrée Wealthly',
+                                'llm': 'Catégorisé par l\'IA',
+                              })[tx.catSource]}/>
+                            )}
                           </div>
                           <div className="tx-card-col tx-card-col-cat">
                             {isTransfer ? (

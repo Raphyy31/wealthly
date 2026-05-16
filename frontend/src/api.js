@@ -192,6 +192,18 @@ export const rules = {
   delete: (id) => del(`/rules/${id}`),
 };
 
+export const payees = {
+  list: () => get('/payees'),
+  create: (p) => post('/payees', p),
+  update: (id, p) => put(`/payees/${id}`, p),
+  delete: (id) => del(`/payees/${id}`),
+  merge: (id, otherId) => post(`/payees/${id}/merge/${otherId}`, {}),
+};
+
+export const categorizeEngine = {
+  preview: (label, amount = 0) => post('/categorize/preview', { label, amount }),
+};
+
 // ============================================================================
 // AI CATEGORIZATION
 // ============================================================================

@@ -685,6 +685,7 @@ function CustomRulesSection({ categories }) {
   const [newTopId, setNewTopId] = useState('');     // niveau 1 (Catégorie)
   const [newSubId, setNewSubId] = useState('');     // niveau 2 (Détail, optionnel)
   const [submitting, setSubmitting] = useState(false);
+  const [rulesFilter, setRulesFilter] = useState('all'); // all | user | learning | transfer
 
   const refresh = useCallback(async () => {
     try {
@@ -810,10 +811,34 @@ function CustomRulesSection({ categories }) {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {rules.map((r) => {
+          {/* Filtre par provenance (Manuelle / Apprise / Intégrée) */}
+          <div style={{ display: 'flex', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
+            {[
+              { v: 'all', label: `Toutes (${rules.length})` },
+              { v: 'user', label: `Manuelles (${rules.filter(r => (r.created_by || 'user') === 'user').length})` },
+              { v: 'learning', label: `🧠 Apprises (${rules.filter(r => r.created_by === 'learning').length})` },
+              { v: 'transfer', label: `↔ Virement (${rules.filter(r => r.rule_type === 'transfer').length})` },
+            ].map(opt => (
+              <button
+                key={opt.v}
+                className={`tx-sort-btn ${rulesFilter === opt.v ? 'active' : ''}`}
+                onClick={() => setRulesFilter(opt.v)}
+                style={{ fontSize: 11 }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          {rules.filter(r => {
+            if (rulesFilter === 'all') return true;
+            if (rulesFilter === 'transfer') return r.rule_type === 'transfer';
+            return (r.created_by || 'user') === rulesFilter;
+          }).map((r) => {
             const slug = r.category_slug || r.categoryId;
             const cat = categories.find((c) => c.id === slug);
             const parentCat = cat?.parent ? categories.find((c) => c.id === cat.parent) : null;
+            const cb = r.created_by || 'user';
+            const isTransferRule = r.rule_type === 'transfer';
             return (
               <div
                 key={r.id}
@@ -842,6 +867,18 @@ function CustomRulesSection({ categories }) {
                 >
                   /{r.pattern}/i
                 </code>
+                {/* Badge provenance : Manuelle / 🧠 Apprise / Intégrée */}
+                {cb !== 'user' && (
+                  <span style={{
+                    fontSize: 10, padding: '2px 7px', borderRadius: 4,
+                    background: cb === 'learning' ? '#E7E0F7' : 'var(--bg-elev)',
+                    color: cb === 'learning' ? '#7B57C6' : 'var(--ink-3)',
+                    textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600,
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {cb === 'learning' ? '🧠 Apprise' : cb === 'builtin' ? 'Intégrée' : cb}
+                  </span>
+                )}
                 <span
                   style={{
                     display: 'inline-flex',
@@ -849,16 +886,18 @@ function CustomRulesSection({ categories }) {
                     gap: 5,
                     padding: '4px 10px',
                     borderRadius: 6,
-                    background: (cat?.color || '#999') + '22',
-                    color: cat?.color || 'var(--text-secondary)',
+                    background: isTransferRule ? 'var(--accent-soft)' : (cat?.color || '#999') + '22',
+                    color: isTransferRule ? 'var(--accent)' : (cat?.color || 'var(--text-secondary)'),
                     fontSize: 11,
                     fontWeight: 600,
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  {parentCat
-                    ? <>{parentCat.icon} {parentCat.name} <span style={{ opacity: 0.6 }}>›</span> {cat.icon} {cat.name}</>
-                    : <>{cat?.icon} {cat?.name || slug}</>}
+                  {isTransferRule
+                    ? <>↔ Virement interne</>
+                    : (parentCat
+                        ? <>{parentCat.icon} {parentCat.name} <span style={{ opacity: 0.6 }}>›</span> {cat.icon} {cat.name}</>
+                        : <>{cat?.icon} {cat?.name || slug}</>)}
                 </span>
                 <button className="icon-btn-sm" onClick={() => onDelete(r.id)} title={t('actions.delete')}>
                   <Trash2 size={13}/>
