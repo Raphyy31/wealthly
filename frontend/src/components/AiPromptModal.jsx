@@ -23,10 +23,19 @@ export function AiPromptModal({ open, transactions = [], categories = [], accoun
   }, [transactions]);
 
   // Slug list for the prompt — only expense + income, skip techniques.
-  // Format: "slug — Name (parent name if sub)" so the LLM sees the hierarchy.
+  // Filters out test slugs and de-duplicates concept-equivalent pairs so the
+  // model sees a single option per concept and doesn't hesitate at random.
   const slugList = useMemo(() => {
+    // Drop user-created test/garbage slugs that pollute the picker.
+    const isTestSlug = (id) => /^test(-|$)/i.test(id) || /-assurance-scooter$/i.test(id);
+    // Concept-equivalent duplicates : keep the canonical (built-in) slug,
+    // drop the alias that creates ambiguity for the model.
+    const DUP_DROP = new Set(['sport', 'pharmacy', 'streaming', 'childcare']);
+
     return categories
       .filter(c => c.type !== 'transfer' && c.id !== 'uncategorized')
+      .filter(c => !isTestSlug(c.id))
+      .filter(c => !DUP_DROP.has(c.id))
       .map(c => {
         const parent = c.parent ? categories.find(p => p.id === c.parent) : null;
         return parent
@@ -53,25 +62,92 @@ export function AiPromptModal({ open, transactions = [], categories = [], accoun
     }).join('\n');
     return `Tu es un assistant qui catégorise des transactions bancaires françaises.
 
-Voici les catégories disponibles (utilise EXACTEMENT le slug entre backticks, jamais le nom français) :
+# Catégories disponibles
+
+Utilise EXACTEMENT le slug (premier mot avant le tiret), jamais le nom français.
 
 ${slugList}
 
-Voici ${candidates.length} transaction${candidates.length > 1 ? 's' : ''} à catégoriser (format : numéro, [date · compte], montant, libellé brut) :
+# Étape 1 — Scan préalable (récurrence)
+
+AVANT de catégoriser ligne par ligne, parcours toute la liste pour repérer les marchands récurrents :
+- même nom (insensible à la casse, codes numériques / dates ignorés)
+- apparaissant ≥ 2 fois sur ≥ 2 mois différents
+- avec un montant similaire (±20 %)
+
+Pour ces marchands récurrents :
+- Si abonnement / service → \`subs_*\` (subs_video, subs_music, subs_cloud, subs_gym, subs_press, subs_services)
+- Si charge fixe → \`rent\`, \`insurance_*\`, \`electricity_gas\`, \`water\`, \`internet_telecom\`, etc.
+- Si salaire / pension → \`salary\` / \`other_income\`
+
+Pour les marchands ponctuels (≤ 1 occurrence) → catégorise selon le type de produit / service du marchand.
+
+# Étape 2 — Web search pour les marchands inconnus (si tu y as accès)
+
+Si tu as accès à une recherche web et qu'un marchand est inconnu :
+- Cherche le nom du marchand (sans codes numériques, dates, préfixes bancaires)
+- Identifie son secteur d'activité (resto, transport, mode, abonnement…)
+- Budget : maximum 1 recherche par marchand inconnu, et seulement si le nom contient ≥ 4 lettres
+- Si toujours incertain après recherche → \`uncategorized\`
+
+Si tu n'as PAS accès à une recherche web, ignore cette étape.
+
+# Étape 3 — Règles de catégorisation
+
+**Préfixes bancaires à ignorer** pour identifier le marchand : \`PAIEMENT PAR CARTE X\\d+\`, \`PRELEVEMENT\`, \`VIREMENT EMIS WEB\`, \`RETRAIT AU DISTRIBUTEUR X\\d+\`, \`COTISATION\`, \`CHEQUE EMIS\`, dates en suffixe (\`12/04\`), heures (\`14H30\`).
+
+**Processeurs de paiement** : PAYPAL / STRIPE / SUMUP / LYDIA / SQ * / NYX * précèdent souvent le vrai marchand. Exemple : \`PAYPAL *NESPRESSO\` → catégorise Nespresso, pas Paypal.
+
+**Sous-catégorie la plus spécifique** : si \`subs_video\` colle, préfère-la à \`subscriptions\`.
+
+**Cotisations bancaires** : \`COTISATION Offre Premium\`, \`COTISATION Carte ...\` → \`fees\`.
+
+# Étape 4 — Quand mettre \`uncategorized\`
+
+Mets \`uncategorized\` (avec confiance) dans ces cas :
+- Libellé composé uniquement de codes numériques ou identifiants opaques (\`4657-PAR-CHAMPS\`, \`1398858\`, \`MCB-LA-POMPADOUR\`)
+- Libellé contenant un nom de personne sans contexte commercial (\`BOKOBZA ETHEL NOA\`, \`DUPONT JEAN\`)
+- Chèque émis sans bénéficiaire identifiable (\`CHEQUE EMIS XXXXXX\`)
+- Versement d'espèces / virement entre comptes du même titulaire
+- Confiance < 70 % après scan + web search
+
+# Étape 5 — Transferts internes (entre tes propres comptes)
+
+Mets \`uncategorized\` (l'utilisateur les marquera comme virement interne via le badge ↔). N'invente PAS de slug \`transfer\` — il n'existe pas dans la liste.
+
+Indices génériques de transfert interne :
+- Libellé contient le nom d'une carte/banque secondaire de l'utilisateur (Revolut, N26, Lydia, Wise, Bunq, etc.)
+- Montant positif sur une carte de crédit avec libellé \`PRELEVEMENT\`, \`PAIEMENT REÇU\`, \`ENREGISTRE-MERCI\`, \`DÉPENSE ÉCHELONNÉE\` (côté +)
+- Paire \`-X / +X\` même jour même libellé (échelonnement de paiement carte de crédit)
+
+# Étape 6 — Exemples (universels)
+
+Quelques cas résolus pour calibrer ton raisonnement :
+
+- \`PAIEMENT PAR CARTE X1234 NETFLIX.COM 12/04\` (récurrent ~11,99 €/mois) → \`subs_video\`
+- \`PAIEMENT PAR CARTE X1234 UBER * EATS 22/04\` → \`resto_delivery\`
+- \`PAIEMENT PAR CARTE X1234 UBER * TRIP 22/04\` → \`taxi_vtc\`
+- \`PRELEVEMENT EDF\` (récurrent mensuel) → \`electricity_gas\`
+- \`VIREMENT EN VOTRE FAVEUR SALAIRE\` (récurrent mensuel ≥ 1500 €) → \`salary\`
+- \`PAIEMENT PAR CARTE X1234 AMAZON PAYMENTS 03/05\` (montants variables, ponctuel) → \`shop_marketplace\`
+- \`PAIEMENT PAR CARTE X1234 CARREFOUR LEVALLOIS 14/05\` → \`groceries_super\`
+- \`PRELEVEMENT AUTOMATIQUE ENREGISTRE-MERCI\` (montant positif sur AMEX/CB) → \`uncategorized\` (règlement carte de crédit = transfert)
+- \`COTISATION Offre Premium\` (récurrent ~15 €/mois) → \`fees\`
+- \`CHEQUE EMIS 1398858\` → \`uncategorized\`
+
+# Transactions à catégoriser
+
+Format : numéro, [date · compte], montant, libellé brut.
 
 ${txLines}
 
-Réponds UNIQUEMENT avec un objet JSON, sans texte avant ou après, au format :
+# Format de réponse
+
+Réponds UNIQUEMENT avec un objet JSON, sans texte avant ou après, au format strict :
+
 {"1": "slug_choisi", "2": "slug_choisi", ...}
 
-Règles :
-- Si tu n'es pas sûr à au moins 70 %, mets "uncategorized".
-- Pour les transferts entre comptes du même propriétaire, mets "transfer".
-- Privilégie la sous-catégorie la plus spécifique (ex: "subs_video" plutôt que "subscriptions" pour Netflix).
-- Les libellés bancaires français contiennent souvent "PAIEMENT PAR CARTE", "PRELEVEMENT", "VIREMENT" — ignore ces préfixes pour identifier le marchand.
-- Les processeurs comme PAYPAL/STRIPE/SUMUP précèdent souvent le vrai marchand (ex: "PAYPAL *NESPRESSO" = Nespresso, donc subs_services ou subscriptions).
-- Les transactions récurrentes à montant identique chaque mois (même date approximative, même libellé) sont probablement des abonnements → privilégie subscriptions/subs_*.
-- Le compte source peut aider : un compte "Livret A" / "PEA" reçoit surtout des transferts d'épargne/investissement, un compte courant principal reçoit les salaires.`;
+Chaque valeur DOIT être un slug exact présent dans la liste de catégories ci-dessus, ou \`uncategorized\`.`;
   }, [candidates, slugList]);
 
   if (!open) return null;
