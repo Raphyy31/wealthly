@@ -632,6 +632,15 @@ export function Transactions({ transactions, accounts, categories, members = [],
 
         return (
           <div className="tx-feed">
+            <div className="tx-feed-colhead">
+              <span/>
+              <span>Libellé</span>
+              <span>Catégorie</span>
+              <span>Détail</span>
+              <span>Compte</span>
+              <span/>
+              <span className="right">Montant</span>
+            </div>
             {groups.map(({ date, txs }) => {
               const total = txs.reduce((s, t) => s + (t.amount || 0), 0);
               const totalCls = total > 0.005 ? 'positive' : total < -0.005 ? 'negative' : 'neutral';
@@ -674,69 +683,66 @@ export function Transactions({ transactions, accounts, categories, members = [],
                               />
                             </div>
                           )}
-                          <div className="tx-card-body">
-                            <div className="tx-card-label" title={tx.label || 'Sans libellé'}>
-                              {tx.label || 'Sans libellé'}
-                            </div>
-                            <div className="tx-card-meta">
-                              {isTransfer ? (
-                                <button
-                                  className="tx-card-cat-pill transfer"
-                                  onClick={() => setTransferOverride && setTransferOverride(tx.id, false)}
-                                  title="Détecté transfert — clic pour annuler"
-                                >
-                                  ↔ Virement interne
-                                </button>
+                          <div className="tx-card-label" title={tx.label || 'Sans libellé'}>
+                            {tx.label || 'Sans libellé'}
+                          </div>
+                          <div className="tx-card-col tx-card-col-cat">
+                            {isTransfer ? (
+                              <button
+                                className="tx-card-cat-pill transfer"
+                                onClick={() => setTransferOverride && setTransferOverride(tx.id, false)}
+                                title="Détecté transfert — clic pour annuler"
+                              >
+                                ↔ Virement interne
+                              </button>
+                            ) : (
+                              <button
+                                className="tx-card-cat-pill"
+                                style={{
+                                  color: display?.color || 'var(--ink-2)',
+                                  background: (display?.color || '#9ca3af') + '22',
+                                }}
+                                onClick={() => setEditingTx(tx.id)}
+                              >
+                                {display?.name || 'Non catégorisé'}
+                              </button>
+                            )}
+                          </div>
+                          <div className="tx-card-col tx-card-col-sub">
+                            {!isTransfer && cat ? (cat.parent ? (
+                              editingSubcat === tx.id ? (
+                                <SubCatPicker
+                                  categories={categories}
+                                  topSlug={cat.parent}
+                                  currentId={cat.id}
+                                  onSelect={(catId) => { updateCategory(tx.id, catId); }}
+                                  onClose={() => setEditingSubcat(null)}
+                                />
                               ) : (
-                                <button
-                                  className="tx-card-cat-pill"
-                                  style={{
-                                    color: display?.color || 'var(--ink-2)',
-                                    background: (display?.color || '#9ca3af') + '22',
-                                  }}
-                                  onClick={() => setEditingTx(tx.id)}
-                                >
-                                  {display?.name || 'Non catégorisé'}
+                                <button className="tx-card-sub-pill" onClick={() => setEditingSubcat(tx.id)} title="Changer le détail">
+                                  {cat.icon} {cat.name}
                                 </button>
-                              )}
-                              {!isTransfer && cat && (cat.parent ? (
+                              )
+                            ) : (
+                              categories.some(c => c.parent === cat.id) ? (
                                 editingSubcat === tx.id ? (
                                   <SubCatPicker
                                     categories={categories}
-                                    topSlug={cat.parent}
+                                    topSlug={cat.id}
                                     currentId={cat.id}
                                     onSelect={(catId) => { updateCategory(tx.id, catId); }}
                                     onClose={() => setEditingSubcat(null)}
                                   />
                                 ) : (
-                                  <button className="tx-card-sub-pill" onClick={() => setEditingSubcat(tx.id)} title="Changer le détail">
-                                    {cat.icon} {cat.name}
+                                  <button className="tx-card-sub-add" onClick={() => setEditingSubcat(tx.id)} title="Ajouter un détail">
+                                    + détail
                                   </button>
                                 )
-                              ) : (
-                                categories.some(c => c.parent === cat.id) && (
-                                  editingSubcat === tx.id ? (
-                                    <SubCatPicker
-                                      categories={categories}
-                                      topSlug={cat.id}
-                                      currentId={cat.id}
-                                      onSelect={(catId) => { updateCategory(tx.id, catId); }}
-                                      onClose={() => setEditingSubcat(null)}
-                                    />
-                                  ) : (
-                                    <button className="tx-card-sub-add" onClick={() => setEditingSubcat(tx.id)} title="Ajouter un détail">
-                                      + détail
-                                    </button>
-                                  )
-                                )
-                              ))}
-                              {acc && (
-                                <>
-                                  <span className="tx-card-meta-sep">·</span>
-                                  <span className="tx-card-acc">{acc.bank || acc.name}</span>
-                                </>
-                              )}
-                            </div>
+                              ) : <span className="tx-card-col-empty">—</span>
+                            )) : <span className="tx-card-col-empty">—</span>}
+                          </div>
+                          <div className="tx-card-col tx-card-col-acc">
+                            {acc ? <span className="tx-card-acc">{acc.bank || acc.name}</span> : <span className="tx-card-col-empty">—</span>}
                           </div>
                           <div className="tx-card-actions">
                             <button

@@ -1407,11 +1407,34 @@ html, body {
 .tx-day-rows {
   display: flex; flex-direction: column;
 }
+/* Shared grid template — applied to col-head AND each card so columns align.
+   44px icon · 1fr libellé · 170px cat · 150px sub · 120px acc · 80px actions · 110px amount.
+   Actions column reserves a fixed slot so columns never shift between rows. */
+.tx-feed-colhead,
 .tx-card {
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) auto auto;
+  grid-template-columns:
+    44px
+    minmax(0, 1fr)
+    170px
+    150px
+    120px
+    80px
+    110px;
   align-items: center;
   gap: 14px;
+}
+.tx-feed-colhead {
+  padding: 0 4px 10px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+  font: 600 10px var(--font-sans);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-3);
+}
+.tx-feed-colhead .right { text-align: right; }
+.tx-card {
   padding: 12px 4px;
   border-bottom: 1px solid var(--border);
   transition: background 0.12s;
@@ -1420,6 +1443,8 @@ html, body {
 .tx-card:last-child { border-bottom: none; }
 .tx-card:hover { background: var(--bg-sunk); }
 .tx-card-transfer { opacity: 0.78; }
+.tx-card-col { min-width: 0; display: flex; align-items: center; }
+.tx-card-col-empty { color: var(--ink-mute); font-size: 12px; padding-left: 4px; }
 
 .tx-card-icon {
   width: 44px; height: 44px;
@@ -1539,12 +1564,19 @@ html, body {
 .tx-card-amount.negative { color: var(--negative); }
 .tx-card-amount.transfer { color: var(--ink-3); font-weight: 500; }
 
-@media (max-width: 640px) {
+/* Mobile / tablette : on retombe sur 3 colonnes (icon + libellé + montant).
+   Le détail des autres colonnes (cat/sub/compte/actions) est masqué pour
+   garder une ligne propre — l'utilisateur ouvre les filtres pour pivoter. */
+@media (max-width: 880px) {
+  .tx-feed-colhead { display: none; }
   .tx-card {
     grid-template-columns: 40px minmax(0, 1fr) auto;
-    gap: 10px;
+    gap: 12px;
     padding: 10px 2px;
   }
+  .tx-card-col-cat,
+  .tx-card-col-sub,
+  .tx-card-col-acc,
   .tx-card-actions { display: none; }
   .tx-card-icon { width: 40px; height: 40px; font-size: 16px; }
   .tx-card-label { font-size: 13px; }
