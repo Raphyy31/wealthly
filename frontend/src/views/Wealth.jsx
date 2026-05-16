@@ -1708,6 +1708,7 @@ function WealthItemRow({ item, fmt, onClick, onDelete }) {
 // ============================================================================
 function RealEstateDetail({ asset, liabilities = [], members = [], memberShare, fmt, onEdit, onClose }) {
   const subtypeLabel = {
+    rp: 'Résidence principale',
     RP: 'Résidence principale',
     locative: 'Locatif',
     secondaire: 'Résidence secondaire',
