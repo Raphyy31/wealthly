@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Check, X, Sparkles } from 'lucide-react';
+import { Check, X, Sparkles, ArrowLeftRight } from 'lucide-react';
 
 // Modal that lets the user create (and edit) a categorization rule.
 // Pre-fills with the auto-extracted merchant keyword, but the user is free
@@ -17,6 +17,7 @@ import { Check, X, Sparkles } from 'lucide-react';
 export function CreateRuleModal({ open, suggested = '', categories = [], initialCategoryId = '', matchCount, onConfirm, onClose }) {
   const [keyword, setKeyword] = useState(suggested);
   const [submitting, setSubmitting] = useState(false);
+  const [mode, setMode] = useState('category'); // 'category' | 'transfer'
   const inputRef = useRef(null);
 
   // Resolve initial top-level + sub-level from the suggested category.
@@ -35,6 +36,7 @@ export function CreateRuleModal({ open, suggested = '', categories = [], initial
       setKeyword(suggested);
       setTopId(initial.top);
       setSubId(initial.sub);
+      setMode('category');
     }
   }, [open, suggested, initial.top, initial.sub]);
   useEffect(() => { if (open && inputRef.current) inputRef.current.focus(); }, [open]);
@@ -47,13 +49,13 @@ export function CreateRuleModal({ open, suggested = '', categories = [], initial
   const targetCat = categories.find(c => c.id === targetId);
 
   const trimmed = keyword.trim();
-  const count = trimmed.length >= 2 && targetId ? matchCount(trimmed, targetId) : 0;
-  const canSubmit = trimmed.length >= 2 && !!targetId && !submitting;
+  const count = trimmed.length >= 2 ? matchCount(trimmed, mode === 'transfer' ? null : targetId) : 0;
+  const canSubmit = trimmed.length >= 2 && (mode === 'transfer' || !!targetId) && !submitting;
 
   const submit = async () => {
     if (!canSubmit) return;
     setSubmitting(true);
-    try { await onConfirm({ keyword: trimmed, categoryId: targetId }); }
+    try { await onConfirm({ keyword: trimmed, categoryId: mode === 'category' ? targetId : null, mode }); }
     finally { setSubmitting(false); }
   };
 
@@ -69,9 +71,33 @@ export function CreateRuleModal({ open, suggested = '', categories = [], initial
           <button className="icon-btn" onClick={onClose}><X size={18}/></button>
         </div>
         <div className="modal-body">
+          {/* Mode toggle: catégoriser vs marquer comme virement interne.
+              Utile pour les top-ups de cartes secondaires (Revolut, Lydia, AMEX)
+              qui ne sont pas de vraies dépenses mais des transferts. */}
+          <div className="rule-mode-toggle">
+            <button
+              type="button"
+              className={`rule-mode-btn ${mode === 'category' ? 'active' : ''}`}
+              onClick={() => setMode('category')}
+            >
+              <Sparkles size={13}/> Catégoriser
+            </button>
+            <button
+              type="button"
+              className={`rule-mode-btn ${mode === 'transfer' ? 'active' : ''}`}
+              onClick={() => setMode('transfer')}
+            >
+              <ArrowLeftRight size={13}/> Virement interne
+            </button>
+          </div>
+
           <p className="rule-modal-intro">
-            Toutes les transactions dont le libellé contient ce mot-clé seront classées automatiquement
-            {targetCat ? <> en <strong>{targetCat.icon} {targetCat.name}</strong></> : null}.
+            {mode === 'category' ? (
+              <>Toutes les transactions dont le libellé contient ce mot-clé seront classées automatiquement
+              {targetCat ? <> en <strong>{targetCat.icon} {targetCat.name}</strong></> : null}.</>
+            ) : (
+              <>Toutes les transactions dont le libellé contient ce mot-clé seront marquées comme <strong>↔ virement interne</strong> et exclues du cashflow.</>
+            )}
           </p>
           <label className="rule-modal-label">
             <span>Mot-clé</span>
@@ -80,7 +106,7 @@ export function CreateRuleModal({ open, suggested = '', categories = [], initial
               className="rule-modal-input"
               value={keyword}
               onChange={e => setKeyword(e.target.value)}
-              placeholder="ex: NESPRESSO, Netflix, EDF…"
+              placeholder={mode === 'category' ? 'ex: NESPRESSO, Netflix, EDF…' : 'ex: Revolut**, Lydia, N26…'}
               onKeyDown={e => { if (e.key === 'Enter' && canSubmit) submit(); if (e.key === 'Escape') onClose(); }}
             />
             <div className="rule-modal-hint">
@@ -88,51 +114,53 @@ export function CreateRuleModal({ open, suggested = '', categories = [], initial
             </div>
           </label>
 
-          <div className="rule-modal-row">
-            <label className="rule-modal-label">
-              <span>Catégorie</span>
-              <select
-                className="rule-modal-input"
-                value={topId}
-                onChange={e => { setTopId(e.target.value); setSubId(''); }}
-              >
-                <option value="">— Choisir —</option>
-                {topCats.map(c => (
-                  <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
-                ))}
-              </select>
-            </label>
-            <label className="rule-modal-label">
-              <span>Détail <span className="rule-modal-optional">(optionnel)</span></span>
-              <select
-                className="rule-modal-input"
-                value={subId}
-                onChange={e => setSubId(e.target.value)}
-                disabled={!topId || subCats.length === 0}
-              >
-                <option value="">{subCats.length === 0 ? 'Aucun détail' : '— Aucun —'}</option>
-                {subCats.map(c => (
-                  <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
-                ))}
-              </select>
-            </label>
-          </div>
+          {mode === 'category' && (
+            <div className="rule-modal-row">
+              <label className="rule-modal-label">
+                <span>Catégorie</span>
+                <select
+                  className="rule-modal-input"
+                  value={topId}
+                  onChange={e => { setTopId(e.target.value); setSubId(''); }}
+                >
+                  <option value="">— Choisir —</option>
+                  {topCats.map(c => (
+                    <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="rule-modal-label">
+                <span>Détail <span className="rule-modal-optional">(optionnel)</span></span>
+                <select
+                  className="rule-modal-input"
+                  value={subId}
+                  onChange={e => setSubId(e.target.value)}
+                  disabled={!topId || subCats.length === 0}
+                >
+                  <option value="">{subCats.length === 0 ? 'Aucun détail' : '— Aucun —'}</option>
+                  {subCats.map(c => (
+                    <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          )}
 
           <div className={`rule-modal-count ${count > 0 ? 'has' : 'none'}`}>
             {trimmed.length < 2
               ? 'Tape au moins 2 caractères'
-              : !targetId
+              : (mode === 'category' && !targetId)
                 ? 'Choisis une catégorie cible'
                 : count === 0
                   ? <>Aucune transaction existante ne correspond. La règle s'appliquera aux <em>futures</em> transactions.</>
-                  : <><strong>{count}</strong> transaction{count > 1 ? 's' : ''} similaire{count > 1 ? 's' : ''} {count > 1 ? 'seront' : 'sera'} reclassée{count > 1 ? 's' : ''} maintenant.</>
+                  : <><strong>{count}</strong> transaction{count > 1 ? 's' : ''} {mode === 'transfer' ? 'sera' : (count > 1 ? 'seront' : 'sera')} {mode === 'transfer' ? (count > 1 ? 'marquées' : 'marquée') : (count > 1 ? 'reclassées' : 'reclassée')} maintenant.</>
             }
           </div>
         </div>
         <div className="modal-footer">
           <button className="secondary-btn" onClick={onClose} disabled={submitting}>Annuler</button>
           <button className="primary-btn" onClick={submit} disabled={!canSubmit}>
-            <Check size={14}/> {submitting ? 'Création…' : 'Créer la règle'}
+            <Check size={14}/> {submitting ? '…' : (mode === 'transfer' ? 'Marquer comme virement' : 'Créer la règle')}
           </button>
         </div>
       </div>
@@ -143,6 +171,10 @@ export function CreateRuleModal({ open, suggested = '', categories = [], initial
 function CreateRuleStyles() {
   return (
     <style>{`
+      .rule-mode-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px; background: var(--bg-sunk); border-radius: 8px; margin: 0 0 14px; }
+      .rule-mode-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 10px; background: transparent; border: none; border-radius: 6px; font: 500 12px var(--font-sans); color: var(--ink-2); cursor: pointer; transition: background 0.12s, color 0.12s; }
+      .rule-mode-btn:hover { color: var(--ink); }
+      .rule-mode-btn.active { background: var(--bg-elev); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
       .rule-modal-intro { font-size: 13px; color: var(--ink-2); margin: 0 0 16px; line-height: 1.5; }
       .rule-modal-intro strong { color: var(--ink); }
       .rule-modal-label { display: flex; flex-direction: column; gap: 6px; }
