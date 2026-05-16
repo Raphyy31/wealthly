@@ -141,13 +141,29 @@ Format : numéro, [date · compte], montant, libellé brut.
 
 ${txLines}
 
-# Format de réponse
+# Format de réponse — STRICT
 
-Réponds UNIQUEMENT avec un objet JSON, sans texte avant ou après, au format strict :
+Ta réponse doit être UNIQUEMENT le JSON brut, RIEN d'autre. Pas de texte autour, pas de markdown, pas d'artefact.
 
-{"1": "slug_choisi", "2": "slug_choisi", ...}
+INTERDIT :
+- ❌ Phrase d'introduction ("Voici la catégorisation…", "D'accord, voici…")
+- ❌ Phrase de conclusion ("J'espère que…", commentaires sur ton raisonnement)
+- ❌ Bloc markdown avec triples backticks (\\\`\\\`\\\`json ... \\\`\\\`\\\`)
+- ❌ Bloc artefact / canvas — pas de \`<artifact>\`, pas d'éditeur de code interactif
+- ❌ Toute clé autre que les numéros (1, 2, 3…) en string
+- ❌ Toute valeur qui n'est PAS un slug exact de la liste ci-dessus (ou \`uncategorized\`)
+- ❌ Nom français au lieu du slug ("Restaurants" → INVALIDE, doit être "restaurants")
+- ❌ Slug \`transfer\` (il n'existe pas — utilise \`uncategorized\` pour les virements internes)
 
-Chaque valeur DOIT être un slug exact présent dans la liste de catégories ci-dessus, ou \`uncategorized\`.`;
+EXIGÉ : la première caractère de ta réponse doit être \`{\`, et le dernier \`}\`.
+
+Format exact attendu (clés = numéros de transactions en string, valeurs = slugs) :
+
+{"1":"subs_video","2":"groceries_super","3":"taxi_vtc","4":"uncategorized","5":"resto_meal"}
+
+Tu peux mettre des espaces / sauts de ligne entre les paires pour la lisibilité, mais le tout doit rester un objet JSON valide unique, parsable par \`JSON.parse()\`.
+
+Vérifie avant d'envoyer : ta réponse commence-t-elle par \`{\` et finit-elle par \`}\` ? Si non, recommence.`;
   }, [candidates, slugList]);
 
   if (!open) return null;
@@ -166,26 +182,72 @@ Chaque valeur DOIT être un slug exact présent dans la liste de catégories ci-
     setParseError(null);
     let parsed;
     try {
-      // Try to find JSON in the response (sometimes the LLM wraps it in ```json ... ```)
-      const match = response.match(/\{[\s\S]*\}/);
-      const raw = match ? match[0] : response;
+      // Extraction tolérante :
+      //  1. Strip markdown fences ```json ... ``` ou ```
+      //  2. Strip artefact-style wrappers
+      //  3. Récupère le {...} le plus large
+      let raw = response.trim();
+      raw = raw.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '');
+      const match = raw.match(/\{[\s\S]*\}/);
+      raw = match ? match[0] : raw;
       parsed = JSON.parse(raw);
     } catch (e) {
-      setParseError('JSON invalide. Vérifie que tu colles bien le bloc { ... } seul.');
+      setParseError('JSON invalide. Vérifie que la réponse commence par { et finit par }.');
       return;
     }
-    // Map index → tx id → category slug
+
+    // Map slug exact (case-insensitive) OU nom FR de catégorie → slug canonique.
+    // Tolère les variantes que Claude/ChatGPT renvoient parfois.
     const validSlugs = new Set(categories.map(c => c.id));
+    const nameToSlug = new Map(
+      categories.map(c => [String(c.name || '').toLowerCase().trim(), c.id])
+    );
+
     const updates = [];
-    for (const [idx, slug] of Object.entries(parsed)) {
+    let rejected = 0;
+    let rejectedSlugs = [];
+
+    for (const [idx, rawSlug] of Object.entries(parsed)) {
       const i = parseInt(idx, 10) - 1;
-      if (Number.isNaN(i) || i < 0 || i >= candidates.length) continue;
-      if (!validSlugs.has(slug)) continue;
-      updates.push({ txId: candidates[i].id, slug });
+      if (Number.isNaN(i) || i < 0 || i >= candidates.length) {
+        rejected++; continue;
+      }
+      let s = String(rawSlug || '').trim();
+      // Hallucination commune : 'transfer' → on tombe sur 'uncategorized'
+      // (le user le marquera ensuite via le badge ↔).
+      if (s.toLowerCase() === 'transfer' || s.toLowerCase() === 'transfert') s = 'uncategorized';
+      if (validSlugs.has(s)) {
+        updates.push({ txId: candidates[i].id, slug: s });
+        continue;
+      }
+      // Fallback : nom FR (ex: "Restaurants") → slug
+      const mapped = nameToSlug.get(s.toLowerCase());
+      if (mapped && validSlugs.has(mapped)) {
+        updates.push({ txId: candidates[i].id, slug: mapped });
+        continue;
+      }
+      // Fallback : slug en majuscules ou avec espaces ('GROCERIES SUPER')
+      const cleaned = s.toLowerCase().replace(/\s+/g, '_');
+      if (validSlugs.has(cleaned)) {
+        updates.push({ txId: candidates[i].id, slug: cleaned });
+        continue;
+      }
+      rejected++;
+      if (rejectedSlugs.length < 5) rejectedSlugs.push(s);
     }
+
     if (updates.length === 0) {
-      setParseError('Aucune catégorisation valide trouvée dans la réponse.');
+      setParseError(
+        rejected > 0
+          ? `Aucun slug valide. ${rejected} entrées rejetées. Exemples : ${rejectedSlugs.join(', ')}`
+          : 'Aucune catégorisation valide trouvée dans la réponse.'
+      );
       return;
+    }
+    if (rejected > 0) {
+      // On applique quand même mais on prévient
+      // eslint-disable-next-line no-console
+      console.warn(`[AiPromptModal] ${rejected} entrées rejetées :`, rejectedSlugs);
     }
     setApplying(true);
     try {

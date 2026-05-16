@@ -11,8 +11,12 @@ export default defineConfig({
     // In dev, proxy API calls to the backend so we don't hit CORS issues
     proxy: {
       '/api': {
-        target: process.env.VITE_API_URL || 'http://localhost:8000',
+        // VITE_DEV_API_PROXY: backend URL to forward /api to in dev.
+        // Defaults to Railway prod so devs without a local FastAPI still get
+        // real data. Override via env if you run the backend locally.
+        target: process.env.VITE_DEV_API_PROXY || 'https://wealthly-production-45aa.up.railway.app',
         changeOrigin: true,
+        secure: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },
