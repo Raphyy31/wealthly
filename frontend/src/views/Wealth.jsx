@@ -1895,23 +1895,25 @@ function RealEstateDetail({ asset, liabilities = [], members = [], memberShare, 
 
 function RealEstatePatchStyles() {
   const css = String.raw`
-.re-finary-page { max-width: 920px; }
+.re-finary-page { max-width: 880px; }
+.re-finary-page .loan-finary-head { padding: 22px 26px 0; }
+.re-finary-page .loan-finary-body { padding: 20px 26px 24px; gap: 16px; }
 
 /* HERO */
 .re-finary-page .re-hero {
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 32px;
+  gap: 28px;
   align-items: end;
-  margin-top: 18px;
-  padding-bottom: 22px;
+  margin-top: 12px;
+  padding-bottom: 18px;
   border-bottom: 1px solid var(--border);
 }
-@media (max-width: 640px) { .re-finary-page .re-hero { grid-template-columns: 1fr; align-items: start; gap: 16px; } }
+@media (max-width: 640px) { .re-finary-page .re-hero { grid-template-columns: 1fr; align-items: start; gap: 14px; } }
 .re-finary-page .re-type-pill {
   display: inline-flex; align-items: center; gap: 6px;
   font-size: 11px; font-weight: 500;
-  padding: 4px 10px;
+  padding: 3px 10px;
   background: var(--accent-soft, #E7EBFF);
   color: var(--accent, #2540D9);
   border-radius: 999px;
@@ -1921,17 +1923,17 @@ function RealEstatePatchStyles() {
 .re-finary-page .re-name {
   font-family: 'Geist', sans-serif;
   font-weight: 500;
-  font-size: 28px;
+  font-size: 22px;
   line-height: 1.15;
   letter-spacing: -0.02em;
-  margin: 10px 0 4px;
+  margin: 8px 0 3px;
   color: var(--ink);
 }
 .re-finary-page .re-address {
-  font-size: 13.5px;
+  font-size: 13px;
   color: var(--ink-3);
 }
-.re-finary-page .re-hero-right { text-align: right; }
+.re-finary-page .re-hero-right { text-align: right; line-height: 1; }
 @media (max-width: 640px) { .re-finary-page .re-hero-right { text-align: left; } }
 .re-finary-page .re-eyebrow {
   font-size: 10.5px;
@@ -1943,11 +1945,11 @@ function RealEstatePatchStyles() {
 .re-finary-page .re-hero-value {
   font-family: 'Geist', sans-serif;
   font-weight: 500;
-  font-size: 36px;
+  font-size: 28px;
   line-height: 1.05;
   color: var(--ink);
-  margin-top: 4px;
-  letter-spacing: -0.025em;
+  margin-top: 6px;
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1956,20 +1958,20 @@ function RealEstatePatchStyles() {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 0;
-  margin-top: 22px;
+  margin: 16px 0 4px;
 }
 @media (max-width: 720px) { .re-finary-page .re-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
 .re-finary-page .re-kpi {
-  padding: 6px 18px;
+  padding: 4px 16px;
   border-left: 1px solid var(--border);
 }
 .re-finary-page .re-kpi:first-child { padding-left: 0; border-left: none; }
 @media (max-width: 720px) {
   .re-finary-page .re-kpi { border-left: none; padding: 8px 0; }
-  .re-finary-page .re-kpi:nth-child(2n) { padding-left: 18px; border-left: 1px solid var(--border); }
+  .re-finary-page .re-kpi:nth-child(2n) { padding-left: 16px; border-left: 1px solid var(--border); }
 }
 .re-finary-page .re-kpi-label {
-  font-size: 11px;
+  font-size: 10.5px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--ink-3);
@@ -1978,47 +1980,47 @@ function RealEstatePatchStyles() {
 .re-finary-page .re-kpi-value {
   font-family: 'Geist', sans-serif;
   font-weight: 500;
-  font-size: 19px;
+  font-size: 17px;
   line-height: 1.2;
   color: var(--ink);
-  margin-top: 4px;
+  margin-top: 3px;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
 }
 .re-finary-page .re-kpi-sub {
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--ink-3);
-  margin-top: 3px;
+  margin-top: 2px;
 }
 
 /* CARDS — coût d'acquisition + prêt */
 .re-finary-page .re-card {
   background: var(--bg-elev);
   border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 22px 24px 20px;
-  display: flex; flex-direction: column; gap: 14px;
+  border-radius: 12px;
+  padding: 18px 22px 16px;
+  display: flex; flex-direction: column; gap: 12px;
 }
 .re-finary-page .re-card-head {
   display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
 }
 .re-finary-page .re-card-title {
   font-family: 'Geist', sans-serif;
-  font-size: 15px; font-weight: 500;
+  font-size: 14px; font-weight: 500;
   color: var(--ink); margin: 0;
   letter-spacing: -0.005em;
 }
 .re-finary-page .re-card-total {
   font-family: 'Geist', sans-serif;
   font-weight: 500;
-  font-size: 20px;
+  font-size: 17px;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
 }
 .re-finary-page .re-card-link {
   background: none; border: none; padding: 0; cursor: pointer;
-  font-size: 13px; color: var(--ink-3);
+  font-size: 12.5px; color: var(--ink-3);
   text-decoration: underline; text-underline-offset: 3px;
   text-decoration-color: var(--border-strong, #D2CEC0);
 }
@@ -2028,45 +2030,45 @@ function RealEstatePatchStyles() {
 .re-finary-page .re-rows {
   list-style: none;
   margin: 0;
-  padding: 12px 0 0;
+  padding: 10px 0 0;
   border-top: 1px solid var(--border);
   display: flex; flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
-.re-finary-page .re-card .re-rows { border-top: none; padding-top: 0; }
 .re-finary-page .re-rows li {
   display: flex; justify-content: space-between; align-items: baseline;
-  gap: 16px; font-size: 13.5px; color: var(--ink-2);
+  gap: 16px; font-size: 13px; color: var(--ink-2);
 }
 .re-finary-page .re-rows li .w-num { color: var(--ink); font-weight: 500; font-variant-numeric: tabular-nums; }
 
 /* PRÊT — headline + progress bar */
 .re-finary-page .re-loan-headline {
   display: flex; justify-content: space-between; align-items: flex-end; gap: 12px;
+  padding-top: 2px;
 }
 .re-finary-page .re-loan-big {
   font-family: 'Geist', sans-serif;
   font-weight: 500;
-  font-size: 30px;
+  font-size: 24px;
   line-height: 1.05;
   color: var(--ink);
-  margin-top: 4px;
+  margin-top: 3px;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
 .re-finary-page .re-loan-pct {
   font-family: 'Geist', sans-serif;
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 500;
   color: var(--accent, #2540D9);
   letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
 }
 .re-finary-page .re-loan-pct span {
-  font-size: 12px; color: var(--ink-3); font-weight: 400; margin-left: 4px;
+  font-size: 11.5px; color: var(--ink-3); font-weight: 400; margin-left: 4px;
 }
 .re-finary-page .re-progress {
-  height: 8px;
+  height: 6px;
   background: var(--bg-sunk, #EFEDE6);
   border-radius: 999px;
   overflow: hidden;
@@ -2078,35 +2080,35 @@ function RealEstatePatchStyles() {
   transition: width .3s ease;
 }
 .re-finary-page .re-progress-legend {
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--ink-3);
-  display: flex; gap: 6px; align-items: baseline;
+  display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap;
 }
 .re-finary-page .re-progress-legend .w-num { color: var(--ink-2); font-weight: 500; }
-.re-finary-page .re-progress-legend .re-sep { color: var(--ink-3); opacity: 0.6; }
+.re-finary-page .re-progress-legend .re-sep { color: var(--ink-3); opacity: 0.5; }
 
 .re-finary-page .re-loan-foot {
   display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
-  padding-top: 14px;
+  padding-top: 12px; margin-top: 4px;
   border-top: 1px solid var(--border);
 }
 @media (max-width: 540px) { .re-finary-page .re-loan-foot { grid-template-columns: 1fr; gap: 14px; } }
 .re-finary-page .re-loan-foot-val {
   font-family: 'Geist', sans-serif; font-weight: 500;
-  font-size: 18px; color: var(--ink);
-  margin-top: 4px; font-variant-numeric: tabular-nums;
+  font-size: 16px; color: var(--ink);
+  margin-top: 3px; font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
 }
-.re-finary-page .re-loan-foot-sub { font-size: 12px; color: var(--ink-3); margin-top: 3px; }
+.re-finary-page .re-loan-foot-sub { font-size: 11.5px; color: var(--ink-3); margin-top: 2px; }
 
 /* Footer */
 .re-finary-page .re-footer {
   display: flex; justify-content: space-between; align-items: center;
-  gap: 16px; padding-top: 8px;
+  gap: 16px; padding-top: 4px;
 }
 .re-finary-page .re-owners {
   display: inline-flex; align-items: center; gap: 6px;
-  font-size: 13px; color: var(--ink-3);
+  font-size: 12.5px; color: var(--ink-3);
 }
 @media (max-width: 540px) {
   .re-finary-page .re-footer { flex-direction: column; align-items: flex-start; }
