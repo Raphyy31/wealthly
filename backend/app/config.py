@@ -51,6 +51,11 @@ class Settings:
     )
     GOCARDLESS_API_BASE: str = "https://bankaccountdata.gocardless.com/api/v2"
 
+    # Cron auth — partagé entre les jobs Railway (cron nightly sync, etc.)
+    # et le backend. Si vide en prod, les endpoints /cron/* refusent toutes
+    # les requêtes (jamais d'endpoint sans auth ouvert).
+    CRON_SECRET: str = os.getenv("CRON_SECRET", "")
+
     # App
     APP_NAME: str = "Wealthly API"
     DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"

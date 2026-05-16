@@ -30,7 +30,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -195,6 +195,7 @@ async def connect_bank(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    household_id = current_user.household_id
     """
     Create an end-user agreement + requisition.
     Returns the URL where the user must authenticate at their bank.
@@ -244,7 +245,7 @@ async def connect_bank(
     )
 
     conn = BankConnection(
-        household_id=current_user.household_id,
+        household_id=household_id,
         session_id=requisition["id"],   # repurposed for GoCardless requisition_id
         bank_name=body.bank_name,
         bank_country=body.bank_country.upper(),
@@ -272,13 +273,14 @@ async def complete_connection(
     Called by the frontend after the bank redirects back with ?ref={state}.
     Pulls the requisition status from GoCardless and stores the linked accounts.
     """
+    household_id = current_user.household_id
     state = body.state or body.ref
     if not state:
         raise HTTPException(status_code=400, detail="Référence (?ref=) absente du retour de la banque")
 
     conn = db.query(BankConnection).filter(
         BankConnection.state == state,
-        BankConnection.household_id == current_user.household_id,
+        BankConnection.household_id == household_id,
     ).first()
     if not conn:
         raise HTTPException(status_code=404, detail="Connexion introuvable (référence inconnue)")
@@ -338,24 +340,17 @@ def body_to_institution_id(conn: BankConnection) -> str:
 
 # ─── Sync ───────────────────────────────────────────────────────────────────
 
-@router.post("/sync/{connection_id}")
-async def sync_transactions(
-    connection_id: str,
-    days_back: int = Query(90, ge=1, le=720),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
+async def _sync_one_connection(
+    conn: BankConnection,
+    household_id: str,
+    days_back: int,
+    db: Session,
+) -> dict:
+    """Sync logic factorisée — utilisée par l'endpoint user-facing
+    /sync/{connection_id} ET le cron nightly /cron/sync-all.
+
+    Retourne {imported, updated, skipped, errors, last_synced_at}.
     """
-    Pull transactions for every linked account in this connection.
-    Creates Wealthly accounts on first sync, then upserts transactions
-    (uniqueness via (account_id, external_id)).
-    """
-    conn = db.query(BankConnection).filter(
-        BankConnection.id == connection_id,
-        BankConnection.household_id == current_user.household_id,
-    ).first()
-    if not conn:
-        raise HTTPException(status_code=404, detail="Connexion introuvable")
     if conn.status != "authorized" or not conn.accounts_data:
         raise HTTPException(status_code=400, detail="Connexion non autorisée")
 
@@ -363,18 +358,12 @@ async def sync_transactions(
     total_new = 0
     total_updated = 0
     total_skipped = 0
-    # Track dedup hashes already prepared in this sync session — protects
-    # against GC returning the same tx twice (booked + pending overlap) which
-    # would otherwise both INSERT and trip the unique constraint at commit.
     batch_hashes = set()
     errors: list[str] = []
 
-    # Get all current household members so we auto-assign new accounts to
-    # everyone (otherwise the visibility filter hides them when the user
-    # switches to a member tab).
     from app.models import Member  # local import to avoid circular at module load
     household_members = db.query(Member).filter(
-        Member.household_id == current_user.household_id,
+        Member.household_id == household_id,
     ).all()
 
     for acc_info in conn.accounts_data:
@@ -383,7 +372,7 @@ async def sync_transactions(
             continue
         # Find or create the Wealthly account (matched by external_id == gc_acc_id)
         wl_acc = db.query(Account).filter(
-            Account.household_id == current_user.household_id,
+            Account.household_id == household_id,
             Account.external_id == gc_acc_id,
         ).first()
         if not wl_acc:
@@ -418,7 +407,7 @@ async def sync_transactions(
                 acc_type = "checking"
 
             wl_acc = Account(
-                household_id=current_user.household_id,
+                household_id=household_id,
                 name=acc_info.get("name") or "Compte",
                 bank=conn.bank_name,
                 type=acc_type,
@@ -478,7 +467,7 @@ async def sync_transactions(
             # uq_household_dedup and the entire sync batch rolls back.
             if not existing:
                 existing = db.query(Transaction).filter(
-                    Transaction.household_id == current_user.household_id,
+                    Transaction.household_id == household_id,
                     Transaction.dedup_hash == dh,
                 ).first()
                 if existing and not existing.external_id:
@@ -506,12 +495,12 @@ async def sync_transactions(
                     from app.categorization import categorize_transaction as _cat
                     result = _cat(
                         label=label, amount=amount,
-                        household_id=current_user.household_id, db=db, date=tx_date,
+                        household_id=household_id, db=db, date=tx_date,
                     )
                     cat_id = None
                     if result.slug:
                         c = db.query(Category).filter(
-                            Category.household_id == current_user.household_id,
+                            Category.household_id == household_id,
                             Category.slug == result.slug,
                         ).first()
                         if c:
@@ -527,7 +516,7 @@ async def sync_transactions(
 
                 db.add(Transaction(
                     account_id=wl_acc.id,
-                    household_id=current_user.household_id,
+                    household_id=household_id,
                     date=tx_date,
                     amount=amount,
                     label=label,
@@ -555,6 +544,83 @@ async def sync_transactions(
     }
 
 
+# ─── Endpoints sync ────────────────────────────────────────────────────────
+
+@router.post("/sync/{connection_id}")
+async def sync_transactions(
+    connection_id: str,
+    days_back: int = Query(90, ge=1, le=720),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Sync user-facing : appelle _sync_one_connection scopé au foyer du user."""
+    household_id = current_user.household_id
+    conn = db.query(BankConnection).filter(
+        BankConnection.id == connection_id,
+        BankConnection.household_id == household_id,
+    ).first()
+    if not conn:
+        raise HTTPException(status_code=404, detail="Connexion introuvable")
+    return await _sync_one_connection(conn, household_id, days_back, db)
+
+
+@router.post("/cron/sync-all")
+async def cron_sync_all(
+    request: Request,
+    days_back: int = Query(7, ge=1, le=90),
+    db: Session = Depends(get_db),
+):
+    """Endpoint cron nightly : sync TOUTES les connexions autorisées de TOUS
+    les foyers. Auth par header X-Cron-Secret (config CRON_SECRET).
+
+    Idéalement schedulé via Railway cron (1×/jour, par ex. 04:00 UTC).
+    days_back=7 par défaut pour rester rapide ; un re-sync historique se
+    déclenche manuellement par foyer via l'endpoint /sync/{id}.
+
+    Retourne le summary par foyer et global.
+    """
+    expected = (settings.CRON_SECRET or "").strip()
+    if not expected:
+        raise HTTPException(status_code=503, detail="CRON_SECRET non configuré côté serveur")
+    provided = request.headers.get("X-Cron-Secret", "")
+    if not provided or provided != expected:
+        raise HTTPException(status_code=403, detail="Header X-Cron-Secret invalide")
+
+    connections = db.query(BankConnection).filter(
+        BankConnection.status == "authorized",
+    ).all()
+    total_imported = 0
+    total_updated = 0
+    total_skipped = 0
+    failures: list[dict] = []
+    results: list[dict] = []
+    for conn in connections:
+        try:
+            res = await _sync_one_connection(conn, conn.household_id, days_back, db)
+            total_imported += res.get("imported", 0)
+            total_updated += res.get("updated", 0)
+            total_skipped += res.get("skipped", 0)
+            results.append({
+                "connection_id": conn.id, "household_id": conn.household_id,
+                "imported": res.get("imported", 0), "updated": res.get("updated", 0),
+                "errors": res.get("errors", []),
+            })
+        except Exception as e:
+            logger.error("[cron-sync] connection %s failed: %s", conn.id, e)
+            failures.append({"connection_id": conn.id, "household_id": conn.household_id, "error": str(e)[:200]})
+
+    return {
+        "connections_synced": len(results),
+        "connections_failed": len(failures),
+        "total_imported": total_imported,
+        "total_updated": total_updated,
+        "total_skipped": total_skipped,
+        "results": results,
+        "failures": failures,
+        "completed_at": datetime.utcnow().isoformat(),
+    }
+
+
 # ─── Connections list / delete / refresh ────────────────────────────────────
 
 @router.get("/connections")
@@ -562,8 +628,9 @@ def list_connections(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    household_id = current_user.household_id
     rows = db.query(BankConnection).filter(
-        BankConnection.household_id == current_user.household_id,
+        BankConnection.household_id == household_id,
     ).order_by(BankConnection.created_at.desc()).all()
     return [
         {
@@ -588,9 +655,10 @@ async def refresh_connection(
 ):
     """Re-poll the requisition status — useful if /complete was called before
     the user finished bank authentication."""
+    household_id = current_user.household_id
     conn = db.query(BankConnection).filter(
         BankConnection.id == connection_id,
-        BankConnection.household_id == current_user.household_id,
+        BankConnection.household_id == household_id,
     ).first()
     if not conn:
         raise HTTPException(status_code=404, detail="Connexion introuvable")
@@ -643,9 +711,10 @@ async def delete_connection(
     """Remove the connection locally and best-effort delete the requisition
     on GoCardless side. Wealthly accounts already imported stay — only the
     open-banking link is severed."""
+    household_id = current_user.household_id
     conn = db.query(BankConnection).filter(
         BankConnection.id == connection_id,
-        BankConnection.household_id == current_user.household_id,
+        BankConnection.household_id == household_id,
     ).first()
     if not conn:
         raise HTTPException(status_code=404, detail="Connexion introuvable")
