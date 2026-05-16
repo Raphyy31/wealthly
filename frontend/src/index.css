@@ -1455,32 +1455,34 @@ html, body {
 .tx-card-meta-sep { color: var(--ink-mute); flex-shrink: 0; }
 .tx-card-cat-pill {
   display: inline-flex; align-items: center; gap: 5px;
-  padding: 2px 0;
-  background: none;
-  border: none;
+  padding: 3px 10px;
+  background: var(--bg-sunk);
+  border: 1px solid transparent;
+  border-radius: 6px;
   cursor: pointer;
-  font: 500 12px var(--font-sans);
+  font: 600 12px var(--font-sans);
   color: var(--ink-2);
   letter-spacing: -0.005em;
   flex-shrink: 0;
+  transition: filter 0.12s, border-color 0.12s;
 }
-.tx-card-cat-pill:hover { text-decoration: underline; text-underline-offset: 3px; }
-.tx-card-cat-pill.transfer { color: var(--accent); }
-.tx-card-cat-dot {
-  width: 8px; height: 8px;
-  border-radius: 999px;
-  flex-shrink: 0;
+.tx-card-cat-pill:hover { filter: brightness(1.06); border-color: currentColor; }
+.tx-card-cat-pill.transfer {
+  color: var(--accent);
+  background: var(--accent-soft);
 }
 .tx-card-sub-pill {
-  background: transparent;
-  border: none;
-  padding: 0;
-  font: 400 12px var(--font-sans);
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  padding: 3px 8px;
+  border-radius: 6px;
+  font: 500 11.5px var(--font-sans);
   color: var(--ink-2);
   cursor: pointer;
   flex-shrink: 0;
+  transition: color 0.12s, border-color 0.12s;
 }
-.tx-card-sub-pill:hover { color: var(--accent); }
+.tx-card-sub-pill:hover { color: var(--accent); border-color: var(--accent); }
 .tx-card-sub-add {
   background: transparent;
   border: 1px dashed var(--border);

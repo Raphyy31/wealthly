@@ -690,48 +690,44 @@ export function Transactions({ transactions, accounts, categories, members = [],
                               ) : (
                                 <button
                                   className="tx-card-cat-pill"
-                                  style={{ color: display?.color || 'var(--ink-2)' }}
+                                  style={{
+                                    color: display?.color || 'var(--ink-2)',
+                                    background: (display?.color || '#9ca3af') + '22',
+                                  }}
                                   onClick={() => setEditingTx(tx.id)}
                                 >
-                                  <span className="tx-card-cat-dot" style={{ background: display?.color || '#9ca3af' }}/>
                                   {display?.name || 'Non catégorisé'}
                                 </button>
                               )}
                               {!isTransfer && cat && (cat.parent ? (
-                                <>
-                                  <span className="tx-card-meta-sep">·</span>
-                                  {editingSubcat === tx.id ? (
+                                editingSubcat === tx.id ? (
+                                  <SubCatPicker
+                                    categories={categories}
+                                    topSlug={cat.parent}
+                                    currentId={cat.id}
+                                    onSelect={(catId) => { updateCategory(tx.id, catId); }}
+                                    onClose={() => setEditingSubcat(null)}
+                                  />
+                                ) : (
+                                  <button className="tx-card-sub-pill" onClick={() => setEditingSubcat(tx.id)} title="Changer le détail">
+                                    {cat.icon} {cat.name}
+                                  </button>
+                                )
+                              ) : (
+                                categories.some(c => c.parent === cat.id) && (
+                                  editingSubcat === tx.id ? (
                                     <SubCatPicker
                                       categories={categories}
-                                      topSlug={cat.parent}
+                                      topSlug={cat.id}
                                       currentId={cat.id}
                                       onSelect={(catId) => { updateCategory(tx.id, catId); }}
                                       onClose={() => setEditingSubcat(null)}
                                     />
                                   ) : (
-                                    <button className="tx-card-sub-pill" onClick={() => setEditingSubcat(tx.id)} title="Changer le détail">
-                                      {cat.icon} {cat.name}
+                                    <button className="tx-card-sub-add" onClick={() => setEditingSubcat(tx.id)} title="Ajouter un détail">
+                                      + détail
                                     </button>
-                                  )}
-                                </>
-                              ) : (
-                                categories.some(c => c.parent === cat.id) && (
-                                  <>
-                                    <span className="tx-card-meta-sep">·</span>
-                                    {editingSubcat === tx.id ? (
-                                      <SubCatPicker
-                                        categories={categories}
-                                        topSlug={cat.id}
-                                        currentId={cat.id}
-                                        onSelect={(catId) => { updateCategory(tx.id, catId); }}
-                                        onClose={() => setEditingSubcat(null)}
-                                      />
-                                    ) : (
-                                      <button className="tx-card-sub-add" onClick={() => setEditingSubcat(tx.id)} title="Ajouter un détail">
-                                        + détail
-                                      </button>
-                                    )}
-                                  </>
+                                  )
                                 )
                               ))}
                               {acc && (
