@@ -7,7 +7,7 @@
 // ============================================================================
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Search, ArrowUpDown, Repeat, Trash2, Filter, X, RotateCcw, Sparkles } from 'lucide-react';
+import { Search, ArrowUpDown, Repeat, Trash2, Filter, X, RotateCcw, Sparkles, Plus } from 'lucide-react';
 import { formatDate } from '../utils.js';
 
 const EMPTY_FILTERS = {
@@ -861,7 +861,7 @@ export function Transactions({ transactions, accounts, categories, members = [],
                                   />
                                 ) : (
                                   <button className="tx-card-sub-add" onClick={() => setEditingSubcat(tx.id)} title="Ajouter un détail">
-                                    + détail
+                                    <Plus size={11}/> Ajouter
                                   </button>
                                 )
                               ) : <span className="tx-card-col-empty">—</span>
