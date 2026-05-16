@@ -1761,93 +1761,127 @@ function RealEstateDetail({ asset, liabilities = [], members = [], memberShare, 
             <X size={18}/>
           </button>
 
-          <div className="drawer-title-row">
-            <div>
-              <h2 className="drawer-title">
-                {subtypeLabel} <em>{asset.name}.</em>
-              </h2>
-              <div className="drawer-meta">
-                <span className="badge badge-manual"><Edit3 size={11}/> Manuel</span>
-                {asset.address && <span style={{ marginLeft: 8 }}>{asset.address}</span>}
-              </div>
+          {/* HERO — chip type + nom + adresse + valeur */}
+          <div className="re-hero">
+            <div className="re-hero-left">
+              <div className="re-type-pill"><Home size={12}/> {subtypeLabel}</div>
+              <h2 className="re-name">{asset.name}</h2>
+              {asset.address && <div className="re-address">{asset.address}</div>}
             </div>
-            <div className="drawer-total">
-              <div className="drawer-total-val w-num">{fmt(currentValue)}</div>
-              {/* Plus-value latente déplacée sur la fiche du prêt lié */}
+            <div className="re-hero-right">
+              <div className="re-eyebrow">Valeur estimée</div>
+              <div className="re-hero-value w-num">{fmt(currentValue)}</div>
             </div>
           </div>
 
-          {/* KPI strip — Prix d'acquisition + Caractéristiques */}
-          <div className="re-kpi-strip">
-            <div className="re-panel">
-              <div className="re-eyebrow">Prix d'acquisition</div>
-              <div className="re-panel-value w-num">{fmt(totalAcquisitionCost)}</div>
-              <ul className="re-rows">
-                <li><span>Prix d'achat</span><span className="w-num">{fmt(purchasePrice)}</span></li>
-                {notaryFees > 0    && <li><span>Frais de notaire</span><span className="w-num">{fmt(notaryFees)}</span></li>}
-                {agencyFees > 0    && <li><span>Frais d'agence</span><span className="w-num">{fmt(agencyFees)}</span></li>}
-                {worksFees > 0     && <li><span>Travaux</span><span className="w-num">{fmt(worksFees)}</span></li>}
-                {furnitureFees > 0 && <li><span>Mobilier</span><span className="w-num">{fmt(furnitureFees)}</span></li>}
-              </ul>
-            </div>
-
-            <div className="re-panel">
-              <div className="re-eyebrow">Caractéristiques</div>
-              <ul className="re-rows re-rows-top">
-                {surface > 0 && <li><span>Surface</span><span className="w-num">{surface} m²</span></li>}
-                {pricePerM2 > 0 && <li><span>Prix au m²</span><span className="w-num">{fmt(pricePerM2)} /m²</span></li>}
-                {purchasePricePerM2 > 0 && <li><span>Prix d'achat au m²</span><span className="w-num">{fmt(purchasePricePerM2)} /m²</span></li>}
-                {asset.constructionYear && <li><span>Année construction</span><span className="w-num">{asset.constructionYear}</span></li>}
-                {ownershipPct !== 100 && <li><span>Quote-part</span><span className="w-num">{ownershipPct} %</span></li>}
-                {asset.purchaseDate && (
-                  <li>
-                    <span>Date d'achat</span>
-                    <span className="w-num">
-                      {new Date(asset.purchaseDate).getFullYear()}
-                      {yearsSincePurchase >= 1 && <> · il y a {Math.round(yearsSincePurchase)} ans</>}
-                    </span>
-                  </li>
+          {/* KPI grid — chiffres clés */}
+          <div className="re-kpi-grid">
+            {surface > 0 && (
+              <div className="re-kpi">
+                <div className="re-kpi-label">Surface</div>
+                <div className="re-kpi-value w-num">{surface} m²</div>
+              </div>
+            )}
+            {pricePerM2 > 0 && (
+              <div className="re-kpi">
+                <div className="re-kpi-label">Prix au m²</div>
+                <div className="re-kpi-value w-num">{fmt(pricePerM2)}</div>
+                {purchasePricePerM2 > 0 && (
+                  <div className="re-kpi-sub w-num">vs. {fmt(purchasePricePerM2)} à l'achat</div>
                 )}
-              </ul>
-            </div>
+              </div>
+            )}
+            {asset.purchaseDate && (
+              <div className="re-kpi">
+                <div className="re-kpi-label">Acquis en</div>
+                <div className="re-kpi-value w-num">{new Date(asset.purchaseDate).getFullYear()}</div>
+                {yearsSincePurchase >= 1 && (
+                  <div className="re-kpi-sub">il y a <span className="w-num">{Math.round(yearsSincePurchase)}</span> ans</div>
+                )}
+              </div>
+            )}
+            {ownershipPct !== 100 && (
+              <div className="re-kpi">
+                <div className="re-kpi-label">Quote-part</div>
+                <div className="re-kpi-value w-num">{ownershipPct} %</div>
+              </div>
+            )}
+            {asset.constructionYear && (
+              <div className="re-kpi">
+                <div className="re-kpi-label">Construction</div>
+                <div className="re-kpi-value w-num">{asset.constructionYear}</div>
+              </div>
+            )}
           </div>
         </div>
 
         <div className="loan-finary-body">
-          {/* Bilan net du bien — couplé au prêt si lié */}
-          {linkedLoan && (
-            <div className="re-net-panel">
-              <div>
-                <div className="re-eyebrow">Patrimoine net du bien</div>
-                <div className="re-net-value w-num">{fmt(netValue)}</div>
-                <div className="re-net-meta">
-                  <span className="w-num">{fmt(currentValue)}</span> de valeur
-                  <span className="re-net-minus"> − </span>
-                  <span className="w-num">{fmt(remainingCapital)}</span> de capital restant dû
-                </div>
-              </div>
-              <div className="re-net-loan">
-                <div className="re-eyebrow">Prêt lié</div>
-                <ul className="re-rows re-rows-top">
-                  <li><span>Mensualité</span><span className="w-num">{fmt(monthlyPayment)}</span></li>
-                  <li><span>% remboursé</span><span className="w-num">{initialCapital > 0 ? Math.round((1 - remainingCapital / initialCapital) * 100) : 0} %</span></li>
-                </ul>
-              </div>
+          {/* Coût d'acquisition */}
+          <section className="re-card">
+            <div className="re-card-head">
+              <h3 className="re-card-title">Coût d'acquisition</h3>
+              <div className="re-card-total w-num">{fmt(totalAcquisitionCost)}</div>
             </div>
-          )}
+            <ul className="re-rows">
+              <li><span>Prix d'achat</span><span className="w-num">{fmt(purchasePrice)}</span></li>
+              {notaryFees > 0    && <li><span>Frais de notaire</span><span className="w-num">{fmt(notaryFees)}</span></li>}
+              {agencyFees > 0    && <li><span>Frais d'agence</span><span className="w-num">{fmt(agencyFees)}</span></li>}
+              {worksFees > 0     && <li><span>Travaux</span><span className="w-num">{fmt(worksFees)}</span></li>}
+              {furnitureFees > 0 && <li><span>Mobilier</span><span className="w-num">{fmt(furnitureFees)}</span></li>}
+            </ul>
+          </section>
 
-          {/* Plus-value latente : déplacée sur la fiche du prêt lié pour
-              éviter d'afficher un chiffre trompeur sur le bien (les frais
-              de notaire + travaux ne se déduisent qu'à la cession fiscale,
-              pas pour évaluer la performance courante du bien). Voir le
-              prêt rattaché pour le détail du calcul. */}
+          {/* Prêt immobilier — avec barre de progression */}
+          {linkedLoan && (() => {
+            const repaidPct = initialCapital > 0
+              ? Math.max(0, Math.min(100, ((initialCapital - remainingCapital) / initialCapital) * 100))
+              : 0;
+            return (
+              <section className="re-card">
+                <div className="re-card-head">
+                  <h3 className="re-card-title">Prêt immobilier</h3>
+                  <button className="re-card-link" onClick={() => onEdit && onEdit(asset)} title="Voir le prêt lié">
+                    {linkedLoan.name || 'Voir le prêt'}
+                  </button>
+                </div>
+
+                <div className="re-loan-headline">
+                  <div>
+                    <div className="re-kpi-label">Capital restant dû</div>
+                    <div className="re-loan-big w-num">{fmt(remainingCapital)}</div>
+                  </div>
+                  <div className="re-loan-pct w-num">{Math.round(repaidPct)} %<span> remboursé</span></div>
+                </div>
+
+                <div className="re-progress">
+                  <div className="re-progress-fill" style={{ width: `${repaidPct}%` }}/>
+                </div>
+                <div className="re-progress-legend">
+                  <span className="w-num">{fmt(initialCapital - remainingCapital)}</span> remboursés
+                  <span className="re-sep">·</span>
+                  <span className="w-num">{fmt(initialCapital)}</span> empruntés
+                </div>
+
+                <div className="re-loan-foot">
+                  <div className="re-loan-foot-cell">
+                    <div className="re-kpi-label">Mensualité</div>
+                    <div className="re-loan-foot-val w-num">{fmt(monthlyPayment)}</div>
+                  </div>
+                  <div className="re-loan-foot-cell">
+                    <div className="re-kpi-label">Patrimoine net du bien</div>
+                    <div className="re-loan-foot-val w-num">{fmt(netValue)}</div>
+                    <div className="re-loan-foot-sub">
+                      <span className="w-num">{fmt(currentValue)}</span> − <span className="w-num">{fmt(remainingCapital)}</span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            );
+          })()}
 
           {/* Détenteurs */}
-          <div className="loan-finary-meta" style={{ marginTop: 4 }}>
-            <Users size={13}/> Détenu par {owners}
-          </div>
-
-          <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+          <div className="re-footer">
+            <div className="re-owners"><Users size={13}/> Détenu par {owners}</div>
             <button className="secondary-btn" onClick={() => onEdit && onEdit(asset)}>
               <Edit3 size={14}/> Modifier
             </button>
@@ -1861,112 +1895,222 @@ function RealEstateDetail({ asset, liabilities = [], members = [], memberShare, 
 
 function RealEstatePatchStyles() {
   const css = String.raw`
-/* KPI strip — deux panels jumeaux Prix d'acquisition + Caractéristiques */
-.re-finary-page .re-kpi-strip {
+.re-finary-page { max-width: 920px; }
+
+/* HERO */
+.re-finary-page .re-hero {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  grid-template-columns: 1fr auto;
+  gap: 32px;
+  align-items: end;
   margin-top: 18px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--border);
 }
-@media (max-width: 720px) { .re-finary-page .re-kpi-strip { grid-template-columns: 1fr; } }
-.re-finary-page .re-panel {
-  background: var(--bg-elev);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg, 14px);
-  padding: 22px 24px 20px;
-  display: flex;
-  flex-direction: column;
-  min-height: 100%;
+@media (max-width: 640px) { .re-finary-page .re-hero { grid-template-columns: 1fr; align-items: start; gap: 16px; } }
+.re-finary-page .re-type-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 500;
+  padding: 4px 10px;
+  background: var(--accent-soft, #E7EBFF);
+  color: var(--accent, #2540D9);
+  border-radius: 999px;
+  letter-spacing: 0;
+  text-transform: none;
 }
+.re-finary-page .re-name {
+  font-family: 'Geist', sans-serif;
+  font-weight: 500;
+  font-size: 28px;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  margin: 10px 0 4px;
+  color: var(--ink);
+}
+.re-finary-page .re-address {
+  font-size: 13.5px;
+  color: var(--ink-3);
+}
+.re-finary-page .re-hero-right { text-align: right; }
+@media (max-width: 640px) { .re-finary-page .re-hero-right { text-align: left; } }
 .re-finary-page .re-eyebrow {
-  font-size: 11px;
-  letter-spacing: 0.14em;
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--ink-3);
   font-weight: 500;
 }
-.re-finary-page .re-panel-value {
-  font-family: var(--font-sans);
+.re-finary-page .re-hero-value {
+  font-family: 'Geist', sans-serif;
   font-weight: 500;
-  font-size: 26px;
-  line-height: 1.1;
+  font-size: 36px;
+  line-height: 1.05;
   color: var(--ink);
-  margin: 6px 0 14px;
+  margin-top: 4px;
+  letter-spacing: -0.025em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* KPI GRID */
+.re-finary-page .re-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  margin-top: 22px;
+}
+@media (max-width: 720px) { .re-finary-page .re-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+.re-finary-page .re-kpi {
+  padding: 6px 18px;
+  border-left: 1px solid var(--border);
+}
+.re-finary-page .re-kpi:first-child { padding-left: 0; border-left: none; }
+@media (max-width: 720px) {
+  .re-finary-page .re-kpi { border-left: none; padding: 8px 0; }
+  .re-finary-page .re-kpi:nth-child(2n) { padding-left: 18px; border-left: 1px solid var(--border); }
+}
+.re-finary-page .re-kpi-label {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-weight: 500;
+}
+.re-finary-page .re-kpi-value {
+  font-family: 'Geist', sans-serif;
+  font-weight: 500;
+  font-size: 19px;
+  line-height: 1.2;
+  color: var(--ink);
+  margin-top: 4px;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
 }
+.re-finary-page .re-kpi-sub {
+  font-size: 12px;
+  color: var(--ink-3);
+  margin-top: 3px;
+}
+
+/* CARDS — coût d'acquisition + prêt */
+.re-finary-page .re-card {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 22px 24px 20px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.re-finary-page .re-card-head {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+}
+.re-finary-page .re-card-title {
+  font-family: 'Geist', sans-serif;
+  font-size: 15px; font-weight: 500;
+  color: var(--ink); margin: 0;
+  letter-spacing: -0.005em;
+}
+.re-finary-page .re-card-total {
+  font-family: 'Geist', sans-serif;
+  font-weight: 500;
+  font-size: 20px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.re-finary-page .re-card-link {
+  background: none; border: none; padding: 0; cursor: pointer;
+  font-size: 13px; color: var(--ink-3);
+  text-decoration: underline; text-underline-offset: 3px;
+  text-decoration-color: var(--border-strong, #D2CEC0);
+}
+.re-finary-page .re-card-link:hover { color: var(--ink); text-decoration-color: var(--ink-3); }
+
+/* Rows label/valeur */
 .re-finary-page .re-rows {
   list-style: none;
   margin: 0;
-  padding: 14px 0 0;
+  padding: 12px 0 0;
   border-top: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
+  display: flex; flex-direction: column;
   gap: 10px;
 }
-.re-finary-page .re-rows.re-rows-top { padding-top: 4px; border-top: none; }
+.re-finary-page .re-card .re-rows { border-top: none; padding-top: 0; }
 .re-finary-page .re-rows li {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 16px;
-  font-size: 13.5px;
-  color: var(--ink-2);
-  text-transform: none;
-  letter-spacing: 0;
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 16px; font-size: 13.5px; color: var(--ink-2);
 }
-.re-finary-page .re-rows li > span:first-child { font-weight: 400; }
 .re-finary-page .re-rows li .w-num { color: var(--ink); font-weight: 500; font-variant-numeric: tabular-nums; }
 
-/* Bandeau bas — Patrimoine net + Prêt lié */
-.re-net-panel {
-  background: var(--bg-elev);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg, 14px);
-  padding: 22px 26px;
-  display: grid;
-  grid-template-columns: 1.4fr 1fr;
-  gap: 28px;
-  margin-top: 4px;
+/* PRÊT — headline + progress bar */
+.re-finary-page .re-loan-headline {
+  display: flex; justify-content: space-between; align-items: flex-end; gap: 12px;
 }
-@media (max-width: 720px) { .re-net-panel { grid-template-columns: 1fr; } }
-.re-net-value {
-  font-family: var(--font-sans);
+.re-finary-page .re-loan-big {
+  font-family: 'Geist', sans-serif;
   font-weight: 500;
-  font-size: 34px;
+  font-size: 30px;
   line-height: 1.05;
   color: var(--ink);
-  margin-top: 6px;
-  letter-spacing: -0.015em;
-  font-variant-numeric: tabular-nums;
-}
-.re-net-meta { color: var(--ink-3); font-size: 12.5px; margin-top: 8px; }
-.re-net-meta .w-num { color: var(--ink-2); font-weight: 500; }
-.re-net-minus { margin: 0 4px; color: var(--ink-3); }
-.re-net-loan { border-left: 1px solid var(--border); padding-left: 28px; }
-@media (max-width: 720px) { .re-net-loan { border-left: none; padding-left: 0; border-top: 1px solid var(--border); padding-top: 18px; } }
-
-.re-pl-panel {
-  background: var(--bg-elev);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 18px 24px;
-  margin-top: 12px;
-}
-.re-pl-value {
-  font-family: var(--font-serif);
-  font-weight: 400;
-  font-size: 26px;
-  line-height: 1.1;
   margin-top: 4px;
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
-  display: inline-flex;
-  align-items: baseline;
-  gap: 10px;
 }
-.re-pl-pct { font-size: 14px; font-family: var(--font-sans); font-weight: 500; opacity: 0.85; }
-.re-pl-meta { color: var(--ink-2); font-size: 12.5px; margin-top: 6px; }
-.re-pl-meta em { font-family: var(--font-serif); font-style: italic; color: var(--ink-3); }
+.re-finary-page .re-loan-pct {
+  font-family: 'Geist', sans-serif;
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--accent, #2540D9);
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+.re-finary-page .re-loan-pct span {
+  font-size: 12px; color: var(--ink-3); font-weight: 400; margin-left: 4px;
+}
+.re-finary-page .re-progress {
+  height: 8px;
+  background: var(--bg-sunk, #EFEDE6);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.re-finary-page .re-progress-fill {
+  height: 100%;
+  background: var(--accent, #2540D9);
+  border-radius: 999px;
+  transition: width .3s ease;
+}
+.re-finary-page .re-progress-legend {
+  font-size: 12px;
+  color: var(--ink-3);
+  display: flex; gap: 6px; align-items: baseline;
+}
+.re-finary-page .re-progress-legend .w-num { color: var(--ink-2); font-weight: 500; }
+.re-finary-page .re-progress-legend .re-sep { color: var(--ink-3); opacity: 0.6; }
+
+.re-finary-page .re-loan-foot {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+@media (max-width: 540px) { .re-finary-page .re-loan-foot { grid-template-columns: 1fr; gap: 14px; } }
+.re-finary-page .re-loan-foot-val {
+  font-family: 'Geist', sans-serif; font-weight: 500;
+  font-size: 18px; color: var(--ink);
+  margin-top: 4px; font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.re-finary-page .re-loan-foot-sub { font-size: 12px; color: var(--ink-3); margin-top: 3px; }
+
+/* Footer */
+.re-finary-page .re-footer {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 16px; padding-top: 8px;
+}
+.re-finary-page .re-owners {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; color: var(--ink-3);
+}
+@media (max-width: 540px) {
+  .re-finary-page .re-footer { flex-direction: column; align-items: flex-start; }
+}
 `;
   return <style dangerouslySetInnerHTML={{ __html: css }}/>;
 }
