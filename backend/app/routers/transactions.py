@@ -295,6 +295,54 @@ def apply_rule_retroactively(rule_id: str, db: Session = Depends(get_db), user: 
     return {"updated": updated, "rule_id": rule_id, "category_slug": rule.category_slug}
 
 
+@router.post("/recategorize-transfers")
+def recategorize_transfers(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Re-passe le moteur de catégorisation v2 (couche transfer-detection) sur les
+    transactions existantes du foyer ayant is_transfer_override=NULL — celles
+    pour lesquelles l'utilisateur n'a pas encore exprimé de décision manuelle.
+
+    Flag celles dont le libellé matche une règle xfer.* (PRELEVEMENT AUTOMATIQUE
+    ENREGISTRE-MERCI = règlement carte de crédit, DEPENSE ECHELONNEE = paire
+    AMEX, Revolut/N26/Lydia/Wise/Bunq = top-ups inter-comptes).
+
+    Les overrides manuels (True OU False) ne sont JAMAIS touchés — la décision
+    explicite de l'utilisateur est sacrée.
+
+    Cas d'usage : tx importées avant 2026-05-16 (date d'arrivée du moteur v2)
+    qui restent à NULL et polluent le panneau Total période des Transactions.
+
+    Retourne {"scanned": N, "flagged": M}.
+    """
+    candidates = db.query(Transaction).filter(
+        Transaction.household_id == user.household_id,
+        Transaction.is_transfer_override.is_(None),
+    ).all()
+    flagged = 0
+    for t in candidates:
+        try:
+            result = categorize_transaction(
+                label=t.label or "",
+                amount=t.amount or 0.0,
+                household_id=user.household_id,
+                db=db,
+                date=t.date,
+            )
+        except Exception:
+            # Une tx malformée ne doit pas casser le batch entier
+            continue
+        if result.is_transfer:
+            t.is_transfer_override = True
+            # Remplit aussi payee/source si l'engine a résolu et que la tx
+            # n'en avait pas (cas typique : tx pré-v2 jamais catégorisée).
+            if result.payee_id and not t.payee_id:
+                t.payee_id = result.payee_id
+            if result.source and not t.cat_source:
+                t.cat_source = result.source
+            flagged += 1
+    db.commit()
+    return {"scanned": len(candidates), "flagged": flagged}
+
+
 @router.delete("/{tx_id}", status_code=204)
 def delete_transaction(tx_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     tx = db.query(Transaction).filter(Transaction.id == tx_id, Transaction.household_id == user.household_id).first()
