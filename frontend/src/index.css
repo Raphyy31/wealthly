@@ -1318,3 +1318,233 @@ html, body {
   from { transform: translate(-50%, -8px); opacity: 0; }
   to   { transform: translate(-50%, 0); opacity: 1; }
 }
+
+/* ============================================================================
+   Transactions — day-grouped card feed (Mai 2026 redesign)
+   ============================================================================ */
+.tx-sort-bar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 10px 4px 14px;
+  flex-wrap: wrap;
+}
+.tx-sort-label {
+  font: 500 11px var(--font-sans);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+  margin-right: 4px;
+}
+.tx-sort-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 6px 10px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font: 500 12px var(--font-sans);
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.tx-sort-btn:hover { color: var(--ink); border-color: var(--border-strong); }
+.tx-sort-btn.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--accent-line);
+}
+.tx-sort-meta {
+  margin-left: auto;
+  font: 500 11px var(--font-mono);
+  color: var(--ink-3);
+}
+
+.tx-feed {
+  display: flex; flex-direction: column;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+.tx-feed-empty {
+  padding: 60px 24px;
+  text-align: center;
+  color: var(--ink-3);
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.tx-feed-empty svg { opacity: 0.5; margin-bottom: 8px; }
+.tx-feed-empty p { margin: 0; font-size: 13px; }
+.tx-feed-more {
+  text-align: center;
+  padding: 16px;
+  color: var(--ink-3);
+  font: 400 12px var(--font-sans);
+  font-style: italic;
+}
+
+.tx-day {
+  display: flex; flex-direction: column;
+}
+.tx-day-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  padding: 0 4px 10px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+.tx-day-label {
+  font: 500 13px var(--font-sans);
+  color: var(--ink-2);
+  text-transform: capitalize;
+  letter-spacing: -0.005em;
+}
+.tx-day-total {
+  font: 600 14px var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.tx-day-total.positive { color: var(--positive); }
+.tx-day-total.negative { color: var(--ink-2); }
+.tx-day-total.neutral  { color: var(--ink-3); }
+
+.tx-day-rows {
+  display: flex; flex-direction: column;
+}
+.tx-card {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 4px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.12s;
+  position: relative;
+}
+.tx-card:last-child { border-bottom: none; }
+.tx-card:hover { background: var(--bg-sunk); }
+.tx-card-transfer { opacity: 0.78; }
+
+.tx-card-icon {
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.12s;
+  padding: 0;
+}
+.tx-card-icon:hover { transform: scale(1.05); }
+.tx-card-picker {
+  position: absolute; top: 56px; left: 0; z-index: 30;
+}
+
+.tx-card-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.tx-card-label {
+  font: 500 14px var(--font-sans);
+  color: var(--ink);
+  letter-spacing: -0.005em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.tx-card-meta {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px;
+  color: var(--ink-3);
+  min-width: 0;
+}
+.tx-card-meta-sep { color: var(--ink-mute); flex-shrink: 0; }
+.tx-card-cat-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font: 500 12px var(--font-sans);
+  color: var(--ink-2);
+  letter-spacing: -0.005em;
+  flex-shrink: 0;
+}
+.tx-card-cat-pill:hover { text-decoration: underline; text-underline-offset: 3px; }
+.tx-card-cat-pill.transfer { color: var(--accent); }
+.tx-card-cat-dot {
+  width: 8px; height: 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+.tx-card-sub-pill {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font: 400 12px var(--font-sans);
+  color: var(--ink-2);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.tx-card-sub-pill:hover { color: var(--accent); }
+.tx-card-sub-add {
+  background: transparent;
+  border: 1px dashed var(--border);
+  padding: 1px 7px;
+  border-radius: 6px;
+  font: 400 11px var(--font-sans);
+  color: var(--ink-3);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s, border-color 0.15s;
+}
+.tx-card:hover .tx-card-sub-add { opacity: 1; }
+.tx-card-sub-add:hover { color: var(--accent); border-color: var(--accent); }
+.tx-card-acc {
+  color: var(--ink-3);
+  font-size: 11.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tx-card-actions {
+  display: flex; align-items: center; gap: 2px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.tx-card:hover .tx-card-actions { opacity: 1; }
+.tx-card-action {
+  background: transparent;
+  border: none;
+  padding: 6px;
+  border-radius: 6px;
+  color: var(--ink-3);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px;
+  line-height: 1;
+}
+.tx-card-action:hover { background: var(--bg-elev); color: var(--ink); }
+.tx-card-action.delete:hover { color: var(--negative); }
+.tx-card-action.recurring.active { color: var(--accent); opacity: 1; }
+.tx-card .tx-card-action.recurring.active { opacity: 1; }
+.tx-card-action.transfer-toggle { font-size: 13px; }
+
+.tx-card-amount {
+  font: 600 14px var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  text-align: right;
+  white-space: nowrap;
+  min-width: 80px;
+}
+.tx-card-amount.positive { color: var(--positive); }
+.tx-card-amount.negative { color: var(--negative); }
+.tx-card-amount.transfer { color: var(--ink-3); font-weight: 500; }
+
+@media (max-width: 640px) {
+  .tx-card {
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    gap: 10px;
+    padding: 10px 2px;
+  }
+  .tx-card-actions { display: none; }
+  .tx-card-icon { width: 40px; height: 40px; font-size: 16px; }
+  .tx-card-label { font-size: 13px; }
+  .tx-card-amount { font-size: 13px; min-width: 70px; }
+}

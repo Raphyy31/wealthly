@@ -580,273 +580,207 @@ export function Transactions({ transactions, accounts, categories, members = [],
         {allTags.map(tag => <option key={tag} value={tag}/>)}
       </datalist>
 
-      <div className="tx-table">
-        <div className="tx-header">
-          {/* Date — filter: range from/to */}
-          <div className="th sortable" onClick={() => toggleSort('date')}>
-            Date <ArrowUpDown size={12}/>
-            <HeaderFilter
-              active={!!filters.dateFrom || !!filters.dateTo}
-              onReset={() => { setField('dateFrom', ''); setField('dateTo', ''); }}
-            >
-              {() => (
-                <div className="th-filter-section">
-                  <label className="th-filter-row">
-                    <span>Du</span>
-                    <input type="date" value={filters.dateFrom} onChange={(e) => setField('dateFrom', e.target.value)}/>
-                  </label>
-                  <label className="th-filter-row">
-                    <span>Au</span>
-                    <input type="date" value={filters.dateTo} onChange={(e) => setField('dateTo', e.target.value)}/>
-                  </label>
-                </div>
-              )}
-            </HeaderFilter>
-          </div>
-          {/* Libellé — keeps the top-bar search; no column filter */}
-          <div className="th sortable" onClick={() => toggleSort('label')}>Libellé <ArrowUpDown size={12}/></div>
-          {/* Catégorie — multi-select top-levels */}
-          <div className="th">
-            Catégorie
-            <HeaderFilter
-              active={filters.cats.some(id => {
-                const c = categories.find(x => x.id === id);
-                return c && !c.parent;
-              })}
-              onReset={() => {
-                const sub = filters.cats.filter(id => { const c = categories.find(x => x.id === id); return c && c.parent; });
-                setField('cats', sub);
-              }}
-            >
-              {() => (
-                <div className="th-filter-section">
-                  <input
-                    className="th-filter-search"
-                    placeholder="Filtrer…"
-                    value={catFilterSearch}
-                    onChange={e => setCatFilterSearch(e.target.value)}
-                  />
-                  {categories.filter(c => !c.parent && c.id !== 'uncategorized' && (catFilterSearch === '' || c.name.toLowerCase().includes(catFilterSearch))).map(c => (
-                    <label key={c.id} className={`th-filter-chk ${filters.cats.includes(c.id) ? 'active' : ''}`}>
-                      <input type="checkbox" checked={filters.cats.includes(c.id)} onChange={() => toggleInList('cats', c.id)}/>
-                      <span className="th-filter-chk-icon">{c.icon}</span>
-                      <span>{c.name}</span>
-                      <span className="th-filter-chk-count">{catCounts[c.id] || 0}</span>
-                    </label>
-                  ))}
-                  {(catFilterSearch === '' || 'non catégorisé'.includes(catFilterSearch) || 'non categorise'.includes(catFilterSearch)) && (
-                    <label className={`th-filter-chk ${filters.cats.includes('uncategorized') ? 'active' : ''}`}>
-                      <input type="checkbox" checked={filters.cats.includes('uncategorized')} onChange={() => toggleInList('cats', 'uncategorized')}/>
-                      <span className="th-filter-chk-icon">❓</span>
-                      <span>Non catégorisé</span>
-                      <span className="th-filter-chk-count">{catCounts['uncategorized'] || 0}</span>
-                    </label>
-                  )}
-                </div>
-              )}
-            </HeaderFilter>
-          </div>
-          {/* Détail — multi-select sub-cats */}
-          <div className="th">
-            Détail
-            <HeaderFilter
-              active={filters.cats.some(id => {
-                const c = categories.find(x => x.id === id);
-                return c && c.parent;
-              })}
-              onReset={() => {
-                const top = filters.cats.filter(id => { const c = categories.find(x => x.id === id); return c && !c.parent; });
-                setField('cats', top);
-              }}
-            >
-              {() => {
-                const subs = categories.filter(c => c.parent && (catFilterSearch === '' || c.name.toLowerCase().includes(catFilterSearch)));
-                // Group by parent for clarity
-                const byParent = new Map();
-                subs.forEach(s => {
-                  const p = categories.find(c => c.id === s.parent);
-                  if (!p) return;
-                  if (!byParent.has(p.id)) byParent.set(p.id, { parent: p, subs: [] });
-                  byParent.get(p.id).subs.push(s);
-                });
-                return (
-                  <div className="th-filter-section">
-                    <input
-                      className="th-filter-search"
-                      placeholder="Filtrer…"
-                      value={catFilterSearch}
-                      onChange={e => setCatFilterSearch(e.target.value)}
-                    />
-                    {[...byParent.values()].map(({ parent, subs }) => (
-                      <div key={parent.id}>
-                        <div className="th-filter-group">{parent.icon} {parent.name}</div>
-                        {subs.map(s => (
-                          <label key={s.id} className={`th-filter-chk ${filters.cats.includes(s.id) ? 'active' : ''}`}>
-                            <input type="checkbox" checked={filters.cats.includes(s.id)} onChange={() => toggleInList('cats', s.id)}/>
-                            <span className="th-filter-chk-icon">{s.icon}</span>
-                            <span>{s.name}</span>
-                            <span className="th-filter-chk-count">{catCounts[s.id] || 0}</span>
-                          </label>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                );
-              }}
-            </HeaderFilter>
-          </div>
-          {/* Compte — multi-select */}
-          <div className="th">
-            Compte
-            <HeaderFilter
-              active={filters.accs.length > 0}
-              onReset={() => setField('accs', [])}
-            >
-              {() => (
-                <div className="th-filter-section">
-                  {accounts.map(a => (
-                    <label key={a.id} className={`th-filter-chk ${filters.accs.includes(a.id) ? 'active' : ''}`}>
-                      <input type="checkbox" checked={filters.accs.includes(a.id)} onChange={() => toggleInList('accs', a.id)}/>
-                      <span>{a.bank} — {a.name}</span>
-                    </label>
-                  ))}
-                </div>
-              )}
-            </HeaderFilter>
-          </div>
-          {/* Montant — type radio + min/max range */}
-          <div className="th right sortable" onClick={() => toggleSort('amount')}>
-            Montant <ArrowUpDown size={12}/>
-            <HeaderFilter
-              align="right"
-              active={filters.type !== 'all' || filters.amountMin !== '' || filters.amountMax !== ''}
-              onReset={() => { setField('type', 'all'); setField('amountMin', ''); setField('amountMax', ''); }}
-            >
-              {() => (
-                <div className="th-filter-section">
-                  <div className="th-filter-segmented">
-                    {[['all', 'Tout'], ['income', 'Recettes'], ['expense', 'Dépenses']].map(([id, label]) => (
-                      <button
-                        key={id}
-                        type="button"
-                        className={`th-filter-seg ${filters.type === id ? 'active' : ''}`}
-                        onClick={() => setField('type', id)}
-                      >{label}</button>
-                    ))}
-                  </div>
-                  <label className="th-filter-row">
-                    <span>Min €</span>
-                    <input type="number" value={filters.amountMin} onChange={e => setField('amountMin', e.target.value)} placeholder="0"/>
-                  </label>
-                  <label className="th-filter-row">
-                    <span>Max €</span>
-                    <input type="number" value={filters.amountMax} onChange={e => setField('amountMax', e.target.value)} placeholder="∞"/>
-                  </label>
-                </div>
-              )}
-            </HeaderFilter>
-          </div>
-          <div className="th"></div>
-        </div>
-        <div className="tx-body">
-          {filtered.slice(0, 200).map(tx => {
-            const cat = categories.find(c => c.id === tx.categoryId);
-            const acc = accounts.find(a => a.id === tx.accountId);
-            const isRecurring = recurringIds.has(tx.id);
-            const isTransfer = transferIds.has(tx.id);
-            return (
-              <div key={tx.id} className={`tx-row ${isTransfer ? 'tx-row-transfer' : ''}`}>
-                <div className="td td-date">{formatDate(tx.date)}</div>
-                <div className="td td-label" data-tooltip={tx.label || 'Sans libellé'}>
-                  <span className="td-label-text">{tx.label || 'Sans libellé'}</span>
-                  {isTransfer && (
-                    <button
-                      className="tx-transfer-badge"
-                      onClick={() => setTransferOverride && setTransferOverride(tx.id, false)}
-                      title="Transfert détecté — clic pour marquer comme transaction normale"
-                    >↔ Transfert</button>
-                  )}
-                  {!isTransfer && setTransferOverride && (
-                    <button
-                      className="tx-transfer-toggle"
-                      onClick={() => setTransferOverride(tx.id, true)}
-                      title="Marquer cette transaction comme transfert interne (l'exclure du cashflow)"
-                    >↔</button>
-                  )}
-                  <button className={`recurring-toggle ${isRecurring ? 'active' : ''}`} onClick={() => toggleRecurring(tx.id, !isRecurring)} title={isRecurring ? 'Marquer comme non-récurrent' : 'Marquer comme récurrent'}>
-                    <Repeat size={11}/>
-                  </button>
-                  {updateTags && (
-                    <TxTagsInline tags={tx.tags || []} allTags={allTags} onChange={(next) => updateTags(tx.id, next)}/>
-                  )}
-                </div>
-                <div className="td td-cat" style={{ position: 'relative' }}>
-                  {editingTx === tx.id ? (
-                    <CatPicker
-                      categories={categories}
-                      currentId={tx.categoryId}
-                      onSelect={(catId) => { updateCategory(tx.id, catId); }}
-                      onClose={() => setEditingTx(null)}
-                    />
-                  ) : isTransfer ? (
-                    <button className="cat-pill" style={{ background: 'var(--primary-soft)', color: 'var(--primary)' }} onClick={() => setEditingTx(tx.id)} title="Cliquez pour catégoriser malgré tout">
-                      ↔ Virement interne
-                    </button>
-                  ) : (() => {
-                    // Top-level category (parent if cat is a sub, else itself).
-                    const topCat = cat?.parent ? categories.find(c => c.id === cat.parent) : cat;
-                    const display = topCat || cat;
-                    return (
-                      <button className="cat-pill" style={{ background: (display?.color || '#999') + '1f', color: display?.color || '#666' }} onClick={() => setEditingTx(tx.id)}>
-                        {display?.icon} {display?.name || 'Non catégorisé'}
-                      </button>
-                    );
-                  })()}
-                </div>
-                <div className="td td-subcat" style={{ position: 'relative' }}>
-                  {(() => {
-                    if (isTransfer) return <span className="cat-pill-empty">—</span>;
-                    if (!cat) return <span className="cat-pill-empty">—</span>;
-                    // Determine which top-level the picker should scope to.
-                    const topSlug = cat.parent || cat.id;
-                    if (editingSubcat === tx.id) {
-                      return (
-                        <SubCatPicker
-                          categories={categories}
-                          topSlug={topSlug}
-                          currentId={cat.id}
-                          onSelect={(catId) => { updateCategory(tx.id, catId); }}
-                          onClose={() => setEditingSubcat(null)}
-                        />
-                      );
-                    }
-                    if (cat.parent) {
-                      return (
-                        <button className="cat-pill cat-pill-sub" onClick={() => setEditingSubcat(tx.id)} title={`Détail · cliquer pour changer`}>
-                          {cat.icon} {cat.name}
-                        </button>
-                      );
-                    }
-                    // Top-level cat, no sub yet — show "+ détail" hint button
-                    const hasSubs = categories.some(c => c.parent === cat.id);
-                    return hasSubs ? (
-                      <button className="cat-pill-add-sub" onClick={() => setEditingSubcat(tx.id)} title="Ajouter un détail">
-                        + détail
-                      </button>
-                    ) : <span className="cat-pill-empty">—</span>;
-                  })()}
-                </div>
-                <div className="td td-acc">{acc?.name || '—'}</div>
-                <div className={`td td-amount right ${tx.amount >= 0 ? 'positive' : ''}`}>{fmt(tx.amount, { sign: true })}</div>
-                <div className="td td-actions">
-                  <button className="icon-btn-sm" onClick={() => deleteTransaction(tx.id)}><Trash2 size={13}/></button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        {filtered.length > 200 && <div className="tx-more">+ {filtered.length - 200} transactions (affinez les filtres)</div>}
+
+      {/* Sort toolbar */}
+      <div className="tx-sort-bar">
+        <span className="tx-sort-label">Trier par</span>
+        <button className={`tx-sort-btn ${sortKey === 'date' ? 'active' : ''}`} onClick={() => toggleSort('date')}>
+          Date <ArrowUpDown size={11}/>
+        </button>
+        <button className={`tx-sort-btn ${sortKey === 'amount' ? 'active' : ''}`} onClick={() => toggleSort('amount')}>
+          Montant <ArrowUpDown size={11}/>
+        </button>
+        <button className={`tx-sort-btn ${sortKey === 'label' ? 'active' : ''}`} onClick={() => toggleSort('label')}>
+          Libellé <ArrowUpDown size={11}/>
+        </button>
+        <span className="tx-sort-meta">{sortDir === 'desc' ? '↓' : '↑'}</span>
       </div>
+
+      {/* Day-grouped feed */}
+      {(() => {
+        const visible = filtered.slice(0, 200);
+        if (visible.length === 0) {
+          return (
+            <div className="tx-feed-empty">
+              <Search size={28}/>
+              <p>Aucune transaction ne correspond à tes filtres.</p>
+            </div>
+          );
+        }
+        // Group by day while respecting current sort order. When sorted by
+        // date, the natural order already puts days together. When sorted
+        // differently (label/amount), each tx still lands in its day group
+        // but groups may interleave — that's expected.
+        const groups = [];
+        const seenDay = new Map();
+        for (const tx of visible) {
+          let bucket = seenDay.get(tx.date);
+          if (!bucket) {
+            bucket = { date: tx.date, txs: [] };
+            seenDay.set(tx.date, bucket);
+            groups.push(bucket);
+          }
+          bucket.txs.push(tx);
+        }
+
+        const fmtDay = (iso) => {
+          try {
+            const d = new Date(iso + 'T00:00:00');
+            return new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }).format(d);
+          } catch { return iso; }
+        };
+
+        return (
+          <div className="tx-feed">
+            {groups.map(({ date, txs }) => {
+              const total = txs.reduce((s, t) => s + (t.amount || 0), 0);
+              const totalCls = total > 0.005 ? 'positive' : total < -0.005 ? 'negative' : 'neutral';
+              return (
+                <section key={date} className="tx-day">
+                  <header className="tx-day-head">
+                    <span className="tx-day-label">{fmtDay(date)}</span>
+                    <span className={`tx-day-total num ${totalCls}`}>
+                      {total > 0 ? '+' : ''}{fmt(total)}
+                    </span>
+                  </header>
+                  <div className="tx-day-rows">
+                    {txs.map(tx => {
+                      const cat = categories.find(c => c.id === tx.categoryId);
+                      const acc = accounts.find(a => a.id === tx.accountId);
+                      const isRecurring = recurringIds.has(tx.id);
+                      const isTransfer = transferIds.has(tx.id);
+                      const topCat = cat?.parent ? categories.find(c => c.id === cat.parent) : cat;
+                      const display = topCat || cat;
+                      const tileBg = isTransfer ? 'var(--bg-sunk)' : ((display?.color || '#9ca3af') + '22');
+                      const tileFg = isTransfer ? 'var(--ink-2)' : (display?.color || '#6b7280');
+                      const amtCls = isTransfer ? 'transfer' : (tx.amount >= 0 ? 'positive' : 'negative');
+                      return (
+                        <div key={tx.id} className={`tx-card ${isTransfer ? 'tx-card-transfer' : ''}`}>
+                          <button
+                            className="tx-card-icon"
+                            style={{ background: tileBg, color: tileFg }}
+                            onClick={() => setEditingTx(tx.id)}
+                            title="Changer la catégorie"
+                          >
+                            <span aria-hidden="true">{isTransfer ? '↔' : (display?.icon || '❓')}</span>
+                          </button>
+                          {editingTx === tx.id && (
+                            <div className="tx-card-picker">
+                              <CatPicker
+                                categories={categories}
+                                currentId={tx.categoryId}
+                                onSelect={(catId) => { updateCategory(tx.id, catId); }}
+                                onClose={() => setEditingTx(null)}
+                              />
+                            </div>
+                          )}
+                          <div className="tx-card-body">
+                            <div className="tx-card-label" title={tx.label || 'Sans libellé'}>
+                              {tx.label || 'Sans libellé'}
+                            </div>
+                            <div className="tx-card-meta">
+                              {isTransfer ? (
+                                <button
+                                  className="tx-card-cat-pill transfer"
+                                  onClick={() => setTransferOverride && setTransferOverride(tx.id, false)}
+                                  title="Détecté transfert — clic pour annuler"
+                                >
+                                  ↔ Virement interne
+                                </button>
+                              ) : (
+                                <button
+                                  className="tx-card-cat-pill"
+                                  style={{ color: display?.color || 'var(--ink-2)' }}
+                                  onClick={() => setEditingTx(tx.id)}
+                                >
+                                  <span className="tx-card-cat-dot" style={{ background: display?.color || '#9ca3af' }}/>
+                                  {display?.name || 'Non catégorisé'}
+                                </button>
+                              )}
+                              {!isTransfer && cat && (cat.parent ? (
+                                <>
+                                  <span className="tx-card-meta-sep">·</span>
+                                  {editingSubcat === tx.id ? (
+                                    <SubCatPicker
+                                      categories={categories}
+                                      topSlug={cat.parent}
+                                      currentId={cat.id}
+                                      onSelect={(catId) => { updateCategory(tx.id, catId); }}
+                                      onClose={() => setEditingSubcat(null)}
+                                    />
+                                  ) : (
+                                    <button className="tx-card-sub-pill" onClick={() => setEditingSubcat(tx.id)} title="Changer le détail">
+                                      {cat.icon} {cat.name}
+                                    </button>
+                                  )}
+                                </>
+                              ) : (
+                                categories.some(c => c.parent === cat.id) && (
+                                  <>
+                                    <span className="tx-card-meta-sep">·</span>
+                                    {editingSubcat === tx.id ? (
+                                      <SubCatPicker
+                                        categories={categories}
+                                        topSlug={cat.id}
+                                        currentId={cat.id}
+                                        onSelect={(catId) => { updateCategory(tx.id, catId); }}
+                                        onClose={() => setEditingSubcat(null)}
+                                      />
+                                    ) : (
+                                      <button className="tx-card-sub-add" onClick={() => setEditingSubcat(tx.id)} title="Ajouter un détail">
+                                        + détail
+                                      </button>
+                                    )}
+                                  </>
+                                )
+                              ))}
+                              {acc && (
+                                <>
+                                  <span className="tx-card-meta-sep">·</span>
+                                  <span className="tx-card-acc">{acc.bank || acc.name}</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                          <div className="tx-card-actions">
+                            <button
+                              className={`tx-card-action recurring ${isRecurring ? 'active' : ''}`}
+                              onClick={() => toggleRecurring(tx.id, !isRecurring)}
+                              title={isRecurring ? 'Récurrent — clic pour annuler' : 'Marquer récurrent'}
+                            >
+                              <Repeat size={12}/>
+                            </button>
+                            {!isTransfer && setTransferOverride && (
+                              <button
+                                className="tx-card-action transfer-toggle"
+                                onClick={() => setTransferOverride(tx.id, true)}
+                                title="Marquer comme transfert interne"
+                              >↔</button>
+                            )}
+                            <button
+                              className="tx-card-action delete"
+                              onClick={() => deleteTransaction(tx.id)}
+                              title="Supprimer"
+                            >
+                              <Trash2 size={12}/>
+                            </button>
+                          </div>
+                          <div className={`tx-card-amount num ${amtCls}`}>
+                            {tx.amount >= 0 ? '+' : ''}{fmt(tx.amount)}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              );
+            })}
+            {filtered.length > 200 && (
+              <div className="tx-feed-more">+ {filtered.length - 200} transactions — affine tes filtres pour les voir.</div>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }
