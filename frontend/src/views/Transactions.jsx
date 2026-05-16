@@ -580,6 +580,56 @@ export function Transactions({ transactions, accounts, categories, members = [],
         {allTags.map(tag => <option key={tag} value={tag}/>)}
       </datalist>
 
+      {/* Période totals — somme nette de la période/filtres actuels.
+          Exclut les virements internes (PRELEVEMENT AUTOMATIQUE Amex,
+          DÉPENSE ÉCHELONNÉE pairs, top-ups Revolut, etc.) pour donner
+          la VRAIE dépense / vrai revenu de la période. */}
+      {(() => {
+        let inc = 0, exp = 0, txfCount = 0, txfTotal = 0;
+        for (const tx of filtered) {
+          if (transferIds.has(tx.id)) {
+            txfCount++;
+            txfTotal += Math.abs(tx.amount || 0);
+            continue;
+          }
+          if (tx.amount > 0) inc += tx.amount;
+          else exp += Math.abs(tx.amount);
+        }
+        const net = inc - exp;
+        const monthLabel = filters.month
+          ? new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(new Date(filters.month + '-02'))
+          : 'toute la période';
+        return (
+          <div className="tx-period-summary">
+            <div className="tx-period-summary-head">
+              <span className="tx-period-summary-label">Total sur {monthLabel}</span>
+              <span className="tx-period-summary-count">{filtered.length} tx</span>
+            </div>
+            <div className="tx-period-summary-row">
+              <div className="tx-period-stat">
+                <span className="tx-period-stat-label">Revenus</span>
+                <span className="tx-period-stat-value num positive">+{fmt(inc)}</span>
+              </div>
+              <div className="tx-period-stat">
+                <span className="tx-period-stat-label">Dépenses</span>
+                <span className="tx-period-stat-value num negative">-{fmt(exp)}</span>
+              </div>
+              <div className="tx-period-stat">
+                <span className="tx-period-stat-label">Solde net</span>
+                <span className={`tx-period-stat-value num ${net >= 0 ? 'positive' : 'negative'}`}>
+                  {net >= 0 ? '+' : ''}{fmt(net)}
+                </span>
+              </div>
+              {txfCount > 0 && (
+                <div className="tx-period-stat transfers">
+                  <span className="tx-period-stat-label">↔ Virements internes <span className="muted">(exclus)</span></span>
+                  <span className="tx-period-stat-value num neutral">{txfCount} · {fmt(txfTotal)}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Sort toolbar */}
       <div className="tx-sort-bar">
