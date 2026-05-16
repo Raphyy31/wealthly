@@ -133,6 +133,7 @@ export const transactions = {
   update: (id, t) => put(`/transactions/${id}`, t),
   delete: (id) => del(`/transactions/${id}`),
   applyRuleRetroactively: (ruleId) => post(`/transactions/rules/${ruleId}/apply-retroactively`, {}),
+  recategorizeTransfers: () => post('/transactions/recategorize-transfers', {}),
 };
 
 // ============================================================================

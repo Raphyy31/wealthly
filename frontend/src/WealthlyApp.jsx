@@ -1197,6 +1197,33 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     showToast(`${ok} transactions re-catégorisées sur ${candidates.length} candidates.`, 'success');
   };
 
+  // Re-run the v2 engine's transfer-detection layer on existing transactions.
+  // Backend filters to is_transfer_override IS NULL (no manual user decision)
+  // and flags those whose label matches a xfer.* rule. Manual overrides
+  // (true OR false) are never touched.
+  //
+  // Use case: tx imported before 2026-05-16 (when engine v2 shipped) that
+  // never traversed the engine and still pollute period totals — typically
+  // AMEX PRELEVEMENT AUTOMATIQUE arriving as +X via GoCardless and counted
+  // as fake "income".
+  const recategorizeTransfers = async () => {
+    try {
+      const res = await api.transactions.recategorizeTransfers();
+      const flagged = res?.flagged ?? 0;
+      const scanned = res?.scanned ?? 0;
+      if (flagged > 0) {
+        // Reload tx so the frontend Set transferIds includes the new flags
+        // and the Total période panel updates.
+        await reloadAll();
+        showToast(`${flagged} virement(s) interne(s) détecté(s) sur ${scanned} transaction(s) analysée(s).`, 'success');
+      } else {
+        showToast(`Aucun virement interne détecté (${scanned} tx analysées).`, 'info');
+      }
+    } catch (e) {
+      showToast(e.message || 'Erreur lors de la détection des virements internes.', 'error');
+    }
+  };
+
   const toggleRecurring = async (txId, isFixed) => {
     // Stored locally as UI override (the backend has its own column but we keep this client-side for speed)
     const newOverrides = { ...recurringOverrides, [txId]: isFixed };
@@ -1967,6 +1994,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             currentUser={currentUser}
             onImport={() => { setView('import'); setImportStep('upload'); }}
             recategorizeUncategorized={recategorizeUncategorized}
+            recategorizeTransfers={recategorizeTransfers}
           />
         )}
         {view === 'admin' && currentUser?.is_admin && (

@@ -44,7 +44,7 @@ function readHashSection() {
   return null;
 }
 
-export function SettingsView({ members, accounts, accountBalances, saveMember, deleteMember, deleteAccount, updateAccount, transactions = [], exportData, importData, resetAllData, categories = [], reloadCategories, onCategoryCreated, onCategoryDeleted, showToast, fmt, baseCurrency = 'EUR', setBaseCurrency, rates, ratesDate, currentUser, onImport, recategorizeUncategorized }) {
+export function SettingsView({ members, accounts, accountBalances, saveMember, deleteMember, deleteAccount, updateAccount, transactions = [], exportData, importData, resetAllData, categories = [], reloadCategories, onCategoryCreated, onCategoryDeleted, showToast, fmt, baseCurrency = 'EUR', setBaseCurrency, rates, ratesDate, currentUser, onImport, recategorizeUncategorized, recategorizeTransfers }) {
   const { t } = useTranslation();
   const [editingMember, setEditingMember] = useState(null);
   const [activeSection, setActiveSection] = useState(() => readHashSection() || 'profil');
@@ -144,6 +144,19 @@ export function SettingsView({ members, accounts, accountBalances, saveMember, d
                   </button>
                   <span style={{ color: 'var(--ink-2)', fontSize: 12 }}>
                     Ré-applique les règles aux transactions actuellement en « Non catégorisé ».
+                  </span>
+                </div>
+              )}
+              {recategorizeTransfers && (
+                <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                  <button className="ds-btn" type="button" onClick={recategorizeTransfers}>
+                    Rejouer la détection des virements internes
+                  </button>
+                  <span style={{ color: 'var(--ink-2)', fontSize: 12, maxWidth: 520 }}>
+                    Identifie les prélèvements mensuels de carte de crédit (AMEX),
+                    les paires DÉPENSE ÉCHELONNÉE et les top-ups Revolut/Lydia/Wise
+                    importés avant le moteur de catégorisation v2. Tes overrides
+                    manuels ne sont jamais touchés.
                   </span>
                 </div>
               )}
