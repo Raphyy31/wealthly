@@ -132,6 +132,7 @@ export const transactions = {
   bulkImport: (accountId, txs) => post('/transactions/import', { account_id: accountId, transactions: txs }),
   update: (id, t) => put(`/transactions/${id}`, t),
   delete: (id) => del(`/transactions/${id}`),
+  applyRuleRetroactively: (ruleId) => post(`/transactions/rules/${ruleId}/apply-retroactively`, {}),
 };
 
 // ============================================================================

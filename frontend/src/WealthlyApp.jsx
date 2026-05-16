@@ -113,6 +113,11 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   // Persistent banner shown during long-running async ops (bank sync can take
   // 10-30s; a 3.5s toast is gone before it finishes). null = idle, string = label.
   const [syncBusy, setSyncBusy] = useState(null);
+  // Category Learning : quand le backend crée une règle apprise après 2
+  // recatégorisations manuelles du même payee, on propose à l'user d'appliquer
+  // la règle aux tx historiques du marchand. null = idle, sinon les infos
+  // pour rendre la bannière + appeler /apply-retroactively.
+  const [learningOffer, setLearningOffer] = useState(null);
   const [sidebarMenuOpen, setSidebarMenuOpen] = useState(false);
 
   // Multi-currency: user's display currency + live FX rates (Frankfurter, 1h cache).
@@ -1014,8 +1019,20 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   const updateTransactionCategory = async (txId, categoryId) => {
     const tx = transactions.find(x => x.id === txId);
     try {
-      await api.transactions.update(txId, { category_slug: categoryId, is_manual_category: true });
+      const resp = await api.transactions.update(txId, { category_slug: categoryId, is_manual_category: true });
       setTransactions(prev => prev.map(x => x.id === txId ? { ...x, categoryId, isManualCategory: true } : x));
+      // Si le backend a créé/mis à jour une règle apprise (Category Learning
+      // a passé le seuil de 2 observations), on propose à l'user d'appliquer
+      // la règle aux transactions historiques du même marchand.
+      if (resp?.learned_rule) {
+        setLearningOffer({
+          ruleId: resp.learned_rule.rule_id,
+          payeeName: resp.learned_rule.payee_name,
+          categoryName: resp.learned_rule.category_name,
+          matchableCount: resp.learned_rule.matchable_count || 0,
+          updated: resp.learned_rule.updated,
+        });
+      }
     } catch (err) {
       showToast(t('toasts.genericError', { message: err.message }), 'error');
       return;
@@ -1603,6 +1620,41 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
         <div className="sync-busy-banner" role="status" aria-live="polite">
           <RefreshCw size={14} className="spin"/>
           <span>{syncBusy}</span>
+        </div>
+      )}
+
+      {learningOffer && (
+        <div className="learning-banner" role="status">
+          <div className="learning-banner-text">
+            <span className="learning-banner-icon">🧠</span>
+            <span>
+              <strong>Wealthly a appris</strong> : « {learningOffer.payeeName} » → <strong>{learningOffer.categoryName}</strong>.
+              {learningOffer.matchableCount > 0 && <> Appliquer aux <strong>{learningOffer.matchableCount}</strong> transaction{learningOffer.matchableCount > 1 ? 's' : ''} historique{learningOffer.matchableCount > 1 ? 's' : ''} de ce marchand ?</>}
+            </span>
+          </div>
+          <div className="learning-banner-actions">
+            {learningOffer.matchableCount > 0 && (
+              <button
+                className="ds-btn primary sm"
+                onClick={async () => {
+                  try {
+                    const res = await api.transactions.applyRuleRetroactively(learningOffer.ruleId);
+                    showToast(`${res.updated || 0} transaction${(res.updated || 0) > 1 ? 's' : ''} reclassée${(res.updated || 0) > 1 ? 's' : ''}.`, 'success');
+                    await reloadAll();
+                  } catch (err) {
+                    showToast(t('toasts.genericError', { message: err.message }), 'error');
+                  } finally {
+                    setLearningOffer(null);
+                  }
+                }}
+              >
+                Appliquer
+              </button>
+            )}
+            <button className="ds-btn ghost sm" onClick={() => setLearningOffer(null)}>
+              Plus tard
+            </button>
+          </div>
         </div>
       )}
 

@@ -208,7 +208,7 @@ def bulk_import(payload: TransactionImport, db: Session = Depends(get_db), user:
     return TransactionImportResult(inserted=inserted, skipped_duplicates=skipped)
 
 
-@router.put("/{tx_id}", response_model=TransactionOut)
+@router.put("/{tx_id}")
 def update_transaction(tx_id: str, payload: TransactionUpdate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     tx = db.query(Transaction).filter(Transaction.id == tx_id, Transaction.household_id == user.household_id).first()
     if not tx:
@@ -225,15 +225,74 @@ def update_transaction(tx_id: str, payload: TransactionUpdate, db: Session = Dep
     db.refresh(tx)
     # Hook Category Learning : si l'user a recatégorisé manuellement et que
     # le payee est connu, on peut auto-créer une règle apprise après seuil.
+    learned_rule = None
     if cat_changed_to and tx.is_manual_category and tx.payee_id:
         try:
-            on_transaction_recategorized(
+            learned_rule = on_transaction_recategorized(
                 tx=tx, new_category_id=cat_changed_to,
                 household_id=user.household_id, db=db,
             )
         except Exception:
             pass  # ne bloque jamais l'update
-    return _to_out(tx, db)
+    out = _to_out(tx, db)
+    if learned_rule:
+        out["learned_rule"] = learned_rule
+    return out
+
+
+@router.post("/rules/{rule_id}/apply-retroactively")
+def apply_rule_retroactively(rule_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Applique une règle (manuelle OU apprise) à toutes les tx historiques du
+    foyer qui ne sont pas déjà dans la catégorie cible. Utilisé par le snackbar
+    'Appliquer aux N transactions historiques' qui apparaît après une règle
+    apprise par Category Learning.
+
+    Ne modifie PAS les tx déjà manuellement catégorisées par l'utilisateur
+    (respect du travail passé).
+    """
+    from app.models import CategorisationRule
+    rule = db.query(CategorisationRule).filter(
+        CategorisationRule.id == rule_id,
+        CategorisationRule.household_id == user.household_id,
+    ).first()
+    if not rule:
+        raise HTTPException(status_code=404, detail="Règle introuvable")
+    target_cat = db.query(Category).filter(
+        Category.household_id == user.household_id,
+        Category.slug == rule.category_slug,
+    ).first()
+    if not target_cat:
+        raise HTTPException(status_code=400, detail="Catégorie cible inconnue")
+
+    # Match par payee_id si la règle est attachée à un payee (cas Category
+    # Learning), sinon par regex sur le label.
+    candidates = []
+    if rule.payee_id:
+        candidates = db.query(Transaction).filter(
+            Transaction.household_id == user.household_id,
+            Transaction.payee_id == rule.payee_id,
+            (Transaction.category_id != target_cat.id) | (Transaction.category_id.is_(None)),
+            Transaction.is_manual_category == False,  # noqa: E712
+        ).all()
+    else:
+        import re as _re
+        try:
+            rx = _re.compile(rule.pattern, _re.IGNORECASE)
+        except _re.error:
+            raise HTTPException(status_code=400, detail="Pattern de règle invalide")
+        all_txs = db.query(Transaction).filter(
+            Transaction.household_id == user.household_id,
+            Transaction.is_manual_category == False,  # noqa: E712
+        ).all()
+        candidates = [t for t in all_txs if rx.search(t.label or "")]
+
+    updated = 0
+    for t in candidates:
+        t.category_id = target_cat.id
+        t.cat_source = "learned_rule" if rule.created_by == "learning" else "user_rule"
+        updated += 1
+    db.commit()
+    return {"updated": updated, "rule_id": rule_id, "category_slug": rule.category_slug}
 
 
 @router.delete("/{tx_id}", status_code=204)
