@@ -136,6 +136,9 @@ class TransactionUpdate(BaseModel):
 class TransactionOut(TransactionBase):
     id: str
     household_id: str
+    payee_id: Optional[str] = None
+    payee_name: Optional[str] = None
+    cat_source: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -366,12 +369,23 @@ class AchievementOut(BaseModel):
 
 class RuleCreate(BaseModel):
     pattern: str
-    category_slug: str
+    category_slug: Optional[str] = None
     source: str = "manual"
+    created_by: str = "user"         # user | learning | builtin
+    rule_type: str = "category"      # category | transfer
+    payee_id: Optional[str] = None
+    priority: int = 100
 
 
-class RuleOut(RuleCreate):
+class RuleOut(BaseModel):
     id: str
+    pattern: str
+    category_slug: Optional[str] = None
+    source: str = "manual"
+    created_by: str = "user"
+    rule_type: str = "category"
+    payee_id: Optional[str] = None
+    priority: int = 100
     model_config = ConfigDict(from_attributes=True)
 
 

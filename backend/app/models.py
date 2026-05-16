@@ -206,6 +206,13 @@ class Transaction(Base):
     is_manual_category = Column(Boolean, default=False)
     is_recurring_override = Column(Boolean, nullable=True)  # null = auto-detect, true/false = manual override
     is_transfer_override = Column(Boolean, nullable=True)   # null = auto-detect, true/false = manual override on internal-transfer detection
+    # Payee canonique résolu par le moteur de catégorisation. Permet d'unifier
+    # toutes les variantes de libellé d'un même marchand (FRANPRIX LEVALLOIS P,
+    # FRANPRIX 5 RUE…) sous une seule entité affichable et requalifiable.
+    payee_id = Column(String, ForeignKey("payees.id", ondelete="SET NULL"), nullable=True, index=True)
+    # Source de la catégorisation pour audit : user_rule | payee_default |
+    # learned_rule | builtin_rule | llm | unknown.
+    cat_source = Column(String, nullable=True)
     notes = Column(Text, nullable=True, default="")
     tags = Column(JSON, nullable=False, default=list)  # transverse tags: ["vacances-2026", "pro", "cadeau"]
     # Hash for deduplication on import: account_id|date|amount|label_truncated
@@ -345,17 +352,84 @@ class Category(Base):
 
 
 class CategorisationRule(Base):
-    """Custom regex rules learned from manual category overrides."""
+    """Custom regex rules learned from manual category overrides.
+
+    Trois provenances possibles (`created_by`) :
+    - 'user' : créée explicitement par l'utilisateur via la modale
+    - 'learning' : créée auto par le Category Learning après N recatégorisations
+                   manuelles du même payee dans la même catégorie
+    - 'builtin' : héritée d'une règle livrée d'origine (rare, généralement
+                   on préfère cibler le payee directement)
+    """
     __tablename__ = "categorisation_rules"
 
     id = Column(String, primary_key=True, default=_uuid)
-    pattern = Column(String, nullable=False)  # regex source
+    pattern = Column(String, nullable=False)  # regex source ou substring
     category_slug = Column(String, nullable=False)
-    source = Column(String, default="manual")  # manual | learned
+    source = Column(String, default="manual")  # manual | learned (legacy, gardé pour compat)
+    # Provenance enrichie pour le filtrage UI et le debug.
+    created_by = Column(String, default="user", nullable=False)  # user | learning | builtin
+    # Type de la règle : 'category' (assigne une catégorie) ou 'transfer'
+    # (flag comme virement interne). Permet de gérer les top-ups vers cartes
+    # secondaires non connectées (Revolut**, Lydia, etc.).
+    rule_type = Column(String, default="category", nullable=False)  # category | transfer
+    # Si la règle est attachée à un payee canonique, on persiste la FK.
+    # Utile pour l'apprentissage : une règle apprise cible un payee, pas
+    # juste un pattern regex flou.
+    payee_id = Column(String, ForeignKey("payees.id", ondelete="CASCADE"), nullable=True)
+    # Priorité d'application : user=100, learning=50, builtin=10. Plus haut = appliqué d'abord.
+    priority = Column(Integer, default=100, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     household_id = Column(String, ForeignKey("households.id", ondelete="CASCADE"), nullable=False)
     household = relationship("Household", back_populates="rules")
+
+
+class Payee(Base):
+    """Marchand canonique scopé au foyer.
+
+    Inspiration Actual Budget : on identifie d'abord QUI est le bénéficiaire
+    (Uber, Franprix, MAIF…) avant de raisonner sur la catégorie. Toutes les
+    variantes du libellé brut bancaire pointent vers le même Payee, ce qui
+    permet à l'utilisateur de requalifier une catégorie en un seul endroit
+    au lieu de toucher 50 règles regex distinctes.
+    """
+    __tablename__ = "payees"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    name = Column(String, nullable=False)  # Nom canonique affiché ("Uber", "Franprix")
+    default_category_id = Column(String, ForeignKey("categories.id", ondelete="SET NULL"), nullable=True)
+    is_transfer = Column(Boolean, default=False, nullable=False)  # Virement interne (Revolut, Lydia self-transfer…)
+    created_by = Column(String, default="user", nullable=False)   # builtin | import | user | learning
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    household_id = Column(String, ForeignKey("households.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    __table_args__ = (
+        # Évite les doublons de payees (case-insensitive géré côté code).
+        UniqueConstraint("household_id", "name", name="uq_household_payee_name"),
+    )
+
+
+class PayeeMatchRule(Base):
+    """Règle de résolution libellé brut → Payee canonique.
+
+    Distincte de CategorisationRule (qui mappe pattern → catégorie). Ici on
+    mappe pattern → payee. Le payee porte ensuite la catégorie par défaut.
+    """
+    __tablename__ = "payee_match_rules"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    payee_id = Column(String, ForeignKey("payees.id", ondelete="CASCADE"), nullable=False, index=True)
+    match_type = Column(String, nullable=False, default="contains")  # exact | contains | regex
+    pattern = Column(String, nullable=False)
+    priority = Column(Integer, default=0, nullable=False)            # plus haut = appliqué d'abord
+    match_against = Column(String, default="both", nullable=False)   # merchant | raw | both
+    created_by = Column(String, default="user", nullable=False)      # builtin | user | learning
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    household_id = Column(String, ForeignKey("households.id", ondelete="CASCADE"), nullable=False, index=True)
 
 
 class Budget(Base):

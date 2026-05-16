@@ -26,7 +26,7 @@ logging.basicConfig(
 from app.config import settings
 from app.database import engine, Base
 from app.rate_limit import limiter, rate_limit_handler
-from app.routers import auth, members, accounts, transactions, wealth, other, categorize, banking, admin, quotes, fixed_charges, dca, ref_month
+from app.routers import auth, members, accounts, transactions, wealth, other, categorize, banking, admin, quotes, fixed_charges, dca, ref_month, payees
 
 logger = logging.getLogger("wealthly")
 
@@ -178,6 +178,29 @@ def _run_lightweight_migrations() -> None:
             # JSON array — empty list by default. Lets users tag a tx across
             # multiple dimensions without exploding the category taxonomy.
             "ALTER TABLE transactions ADD COLUMN IF NOT EXISTS tags JSON NOT NULL DEFAULT '[]'::json",
+            # ── Catégorisation v2 (2026-05-16) — Payees + Category Learning
+            # Nouvelles tables (payees, payee_match_rules) déjà créées par
+            # create_all ci-dessus. Ici on étend les tables existantes.
+            "ALTER TABLE categorisation_rules ADD COLUMN IF NOT EXISTS created_by VARCHAR DEFAULT 'user' NOT NULL",
+            "ALTER TABLE categorisation_rules ADD COLUMN IF NOT EXISTS rule_type VARCHAR DEFAULT 'category' NOT NULL",
+            "ALTER TABLE categorisation_rules ADD COLUMN IF NOT EXISTS payee_id VARCHAR",
+            "ALTER TABLE categorisation_rules ADD COLUMN IF NOT EXISTS priority INTEGER DEFAULT 100 NOT NULL",
+            "ALTER TABLE categorisation_rules ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()",
+            "DO $$ BEGIN "
+            "  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_rule_payee') THEN "
+            "    ALTER TABLE categorisation_rules ADD CONSTRAINT fk_rule_payee "
+            "      FOREIGN KEY (payee_id) REFERENCES payees(id) ON DELETE CASCADE; "
+            "  END IF; "
+            "END $$;",
+            "ALTER TABLE transactions ADD COLUMN IF NOT EXISTS payee_id VARCHAR",
+            "ALTER TABLE transactions ADD COLUMN IF NOT EXISTS cat_source VARCHAR",
+            "CREATE INDEX IF NOT EXISTS ix_transactions_payee_id ON transactions (payee_id)",
+            "DO $$ BEGIN "
+            "  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_tx_payee') THEN "
+            "    ALTER TABLE transactions ADD CONSTRAINT fk_tx_payee "
+            "      FOREIGN KEY (payee_id) REFERENCES payees(id) ON DELETE SET NULL; "
+            "  END IF; "
+            "END $$;",
         ]
     with engine.begin() as conn:
         for stmt in statements:
@@ -313,3 +336,4 @@ app.include_router(quotes.router)
 app.include_router(fixed_charges.router)
 app.include_router(dca.router)
 app.include_router(ref_month.router)
+app.include_router(payees.router)
