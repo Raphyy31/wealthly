@@ -634,12 +634,138 @@ export function Transactions({ transactions, accounts, categories, members = [],
           <div className="tx-feed">
             <div className="tx-feed-colhead">
               <span/>
-              <span>Libellé</span>
-              <span>Catégorie</span>
-              <span>Détail</span>
-              <span>Compte</span>
+              <span className="tx-colhead-cell">Libellé</span>
+              <span className="tx-colhead-cell">
+                Catégorie
+                <HeaderFilter
+                  active={filters.cats.some(id => { const c = categories.find(x => x.id === id); return c && !c.parent; }) || filters.cats.includes('uncategorized')}
+                  onReset={() => {
+                    const sub = filters.cats.filter(id => { const c = categories.find(x => x.id === id); return c && c.parent; });
+                    setField('cats', sub);
+                  }}
+                >
+                  {() => (
+                    <div className="th-filter-section">
+                      <input
+                        className="th-filter-search"
+                        placeholder="Filtrer…"
+                        value={catFilterSearch}
+                        onChange={e => setCatFilterSearch(e.target.value)}
+                      />
+                      {categories.filter(c => !c.parent && c.id !== 'uncategorized' && (catFilterSearch === '' || c.name.toLowerCase().includes(catFilterSearch))).map(c => (
+                        <label key={c.id} className={`th-filter-chk ${filters.cats.includes(c.id) ? 'active' : ''}`}>
+                          <input type="checkbox" checked={filters.cats.includes(c.id)} onChange={() => toggleInList('cats', c.id)}/>
+                          <span className="th-filter-chk-icon">{c.icon}</span>
+                          <span>{c.name}</span>
+                          <span className="th-filter-chk-count">{catCounts[c.id] || 0}</span>
+                        </label>
+                      ))}
+                      {(catFilterSearch === '' || 'non catégorisé'.includes(catFilterSearch) || 'non categorise'.includes(catFilterSearch)) && (
+                        <label className={`th-filter-chk ${filters.cats.includes('uncategorized') ? 'active' : ''}`}>
+                          <input type="checkbox" checked={filters.cats.includes('uncategorized')} onChange={() => toggleInList('cats', 'uncategorized')}/>
+                          <span className="th-filter-chk-icon">❓</span>
+                          <span>Non catégorisé</span>
+                          <span className="th-filter-chk-count">{catCounts['uncategorized'] || 0}</span>
+                        </label>
+                      )}
+                    </div>
+                  )}
+                </HeaderFilter>
+              </span>
+              <span className="tx-colhead-cell">
+                Détail
+                <HeaderFilter
+                  active={filters.cats.some(id => { const c = categories.find(x => x.id === id); return c && c.parent; })}
+                  onReset={() => {
+                    const top = filters.cats.filter(id => { const c = categories.find(x => x.id === id); return c && !c.parent; });
+                    setField('cats', top);
+                  }}
+                >
+                  {() => {
+                    const subs = categories.filter(c => c.parent && (catFilterSearch === '' || c.name.toLowerCase().includes(catFilterSearch)));
+                    const byParent = new Map();
+                    subs.forEach(s => {
+                      const p = categories.find(c => c.id === s.parent);
+                      if (!p) return;
+                      if (!byParent.has(p.id)) byParent.set(p.id, { parent: p, subs: [] });
+                      byParent.get(p.id).subs.push(s);
+                    });
+                    return (
+                      <div className="th-filter-section">
+                        <input
+                          className="th-filter-search"
+                          placeholder="Filtrer…"
+                          value={catFilterSearch}
+                          onChange={e => setCatFilterSearch(e.target.value)}
+                        />
+                        {[...byParent.values()].map(({ parent, subs }) => (
+                          <div key={parent.id}>
+                            <div className="th-filter-group">{parent.icon} {parent.name}</div>
+                            {subs.map(s => (
+                              <label key={s.id} className={`th-filter-chk ${filters.cats.includes(s.id) ? 'active' : ''}`}>
+                                <input type="checkbox" checked={filters.cats.includes(s.id)} onChange={() => toggleInList('cats', s.id)}/>
+                                <span className="th-filter-chk-icon">{s.icon}</span>
+                                <span>{s.name}</span>
+                                <span className="th-filter-chk-count">{catCounts[s.id] || 0}</span>
+                              </label>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  }}
+                </HeaderFilter>
+              </span>
+              <span className="tx-colhead-cell">
+                Compte
+                <HeaderFilter
+                  active={filters.accs.length > 0}
+                  onReset={() => setField('accs', [])}
+                >
+                  {() => (
+                    <div className="th-filter-section">
+                      {accounts.map(a => (
+                        <label key={a.id} className={`th-filter-chk ${filters.accs.includes(a.id) ? 'active' : ''}`}>
+                          <input type="checkbox" checked={filters.accs.includes(a.id)} onChange={() => toggleInList('accs', a.id)}/>
+                          <span>{a.bank} — {a.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </HeaderFilter>
+              </span>
               <span/>
-              <span className="right">Montant</span>
+              <span className="tx-colhead-cell right">
+                Montant
+                <HeaderFilter
+                  align="right"
+                  active={filters.type !== 'all' || filters.amountMin !== '' || filters.amountMax !== ''}
+                  onReset={() => { setField('type', 'all'); setField('amountMin', ''); setField('amountMax', ''); }}
+                >
+                  {() => (
+                    <div className="th-filter-section">
+                      <div className="th-filter-segmented">
+                        {[['all', 'Tout'], ['income', 'Recettes'], ['expense', 'Dépenses']].map(([id, label]) => (
+                          <button
+                            key={id}
+                            type="button"
+                            className={`th-filter-seg ${filters.type === id ? 'active' : ''}`}
+                            onClick={() => setField('type', id)}
+                          >{label}</button>
+                        ))}
+                      </div>
+                      <label className="th-filter-row">
+                        <span>Min €</span>
+                        <input type="number" value={filters.amountMin} onChange={e => setField('amountMin', e.target.value)} placeholder="0"/>
+                      </label>
+                      <label className="th-filter-row">
+                        <span>Max €</span>
+                        <input type="number" value={filters.amountMax} onChange={e => setField('amountMax', e.target.value)} placeholder="∞"/>
+                      </label>
+                    </div>
+                  )}
+                </HeaderFilter>
+              </span>
             </div>
             {groups.map(({ date, txs }) => {
               const total = txs.reduce((s, t) => s + (t.amount || 0), 0);
@@ -683,7 +809,7 @@ export function Transactions({ transactions, accounts, categories, members = [],
                               />
                             </div>
                           )}
-                          <div className="tx-card-label" title={tx.label || 'Sans libellé'}>
+                          <div className="tx-card-label" data-tooltip={tx.label || 'Sans libellé'}>
                             {tx.label || 'Sans libellé'}
                           </div>
                           <div className="tx-card-col tx-card-col-cat">
