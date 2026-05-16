@@ -203,6 +203,8 @@ export const payees = {
 
 export const categorizeEngine = {
   preview: (label, amount = 0) => post('/categorize/preview', { label, amount }),
+  getLearningSettings: () => get('/learning/settings'),
+  updateLearningSettings: (enabled) => put('/learning/settings', { auto_learning_enabled: enabled }),
 };
 
 // ============================================================================

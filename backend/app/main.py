@@ -201,6 +201,8 @@ def _run_lightweight_migrations() -> None:
             "      FOREIGN KEY (payee_id) REFERENCES payees(id) ON DELETE SET NULL; "
             "  END IF; "
             "END $$;",
+            # Toggle Category Learning auto par foyer (2026-05-16)
+            "ALTER TABLE households ADD COLUMN IF NOT EXISTS auto_learning_enabled BOOLEAN DEFAULT TRUE NOT NULL",
         ]
     with engine.begin() as conn:
         for stmt in statements:

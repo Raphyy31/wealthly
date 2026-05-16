@@ -66,6 +66,10 @@ class Household(Base):
     name = Column(String, nullable=False, default="Mon foyer")
     # plan: solo | pro | family | admin (free forever for platform founders)
     plan = Column(String, nullable=False, default="solo")
+    # Category Learning : si False, le hook on_transaction_recategorized
+    # ne crée plus de règle apprise automatiquement (l'user gère tout à
+    # la main). Par défaut activé — l'app apprend en silence.
+    auto_learning_enabled = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     users = relationship("User", back_populates="household", cascade="all, delete-orphan")

@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.auth import get_current_user
-from app.models import User, Payee, Transaction, Category, CategorisationRule
+from app.models import User, Payee, Transaction, Category, CategorisationRule, Household
 from app.categorization import categorize_transaction
 
 
@@ -157,6 +157,32 @@ def merge_payees(payee_id: str, other_id: str, db: Session = Depends(get_db), us
 
 
 # ─── Categorize preview (debug + UI Réglages → Règles) ──────────────────────
+
+# ─── Toggle auto-learning ───────────────────────────────────────────────────
+
+class LearningSettingsOut(BaseModel):
+    auto_learning_enabled: bool
+
+
+class LearningSettingsUpdate(BaseModel):
+    auto_learning_enabled: bool
+
+
+@router.get("/learning/settings", response_model=LearningSettingsOut)
+def get_learning_settings(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    hh = db.query(Household).filter(Household.id == user.household_id).first()
+    return LearningSettingsOut(auto_learning_enabled=bool(hh.auto_learning_enabled) if hh else True)
+
+
+@router.put("/learning/settings", response_model=LearningSettingsOut)
+def update_learning_settings(payload: LearningSettingsUpdate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    hh = db.query(Household).filter(Household.id == user.household_id).first()
+    if not hh:
+        raise HTTPException(status_code=404, detail="Foyer introuvable")
+    hh.auto_learning_enabled = bool(payload.auto_learning_enabled)
+    db.commit()
+    return LearningSettingsOut(auto_learning_enabled=hh.auto_learning_enabled)
+
 
 @router.post("/categorize/preview", response_model=PreviewResponse)
 def preview_categorization(payload: PreviewRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)):

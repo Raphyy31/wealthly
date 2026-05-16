@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import Optional
 from sqlalchemy.orm import Session
 
-from app.models import Transaction, CategorisationRule, Payee, Category
+from app.models import Transaction, CategorisationRule, Payee, Category, Household
 
 
 LEARNING_THRESHOLD = 2  # nombre d'observations avant création d'une règle apprise
@@ -32,6 +32,13 @@ def on_transaction_recategorized(
     if tx.payee_id is None:
         return None  # pas de payee canonique → rien à apprendre
     if not new_category_id:
+        return None
+
+    # Vérifie le toggle 'auto_learning_enabled' du foyer. Si désactivé,
+    # l'user veut gérer ses règles entièrement à la main → on n'auto-crée
+    # plus de learned_rule.
+    household = db.query(Household).filter(Household.id == household_id).first()
+    if household and not household.auto_learning_enabled:
         return None
 
     # 1) Compter les observations existantes (payee × catégorie) sur ce foyer.
