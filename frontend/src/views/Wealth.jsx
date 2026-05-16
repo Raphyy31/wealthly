@@ -1647,6 +1647,9 @@ function LiabilityPatchStyles() {
 // ============================================================================
 function WealthItemRow({ item, fmt, onClick, onDelete }) {
   const positive = (item.plLatente || 0) >= 0;
+  // Pas de PV latente affichée sur les biens immobiliers dans la liste —
+  // le détail (brute marché vs nette fiscale) vit sur la fiche du prêt lié.
+  const showPlLatente = item.category !== 'immobilier';
   return (
     <div
       className="wealth-item-row"
@@ -1671,7 +1674,7 @@ function WealthItemRow({ item, fmt, onClick, onDelete }) {
       </div>
       <div className="wealth-item-row-right">
         <div className="wealth-item-value w-num">{fmt(item.value)}</div>
-        {item.plLatente !== null && item.plLatente !== undefined && (
+        {showPlLatente && item.plLatente !== null && item.plLatente !== undefined && (
           <div className={`wealth-item-delta ${positive ? 'up' : 'down'}`}>
             {positive ? '+' : ''}{fmt(item.plLatente)}
             {item.plLatentePct !== null && item.plLatentePct !== undefined &&

@@ -208,6 +208,10 @@ export function WealthItemDrawer({ item, fmt, members = [], liabilities = [], on
   if (!item) return null;
 
   const positive = (item.plLatente || 0) >= 0;
+  // Pour l'immobilier, on ne montre pas la plus-value latente ici — elle
+  // n'a pas de sens commerciale courante (frais notaire + travaux mélangés).
+  // L'info détaillée (brute vs nette fiscale) vit sur la fiche du prêt lié.
+  const showPlLatente = item.category !== 'immobilier';
 
   return (
     <div className="drawer-backdrop" onClick={onClose}>
@@ -238,7 +242,7 @@ export function WealthItemDrawer({ item, fmt, members = [], liabilities = [], on
             </div>
             <div className="drawer-total">
               <div className="drawer-total-val w-num">{fmt(item.value)}</div>
-              {item.plLatente !== null && item.plLatente !== undefined && (
+              {showPlLatente && item.plLatente !== null && item.plLatente !== undefined && (
                 <div className={`drawer-total-delta ${positive ? 'up' : 'down'}`}>
                   {positive ? '+' : ''}{fmt(item.plLatente)}
                   {item.plLatentePct !== null && item.plLatentePct !== undefined &&
@@ -256,7 +260,7 @@ export function WealthItemDrawer({ item, fmt, members = [], liabilities = [], on
                   <div className="drawer-kpi-val w-num">{fmt(item.costBasis)}</div>
                 </div>
               )}
-              {item.plLatente != null && (
+              {showPlLatente && item.plLatente != null && (
                 <div className="drawer-kpi">
                   <div className="drawer-kpi-label">+/− value</div>
                   <div className={`drawer-kpi-val w-num ${positive ? 'up' : 'down'}`}>
