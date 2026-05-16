@@ -1218,6 +1218,19 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
         showToast(t('toasts.bankConnected'), 'success');
         const conns = await api.banking.listConnections();
         setBankConnections(conns);
+        // Auto-sync the freshly-connected bank so the user doesn't have to
+        // chase down a hidden Sync button to see their transactions.
+        if (result.connection_id) {
+          try {
+            showToast(t('toasts.syncRunning'), 'info');
+            const syncRes = await api.banking.sync(result.connection_id);
+            showToast(t('toasts.syncImported', { count: syncRes.imported }), 'success');
+            await reloadAll();
+            if (syncRes.imported > 0) unlockAchievement('first_import');
+          } catch (syncErr) {
+            showToast(t('toasts.syncError', { message: syncErr.message }), 'error');
+          }
+        }
       } else {
         showToast(t('toasts.bankPending'), 'info');
       }
@@ -1225,6 +1238,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       setBankingPendingState(null);
       showToast(t('toasts.bankError', { message: err.message }), 'error');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Auto-complete when bankingPendingState is set (after URL callback detection)

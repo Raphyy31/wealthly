@@ -363,6 +363,10 @@ async def sync_transactions(
     total_new = 0
     total_updated = 0
     total_skipped = 0
+    # Track dedup hashes already prepared in this sync session — protects
+    # against GC returning the same tx twice (booked + pending overlap) which
+    # would otherwise both INSERT and trip the unique constraint at commit.
+    batch_hashes = set()
     errors: list[str] = []
 
     # Get all current household members so we auto-assign new accounts to
@@ -454,10 +458,34 @@ async def sync_transactions(
             date_str = raw.get("bookingDate") or raw.get("valueDate")
             tx_date = parse_iso_date(date_str) if date_str else datetime.utcnow().date()
 
+            dh = _dedup_hash(wl_acc.id, tx_date.isoformat(), amount, label)
+
+            # 0) Already prepared in this same sync batch — skip duplicate.
+            if dh in batch_hashes:
+                total_skipped += 1
+                continue
+
+            # 1) Fast path: same external_id already imported.
             existing = db.query(Transaction).filter(
                 Transaction.account_id == wl_acc.id,
                 Transaction.external_id == ext_id,
             ).first()
+
+            # 2) Fallback: same (household_id, dedup_hash) already exists.
+            # Happens when the transaction was previously imported via CSV
+            # (no external_id) and GoCardless is now pushing it with one.
+            # Without this check the bulk INSERT trips the unique constraint
+            # uq_household_dedup and the entire sync batch rolls back.
+            if not existing:
+                existing = db.query(Transaction).filter(
+                    Transaction.household_id == current_user.household_id,
+                    Transaction.dedup_hash == dh,
+                ).first()
+                if existing and not existing.external_id:
+                    # Attach the GC external_id so future syncs hit path (1).
+                    existing.external_id = ext_id
+                    existing.source = "gocardless"
+
             if existing:
                 # Refresh in case label / amount got revised by the bank
                 changed = False
@@ -478,9 +506,10 @@ async def sync_transactions(
                     label=label,
                     source="gocardless",
                     external_id=ext_id,
-                    dedup_hash=_dedup_hash(wl_acc.id, tx_date.isoformat(), amount, label),
+                    dedup_hash=dh,
                 ))
                 total_new += 1
+            batch_hashes.add(dh)
 
     conn.last_synced_at = datetime.utcnow()
     db.commit()
