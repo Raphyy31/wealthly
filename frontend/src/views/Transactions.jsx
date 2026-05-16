@@ -810,7 +810,7 @@ export function Transactions({ transactions, accounts, categories, members = [],
                             </div>
                           )}
                           <div className="tx-card-label" data-tooltip={tx.label || 'Sans libellé'}>
-                            {tx.label || 'Sans libellé'}
+                            <span className="tx-card-label-text">{tx.label || 'Sans libellé'}</span>
                           </div>
                           <div className="tx-card-col tx-card-col-cat">
                             {isTransfer ? (

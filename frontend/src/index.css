@@ -1465,15 +1465,21 @@ html, body {
 
 .tx-card-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .tx-card-label {
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+  cursor: default;
+  /* overflow stays visible so the tooltip pseudo-element below isn't clipped.
+     Truncation happens on the inner .tx-card-label-text span. */
+}
+.tx-card-label-text {
+  display: block;
   font: 500 14px var(--font-sans);
   color: var(--ink);
   letter-spacing: -0.005em;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 100%;
-  position: relative;
-  cursor: default;
 }
 /* CSS hover tooltip — shows the full label when truncated. Instantaneous,
    no 1s native delay. Positioned above the row to not get clipped. */
