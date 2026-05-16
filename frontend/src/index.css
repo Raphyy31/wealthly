@@ -1679,3 +1679,79 @@ html, body {
   .learning-banner { flex-direction: column; align-items: stretch; }
   .learning-banner-actions { justify-content: flex-end; }
 }
+
+/* ============================================================================
+   Recurring view — toutes les charges récurrentes du foyer
+   ============================================================================ */
+.rec-view { padding: 24px 32px; max-width: 1280px; margin: 0 auto; }
+.rec-hero {
+  display: flex; gap: 24px; align-items: center;
+  padding: 18px 22px;
+  background: var(--bg-elev); border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+.rec-hero-stat { display: flex; flex-direction: column; gap: 4px; }
+.rec-hero-label { font: 500 11px var(--font-sans); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); }
+.rec-hero-value { font: 600 22px var(--font-mono); letter-spacing: -0.02em; color: var(--ink); font-variant-numeric: tabular-nums; }
+.rec-hero-divider { width: 1px; height: 36px; background: var(--border); }
+@media (max-width: 640px) {
+  .rec-hero { flex-direction: column; align-items: stretch; gap: 12px; }
+  .rec-hero-divider { display: none; }
+}
+.rec-toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 18px; flex-wrap: wrap; }
+.rec-toolbar .search-box { flex: 1 1 300px; }
+.rec-toolbar select { padding: 8px 10px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--bg-elev); color: var(--ink); }
+.rec-toolbar .result-count { font-size: 12px; color: var(--ink-3); margin-left: auto; }
+.rec-empty {
+  padding: 60px 24px; text-align: center;
+  background: var(--bg-elev); border: 1px solid var(--border); border-radius: 12px;
+}
+.rec-empty svg { color: var(--ink-mute); margin-bottom: 8px; }
+.rec-empty h3 { margin: 8px 0; font: 500 16px var(--font-sans); color: var(--ink); }
+.rec-empty p { color: var(--ink-2); max-width: 480px; margin: 0 auto; font-size: 13px; line-height: 1.5; }
+.rec-table {
+  background: var(--bg-elev); border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+}
+.rec-header, .rec-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 2fr) 1.3fr 0.9fr 0.9fr 0.9fr 0.7fr;
+  gap: 14px; align-items: center;
+  padding: 10px 16px;
+}
+.rec-header {
+  background: var(--bg-sunk);
+  border-bottom: 1px solid var(--border);
+  font: 600 10px var(--font-sans); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3);
+}
+.rec-th { display: flex; align-items: center; gap: 4px; }
+.rec-th.right { justify-content: flex-end; }
+.rec-th.sortable { cursor: pointer; }
+.rec-th.sortable:hover { color: var(--ink); }
+.rec-row { border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.12s; }
+.rec-row:last-child { border-bottom: none; }
+.rec-row:hover { background: var(--bg-sunk); }
+.rec-merchant { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.rec-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+.rec-merchant-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.rec-merchant-name { font: 500 13.5px var(--font-sans); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rec-merchant-acc { font-size: 11px; color: var(--ink-3); }
+.rec-cat { display: flex; flex-direction: column; gap: 3px; }
+.rec-cat-pill { display: inline-block; padding: 3px 9px; border-radius: 6px; font: 600 11px var(--font-sans); width: fit-content; }
+.rec-cat-sub { font-size: 11px; color: var(--ink-3); }
+.rec-cat-empty { color: var(--ink-mute); }
+.rec-freq { font: 500 12.5px var(--font-sans); color: var(--ink-2); }
+.rec-freq-meta { color: var(--ink-3); font-size: 11px; }
+.rec-amount { font: 600 13px var(--font-mono); color: var(--ink); font-variant-numeric: tabular-nums; }
+.rec-amount-year { font: 600 13px var(--font-mono); color: var(--negative); font-variant-numeric: tabular-nums; }
+.rec-row.positive .rec-amount, .rec-row.positive .rec-amount-year { color: var(--positive); }
+.right { text-align: right; }
+.rec-last { font: 500 12px var(--font-mono); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+@media (max-width: 880px) {
+  .rec-header, .rec-row {
+    grid-template-columns: 1fr auto auto;
+    gap: 10px;
+  }
+  .rec-th:nth-child(2), .rec-th:nth-child(3), .rec-th:nth-child(6) { display: none; }
+  .rec-cat, .rec-freq, .rec-last { display: none; }
+}
