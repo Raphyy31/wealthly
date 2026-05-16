@@ -1,10 +1,34 @@
 # Wealthly — Roadmap
 
-État au **2026-05-15** — catégories utilisateur + dual-select règles + Mois type modal.
+État au **2026-05-16** — refonte moteur de catégorisation v2 (Payees + Category Learning + 120 règles builtin).
 
 ---
 
-## 🆕 Session 2026-05-15 — Raphyy31 + Claude (Opus 4.7)
+## 🆕 Session 2026-05-16 — Raphyy31 + Claude (Opus 4.7) — moteur de catégorisation v2
+
+Chantier majeur. Voir `CLAUDE.md` pour le détail complet.
+
+- [x] **Module `app/categorization/`** — normalize, rules.py (120 règles builtin), engine.py (5 couches), learning.py
+- [x] **DB** — tables Payee + PayeeMatchRule, extensions CategorisationRule/Transaction
+- [x] **Intégration** — bulk import + sync GoCardless + PUT hook learning
+- [x] **Endpoints** — /payees CRUD + fusion, /categorize/preview, /transactions/rules/{id}/apply-retroactively
+- [x] **Frontend badges source** — dots colorés par source de catégorisation (user/payee/learned/builtin/llm)
+- [x] **Frontend PayeesSection** — vue Marchands canoniques (rename / merge / toggle is_transfer / delete)
+- [x] **Frontend filtres règles** — chips Toutes / Manuelles / 🧠 Apprises / ↔ Virement + badge sur règles apprises
+- [x] **Toast Category Learning** — bannière « 🧠 Wealthly a appris : X → Y. Appliquer aux N tx ? » avec endpoint d'apply rétroactif
+- [x] **AI prompt modal refondu** — 6 étapes (scan récurrence, web search, règles, uncategorized, transferts, few-shot universels) + section format strict + parser tolérant (fences, FR→slug, debug rejets)
+- [x] **Hotfix Railway boot crash** — `maketrans` typo → `unicodedata.normalize` canonique
+
+**Validé sur 100 tx réelles** (Crédit Agricole + AMEX) : qualité de catégorisation solide via Claude.ai, Revolut/AMEX/DÉPENSE ÉCHELONNÉE correctement détectés comme transferts.
+
+**Reste à faire dans cette catégorisation** (P2) :
+- Tests pytest fixtures sur le moteur (fixture credit_agricole_sample.json avec 30 tx)
+- Toggle « Apprentissage automatique » dans Réglages (on par défaut)
+- Persister les règles `rule_type='transfer'` (actuellement one-shot via setTransferOverride côté front)
+
+---
+
+## Session 2026-05-15 — Raphyy31 + Claude (Opus 4.7)
 
 6 commits push directs sur `main` (`1ec712f` … `0ef3513`). Voir `CLAUDE.md` pour le détail complet.
 

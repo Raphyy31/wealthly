@@ -7,6 +7,35 @@ Notes for Claude (and any future AI tooling) picking the project back up.
 
 ---
 
+## Session 2026-05-16 — Raphyy31 + Claude (Opus 4.7) — refonte moteur de catégorisation v2 (Payees + Learning + 120 règles builtin)
+
+Chantier majeur prévu depuis le 2026-05-15 (gros prompt rédigé par l'utilisateur inspiré d'Actual Budget). Mergé en plusieurs commits atomiques sur `main`. Une grosse régression au déploiement Railway (typo dans la table d'accents `maketrans`) a été corrigée en suivant.
+
+**Livré** :
+
+| Domaine | Changement |
+|---|---|
+| **Module backend `app/categorization/`** | Nouveau package qui sépare la catégorisation du router. `normalize.py` : extrait merchant + operation_type + flags (SELF_TRANSFER, LOAN_INSTALLMENT, REFUND, FOREIGN) du libellé brut, désaccente via `unicodedata.normalize('NFKD')`. `rules.py` : ~120 règles builtin compilées (transports, courses, abos, santé, restaurants, voyages, impôts), chaque règle attachée à un Payee canonique (Uber, Franprix, MAIF, etc.). `engine.py` : moteur déterministe 5 couches `user_rule → payee_default → learned_rule → builtin_rule → llm → unknown`. `learning.py` : `on_transaction_recategorized()` crée auto une `CategorisationRule(created_by='learning')` après `LEARNING_THRESHOLD=2` observations du même payee → même catégorie. |
+| **DB** | Nouvelles tables `payees` (nom canonique scopé foyer, `default_category_id`, `is_transfer`) + `payee_match_rules`. `CategorisationRule` enrichi : `created_by` (user/learning/builtin), `rule_type` (category/transfer), `payee_id` FK, `priority`, `updated_at`. `Transaction` enrichi : `payee_id` FK + `cat_source` (audit). Migrations légères ALTER IF NOT EXISTS au boot. |
+| **Endpoints** | `routers/payees.py` (nouveau) : CRUD `/payees` + `/payees/{id}/merge/{other}` (fusion) + `/categorize/preview` (passe un libellé dans le moteur sans rien sauver). `POST /transactions/rules/{id}/apply-retroactively` : applique une règle aux tx historiques d'un même payee (utilisé par le snackbar de learning). |
+| **Intégration imports/sync** | `routers/transactions.py` bulk import passe par le moteur quand pas de slug fourni. PUT déclenche le hook learning. `routers/banking.py` : sync GoCardless catégorise auto chaque tx au moment de l'insert → fini le « Catégoriser via IA » manuel à chaque sync. |
+| **Frontend — badges source** | `txFromApi` propage `payee_name`, `cat_source`, `payee_id`. Sur les cartes Transactions, nom du payee canonique affiché en discret après le libellé. Dot coloré indique la source (`user_rule` vert sage, `payee_default` cobalt, `learned_rule` mauve, `builtin_rule` gris, `llm` bleu clair) avec tooltip explicite. |
+| **Frontend — Réglages** | Section `PayeesSection` ajoutée (Mes catégories → Marchands canoniques → Règles). Liste tous les payees du foyer, badge `AUTO` si créé par builtin rules. Renommage inline, toggle `is_transfer`, **fusion** (clic ⇆ source puis clic cible), suppression. Filtre par nom. La section `CustomRulesSection` a maintenant 4 chips de filtre (Toutes / Manuelles / 🧠 Apprises / ↔ Virement), badge `🧠 Apprise` sur les règles auto-créées, pill spécifique cobalt soft pour les règles `rule_type='transfer'`. |
+| **Toast Category Learning** | Quand la PUT `/transactions/{id}` retourne `learned_rule` (le hook a créé/maj une règle apprise), une bannière persistante apparaît en bas centre : « 🧠 Wealthly a appris : Franprix → Courses. Appliquer aux N transactions historiques ? [Appliquer] [Plus tard] ». Clic Appliquer → POST `/apply-retroactively` → reclasse toutes les tx du même payee non manuellement catégorisées + reloadAll. |
+| **AI prompt modal — refonte générique** | Le prompt généré par `AiPromptModal` est restructuré en 6 étapes (scan récurrence, web search opt-in, règles de catégorisation, quand mettre uncategorized, transferts internes, few-shot universels). Section finale "Format de réponse — STRICT" avec liste INTERDIT explicite (pas de fences markdown, pas de préambule, pas d'artefact, pas de slug `transfer`, pas de nom FR). Côté parser : strip fences ```json``` auto, fallback nom FR → slug, normalisation slug avec espaces/majuscules, comptage des entrées rejetées dans le message d'erreur. Slugs dupliqués/test filtrés du prompt envoyé au modèle (sport/pharmacy/streaming/childcare → masqués au profit des canoniques subs_gym/health_pharmacy/subs_video/children_childcare). |
+| **Hotfix Railway** | Le boot Railway crashait avec `ValueError: the first two maketrans arguments must have equal length` car ma table d'accents avait un `O` en trop dans chaque groupe. Remplacé par la méthode canonique Python `unicodedata.normalize('NFKD')` + filtre des marques combinantes. Plus robuste + impossible à casser par typo. |
+
+**Test réel sur 100 tx (Crédit Agricole + AMEX, prompt + Claude.ai)** : qualité de catégorisation très solide. Revolut correctement détectés comme `uncategorized` (transferts internes), AMEX `PRELEVEMENT AUTOMATIQUE ENREGISTRE-MERCI` en uncategorized, `DÉPENSE ÉCHELONNÉE` pair OK, ANTHROPIC → subs_cloud, COTISATION Offre Premium → fees, marchands fashion (Kith, Axel Arigato, La Redoute, H&M, Work In Progress) → shop_clothing. Erreurs surtout sur les marchands obscurs sans contexte (SAS 02 MER, CDLR REIMS, BOKOBZA ETHEL).
+
+**Reste à faire (P2/P3)** :
+- Tests pytest fixtures sur le moteur (fixture `credit_agricole_sample.json` avec 30 tx de référence)
+- Toggle « Apprentissage automatique des catégories » dans Réglages (toujours on par défaut pour l'instant)
+- Persister les règles `rule_type='transfer'` qui sont actuellement appliquées en one-shot via `setTransferOverride` côté frontend (n'agit pas sur les imports futurs)
+- 2FA TOTP (toujours en attente)
+- Cron Railway auto-sync GoCardless nightly + email re-consent J-7
+
+---
+
 ## Session 2026-05-15 — Raphyy31 + Claude (Opus 4.7) — catégories user + règles dual-select + Mois type modal + Compte courant
 
 6 commits push directs sur `main` (workflow no-PR). Commit principal `1ec712f`, suivi de 5 itérations ciblées suite aux retours user en live (UX feedback, cohérence cross-app).
