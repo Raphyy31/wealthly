@@ -18,7 +18,7 @@ import {
   parseCSV, detectBankProfile, autoDetectMapping, applyMapping,
   categorize, detectRecurring, extractMerchantFromLabel,
   accountIncludeInNetWorth, accountCountsAsIncome, accountCountsAsExpense,
-  detectInternalTransfers, convertCurrency, ACCOUNT_ROLES,
+  detectInternalTransfers, convertCurrency, ACCOUNT_ROLES, bankColor,
 } from './utils.js';
 import { useRates } from './hooks/useRates.js';
 import { useBaseCurrency } from './hooks/useBaseCurrency.js';
@@ -57,15 +57,7 @@ const TaxSimulator = lazy(() => import('./TaxSimulator.jsx'));
   if (C) C.defaultProps = { ...(C.defaultProps || {}), isAnimationActive: false };
 });
 
-// Deterministic color from a bank name string (used in sidebar account dots).
-// Uses the v3 dataviz palette (light-mode hex) so dots harmonise with charts.
-function bankColor(name) {
-  const colors = ['#2540D9','#1F8E6E','#C2733B','#7B57C6','#B85D7A','#4D4D4D','#E0B23E','#7a8aa8'];
-  if (!name) return colors[0];
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-  return colors[h % colors.length];
-}
+// bankColor is now in utils.js (shared with Settings → Comptes avatars).
 
 // ============================================================================
 // MAIN APP

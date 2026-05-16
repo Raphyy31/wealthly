@@ -56,6 +56,34 @@ export const ACCOUNT_ROLES = {
 
 export const ACCOUNT_ROLE_KEYS = Object.keys(ACCOUNT_ROLES);
 
+// Deterministic color from a bank name string (used for sidebar dots,
+// Settings account avatars, future drawer headers…). Uses the v3 dataviz
+// palette so bank chips harmonise with charts. Same string → same color.
+export const bankColor = (name) => {
+  const colors = ['#2540D9', '#1F8E6E', '#C2733B', '#7B57C6', '#B85D7A', '#4D4D4D', '#E0B23E', '#7a8aa8'];
+  if (!name) return colors[0];
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return colors[h % colors.length];
+};
+
+// Sort accounts by role priority (principal first, then depenses, epargne,
+// investissement, professionnel), then alphabetically by display name within
+// the same role. Used in the sidebar mini-list and Réglages → Comptes so
+// the user sees their main account on top and related satellites (Revolut,
+// AMEX…) grouped right below it.
+export const sortAccountsByRole = (accounts) => {
+  const orderOf = (role) => {
+    const i = ACCOUNT_ROLE_KEYS.indexOf(role || 'principal');
+    return i === -1 ? ACCOUNT_ROLE_KEYS.length : i;
+  };
+  return [...(accounts || [])].sort((a, b) => {
+    const ra = orderOf(a.role), rb = orderOf(b.role);
+    if (ra !== rb) return ra - rb;
+    return (a.bank || a.name || '').localeCompare(b.bank || b.name || '');
+  });
+};
+
 export const accountIncludeInNetWorth = (role) => (ACCOUNT_ROLES[role] || ACCOUNT_ROLES.principal).includeInNetWorth;
 export const accountCountsAsIncome = (role) => (ACCOUNT_ROLES[role] || ACCOUNT_ROLES.principal).countsAsIncome;
 export const accountCountsAsExpense = (role) => (ACCOUNT_ROLES[role] || ACCOUNT_ROLES.principal).countsAsExpense;

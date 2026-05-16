@@ -17,7 +17,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import * as api from '../api.js';
 import { MEMBER_PALETTE } from '../constants.js';
-import { ACCOUNT_ROLES, ACCOUNT_ROLE_KEYS, suggestAccountRole, SUPPORTED_CURRENCIES } from '../utils.js';
+import { ACCOUNT_ROLES, ACCOUNT_ROLE_KEYS, suggestAccountRole, SUPPORTED_CURRENCIES, bankColor } from '../utils.js';
 import { BankConnectModal } from '../components/BankConnectModal.jsx';
 import { BusyButton } from '../components/ui/BusyButton.jsx';
 
@@ -355,7 +355,7 @@ function ComptesSection({ accounts, accountBalances, members, transactions, upda
             const showSuggestion = suggestion && suggestion.role && suggestion.role !== 'principal' && suggestion.confidence !== 'low';
             return (
               <div key={a.id} className="member-card" style={{ alignItems: 'flex-start' }}>
-                <span className="member-avatar large" style={{ background: 'var(--info)' }}>{a.bank?.charAt(0) || '?'}</span>
+                <span className="member-avatar large" style={{ background: bankColor(a.bank) }}>{(a.bank || a.name || '?').charAt(0).toUpperCase()}</span>
                 <div className="member-card-info" style={{ flex: 1 }}>
                   <div className="member-card-name">{a.name}</div>
                   <div className="member-card-role">{a.bank} · {owners} · {fmt(accountBalances[a.id] || 0)}</div>
