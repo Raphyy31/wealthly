@@ -1784,13 +1784,41 @@ function RealEstateDetail({ asset, liabilities = [], members = [], memberShare, 
               <div className="loan-monthly-val w-num">
                 <em>{fmt(totalAcquisitionCost)}</em>
               </div>
-              <div className="loan-monthly-breakdown">
-                <div><span className="dot dot-cobalt"/>Prix d'achat <span className="w-num">{fmt(purchasePrice)}</span></div>
-                {notaryFees > 0 && <div><span className="dot dot-sage"/>Frais notaire <span className="w-num">{fmt(notaryFees)}</span></div>}
-                {agencyFees > 0 && <div><span className="dot dot-terra"/>Agence <span className="w-num">{fmt(agencyFees)}</span></div>}
-                {worksFees > 0 && <div><span className="dot dot-ocre"/>Travaux <span className="w-num">{fmt(worksFees)}</span></div>}
-                {furnitureFees > 0 && <div><span className="dot dot-mauve"/>Mobilier <span className="w-num">{fmt(furnitureFees)}</span></div>}
-              </div>
+              <ul className="loan-monthly-breakdown">
+                <li>
+                  <span className="loan-monthly-dot" style={{ background: 'var(--accent)' }}/>
+                  <span className="loan-monthly-label">Prix d'achat</span>
+                  <span className="loan-monthly-value w-num">{fmt(purchasePrice)}</span>
+                </li>
+                {notaryFees > 0 && (
+                  <li>
+                    <span className="loan-monthly-dot" style={{ background: 'var(--d2, #6B8E7A)' }}/>
+                    <span className="loan-monthly-label">Frais notaire</span>
+                    <span className="loan-monthly-value w-num">{fmt(notaryFees)}</span>
+                  </li>
+                )}
+                {agencyFees > 0 && (
+                  <li>
+                    <span className="loan-monthly-dot" style={{ background: 'var(--d3, #B0392B)' }}/>
+                    <span className="loan-monthly-label">Agence</span>
+                    <span className="loan-monthly-value w-num">{fmt(agencyFees)}</span>
+                  </li>
+                )}
+                {worksFees > 0 && (
+                  <li>
+                    <span className="loan-monthly-dot" style={{ background: 'var(--d7, #8E641A)' }}/>
+                    <span className="loan-monthly-label">Travaux</span>
+                    <span className="loan-monthly-value w-num">{fmt(worksFees)}</span>
+                  </li>
+                )}
+                {furnitureFees > 0 && (
+                  <li>
+                    <span className="loan-monthly-dot" style={{ background: 'var(--d4, #8B6E9E)' }}/>
+                    <span className="loan-monthly-label">Mobilier</span>
+                    <span className="loan-monthly-value w-num">{fmt(furnitureFees)}</span>
+                  </li>
+                )}
+              </ul>
             </div>
 
             <div className="loan-monthly-panel">
