@@ -16,6 +16,8 @@ from app.schemas import (
     TransactionImport, TransactionImportResult,
 )
 from app.auth import get_current_user
+from app.categorization import categorize_transaction
+from app.categorization.learning import on_transaction_recategorized
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
 
@@ -55,6 +57,11 @@ def _to_out(tx: Transaction, db: Session) -> dict:
     if tx.category_id:
         cat = db.query(Category).filter(Category.id == tx.category_id).first()
         cat_slug = cat.slug if cat else None
+    payee_name = None
+    if tx.payee_id:
+        from app.models import Payee  # local import to avoid circular
+        p = db.query(Payee).filter(Payee.id == tx.payee_id).first()
+        payee_name = p.name if p else None
     return {
         "id": tx.id,
         "account_id": tx.account_id,
@@ -68,6 +75,9 @@ def _to_out(tx: Transaction, db: Session) -> dict:
         "notes": tx.notes or "",
         "tags": tx.tags or [],
         "household_id": tx.household_id,
+        "payee_id": tx.payee_id,
+        "payee_name": payee_name,
+        "cat_source": tx.cat_source,
     }
 
 
@@ -153,7 +163,27 @@ def bulk_import(payload: TransactionImport, db: Session = Depends(get_db), user:
         if dedup in existing_hashes:
             skipped += 1
             continue
-        cat_id = _resolve_category_id(db, user.household_id, t.category_slug)
+        # Si le client n'a pas pré-catégorisé (slug fourni explicitement), on
+        # passe par le moteur Payees + builtin rules pour assigner cat + payee
+        # + flag transfer côté backend, source de vérité.
+        cat_id = None
+        payee_id_resolved = None
+        cat_source = None
+        is_transfer_auto = t.is_transfer_override
+        if t.category_slug:
+            cat_id = _resolve_category_id(db, user.household_id, t.category_slug)
+            cat_source = "user_rule" if t.is_manual_category else None
+        else:
+            result = categorize_transaction(
+                label=t.label, amount=t.amount, household_id=user.household_id, db=db, date=t.date,
+            )
+            if result.slug:
+                cat_id = _resolve_category_id(db, user.household_id, result.slug)
+            payee_id_resolved = result.payee_id
+            cat_source = result.source
+            if result.is_transfer and is_transfer_auto is None:
+                is_transfer_auto = True
+
         tx = Transaction(
             household_id=user.household_id,
             account_id=payload.account_id,
@@ -161,9 +191,11 @@ def bulk_import(payload: TransactionImport, db: Session = Depends(get_db), user:
             label=t.label,
             amount=t.amount,
             category_id=cat_id,
+            payee_id=payee_id_resolved,
+            cat_source=cat_source,
             is_manual_category=t.is_manual_category,
             is_recurring_override=t.is_recurring_override,
-            is_transfer_override=t.is_transfer_override,
+            is_transfer_override=is_transfer_auto,
             notes=t.notes or "",
             tags=t.tags or [],
             dedup_hash=dedup,
@@ -182,13 +214,25 @@ def update_transaction(tx_id: str, payload: TransactionUpdate, db: Session = Dep
     if not tx:
         raise HTTPException(status_code=404, detail="Transaction non trouvée")
     data = payload.model_dump(exclude_unset=True)
+    cat_changed_to: Optional[str] = None
     if "category_slug" in data:
         cat_slug = data.pop("category_slug")
         tx.category_id = _resolve_category_id(db, user.household_id, cat_slug)
+        cat_changed_to = tx.category_id
     for k, v in data.items():
         setattr(tx, k, v)
     db.commit()
     db.refresh(tx)
+    # Hook Category Learning : si l'user a recatégorisé manuellement et que
+    # le payee est connu, on peut auto-créer une règle apprise après seuil.
+    if cat_changed_to and tx.is_manual_category and tx.payee_id:
+        try:
+            on_transaction_recategorized(
+                tx=tx, new_category_id=cat_changed_to,
+                household_id=user.household_id, db=db,
+            )
+        except Exception:
+            pass  # ne bloque jamais l'update
     return _to_out(tx, db)
 
 

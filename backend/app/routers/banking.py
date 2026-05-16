@@ -37,7 +37,7 @@ from sqlalchemy.orm import Session
 from app.auth import get_current_user
 from app.config import settings
 from app.database import get_db
-from app.models import Account, BankConnection, Transaction, User
+from app.models import Account, BankConnection, Transaction, User, Category
 
 
 def parse_iso_date(s: str):
@@ -498,6 +498,33 @@ async def sync_transactions(
                 else:
                     total_skipped += 1
             else:
+                # ── Catégorisation automatique au moment du sync via le moteur
+                # Payees + Category Learning + 120 règles builtin. Le user n'a
+                # plus à cliquer 'Catégoriser via IA' à chaque sync — tout ce
+                # qui est connu côté builtin/learning est résolu d'office.
+                try:
+                    from app.categorization import categorize_transaction as _cat
+                    result = _cat(
+                        label=label, amount=amount,
+                        household_id=current_user.household_id, db=db, date=tx_date,
+                    )
+                    cat_id = None
+                    if result.slug:
+                        c = db.query(Category).filter(
+                            Category.household_id == current_user.household_id,
+                            Category.slug == result.slug,
+                        ).first()
+                        if c:
+                            cat_id = c.id
+                    payee_id_resolved = result.payee_id
+                    cat_source = result.source
+                    transfer_auto = True if result.is_transfer else None
+                except Exception:
+                    cat_id = None
+                    payee_id_resolved = None
+                    cat_source = None
+                    transfer_auto = None
+
                 db.add(Transaction(
                     account_id=wl_acc.id,
                     household_id=current_user.household_id,
@@ -507,6 +534,10 @@ async def sync_transactions(
                     source="gocardless",
                     external_id=ext_id,
                     dedup_hash=dh,
+                    category_id=cat_id,
+                    payee_id=payee_id_resolved,
+                    cat_source=cat_source,
+                    is_transfer_override=transfer_auto,
                 ))
                 total_new += 1
             batch_hashes.add(dh)
