@@ -1188,8 +1188,14 @@ html, body {
 .cat-dd-item:hover { background: var(--bg-sunk); }
 .cat-dd-item.is-active { background: var(--accent-soft); color: var(--accent); font-weight: 500; }
 .cat-dd-item-clear { color: var(--ink-3); font-style: italic; border-bottom: 1px dashed var(--border); border-radius: 0; margin-bottom: 2px; }
+.cat-dd-item.is-top { font-weight: 500; }
+.cat-dd-item.is-sub { padding-left: 30px; font-weight: 400; color: var(--ink-2); }
+.cat-dd-item.is-sub .cat-dd-icon { font-size: 12px; }
 .cat-dd-icon { font-size: 14px; line-height: 1; width: 18px; text-align: center; flex-shrink: 0; }
 .cat-dd-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.cat-dd-chip-parent { color: color-mix(in srgb, var(--cat-color) 70%, var(--ink-3)); font-weight: 400; opacity: 0.8; overflow: hidden; text-overflow: ellipsis; }
+.cat-dd-chip-sep { color: color-mix(in srgb, var(--cat-color) 50%, var(--ink-3)); opacity: 0.7; flex-shrink: 0; }
 
 .cat-dd-empty { padding: 12px; text-align: center; color: var(--ink-3); font-size: 12.5px; }
 .rm-footer {

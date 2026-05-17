@@ -461,26 +461,30 @@ export function RefMonthEditor({
   );
 }
 
-// Dual-select picker (Catégorie → Détail) — mirrors the dual-select pattern
-// from Settings → "Catégorisation automatique". The user can target a top-level
-// category alone, or drill into a sub-category. If a category has no children
-// the "Détail" select is disabled.
+// Deux dropdowns liés. Les deux affichent la liste groupée complète
+// (top-level + sous-cats indentées). Clic sur une sous-cat dans n'importe
+// lequel des deux → l'autre se remplit avec son parent automatiquement.
+// targetId envoyé à onAdd = la sous-cat si choisie, sinon le parent.
 function RefMonthAddCategory({ kind, cats, onAdd }) {
   const [open, setOpen] = useState(false);
   const [topId, setTopId] = useState('');
   const [subId, setSubId] = useState('');
 
-  const topCats = useMemo(
-    () => cats.filter(c => !c.parent && !c.parent_slug).sort((a, b) => (a.name || '').localeCompare(b.name || '')),
-    [cats]
-  );
-  const subCats = useMemo(
-    () => cats.filter(c => (c.parent === topId || c.parent_slug === topId)).sort((a, b) => (a.name || '').localeCompare(b.name || '')),
-    [cats, topId]
-  );
-  const targetId = subId || topId;
-
   const reset = () => { setOpen(false); setTopId(''); setSubId(''); };
+
+  // Shared resolver: décide quoi mettre dans top vs sub à partir d'un slug
+  // choisi (qu'il soit top-level ou sub).
+  const resolve = (slug) => {
+    if (!slug) return { top: '', sub: '' };
+    const cat = cats.find(c => (c.id || c.slug) === slug);
+    if (!cat) return { top: '', sub: '' };
+    const parent = cat.parent || cat.parent_slug;
+    return parent ? { top: parent, sub: slug } : { top: slug, sub: '' };
+  };
+  const onPickTop = (slug) => { const { top, sub } = resolve(slug); setTopId(top); setSubId(sub); };
+  const onPickSub = (slug) => { const { top, sub } = resolve(slug); setTopId(top); setSubId(sub); };
+
+  const targetId = subId || topId;
 
   if (!open) return (
     <button className="rm-add-cat" onClick={() => setOpen(true)}>
@@ -492,17 +496,19 @@ function RefMonthAddCategory({ kind, cats, onAdd }) {
     <div className="rm-add-cat-form rm-add-cat-form-dual">
       <CategoryDropdown
         value={topId}
-        categories={topCats}
-        onChange={(v) => { setTopId(v); setSubId(''); }}
+        categories={cats}
+        onChange={onPickTop}
         placeholder="Catégorie"
+        grouped
         clearable={false}
+        showParentInChip={false}
       />
       <CategoryDropdown
         value={subId}
-        categories={subCats}
-        onChange={setSubId}
-        placeholder={subCats.length === 0 ? 'Aucun détail' : 'Détail (optionnel)'}
-        disabled={!topId || subCats.length === 0}
+        categories={cats}
+        onChange={onPickSub}
+        placeholder="Détail (optionnel)"
+        grouped
         emptyLabel="Aucun détail"
       />
       <button

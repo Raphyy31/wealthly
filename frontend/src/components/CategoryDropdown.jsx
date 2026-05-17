@@ -13,6 +13,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Search } from 'lucide-react';
 
+// Helpers — read parent slug whether it's stored as `parent` (frontend
+// constants) or `parent_slug` (backend payload).
+const parentOf = (c) => c?.parent || c?.parent_slug || null;
+const slugOf = (c) => c?.id || c?.slug;
+
 export function CategoryDropdown({
   value,
   categories,
@@ -23,6 +28,8 @@ export function CategoryDropdown({
   searchable = true,
   clearable = true,
   emptyLabel = 'Aucune catégorie',
+  grouped = false,            // when true, render top-level + indented children
+  showParentInChip = true,    // when a sub is selected, show "Parent › Sub" in trigger
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -37,10 +44,35 @@ export function CategoryDropdown({
 
   useEffect(() => { if (!open) setSearch(''); }, [open]);
 
-  const selected = categories.find(c => (c.id || c.slug) === value);
+  const selected = categories.find(c => slugOf(c) === value);
+  const parentCat = selected && parentOf(selected)
+    ? categories.find(c => slugOf(c) === parentOf(selected))
+    : null;
+
   const q = search.toLowerCase().trim();
-  const filtered = q ? categories.filter(c => (c.name || '').toLowerCase().includes(q)) : categories;
+  const matches = (c) => q === '' || (c.name || '').toLowerCase().includes(q);
   const showSearch = searchable && categories.length > 8;
+
+  // Build the rows to render. In grouped mode we surface top-level cats and
+  // indent their direct children right below — search hits on a sub keep the
+  // parent visible (for context), search hits on a top surface all its subs.
+  let rows;
+  if (grouped) {
+    const tops = categories.filter(c => !parentOf(c)).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    rows = [];
+    for (const top of tops) {
+      const subs = categories.filter(c => parentOf(c) === slugOf(top))
+        .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      const topHit = matches(top);
+      const matchedSubs = subs.filter(matches);
+      if (q && !topHit && matchedSubs.length === 0) continue;
+      rows.push({ cat: top, indent: false });
+      const subsToShow = (q && !topHit) ? matchedSubs : subs;
+      for (const s of subsToShow) rows.push({ cat: s, indent: true });
+    }
+  } else {
+    rows = categories.filter(matches).map(c => ({ cat: c, indent: false }));
+  }
 
   return (
     <span className={`cat-dd ${disabled ? 'is-disabled' : ''} ${open ? 'is-open' : ''}`} ref={ref}>
@@ -51,8 +83,14 @@ export function CategoryDropdown({
         disabled={disabled}
       >
         {selected ? (
-          <span className="cat-dd-chip" style={{ '--cat-color': selected.color || 'var(--accent)' }}>
-            <span className="cat-dd-chip-icon" aria-hidden="true">{selected.icon || '·'}</span>
+          <span className="cat-dd-chip" style={{ '--cat-color': selected.color || parentCat?.color || 'var(--accent)' }}>
+            <span className="cat-dd-chip-icon" aria-hidden="true">{selected.icon || parentCat?.icon || '·'}</span>
+            {parentCat && showParentInChip ? (
+              <>
+                <span className="cat-dd-chip-parent">{parentCat.name}</span>
+                <span className="cat-dd-chip-sep" aria-hidden="true">›</span>
+              </>
+            ) : null}
             <span className="cat-dd-chip-name">{selected.name}</span>
           </span>
         ) : (
@@ -85,20 +123,20 @@ export function CategoryDropdown({
                 <span className="cat-dd-name">{emptyLabel}</span>
               </button>
             )}
-            {filtered.length === 0 ? (
+            {rows.length === 0 ? (
               <div className="cat-dd-empty">Aucun résultat</div>
             ) : (
-              filtered.map(c => {
-                const id = c.id || c.slug;
+              rows.map(({ cat, indent }) => {
+                const id = slugOf(cat);
                 return (
                   <button
                     key={id}
                     type="button"
-                    className={`cat-dd-item ${value === id ? 'is-active' : ''}`}
+                    className={`cat-dd-item ${indent ? 'is-sub' : 'is-top'} ${value === id ? 'is-active' : ''}`}
                     onClick={() => { onChange(id); setOpen(false); }}
                   >
-                    <span className="cat-dd-icon" style={{ color: c.color || 'inherit' }}>{c.icon || '·'}</span>
-                    <span className="cat-dd-name">{c.name}</span>
+                    <span className="cat-dd-icon" style={{ color: cat.color || 'inherit' }}>{cat.icon || '·'}</span>
+                    <span className="cat-dd-name">{cat.name}</span>
                   </button>
                 );
               })

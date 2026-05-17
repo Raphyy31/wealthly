@@ -718,14 +718,23 @@ function CustomRulesSection({ categories }) {
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  const topCategories = useMemo(
-    () => categories.filter((c) => !c.parent && c.id !== 'uncategorized' && c.type !== 'income'),
+  // All expense + transfer cats, top-level + subs. Both pickers (Catégorie
+  // and Détail) show this same grouped list ; the linked-pick logic below
+  // keeps them in sync.
+  const pickerCats = useMemo(
+    () => categories.filter((c) => c.id !== 'uncategorized' && c.type !== 'income'),
     [categories]
   );
-  const subCategories = useMemo(
-    () => categories.filter((c) => c.parent === newTopId),
-    [categories, newTopId]
-  );
+  // Linked picker handler — picking a sub-cat in either dropdown auto-fills
+  // the parent ; picking a top-level resets the détail.
+  const resolveLink = (slug) => {
+    if (!slug) return { top: '', sub: '' };
+    const cat = categories.find(c => (c.id || c.slug) === slug);
+    if (!cat) return { top: '', sub: '' };
+    const parent = cat.parent || cat.parent_slug;
+    return parent ? { top: parent, sub: slug } : { top: slug, sub: '' };
+  };
+  const onPickCat = (slug) => { const r = resolveLink(slug); setNewTopId(r.top); setNewSubId(r.sub); };
   const targetSlug = newSubId || newTopId;
 
   const onAdd = async (e) => {
@@ -783,17 +792,19 @@ function CustomRulesSection({ categories }) {
         />
         <CategoryDropdown
           value={newTopId}
-          categories={topCategories}
-          onChange={(v) => { setNewTopId(v); setNewSubId(''); }}
+          categories={pickerCats}
+          onChange={onPickCat}
           placeholder="Catégorie"
+          grouped
           clearable={false}
+          showParentInChip={false}
         />
         <CategoryDropdown
           value={newSubId}
-          categories={subCategories}
-          onChange={setNewSubId}
-          placeholder={subCategories.length === 0 ? 'Aucun détail' : 'Détail (optionnel)'}
-          disabled={!newTopId || subCategories.length === 0}
+          categories={pickerCats}
+          onChange={onPickCat}
+          placeholder="Détail (optionnel)"
+          grouped
           emptyLabel="Aucun détail"
         />
         <button
