@@ -1878,12 +1878,12 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             </button>
 
             <div className="ws-nav-group">{t('nav.group_accounts')}</div>
-            {(accounts || []).slice(0, 4).map(a => (
+            {(accounts || []).map(a => (
               <button key={a.id} onClick={() => setDrawerAccount(a)} className="ws-account-item">
                 <span className="ws-bank-dot" style={{ background: bankColor(a.bank) }}>
-                  {(a.bank || a.name || '?')[0].toUpperCase()}
+                  {(a.name || a.bank || '?')[0].toUpperCase()}
                 </span>
-                <span>{a.bank || a.name}</span>
+                <span>{a.name || a.bank}</span>
               </button>
             ))}
             <div className="ws-nav-group">{t('nav.group_config')}</div>
