@@ -456,67 +456,53 @@ function ComptesSection({ accounts, accountBalances, members, transactions, upda
           )}
           {accounts.map(a => {
             const role = a.role || 'principal';
-            const isGocardless = a.source === 'gocardless';
+            const isGocardless = a.source === 'gocardless' || !!a.externalId;
             const accTx = role === 'principal' ? transactions.filter(t => t.accountId === a.id) : [];
             const otherIds = accounts.filter(x => x.id !== a.id).map(x => x.id);
             const suggestion = role === 'principal' ? suggestAccountRole(accTx, otherIds) : null;
             const showSuggestion = suggestion && suggestion.role && suggestion.role !== 'principal' && suggestion.confidence !== 'low';
             return (
-              <div key={a.id} style={{ padding: '14px 0', borderBottom: '1px solid var(--border)' }}>
-                {/* ── Row 1 : identité + solde ── */}
+              <div key={a.id} style={{ padding: '16px 0', borderBottom: '1px solid var(--border)' }}>
+
+                {/* ── identité ── */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <span className="member-avatar large" style={{ background: bankColor(a.bank), flexShrink: 0 }}>
                     {(a.name || a.bank || '?').charAt(0).toUpperCase()}
                   </span>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                       <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--ink)' }}>{a.name || a.bank}</span>
-                      {isGocardless && (
-                        <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 4, background: 'var(--accent-soft)', color: 'var(--accent)', letterSpacing: '.3px' }}>
-                          GoCardless
-                        </span>
-                      )}
-                      {!isGocardless && (
-                        <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 4, background: 'var(--bg-sunk)', color: 'var(--ink-3)', letterSpacing: '.3px' }}>
-                          Manuel
-                        </span>
-                      )}
-                      {a.isJoint && <span className="acc-joint-chip" title="Compte joint (famille)">👪 Joint</span>}
+                      <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 4, letterSpacing: '.3px',
+                        background: isGocardless ? 'var(--accent-soft)' : 'var(--bg-sunk)',
+                        color: isGocardless ? 'var(--accent)' : 'var(--ink-3)' }}>
+                        {isGocardless ? 'GoCardless' : 'Manuel'}
+                      </span>
+                      {a.isJoint && <span className="acc-joint-chip">👪 Joint</span>}
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 2 }}>
                       {a.bank}{a.iban ? ` · •••• ${a.iban.replace(/\s/g, '').slice(-4)}` : ''}
-                      {' · '}<span style={{ fontWeight: 500, color: 'var(--ink-2)' }}>{fmt(accountBalances[a.id] || 0)}</span>
                     </div>
                   </div>
+                  <span style={{ fontWeight: 600, fontSize: 15, color: 'var(--ink)', flexShrink: 0 }}>
+                    {fmt(accountBalances[a.id] || 0)}
+                  </span>
                 </div>
 
-                {/* ── Row 2 : membres ── */}
+                {/* ── membres ── */}
                 {members.length > 0 && updateAccount && (
-                  <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap', paddingLeft: 52 }}>
-                    <span style={{ fontSize: 11, color: 'var(--ink-3)', alignSelf: 'center', marginRight: 2 }}>Appartient à :</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10, paddingLeft: 52, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 11, color: 'var(--ink-3)' }}>Titulaires :</span>
                     {members.map(m => {
                       const assigned = (a.memberIds || []).includes(m.id);
                       return (
-                        <button
-                          key={m.id}
-                          type="button"
-                          onClick={() => {
-                            const next = assigned
-                              ? (a.memberIds || []).filter(id => id !== m.id)
-                              : [...(a.memberIds || []), m.id];
-                            updateAccount(a.id, { memberIds: next });
-                          }}
-                          title={assigned ? `Retirer ${m.name}` : `Ajouter ${m.name}`}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: 4,
-                            padding: '2px 8px 2px 4px', borderRadius: 20,
-                            border: `1.5px solid ${assigned ? m.color : 'var(--border)'}`,
-                            background: assigned ? m.color + '22' : 'transparent',
-                            color: assigned ? m.color : 'var(--ink-3)',
-                            fontSize: 12, cursor: 'pointer', fontWeight: assigned ? 600 : 400,
-                          }}
-                        >
-                          <span style={{ width: 16, height: 16, borderRadius: '50%', background: assigned ? m.color : 'var(--border)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: assigned ? '#fff' : 'var(--ink-3)', fontWeight: 700 }}>
+                        <button key={m.id} type="button"
+                          onClick={() => updateAccount(a.id, { memberIds: assigned ? (a.memberIds||[]).filter(id=>id!==m.id) : [...(a.memberIds||[]),m.id] })}
+                          style={{ display:'flex', alignItems:'center', gap:4, padding:'2px 8px 2px 4px', borderRadius:20, cursor:'pointer', fontSize:12, fontWeight: assigned?600:400,
+                            border:`1.5px solid ${assigned?m.color:'var(--border)'}`,
+                            background: assigned?m.color+'18':'transparent',
+                            color: assigned?m.color:'var(--ink-3)' }}>
+                          <span style={{ width:16,height:16,borderRadius:'50%',display:'inline-flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:700,
+                            background:assigned?m.color:'var(--border-strong)', color:assigned?'#fff':'var(--ink-3)' }}>
                             {m.name.charAt(0).toUpperCase()}
                           </span>
                           {m.name}
@@ -526,47 +512,39 @@ function ComptesSection({ accounts, accountBalances, members, transactions, upda
                   </div>
                 )}
 
-                {/* ── Row 3 : contrôles ── */}
+                {/* ── contrôles inline ── */}
                 {updateAccount && (
-                  <div style={{ display: 'flex', gap: 8, marginTop: 10, paddingLeft: 52, flexWrap: 'wrap', alignItems: 'center' }}>
-                    <button
-                      type="button"
-                      className={`acc-joint-toggle ${a.isJoint ? 'is-on' : ''}`}
-                      onClick={() => updateAccount(a.id, { isJoint: !a.isJoint })}
-                      title={a.isJoint ? 'Retirer le statut joint' : 'Marquer comme compte joint famille'}
-                    >
+                  <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:10, paddingLeft:52, flexWrap:'wrap' }}>
+                    <button type="button"
+                      className={`acc-joint-toggle ${a.isJoint?'is-on':''}`}
+                      onClick={() => updateAccount(a.id,{isJoint:!a.isJoint})}
+                      title={a.isJoint?'Retirer le statut joint':'Marquer comme compte joint'}>
                       👪 Joint
                     </button>
-                    <Combobox
-                      value={role}
-                      onChange={(val) => updateAccount(a.id, { role: val })}
-                      options={ACCOUNT_ROLE_KEYS.map(k => ({ value: k, label: ACCOUNT_ROLES[k].label, meta: ACCOUNT_ROLES[k].desc.split('—')[0].trim() }))}
-                    />
-                    <Combobox
-                      value={a.currency || 'EUR'}
-                      onChange={(val) => updateAccount(a.id, { currency: val })}
-                      options={SUPPORTED_CURRENCIES.map(c => ({ value: c, label: `${CURRENCY_FLAGS[c]} ${c}` }))}
-                    />
-                    <div style={{ flex: 1 }}/>
+                    <Combobox width={148} value={role}
+                      onChange={val => updateAccount(a.id,{role:val})}
+                      options={ACCOUNT_ROLE_KEYS.map(k=>({value:k,label:ACCOUNT_ROLES[k].label,meta:ACCOUNT_ROLES[k].desc.split('—')[0].trim()}))}/>
+                    <Combobox width={90} value={a.currency||'EUR'}
+                      onChange={val => updateAccount(a.id,{currency:val})}
+                      options={SUPPORTED_CURRENCIES.map(c=>({value:c,label:`${CURRENCY_FLAGS[c]} ${c}`}))}/>
+                    <div style={{flex:1}}/>
                     {mergeAccounts && accounts.length > 1 && (
-                      <button
-                        className="secondary-btn"
-                        style={{ fontSize: 12, padding: '4px 10px', display: 'flex', alignItems: 'center', gap: 5 }}
-                        onClick={() => setMergingId(a.id)}
-                      >
+                      <button className="secondary-btn"
+                        style={{fontSize:12,padding:'4px 10px',display:'flex',alignItems:'center',gap:5}}
+                        onClick={() => setMergingId(a.id)}>
                         <ArrowLeftRight size={12}/> Fusionner
                       </button>
                     )}
-                    <BusyButton className="icon-btn-sm" iconOnly spinnerSize={13} onClick={() => deleteAccount(a.id)} title="Supprimer ce compte">
+                    <BusyButton className="icon-btn-sm" iconOnly spinnerSize={13} onClick={() => deleteAccount(a.id)} title="Supprimer">
                       <Trash2 size={13}/>
                     </BusyButton>
                   </div>
                 )}
 
                 {showSuggestion && (
-                  <div style={{ marginTop: 8, paddingLeft: 52, fontSize: 11.5, fontStyle: 'italic', fontFamily: "'Newsreader', Georgia, serif", color: 'var(--ink-3)' }}>
-                    <span style={{ color: 'var(--accent)', fontStyle: 'normal', fontFamily: 'inherit' }}>↪ Suggéré : {ACCOUNT_ROLES[suggestion.role].label}</span> — {suggestion.reason}{' '}
-                    <button onClick={() => updateAccount(a.id, { role: suggestion.role })} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', textDecoration: 'underline', padding: 0, fontSize: 11.5, fontStyle: 'normal', fontFamily: 'inherit' }}>
+                  <div style={{marginTop:8,paddingLeft:52,fontSize:11.5,fontStyle:'italic',fontFamily:"'Newsreader',Georgia,serif",color:'var(--ink-3)'}}>
+                    <span style={{color:'var(--accent)',fontStyle:'normal',fontFamily:'inherit'}}>↪ Suggéré : {ACCOUNT_ROLES[suggestion.role].label}</span> — {suggestion.reason}{' '}
+                    <button onClick={() => updateAccount(a.id,{role:suggestion.role})} style={{background:'none',border:'none',color:'var(--accent)',cursor:'pointer',textDecoration:'underline',padding:0,fontSize:11.5,fontStyle:'normal',fontFamily:'inherit'}}>
                       Appliquer
                     </button>
                   </div>

@@ -31,6 +31,7 @@ def _to_out(account: Account, db: Session) -> dict:
         "is_joint": account.is_joint,
         "iban": account.iban,
         "source": account.source or "manual",
+        "external_id": account.external_id,
     }
 
 
