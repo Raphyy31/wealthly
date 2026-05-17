@@ -259,11 +259,18 @@ export function Transactions({ transactions, accounts, categories, members = [],
   }, [accounts]);
 
   // Per-category transaction counts (shown next to each checkbox in the panel).
+  // A transaction with a sub-category (e.g. resto_meal) is also counted under
+  // its parent (restaurants), so the filter count reflects all children too.
   const catCounts = useMemo(() => {
     const c = {};
-    transactions.forEach(tx => { c[tx.categoryId || 'uncategorized'] = (c[tx.categoryId || 'uncategorized'] || 0) + 1; });
+    transactions.forEach(tx => {
+      const id = tx.categoryId || 'uncategorized';
+      c[id] = (c[id] || 0) + 1;
+      const cat = categories.find(cat => cat.id === id);
+      if (cat?.parent) c[cat.parent] = (c[cat.parent] || 0) + 1;
+    });
     return c;
-  }, [transactions]);
+  }, [transactions, categories]);
 
   // All tags in use across the household, with counts. Sorted by frequency desc.
   const { allTags, tagCounts } = useMemo(() => {
@@ -305,7 +312,17 @@ export function Transactions({ transactions, accounts, categories, members = [],
           const catHit = tx.categoryId ? (catSearchIndex[tx.categoryId] || '').includes(q) : false;
           if (!labelHit && !catHit) return false;
         }
-        if (filters.cats.length > 0 && !filters.cats.includes(tx.categoryId || 'uncategorized')) return false;
+        if (filters.cats.length > 0) {
+          const txCatId = tx.categoryId || 'uncategorized';
+          const txCat = categories.find(c => c.id === txCatId);
+          const matches = filters.cats.some(filterId => {
+            if (filterId === txCatId) return true;
+            // a top-level (no parent) filter selection also matches its children
+            const filterCat = categories.find(c => c.id === filterId);
+            return !filterCat?.parent && txCat?.parent === filterId;
+          });
+          if (!matches) return false;
+        }
         if (filters.accs.length > 0 && !filters.accs.includes(tx.accountId)) return false;
         if (filters.members.length > 0) {
           const owners = accountMembers[tx.accountId] || [];
