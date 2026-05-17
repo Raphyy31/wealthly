@@ -1333,6 +1333,7 @@ html, body {
   animation: pop-in 160ms ease-out;
 }
 @keyframes pop-in { from { transform: translateY(-4px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes spin { to { transform: rotate(360deg); } }
 .mon-picker-head {
   display: flex; align-items: center; justify-content: space-between;
   padding: 4px 4px 10px;
