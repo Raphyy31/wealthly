@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Check, X, Sparkles, ArrowLeftRight } from 'lucide-react';
+import { CategoryDropdown } from './CategoryDropdown.jsx';
 
 // Modal that lets the user create (and edit) a categorization rule.
 // Pre-fills with the auto-extracted merchant keyword, but the user is free
@@ -43,10 +44,18 @@ export function CreateRuleModal({ open, suggested = '', categories = [], initial
 
   if (!open) return null;
 
-  const topCats = categories.filter(c => !c.parent && c.id !== 'uncategorized' && c.type !== 'income');
-  const subCats = categories.filter(c => c.parent === topId);
+  const pickerCats = categories.filter(c => c.id !== 'uncategorized' && c.type !== 'income');
   const targetId = subId || topId;
   const targetCat = categories.find(c => c.id === targetId);
+
+  // Linked picker handler — pick a sub from either dropdown → both filled.
+  const onPickCat = (slug) => {
+    if (!slug) { setTopId(''); setSubId(''); return; }
+    const cat = categories.find(c => c.id === slug);
+    if (!cat) return;
+    if (cat.parent) { setTopId(cat.parent); setSubId(slug); }
+    else { setTopId(slug); setSubId(''); }
+  };
 
   const trimmed = keyword.trim();
   const count = trimmed.length >= 2 ? matchCount(trimmed, mode === 'transfer' ? null : targetId) : 0;
@@ -118,30 +127,26 @@ export function CreateRuleModal({ open, suggested = '', categories = [], initial
             <div className="rule-modal-row">
               <label className="rule-modal-label">
                 <span>Catégorie</span>
-                <select
-                  className="rule-modal-input"
+                <CategoryDropdown
                   value={topId}
-                  onChange={e => { setTopId(e.target.value); setSubId(''); }}
-                >
-                  <option value="">— Choisir —</option>
-                  {topCats.map(c => (
-                    <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
-                  ))}
-                </select>
+                  categories={pickerCats}
+                  onChange={onPickCat}
+                  placeholder="Catégorie"
+                  grouped
+                  clearable={false}
+                  showParentInChip={false}
+                />
               </label>
               <label className="rule-modal-label">
                 <span>Détail <span className="rule-modal-optional">(optionnel)</span></span>
-                <select
-                  className="rule-modal-input"
+                <CategoryDropdown
                   value={subId}
-                  onChange={e => setSubId(e.target.value)}
-                  disabled={!topId || subCats.length === 0}
-                >
-                  <option value="">{subCats.length === 0 ? 'Aucun détail' : '— Aucun —'}</option>
-                  {subCats.map(c => (
-                    <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
-                  ))}
-                </select>
+                  categories={pickerCats}
+                  onChange={onPickCat}
+                  placeholder="Détail (optionnel)"
+                  grouped
+                  emptyLabel="Aucun détail"
+                />
               </label>
             </div>
           )}

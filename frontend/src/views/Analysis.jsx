@@ -11,6 +11,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
 } from 'recharts';
 import { formatCurrency, formatDate, monthKey } from '../utils.js';
+import { CategoryDropdown } from '../components/CategoryDropdown.jsx';
 
 const TOOLTIP_STYLE = {
   background: 'var(--bg-elev)',
@@ -81,16 +82,17 @@ export function Analysis({ transactions, categories, recurringIds, recurringGrou
               <div className="ds-panel-title">Évolution par catégorie</div>
               <div className="ds-panel-sub">Filtrer pour zoomer sur une dépense</div>
             </div>
-            <select
-              className="ds-input ana-select"
-              value={selectedCat}
-              onChange={(e) => setSelectedCat(e.target.value)}
-            >
-              <option value="all">Toutes dépenses</option>
-              {categories.filter(c => c.type === 'expense').map(c => (
-                <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
-              ))}
-            </select>
+            <div className="ana-select">
+              <CategoryDropdown
+                value={selectedCat === 'all' ? '' : selectedCat}
+                categories={categories.filter(c => c.type === 'expense' && c.id !== 'uncategorized')}
+                onChange={(v) => setSelectedCat(v || 'all')}
+                placeholder="Toutes dépenses"
+                grouped
+                emptyLabel="Toutes dépenses"
+                align="right"
+              />
+            </div>
           </div>
           <div className="ana-chart-pad">
             {catTimeData.length > 0 ? (

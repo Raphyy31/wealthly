@@ -10,6 +10,7 @@
 // ============================================================================
 import { useMemo, useState } from 'react';
 import { Activity, Search, ArrowUpDown, X } from 'lucide-react';
+import { CategoryDropdown } from '../components/CategoryDropdown.jsx';
 
 
 export function Recurring({ recurringGroups = [], categories = [], accounts = [], fmt, transactions = [], setView, setInitialAccountFilter }) {
@@ -114,12 +115,16 @@ export function Recurring({ recurringGroups = [], categories = [], accounts = []
           />
           {search && <button className="icon-btn-sm" onClick={() => setSearch('')}><X size={13}/></button>}
         </div>
-        <select value={filterCat} onChange={e => setFilterCat(e.target.value)} style={{ minWidth: 160 }}>
-          <option value="all">Toutes catégories</option>
-          {topLevelCats.map(c => (
-            <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
-          ))}
-        </select>
+        <div style={{ minWidth: 200 }}>
+          <CategoryDropdown
+            value={filterCat === 'all' ? '' : filterCat}
+            categories={categories.filter(c => c.id !== 'uncategorized')}
+            onChange={(v) => setFilterCat(v || 'all')}
+            placeholder="Toutes catégories"
+            grouped
+            emptyLabel="Toutes catégories"
+          />
+        </div>
         <span className="result-count">{filtered.length} récurrent{filtered.length > 1 ? 's' : ''}</span>
       </div>
 
