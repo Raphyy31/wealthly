@@ -121,6 +121,7 @@ export const accounts = {
   create: (a) => post('/accounts', a),
   update: (id, a) => put(`/accounts/${id}`, a),
   delete: (id) => del(`/accounts/${id}`),
+  merge: (targetId, sourceId) => post(`/accounts/${targetId}/merge/${sourceId}`, {}),
 };
 
 // ============================================================================

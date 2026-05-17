@@ -82,3 +82,41 @@ def delete_account(account_id: str, db: Session = Depends(get_db), user: User = 
         raise HTTPException(status_code=404, detail="Compte non trouvé")
     db.delete(account)
     db.commit()
+
+
+@router.post("/{target_id}/merge/{source_id}", response_model=AccountOut)
+def merge_accounts(target_id: str, source_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Merge source into target: move all transactions, transfer external_id, delete source."""
+    if target_id == source_id:
+        raise HTTPException(status_code=400, detail="Impossible de fusionner un compte avec lui-même")
+    target = db.query(Account).filter(Account.id == target_id, Account.household_id == user.household_id).first()
+    source = db.query(Account).filter(Account.id == source_id, Account.household_id == user.household_id).first()
+    if not target or not source:
+        raise HTTPException(status_code=404, detail="Compte non trouvé")
+
+    # Collect existing dedup hashes on the target to avoid creating duplicates.
+    existing_hashes = {
+        t.dedup_hash for t in
+        db.query(Transaction).filter(Transaction.account_id == target_id, Transaction.dedup_hash.isnot(None)).all()
+    }
+
+    source_txs = db.query(Transaction).filter(Transaction.account_id == source_id).all()
+    moved = 0
+    for tx in source_txs:
+        if tx.dedup_hash and tx.dedup_hash in existing_hashes:
+            db.delete(tx)  # true duplicate — drop it
+        else:
+            tx.account_id = target_id
+            if tx.dedup_hash:
+                existing_hashes.add(tx.dedup_hash)
+            moved += 1
+
+    # Transfer GoCardless binding so future syncs populate the right account.
+    if source.external_id and not target.external_id:
+        target.external_id = source.external_id
+        target.source = source.source
+
+    db.delete(source)
+    db.commit()
+    db.refresh(target)
+    return _to_out(target, db)

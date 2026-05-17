@@ -1352,6 +1352,18 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     }
   };
 
+  const mergeAccounts = async (targetId, sourceId) => {
+    try {
+      const updated = await api.accounts.merge(targetId, sourceId);
+      const mapped = accountFromApi(updated);
+      setAccounts(prev => prev.filter(a => a.id !== sourceId).map(a => a.id === targetId ? mapped : a));
+      await reloadAll();
+      showToast('Comptes fusionnés avec succès', 'success');
+    } catch (err) {
+      showToast(t('toasts.genericError', { message: err.message }), 'error');
+    }
+  };
+
   const unlockAchievement = async (slug) => {
     try {
       await api.achievements.unlock(slug);
@@ -2084,6 +2096,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             saveMember={saveMember} deleteMember={deleteMember}
             deleteAccount={deleteAccount}
             updateAccount={updateAccount}
+            mergeAccounts={mergeAccounts}
             transactions={visibleTransactions}
             exportData={exportData} importData={importData} resetAllData={resetAllData}
             bankConnections={bankConnections}

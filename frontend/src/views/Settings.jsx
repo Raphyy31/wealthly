@@ -13,7 +13,7 @@ import { CategoryDropdown } from '../components/CategoryDropdown.jsx';
 import {
   Plus, Trash2, Edit3, Check, Upload, Download, Users, Wallet,
   Sparkles, Activity, AlertCircle, RefreshCw, Link2, Unlink, X, Cloud,
-  User, Shield, DollarSign, Database, Globe,
+  User, Shield, DollarSign, Database, Globe, ArrowLeftRight,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import * as api from '../api.js';
@@ -45,7 +45,7 @@ function readHashSection() {
   return null;
 }
 
-export function SettingsView({ members, accounts, accountBalances, saveMember, deleteMember, deleteAccount, updateAccount, transactions = [], exportData, importData, resetAllData, categories = [], reloadCategories, onCategoryCreated, onCategoryDeleted, showToast, fmt, baseCurrency = 'EUR', setBaseCurrency, rates, ratesDate, currentUser, onImport, recategorizeUncategorized, recategorizeTransfers }) {
+export function SettingsView({ members, accounts, accountBalances, saveMember, deleteMember, deleteAccount, updateAccount, mergeAccounts, transactions = [], exportData, importData, resetAllData, categories = [], reloadCategories, onCategoryCreated, onCategoryDeleted, showToast, fmt, baseCurrency = 'EUR', setBaseCurrency, rates, ratesDate, currentUser, onImport, recategorizeUncategorized, recategorizeTransfers }) {
   const { t } = useTranslation();
   const [editingMember, setEditingMember] = useState(null);
   const [activeSection, setActiveSection] = useState(() => readHashSection() || 'profil');
@@ -121,6 +121,7 @@ export function SettingsView({ members, accounts, accountBalances, saveMember, d
               transactions={transactions}
               updateAccount={updateAccount}
               deleteAccount={deleteAccount}
+              mergeAccounts={mergeAccounts}
               fmt={fmt}
               onImport={onImport}
             />
@@ -331,8 +332,10 @@ function FoyerSection({ members, setEditingMember, deleteMember, COLORS }) {
 // ============================================================================
 // SECTION : COMPTES & SYNCHRONISATION (merged accounts + GoCardless)
 // ============================================================================
-function ComptesSection({ accounts, accountBalances, members, transactions, updateAccount, deleteAccount, fmt, onImport }) {
+function ComptesSection({ accounts, accountBalances, members, transactions, updateAccount, deleteAccount, mergeAccounts, fmt, onImport }) {
   const { t } = useTranslation();
+  const [mergingId, setMergingId] = useState(null);   // account being merged (source)
+  const [mergeTargetId, setMergeTargetId] = useState('');
   return (
     <section className="settings-panel">
       <header>
@@ -448,6 +451,53 @@ function ComptesSection({ accounts, accountBalances, members, transactions, upda
                       options={SUPPORTED_CURRENCIES.map(c => ({ value: c, label: `${CURRENCY_FLAGS[c]} ${c}` }))}
                     />
                   </div>
+                )}
+                {mergeAccounts && accounts.length > 1 && (
+                  mergingId === a.id ? (
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
+                      <select
+                        value={mergeTargetId}
+                        onChange={e => setMergeTargetId(e.target.value)}
+                        style={{ fontSize: 12, padding: '3px 6px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg-elev)', color: 'var(--ink)' }}
+                        autoFocus
+                      >
+                        <option value="">Fusionner dans…</option>
+                        {accounts.filter(x => x.id !== a.id).map(x => (
+                          <option key={x.id} value={x.id}>{x.name || x.bank}</option>
+                        ))}
+                      </select>
+                      <button
+                        className="primary-btn"
+                        style={{ padding: '3px 10px', fontSize: 12 }}
+                        disabled={!mergeTargetId}
+                        onClick={async () => {
+                          if (!confirm(`Fusionner "${a.name || a.bank}" dans le compte sélectionné ? Cette action est irréversible.`)) return;
+                          await mergeAccounts(mergeTargetId, a.id);
+                          setMergingId(null);
+                          setMergeTargetId('');
+                        }}
+                      >
+                        Confirmer
+                      </button>
+                      <button
+                        className="icon-btn-sm"
+                        onClick={() => { setMergingId(null); setMergeTargetId(''); }}
+                        title="Annuler"
+                        style={{ color: 'var(--ink-3)' }}
+                      >
+                        <X size={13}/>
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      className="icon-btn-sm"
+                      title="Fusionner avec un autre compte"
+                      onClick={() => { setMergingId(a.id); setMergeTargetId(''); }}
+                      style={{ color: 'var(--ink-3)', flexShrink: 0 }}
+                    >
+                      <ArrowLeftRight size={13}/>
+                    </button>
+                  )
                 )}
                 <BusyButton className="icon-btn-sm" iconOnly spinnerSize={13} onClick={() => deleteAccount(a.id)} title="Supprimer ce compte"><Trash2 size={13}/></BusyButton>
               </div>
