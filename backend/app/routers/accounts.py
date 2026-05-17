@@ -30,6 +30,7 @@ def _to_out(account: Account, db: Session) -> dict:
         "current_balance": current,
         "is_joint": account.is_joint,
         "iban": account.iban,
+        "source": account.source or "manual",
     }
 
 

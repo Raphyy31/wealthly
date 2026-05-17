@@ -172,6 +172,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     currency: a.currency || 'EUR',
     memberIds: a.member_ids || [],
     currentBalance: a.current_balance,
+    source: a.source || 'manual',
   });
   const accountToApi = (a) => ({
     name: a.name,
