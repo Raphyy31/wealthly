@@ -6,11 +6,244 @@
 // backdrop-blur nav au scroll, micro-interactions (border + bg, pas translateY).
 // Texte minimal style fintech (Finary/Lydia/Qonto).
 // ============================================================================
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import {
+  motion, useInView, useMotionValue, useReducedMotion, animate as fmAnimate,
+  useScroll, useTransform, useSpring,
+} from 'framer-motion';
 import Logo from '../components/Logo.jsx';
+
+// ─── Premium ease ─────────────────────────────────────────────────────────
+const ease = [0.22, 1, 0.36, 1];
+const easeOut = [0.16, 1, 0.3, 1];
+
+// ─── Digit roll — odometer/airport-board feel ─────────────────────────────
+function RollingDigit({ digit, delay = 0, duration = 1.2 }) {
+  const reduced = useReducedMotion();
+  if (reduced) return <span>{digit}</span>;
+  const cycle = [9, 4, 7, 2, 8, 1, 5, 3, 6, 0, digit];
+  const lastIdx = cycle.length - 1;
+  return (
+    <span style={{ display: 'inline-block', overflow: 'hidden', verticalAlign: 'bottom', height: '1em', lineHeight: 1 }}>
+      <motion.span
+        style={{ display: 'inline-block', lineHeight: 1 }}
+        initial={{ y: 0 }}
+        animate={{ y: `-${lastIdx}em` }}
+        transition={{ duration, delay, ease }}
+      >
+        {cycle.map((d, i) => (
+          <span key={i} style={{ display: 'block', height: '1em', lineHeight: 1 }}>{d}</span>
+        ))}
+      </motion.span>
+    </span>
+  );
+}
+
+function ScrambleNumber({ to, suffix = '', className, delay = 0, locale = 'fr-FR' }) {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, amount: 0.4 });
+  const reduced = useReducedMotion();
+  const formatted = Math.round(to).toLocaleString(locale).replace(/,/g, ' ');
+  const chars = formatted.split('');
+
+  if (reduced || !inView) {
+    return (
+      <span ref={ref} className={className}>
+        {inView ? <>{formatted}{suffix}</> : <span style={{ opacity: 0 }}>{formatted}{suffix}</span>}
+      </span>
+    );
+  }
+  return (
+    <span ref={ref} className={className} style={{ display: 'inline-flex', alignItems: 'flex-end' }}>
+      {chars.map((c, i) => {
+        if (/\d/.test(c)) {
+          return <RollingDigit key={i} digit={parseInt(c, 10)} delay={delay + i * 0.06} />;
+        }
+        return <motion.span key={i} style={{ display: 'inline-block' }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: delay + i * 0.06 + 0.6, duration: 0.3 }}>{c}</motion.span>;
+      })}
+      <motion.span style={{ display: 'inline-block' }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: delay + chars.length * 0.06 + 0.6, duration: 0.4 }}>{suffix}</motion.span>
+    </span>
+  );
+}
+
+// Linear count-up kept for small KPIs
+function CountUp({ to, duration = 1.4, delay = 0, className }) {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, amount: 0.4 });
+  const mv = useMotionValue(0);
+  const [display, setDisplay] = useState(0);
+  const reduced = useReducedMotion();
+
+  useEffect(() => {
+    if (!inView) return;
+    if (reduced) { setDisplay(to); return; }
+    const controls = fmAnimate(mv, to, {
+      duration, delay, ease,
+      onUpdate: (v) => setDisplay(v),
+    });
+    return () => controls.stop();
+  }, [inView, to, duration, delay, reduced, mv]);
+
+  return <span ref={ref} className={className}>{Math.round(display).toLocaleString('fr-FR')}</span>;
+}
+
+function DrawPath({ d, stroke, strokeWidth = 2, duration = 1.6, delay = 0.2, area, areaFill, dotCx, dotCy }) {
+  const reduced = useReducedMotion();
+  return (
+    <>
+      {area && (
+        <motion.path
+          d={area}
+          fill={areaFill}
+          initial={reduced ? { opacity: 1 } : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.8, delay: delay + duration * 0.6 }}
+        />
+      )}
+      <motion.path
+        d={d}
+        fill="none"
+        stroke={stroke}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        initial={reduced ? { pathLength: 1 } : { pathLength: 0 }}
+        animate={{ pathLength: 1 }}
+        transition={{ duration, delay, ease: [0.16, 1, 0.3, 1] }}
+      />
+      {dotCx != null && (
+        <>
+          {!reduced && (
+            <motion.circle
+              cx={dotCx}
+              cy={dotCy}
+              r={5}
+              fill={stroke}
+              initial={{ scale: 1, opacity: 0 }}
+              animate={{ scale: [1, 3.2, 1], opacity: [0, 0.5, 0] }}
+              transition={{ duration: 2.4, delay: delay + duration, repeat: Infinity, ease: 'easeOut' }}
+              style={{ transformOrigin: `${dotCx}px ${dotCy}px` }}
+            />
+          )}
+          <motion.circle
+            cx={dotCx}
+            cy={dotCy}
+            r={5}
+            fill="#181714"
+            stroke={stroke}
+            strokeWidth={2.5}
+            initial={reduced ? { scale: 1, opacity: 1 } : { scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.3, delay: delay + duration }}
+            style={{ transformOrigin: `${dotCx}px ${dotCy}px` }}
+          />
+        </>
+      )}
+    </>
+  );
+}
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 14 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.8, ease } },
+};
+
+// ─── Mouse-tracked 3D parallax wrapper ────────────────────────────────────
+function ParallaxFrame({ children, intensity = 6, className }) {
+  const ref = useRef(null);
+  const rx = useSpring(0, { stiffness: 80, damping: 18, mass: 0.6 });
+  const ry = useSpring(0, { stiffness: 80, damping: 18, mass: 0.6 });
+  const reduced = useReducedMotion();
+
+  const onMove = (e) => {
+    if (reduced || !ref.current) return;
+    const r = ref.current.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    ry.set(((e.clientX - cx) / (r.width / 2)) * intensity);
+    rx.set(-((e.clientY - cy) / (r.height / 2)) * (intensity * 0.5));
+  };
+  const onLeave = () => { rx.set(0); ry.set(0); };
+
+  return (
+    <motion.div
+      ref={ref}
+      onMouseMove={onMove}
+      onMouseLeave={onLeave}
+      className={className}
+      style={{ perspective: 1400, transformStyle: 'preserve-3d' }}
+    >
+      <motion.div
+        style={{
+          rotateX: rx,
+          rotateY: ry,
+          transformStyle: 'preserve-3d',
+          willChange: 'transform',
+        }}
+      >
+        {children}
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ─── Magnetic 3D tilt for tiles ───────────────────────────────────────────
+function TiltTile({ children, className, intensity = 4, ...rest }) {
+  const ref = useRef(null);
+  const rx = useSpring(0, { stiffness: 120, damping: 16 });
+  const ry = useSpring(0, { stiffness: 120, damping: 16 });
+  const reduced = useReducedMotion();
+  const onMove = (e) => {
+    if (reduced || !ref.current) return;
+    const r = ref.current.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    ry.set(((e.clientX - cx) / (r.width / 2)) * intensity);
+    rx.set(-((e.clientY - cy) / (r.height / 2)) * intensity);
+  };
+  const onLeave = () => { rx.set(0); ry.set(0); };
+  return (
+    <motion.div
+      ref={ref}
+      onMouseMove={onMove}
+      onMouseLeave={onLeave}
+      className={className}
+      variants={fadeUp}
+      style={{ perspective: 1200, rotateX: rx, rotateY: ry, transformStyle: 'preserve-3d', willChange: 'transform' }}
+      {...rest}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+// ─── Aurora blob — slow drifting cobalt glow ──────────────────────────────
+function Aurora() {
+  const reduced = useReducedMotion();
+  return (
+    <div className="lc-aurora" aria-hidden>
+      <motion.div
+        className="lc-aurora-blob lc-aurora-1"
+        animate={reduced ? {} : { x: [0, 60, -40, 0], y: [0, -30, 40, 0] }}
+        transition={{ duration: 22, repeat: Infinity, ease: 'easeInOut' }}
+      />
+      <motion.div
+        className="lc-aurora-blob lc-aurora-2"
+        animate={reduced ? {} : { x: [0, -80, 40, 0], y: [0, 50, -20, 0] }}
+        transition={{ duration: 28, repeat: Infinity, ease: 'easeInOut' }}
+      />
+    </div>
+  );
+}
 
 export default function Landing({ onSignIn, onSignUp, onTryDemo }) {
   const [scrolled, setScrolled] = useState(false);
+  const mockupRef = useRef(null);
+  const { scrollYProgress } = useScroll({ target: mockupRef, offset: ['start end', 'end start'] });
+  const mockupScale = useTransform(scrollYProgress, [0, 0.4, 1], [0.94, 1, 1.02]);
+  const mockupRotateX = useTransform(scrollYProgress, [0, 0.5, 1], [10, 0, -3]);
+  const mockupY = useTransform(scrollYProgress, [0, 1], [40, -40]);
+  const mockupOpacity = useTransform(scrollYProgress, [0, 0.2, 0.85, 1], [0, 1, 1, 0.85]);
 
   useEffect(() => {
     const prev = document.documentElement.getAttribute('data-theme');
@@ -27,6 +260,8 @@ export default function Landing({ onSignIn, onSignUp, onTryDemo }) {
     <>
       <Styles />
       <div className="lc-page">
+        <Aurora />
+        <div className="lc-grain" aria-hidden />
 
         {/* ============ STICKY TOP STRIP ============ */}
         <div className={`lc-strip ${scrolled ? 'is-scrolled' : ''}`}>
@@ -46,52 +281,104 @@ export default function Landing({ onSignIn, onSignUp, onTryDemo }) {
           {/* ============ MASTHEAD ============ */}
           <div className="lc-masthead">
             <div>
-              <h1 className="lc-title">Votre patrimoine,<br/><em>enfin clair.</em></h1>
+              <h1 className="lc-title">
+                <motion.span
+                  style={{ display: 'inline-block' }}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8, ease }}
+                >
+                  Votre patrimoine,
+                </motion.span>
+                <br/>
+                <motion.em
+                  style={{ display: 'inline-block' }}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8, delay: 0.35, ease }}
+                >
+                  enfin clair.
+                </motion.em>
+              </h1>
             </div>
-            <div className="lc-deck">
+            <motion.div
+              className="lc-deck"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: 0.6, ease }}
+            >
               Connectez vos comptes, suivez vos placements, votre immobilier et vos crypto.
               <strong> Une seule app, zéro tableur.</strong>
-            </div>
+            </motion.div>
           </div>
 
           {/* ============ CTAs + TRUST BADGES ============ */}
-          <div className="lc-cta-row">
-            <button className="lc-btn-primary" onClick={onSignUp}>
+          <motion.div
+            className="lc-cta-row"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.75, ease }}
+          >
+            <button className="lc-btn-primary lc-btn-primary--pulse" onClick={onSignUp}>
               Commencer gratuitement
               <ArrowRight />
             </button>
             <button className="lc-btn-ghost" onClick={onTryDemo}>
               Voir la démo →
             </button>
-          </div>
-          <div className="lc-trust">
+          </motion.div>
+          <motion.div
+            className="lc-trust"
+            initial="hidden"
+            animate="show"
+            transition={{ staggerChildren: 0.08, delayChildren: 0.9 }}
+          >
             <TrustItem icon={<ShieldIcon />} label="DSP2 · lecture seule" />
             <TrustItem icon={<LockIcon />} label="Chiffré bout-en-bout" />
             <TrustItem icon={<NoCardIcon />} label="Sans carte bancaire" />
-          </div>
+          </motion.div>
 
           {/* ============ HERO MOCKUP (le produit, gros, tout de suite) ============ */}
-          <div className="lc-mockup-wrap">
-            <div className="lc-mockup-frame">
-              <DashboardMockup />
-            </div>
+          <motion.div
+            ref={mockupRef}
+            className="lc-mockup-wrap"
+            style={{ scale: mockupScale, rotateX: mockupRotateX, y: mockupY, opacity: mockupOpacity, transformPerspective: 1600, transformOrigin: '50% 0%' }}
+          >
+            <ParallaxFrame className="lc-mockup-parallax" intensity={4}>
+              <div className="lc-mockup-frame">
+                <DashboardMockup />
+                <div className="lc-mockup-shine" aria-hidden />
+              </div>
+            </ParallaxFrame>
             <div className="lc-mockup-glow" aria-hidden />
-          </div>
+          </motion.div>
 
           {/* ============ TEASER GRID — fonctionnalités produit ============ */}
-          <div className="lc-section-head">
+          <motion.div
+            className="lc-section-head"
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.5 }}
+            transition={{ duration: 0.7, ease }}
+          >
             <h2 className="lc-h2">Tout ce qu'il faut.<br/><em>Rien de plus.</em></h2>
-          </div>
+          </motion.div>
 
-          <div className="lc-teasers">
-            <div className="lc-tile lc-t-hero">
+          <motion.div
+            className="lc-teasers"
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, amount: 0.15 }}
+            variants={{ hidden: {}, show: { transition: { staggerChildren: 0.08 } } }}
+          >
+            <TiltTile className="lc-tile lc-t-hero" intensity={3}>
               <div className="lc-label-row">
                 <div className="lc-tag">Patrimoine net</div>
                 <div className="lc-range">
                   <span>1M</span><span>3M</span><span className="on">6M</span><span>1A</span><span>5A</span>
                 </div>
               </div>
-              <div className="lc-big num">184&nbsp;720<span className="lc-cents">,40&nbsp;€</span></div>
+              <div className="lc-big num"><ScrambleNumber to={184720} delay={0.1} /><span className="lc-cents">,40&nbsp;€</span></div>
               <div className="lc-delta">
                 <span className="lc-pill num">↑ +2&nbsp;340,12&nbsp;€&nbsp;·&nbsp;+1,28&nbsp;%</span>
                 <span className="lc-vs">vs. mois dernier</span>
@@ -115,20 +402,13 @@ export default function Landing({ onSignIn, onSignUp, onTryDemo }) {
                 </svg>
               </div>
               <span className="lc-read">Découvrir le dashboard</span>
-            </div>
+            </TiltTile>
 
-            <div className="lc-tile lc-t-alloc">
+            <TiltTile className="lc-tile lc-t-alloc">
               <div className="lc-tag">Allocation</div>
               <div className="lc-ttl">Tous vos actifs, par classe.</div>
               <div className="lc-alloc-row">
-                <svg className="lc-donut" viewBox="0 0 120 120">
-                  <circle cx="60" cy="60" r="48" fill="none" stroke="#0A0908" strokeWidth="14"/>
-                  <circle cx="60" cy="60" r="48" fill="none" stroke="#4FB57A" strokeWidth="14" strokeDasharray="113 301.6" transform="rotate(-90 60 60)"/>
-                  <circle cx="60" cy="60" r="48" fill="none" stroke="#7E92FF" strokeWidth="14" strokeDasharray="75 301.6" strokeDashoffset="-113" transform="rotate(-90 60 60)"/>
-                  <circle cx="60" cy="60" r="48" fill="none" stroke="#E0975A" strokeWidth="14" strokeDasharray="48 301.6" strokeDashoffset="-188" transform="rotate(-90 60 60)"/>
-                  <circle cx="60" cy="60" r="48" fill="none" stroke="#DA8AA1" strokeWidth="14" strokeDasharray="35 301.6" strokeDashoffset="-236" transform="rotate(-90 60 60)"/>
-                  <circle cx="60" cy="60" r="48" fill="none" stroke="#B69BF2" strokeWidth="14" strokeDasharray="20 301.6" strokeDashoffset="-271" transform="rotate(-90 60 60)"/>
-                </svg>
+                <AnimatedDonut />
                 <div className="lc-legend">
                   <div><span className="lc-sw" style={{ background: '#4FB57A' }}/>Immobilier</div>
                   <div><span className="lc-sw" style={{ background: '#7E92FF' }}/>PEA &amp; CTO</div>
@@ -138,9 +418,9 @@ export default function Landing({ onSignIn, onSignUp, onTryDemo }) {
                 </div>
               </div>
               <span className="lc-read">Voir le détail</span>
-            </div>
+            </TiltTile>
 
-            <div className="lc-tile lc-t-tx">
+            <TiltTile className="lc-tile lc-t-tx">
               <div className="lc-tag">Transactions</div>
               <div className="lc-ttl">Catégorisées automatiquement.</div>
               <div className="lc-tx-row">
@@ -169,37 +449,43 @@ export default function Landing({ onSignIn, onSignUp, onTryDemo }) {
               </div>
               <div className="lc-tx-fade"/>
               <span className="lc-read">Plus loin</span>
-            </div>
+            </TiltTile>
 
-            <div className="lc-tile lc-t-range">
+            <TiltTile className="lc-tile lc-t-range">
               <div className="lc-tag">Indicateurs</div>
               <div className="lc-ttl">Les chiffres qui comptent.</div>
               <div className="lc-kpis">
-                <div className="lc-kpi"><div className="lc-kpi-lbl">Liquidités</div><div className="lc-kpi-val num">12&nbsp;480&nbsp;€</div><div className="lc-kpi-dt num">+3,2&nbsp;%</div></div>
-                <div className="lc-kpi"><div className="lc-kpi-lbl">Investi</div><div className="lc-kpi-val num">84&nbsp;200&nbsp;€</div><div className="lc-kpi-dt num">+1,8&nbsp;%</div></div>
-                <div className="lc-kpi"><div className="lc-kpi-lbl">Immobilier</div><div className="lc-kpi-val num">88&nbsp;040&nbsp;€</div><div className="lc-kpi-dt num">+0,4&nbsp;%</div></div>
-                <div className="lc-kpi"><div className="lc-kpi-lbl">Dettes</div><div className="lc-kpi-val num">42&nbsp;100&nbsp;€</div><div className="lc-kpi-dt lc-kpi-dt-n num">−0,9&nbsp;%</div></div>
+                <div className="lc-kpi"><div className="lc-kpi-lbl">Liquidités</div><div className="lc-kpi-val num"><CountUp to={12480} delay={0.2} />&nbsp;€</div><div className="lc-kpi-dt num">+3,2&nbsp;%</div></div>
+                <div className="lc-kpi"><div className="lc-kpi-lbl">Investi</div><div className="lc-kpi-val num"><CountUp to={84200} delay={0.3} />&nbsp;€</div><div className="lc-kpi-dt num">+1,8&nbsp;%</div></div>
+                <div className="lc-kpi"><div className="lc-kpi-lbl">Immobilier</div><div className="lc-kpi-val num"><CountUp to={88040} delay={0.4} />&nbsp;€</div><div className="lc-kpi-dt num">+0,4&nbsp;%</div></div>
+                <div className="lc-kpi"><div className="lc-kpi-lbl">Dettes</div><div className="lc-kpi-val num"><CountUp to={42100} delay={0.5} />&nbsp;€</div><div className="lc-kpi-dt lc-kpi-dt-n num">−0,9&nbsp;%</div></div>
               </div>
               <span className="lc-read">Lire la grille</span>
-            </div>
+            </TiltTile>
 
-            <button className="lc-tile lc-t-insights" onClick={onTryDemo}>
+            <TiltTile className="lc-tile lc-t-insights" onClick={onTryDemo} role="button" tabIndex={0}>
               <div className="lc-tag">Démo</div>
               <div className="lc-quote">Essayez Wealthly sans créer de compte.</div>
               <div className="lc-quote-src">Données factices — 30 secondes</div>
               <span className="lc-read">Lancer la démo</span>
-            </button>
-          </div>
+            </TiltTile>
+          </motion.div>
 
           {/* ============ FINAL CTA ============ */}
-          <div className="lc-final-cta">
+          <motion.div
+            className="lc-final-cta"
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.4 }}
+            transition={{ duration: 0.7, ease }}
+          >
             <h2 className="lc-h2">Prêt à commencer&nbsp;?</h2>
             <p className="lc-final-sub">Gratuit. Sans carte bancaire. Sans engagement.</p>
             <div className="lc-cta-row" style={{ justifyContent: 'center' }}>
-              <button className="lc-btn-primary" onClick={onSignUp}>Créer mon compte<ArrowRight /></button>
+              <button className="lc-btn-primary lc-btn-primary--pulse" onClick={onSignUp}>Créer mon compte<ArrowRight /></button>
               <button className="lc-btn-ghost" onClick={onTryDemo}>Voir la démo</button>
             </div>
-          </div>
+          </motion.div>
 
           {/* ============ COLOPHON ============ */}
           <div className="lc-colophon">
@@ -222,16 +508,72 @@ export default function Landing({ onSignIn, onSignUp, onTryDemo }) {
 
 // ─── Sub-components ────────────────────────────────────────────────────────
 
+function AnimatedDonut() {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, amount: 0.5 });
+  const reduced = useReducedMotion();
+  const segments = [
+    { color: '#4FB57A', length: 113, offset: 0 },
+    { color: '#7E92FF', length: 75,  offset: -113 },
+    { color: '#E0975A', length: 48,  offset: -188 },
+    { color: '#DA8AA1', length: 35,  offset: -236 },
+    { color: '#B69BF2', length: 20,  offset: -271 },
+  ];
+  return (
+    <svg ref={ref} className="lc-donut" viewBox="0 0 120 120">
+      <circle cx="60" cy="60" r="48" fill="none" stroke="#0A0908" strokeWidth="14"/>
+      {segments.map((s, i) => (
+        <motion.circle
+          key={i}
+          cx="60" cy="60" r="48" fill="none"
+          stroke={s.color} strokeWidth="14"
+          strokeDasharray={`${s.length} 301.6`}
+          strokeDashoffset={s.offset}
+          transform="rotate(-90 60 60)"
+          initial={reduced ? { pathLength: 1, opacity: 1 } : { pathLength: 0, opacity: 0 }}
+          animate={inView ? { pathLength: 1, opacity: 1 } : {}}
+          transition={{ duration: 0.7, delay: 0.15 + i * 0.12, ease }}
+        />
+      ))}
+    </svg>
+  );
+}
+
 function TrustItem({ icon, label }) {
   return (
-    <div className="lc-trust-item">
+    <motion.div
+      className="lc-trust-item"
+      variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0, transition: { duration: 0.5, ease } } }}
+    >
       <span className="lc-trust-icon">{icon}</span>
       <span>{label}</span>
-    </div>
+    </motion.div>
+  );
+}
+
+function AnimatedSvgNumber({ to, x, y, fill, fontFamily, fontSize, fontWeight = 400, letterSpacing = 0, suffix = ' €', delay = 0.4, duration = 1.4 }) {
+  const [val, setVal] = useState(0);
+  const reduced = useReducedMotion();
+  useEffect(() => {
+    if (reduced) { setVal(to); return; }
+    const mv = { current: 0 };
+    const controls = fmAnimate(0, to, {
+      duration,
+      delay,
+      ease: [0.16, 1, 0.3, 1],
+      onUpdate: (v) => { mv.current = v; setVal(v); },
+    });
+    return () => controls.stop();
+  }, [to, delay, duration, reduced]);
+  return (
+    <text x={x} y={y} fill={fill} fontFamily={fontFamily} fontSize={fontSize} fontWeight={fontWeight} letterSpacing={letterSpacing}>
+      {Math.round(val).toLocaleString('fr-FR')}{suffix}
+    </text>
   );
 }
 
 function DashboardMockup() {
+  const reduced = useReducedMotion();
   return (
     <svg viewBox="0 0 1200 720" className="lc-svg" preserveAspectRatio="xMidYMid meet">
       <defs>
@@ -256,7 +598,7 @@ function DashboardMockup() {
       {/* Main */}
       <rect x="248" y="72" width="928" height="624" rx="14" fill="#181714" stroke="#2A2823"/>
       <text x="272" y="108" fill="#75716A" fontFamily="Geist, sans-serif" fontSize="11" letterSpacing="1.5">PATRIMOINE NET TOTAL</text>
-      <text x="272" y="172" fill="#F1EEE4" fontFamily="Newsreader, Georgia, serif" fontSize="56" fontWeight="400" letterSpacing="-2">184 720,40 €</text>
+      <AnimatedSvgNumber to={184720} x={272} y={172} fill="#F1EEE4" fontFamily="Newsreader, Georgia, serif" fontSize={56} fontWeight={400} letterSpacing={-2} delay={0.4} duration={1.6} suffix=",40 €" />
       <rect x="272" y="196" width="156" height="28" rx="14" fill="#15301F"/>
       <text x="292" y="216" fill="#4FB57A" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="500">↑ +2 340 € · +1,28 %</text>
       {/* Period chips */}
@@ -270,17 +612,30 @@ function DashboardMockup() {
       <line x1="272" y1="300" x2="1144" y2="300" stroke="#2A2823" strokeDasharray="2 4"/>
       <line x1="272" y1="370" x2="1144" y2="370" stroke="#2A2823" strokeDasharray="2 4"/>
       <line x1="272" y1="440" x2="1144" y2="440" stroke="#2A2823" strokeDasharray="2 4"/>
-      <path d="M272,440 C340,430 410,400 480,390 C560,378 620,408 700,358 C770,316 840,338 920,310 C990,288 1060,300 1144,260 L1144,500 L272,500 Z" fill="url(#lcHeroArea)"/>
-      <path d="M272,440 C340,430 410,400 480,390 C560,378 620,408 700,358 C770,316 840,338 920,310 C990,288 1060,300 1144,260" fill="none" stroke="#7E92FF" strokeWidth="2.5" strokeLinecap="round"/>
-      <circle cx="1144" cy="260" r="5" fill="#181714" stroke="#7E92FF" strokeWidth="2.5"/>
+      <DrawPath
+        d="M272,440 C340,430 410,400 480,390 C560,378 620,408 700,358 C770,316 840,338 920,310 C990,288 1060,300 1144,260"
+        area="M272,440 C340,430 410,400 480,390 C560,378 620,408 700,358 C770,316 840,338 920,310 C990,288 1060,300 1144,260 L1144,500 L272,500 Z"
+        areaFill="url(#lcHeroArea)"
+        stroke="#7E92FF"
+        strokeWidth={2.5}
+        duration={1.8}
+        delay={0.6}
+        dotCx={1144}
+        dotCy={260}
+      />
       {/* Bottom cards */}
       {['Actifs','Passifs','Liquidités','Épargne · mois'].map((l,i)=>(
-        <g key={l}>
+        <motion.g
+          key={l}
+          initial={reduced ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.55, delay: 1.4 + i * 0.1, ease: [0.16, 1, 0.3, 1] }}
+        >
           <rect x={272+i*228} y="540" width="208" height="140" rx="12" fill="#0F0E0C" stroke="#2A2823"/>
           <text x={288+i*228} y="568" fill="#75716A" fontFamily="Geist, sans-serif" fontSize="10" letterSpacing="1.5">{l.toUpperCase()}</text>
           <text x={288+i*228} y="612" fill="#F1EEE4" fontFamily="Newsreader, Georgia, serif" fontSize="26" fontWeight="400" letterSpacing="-1">{['226 820','42 100','12 480','+1 280'][i]} €</text>
           <text x={288+i*228} y="648" fill={i===1?"#E07A6E":"#4FB57A"} fontFamily="Geist, sans-serif" fontSize="11" fontWeight="500">{['+1.8 %','−0.9 %','+3.2 %','22 % rev.'][i]}</text>
-        </g>
+        </motion.g>
       ))}
     </svg>
   );
@@ -319,8 +674,21 @@ function Styles() {
 }
 
 const css = `
-.lc-page { background: #0F0E0C; color: #F1EEE4; min-height: 100vh; font-family: 'Geist', system-ui, sans-serif; font-feature-settings: 'ss01','cv11'; -webkit-font-smoothing: antialiased; padding-bottom: 88px; }
+.lc-page { background: #0F0E0C; color: #F1EEE4; min-height: 100vh; font-family: 'Geist', system-ui, sans-serif; font-feature-settings: 'ss01','cv11'; -webkit-font-smoothing: antialiased; padding-bottom: 88px; position: relative; overflow-x: hidden; }
 .lc-page * { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* AURORA — slow drifting cobalt glow */
+.lc-aurora { position: absolute; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.lc-aurora-blob { position: absolute; border-radius: 50%; filter: blur(100px); opacity: 0.32; will-change: transform; mix-blend-mode: screen; }
+.lc-aurora-1 { width: 720px; height: 720px; top: -200px; left: -140px; background: radial-gradient(circle at center, rgba(126,146,255,0.40), rgba(126,146,255,0) 70%); }
+.lc-aurora-2 { width: 620px; height: 620px; top: 320px; right: -180px; background: radial-gradient(circle at center, rgba(168,140,255,0.26), rgba(168,140,255,0) 70%); }
+
+/* GRAIN overlay — subtle warmth */
+.lc-grain { position: fixed; inset: 0; pointer-events: none; z-index: 1; opacity: 0.06; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.6 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  background-size: 160px 160px; }
+
+.lc-page > *:not(.lc-aurora):not(.lc-grain) { position: relative; z-index: 2; }
 .lc-page button { font-family: inherit; cursor: pointer; }
 .lc-page .num { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
 
@@ -354,6 +722,15 @@ const css = `
 .lc-cta-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 8px; margin-bottom: 20px; }
 .lc-btn-primary { display: inline-flex; align-items: center; gap: 8px; background: #F1EEE4; color: #0F0E0C; border: none; font-size: 14px; font-weight: 500; letter-spacing: -0.005em; padding: 13px 22px; border-radius: 8px; transition: background .15s, box-shadow .2s; box-shadow: 0 1px 0 rgba(0,0,0,.3), 0 4px 14px -4px rgba(126,146,255,.25); }
 .lc-btn-primary:hover { background: #E5E2D8; box-shadow: 0 1px 0 rgba(0,0,0,.3), 0 8px 22px -6px rgba(126,146,255,.4); }
+.lc-btn-primary--pulse { animation: lcGlowPulse 3.2s ease-in-out infinite; }
+@keyframes lcGlowPulse {
+  0%, 100% { box-shadow: 0 1px 0 rgba(0,0,0,.3), 0 4px 14px -4px rgba(126,146,255,.25); }
+  50%      { box-shadow: 0 1px 0 rgba(0,0,0,.3), 0 10px 32px -6px rgba(126,146,255,.55); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lc-btn-primary--pulse { animation: none; }
+  .lc-dot { animation: none; }
+}
 .lc-btn-ghost { background: transparent; border: 1px solid #3A382F; color: #F1EEE4; font-size: 14px; font-weight: 500; letter-spacing: -0.005em; padding: 12px 22px; border-radius: 8px; transition: background .15s, border-color .15s; }
 .lc-btn-ghost:hover { background: #1F1D19; border-color: #A29E91; }
 .lc-trust { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; padding-bottom: 8px; }
@@ -361,7 +738,9 @@ const css = `
 .lc-trust-icon { color: #75716A; display: grid; place-items: center; }
 
 /* MOCKUP — gros, dès le hero */
-.lc-mockup-wrap { position: relative; margin-top: 56px; }
+.lc-mockup-wrap { position: relative; margin-top: 56px; will-change: transform; }
+.lc-mockup-parallax { position: relative; z-index: 1; }
+.lc-mockup-shine { position: absolute; inset: 0; pointer-events: none; border-radius: 14px; background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,0.06) 50%, transparent 65%); mix-blend-mode: screen; }
 .lc-mockup-glow { position: absolute; inset: 10% -5% -10% -5%; background: radial-gradient(50% 60% at 50% 30%, rgba(126,146,255,0.16) 0%, transparent 70%); pointer-events: none; z-index: 0; }
 .lc-mockup-frame { position: relative; z-index: 1; background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0)); border-radius: 22px; padding: 10px; border: 1px solid #2A2823; box-shadow: 0 1px 0 rgba(0,0,0,.5), 0 40px 100px -32px rgba(0,0,0,.7), 0 12px 32px -8px rgba(126,146,255,.15); }
 .lc-svg { width: 100%; height: auto; display: block; border-radius: 14px; }
@@ -393,6 +772,7 @@ const css = `
 .lc-range span { padding: 4px 10px; border-radius: 6px; color: #75716A; }
 .lc-range .on { background: #181714; color: #F1EEE4; font-weight: 500; }
 .lc-big { font-family: 'Newsreader', Georgia, serif; font-weight: 400; font-size: 78px; line-height: 1; letter-spacing: -0.04em; margin-top: 18px; color: #F1EEE4; }
+.lc-big > span:first-child { display: inline-flex; align-items: flex-end; }
 .lc-cents { color: #75716A; font-size: 40px; }
 .lc-delta { margin-top: 14px; display: flex; align-items: center; gap: 12px; }
 .lc-pill { display: inline-flex; align-items: center; gap: 6px; background: #15301F; color: #4FB57A; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 500; }
