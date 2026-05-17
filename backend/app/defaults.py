@@ -135,8 +135,7 @@ DEFAULT_CATEGORIES = [
 
     # ============ TOP-LEVEL — MÉNAGE ============
     {"slug": "household", "name": "Ménage", "color": "#78716c", "type": "expense", "icon": "🧹", "kind": "needs", "parent_slug": None},
-    {"slug": "household_help", "name": "CESU / Aide à domicile", "color": "#78716c", "type": "expense", "icon": "🤲", "kind": "needs", "parent_slug": "household"},
-    {"slug": "household_cleaning", "name": "Produits ménagers", "color": "#6e6762", "type": "expense", "icon": "🧴", "kind": "needs", "parent_slug": "household"},
+{"slug": "household_cleaning", "name": "Produits ménagers", "color": "#6e6762", "type": "expense", "icon": "🧴", "kind": "needs", "parent_slug": "household"},
     {"slug": "household_laundry", "name": "Pressing & blanchisserie", "color": "#645d58", "type": "expense", "icon": "👔", "kind": "needs", "parent_slug": "household"},
 
     # ============ TOP-LEVEL — SOINS PERSONNELS ============

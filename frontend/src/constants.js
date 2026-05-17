@@ -163,8 +163,7 @@ export const DEFAULT_CATEGORIES = [
 
   // MÉNAGE
   { id: 'household', name: 'Ménage', color: '#78716c', type: 'expense', icon: '🧹', kind: 'needs', parent: null },
-  { id: 'household_help', name: 'CESU / Aide à domicile', color: '#78716c', type: 'expense', icon: '🤲', kind: 'needs', parent: 'household' },
-  { id: 'household_cleaning', name: 'Produits ménagers', color: '#6e6762', type: 'expense', icon: '🧴', kind: 'needs', parent: 'household' },
+{ id: 'household_cleaning', name: 'Produits ménagers', color: '#6e6762', type: 'expense', icon: '🧴', kind: 'needs', parent: 'household' },
   { id: 'household_laundry', name: 'Pressing & blanchisserie', color: '#645d58', type: 'expense', icon: '👔', kind: 'needs', parent: 'household' },
 
   // SOINS PERSONNELS
