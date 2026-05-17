@@ -158,12 +158,24 @@ export function Monthly({
   const dailyBudget = daysLeft > 0 ? restToLive / daysLeft : 0;
 
   // Sankey data — Mois type only. 3 levels :
-  //   Income lines (node per line) → Categories (one per unique catId for expense+saving) → Sub-lines
+  //   Income lines  →  Parent categories  →  Sub-line leaves
+  //
+  // Niveau 2 = catégorie parente (Finance & épargne, Abonnements…). Si la
+  // ligne cible déjà une top-level, on prend cette top-level comme niveau 2.
+  // Niveau 3 = la sous-catégorie ou le label de la ligne (Crédit étudiant,
+  // Netflix, Loyer…). Toujours affiché pour avoir 3 colonnes lisibles.
   const sankeyData = useMemo(() => {
     if (!hasRefMonth) return { nodes: [], links: [] };
     const incomeLines = refLines.filter(l => l.kind === 'income' && (parseFloat(l.amount) || 0) > 0);
     const spendLines = refLines.filter(l => l.kind !== 'income' && (parseFloat(l.amount) || 0) > 0);
     if (!incomeLines.length || !spendLines.length) return { nodes: [], links: [] };
+
+    const parentSlug = (cat) => (cat?.parent || cat?.parent_slug || null);
+    const topLevelFor = (cid) => {
+      const cat = catFor(cid);
+      const ps = parentSlug(cat);
+      return ps ? catFor(ps) : cat;
+    };
 
     const nodes = [];
     const links = [];
@@ -172,51 +184,85 @@ export function Monthly({
     const incomeNodeIdx = {};
     incomeLines.forEach(l => {
       incomeNodeIdx[l.id] = nodes.length;
-      nodes.push({ name: l.label || 'Entrée', level: 0, value: parseFloat(l.amount) || 0, kind: 'income' });
+      nodes.push({
+        name: l.label || 'Entrée',
+        level: 0,
+        kind: 'income',
+        amount: parseFloat(l.amount) || 0,
+        color: 'var(--positive)',
+      });
     });
 
-    // Level 2 — categories (unique catId from spend+saving)
-    const catKeys = [...new Set(spendLines.map(l => `${l.category_id || 'uncategorized'}`))];
-    const catNodeIdx = {};
-    catKeys.forEach(cid => {
-      catNodeIdx[cid] = nodes.length;
-      const cat = catFor(cid);
-      nodes.push({ name: cat?.name || cid, level: 1, kind: 'cat' });
-    });
-
-    // Level 3 — sub-lines
+    // Level 2 — top-level parent categories (one node per unique top-level)
+    const topNodeIdx = {};
+    const topTotals = {};
     spendLines.forEach(l => {
-      const cid = l.category_id || 'uncategorized';
-      const cat = catFor(cid);
-      // Only emit a separate level-3 node if the category has multiple lines.
-      // Otherwise the category node IS the leaf — skip to avoid empty links.
-      const catHasMultiple = spendLines.filter(x => (x.category_id || 'uncategorized') === cid).length > 1;
-      if (catHasMultiple) {
-        const idx = nodes.length;
-        nodes.push({ name: l.label || cat?.name || 'Ligne', level: 2, kind: l.kind });
-        links.push({ source: catNodeIdx[cid], target: idx, value: parseFloat(l.amount) || 0 });
+      const top = topLevelFor(l.category_id || 'uncategorized');
+      const topId = top?.id || top?.slug || 'uncategorized';
+      if (!(topId in topNodeIdx)) {
+        topNodeIdx[topId] = nodes.length;
+        nodes.push({
+          name: top?.name || topId,
+          icon: top?.icon || '',
+          level: 1,
+          kind: 'cat',
+          color: top?.color || 'var(--ink)',
+          amount: 0,
+        });
+        topTotals[topId] = 0;
       }
+      topTotals[topId] += parseFloat(l.amount) || 0;
+    });
+    Object.entries(topTotals).forEach(([topId, total]) => {
+      nodes[topNodeIdx[topId]].amount = total;
     });
 
-    // Income → category links (proportional split — each income contributes
-    // proportionally to each category, based on income share of total income).
+    // Level 3 — leaf per spend line (sub-cat or line label)
+    spendLines.forEach(l => {
+      const top = topLevelFor(l.category_id || 'uncategorized');
+      const topId = top?.id || top?.slug || 'uncategorized';
+      const cat = catFor(l.category_id);
+      const sameTop = (cat?.id || cat?.slug) === topId;
+      // If the line's category IS the top-level, use the line label as leaf
+      // ("Loyer", "Frais bancaires"…) — fallback to the cat name otherwise.
+      const leafName = sameTop
+        ? (l.label || cat?.name || 'Ligne')
+        : (cat?.name || l.label || 'Ligne');
+      const leafIcon = sameTop ? '' : (cat?.icon || '');
+      const leafColor = top?.color || 'var(--ink)';
+      const idx = nodes.length;
+      nodes.push({
+        name: leafName,
+        icon: leafIcon,
+        level: 2,
+        kind: l.kind,
+        color: leafColor,
+        amount: parseFloat(l.amount) || 0,
+      });
+      links.push({
+        source: topNodeIdx[topId],
+        target: idx,
+        value: parseFloat(l.amount) || 0,
+        color: leafColor,
+      });
+    });
+
+    // Income → top-level links (proportional split based on income share)
     const totalIncome = incomeLines.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0);
     const totalSpend = spendLines.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0);
     if (totalIncome > 0 && totalSpend > 0) {
-      // For each category, total spend in that cat.
-      const catTotals = {};
-      spendLines.forEach(l => {
-        const cid = l.category_id || 'uncategorized';
-        catTotals[cid] = (catTotals[cid] || 0) + (parseFloat(l.amount) || 0);
-      });
-      // Each income line contributes (incomeAmount / totalIncome) × catTotal to each cat.
       incomeLines.forEach(inc => {
         const incVal = parseFloat(inc.amount) || 0;
         const incShare = incVal / totalIncome;
-        Object.entries(catTotals).forEach(([cid, catTotal]) => {
-          const val = catTotal * incShare;
+        Object.entries(topTotals).forEach(([topId, topTotal]) => {
+          const val = topTotal * incShare;
           if (val > 0.5) {
-            links.push({ source: incomeNodeIdx[inc.id], target: catNodeIdx[cid], value: val });
+            links.push({
+              source: incomeNodeIdx[inc.id],
+              target: topNodeIdx[topId],
+              value: val,
+              color: nodes[topNodeIdx[topId]].color,
+            });
           }
         });
       });
@@ -337,16 +383,20 @@ export function Monthly({
             <span className="card-meta">Entrées → Catégories → Sous-catégories</span>
           </div>
           <div className="mon-sankey-body">
-            <ResponsiveContainer width="100%" height={isNarrow ? 360 : 420}>
+            <ResponsiveContainer width="100%" height={isNarrow ? 420 : Math.max(480, sankeyData.nodes.filter(n => n.level === 2).length * 32 + 80)}>
               <Sankey
                 data={sankeyData}
-                nodePadding={isNarrow ? 12 : 18}
-                nodeWidth={10}
-                margin={{ top: 8, right: 100, bottom: 8, left: 100 }}
-                node={<SankeyNode/>}
-                link={{ stroke: 'var(--accent-soft)', strokeOpacity: 0.7 }}
+                nodePadding={isNarrow ? 14 : 22}
+                nodeWidth={8}
+                iterations={64}
+                margin={{ top: 16, right: isNarrow ? 120 : 180, bottom: 16, left: isNarrow ? 80 : 130 }}
+                node={<SankeyNode fmt={fmt}/>}
+                link={<SankeyLink/>}
               >
-                <Tooltip formatter={(v) => fmt(v)} contentStyle={{ background: 'var(--bg-elev)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}/>
+                <Tooltip
+                  formatter={(v) => fmt(v)}
+                  contentStyle={{ background: 'var(--bg-elev)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, boxShadow: '0 8px 24px -8px rgba(0,0,0,.18)' }}
+                />
               </Sankey>
             </ResponsiveContainer>
           </div>
@@ -627,22 +677,58 @@ function MonthPicker({ selectedMonth, currentMonth, availableMonths, onChange })
   );
 }
 
-function SankeyNode({ x, y, width, height, index, payload }) {
+function SankeyNode({ x, y, width, height, index, payload, fmt }) {
   if (!payload) return null;
-  const isLeaf = payload.level === 2 || (payload.level === 1 && payload.kind !== 'income');
+  const fill = payload.color || (payload.kind === 'income' ? 'var(--positive)' : 'var(--ink)');
+  const isLeft = payload.level === 0;
+  const labelX = isLeft ? x - 10 : x + width + 10;
+  const anchor = isLeft ? 'end' : 'start';
+  const labelY = y + height / 2;
+  const name = (payload.icon ? `${payload.icon} ` : '') + payload.name;
+  const amount = typeof payload.amount === 'number' ? payload.amount : null;
+
   return (
     <Layer key={`sn-${index}`}>
-      <Rectangle x={x} y={y} width={width} height={height} fill={payload.kind === 'income' ? 'var(--positive)' : (payload.kind === 'saving' ? 'var(--accent)' : 'var(--ink)')} fillOpacity={0.85}/>
-      <text
-        x={payload.level === 0 ? x - 6 : x + width + 6}
-        y={y + height / 2 + 4}
-        fontSize={11}
-        fill="var(--ink-2)"
-        textAnchor={payload.level === 0 ? 'end' : 'start'}
-      >
-        {payload.name}
+      {/* Capsule with the cat color, rounded ends */}
+      <rect
+        x={x} y={y} width={width} height={height}
+        rx={Math.min(width, 4)} ry={Math.min(width, 4)}
+        fill={fill} fillOpacity={0.92}
+      />
+      {/* Inner highlight for a tiny bit of depth */}
+      <rect
+        x={x} y={y} width={width / 2} height={height}
+        rx={Math.min(width, 4)} ry={Math.min(width, 4)}
+        fill="#ffffff" fillOpacity={0.08}
+      />
+      <text x={labelX} y={labelY - 2} dy="0.32em" fontSize={12} fontWeight={500} fill="var(--ink)" textAnchor={anchor}>
+        {name}
       </text>
+      {amount !== null && amount > 0 && (
+        <text x={labelX} y={labelY + 12} dy="0.32em" fontSize={10.5} fill="var(--ink-3)" textAnchor={anchor} style={{ fontVariantNumeric: 'tabular-nums' }}>
+          {fmt ? fmt(amount) : amount}
+        </text>
+      )}
     </Layer>
+  );
+}
+
+// Custom link that picks up the target-node color so each flow takes the
+// colour of where it lands (warm rainbow effect across the chart).
+function SankeyLink({ sourceX, targetX, sourceY, targetY, sourceControlX, targetControlX, linkWidth, payload, index }) {
+  const stroke = payload?.color || 'var(--accent)';
+  const d = `M${sourceX},${sourceY}C${sourceControlX},${sourceY} ${targetControlX},${targetY} ${targetX},${targetY}`;
+  return (
+    <g>
+      <path
+        d={d}
+        stroke={stroke}
+        strokeWidth={Math.max(1, linkWidth)}
+        strokeOpacity={0.32}
+        fill="none"
+        style={{ mixBlendMode: 'normal' }}
+      />
+    </g>
   );
 }
 
