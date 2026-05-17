@@ -225,8 +225,13 @@ export function Monthly({
       }
       topTotals[topId] += parseFloat(l.amount) || 0;
     });
+    // Total income for % computation. Tagged on each level-2 node so the
+    // renderer can show "Logement · 28% du revenu" without re-summing.
+    const totalIncomeForPct = incomeLines.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0);
     Object.entries(topTotals).forEach(([topId, total]) => {
-      nodes[topNodeIdx[topId]].amount = total;
+      const node = nodes[topNodeIdx[topId]];
+      node.amount = total;
+      node.pctOfIncome = totalIncomeForPct > 0 ? (total / totalIncomeForPct) * 100 : null;
     });
 
     // Level 3 — leaf per spend line (sub-cat or line label)
@@ -743,6 +748,11 @@ function SankeyNode({ x, y, width, height, index, payload, fmt }) {
       {amount !== null && amount > 0 && (
         <text x={labelX} y={labelY + 12} dy="0.32em" fontSize={10.5} fill="var(--ink-3)" textAnchor={anchor} style={{ fontVariantNumeric: 'tabular-nums' }}>
           {fmt ? fmt(amount) : amount}
+          {payload.level === 1 && typeof payload.pctOfIncome === 'number' && payload.pctOfIncome > 0 && (
+            <tspan fill={payload.color} fillOpacity={0.85} dx="6">
+              · {payload.pctOfIncome >= 10 ? payload.pctOfIncome.toFixed(0) : payload.pctOfIncome.toFixed(1)}% du revenu
+            </tspan>
+          )}
         </text>
       )}
     </Layer>

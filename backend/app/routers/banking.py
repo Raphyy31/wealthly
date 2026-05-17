@@ -414,11 +414,16 @@ async def _sync_one_connection(
                 currency=(acc_info.get("currency") or "EUR").upper(),
                 initial_balance=balance,
                 external_id=gc_acc_id,
+                iban=acc_info.get("iban"),
                 source="gocardless",
                 members=household_members,  # visible to everyone in the household
             )
             db.add(wl_acc)
             db.flush()
+        else:
+            # Backfill IBAN on accounts created before the column existed.
+            if not wl_acc.iban and acc_info.get("iban"):
+                wl_acc.iban = acc_info.get("iban")
 
         # Transactions
         try:

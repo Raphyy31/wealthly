@@ -373,8 +373,15 @@ function ComptesSection({ accounts, accountBalances, members, transactions, upda
               <div key={a.id} className="member-card" style={{ alignItems: 'flex-start' }}>
                 <span className="member-avatar large" style={{ background: bankColor(a.bank) }}>{(a.bank || a.name || '?').charAt(0).toUpperCase()}</span>
                 <div className="member-card-info" style={{ flex: 1 }}>
-                  <div className="member-card-name">{a.name}</div>
-                  <div className="member-card-role">{a.bank} · {owners} · {fmt(accountBalances[a.id] || 0)}</div>
+                  <div className="member-card-name" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    {a.name}
+                    {a.isJoint && <span className="acc-joint-chip" title="Compte joint (famille)">👪 Joint</span>}
+                  </div>
+                  <div className="member-card-role">
+                    {a.bank}
+                    {a.iban && <span title={a.iban}> · •••• {a.iban.replace(/\s/g, '').slice(-4)}</span>}
+                    {' · '}{owners} · {fmt(accountBalances[a.id] || 0)}
+                  </div>
                   {showSuggestion && (
                     <div style={{ marginTop: 6, fontSize: 11.5, color: 'var(--text-tertiary)', fontStyle: 'italic', fontFamily: "'Newsreader', Georgia, serif" }}>
                       <span style={{ color: 'var(--primary)', fontStyle: 'normal', fontFamily: 'inherit' }}>↪ {t('settings.accounts.suggested', { role: ACCOUNT_ROLES[suggestion.role].label })}</span> — {suggestion.reason}{' '}
@@ -389,6 +396,14 @@ function ComptesSection({ accounts, accountBalances, members, transactions, upda
                 </div>
                 {updateAccount && (
                   <div className="member-card-actions">
+                    <button
+                      type="button"
+                      className={`acc-joint-toggle ${a.isJoint ? 'is-on' : ''}`}
+                      onClick={() => updateAccount(a.id, { isJoint: !a.isJoint })}
+                      title={a.isJoint ? 'Compte joint famille — clic pour retirer' : 'Marquer comme compte joint famille'}
+                    >
+                      👪 Joint
+                    </button>
                     <Combobox
                       value={role}
                       onChange={(val) => updateAccount(a.id, { role: val })}

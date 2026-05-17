@@ -167,6 +167,8 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     bank: a.bank,
     type: a.type,
     role: a.role || 'principal',
+    isJoint: !!a.is_joint,
+    iban: a.iban || null,
     initialBalance: a.initial_balance,
     currency: a.currency || 'EUR',
     memberIds: a.member_ids || [],
@@ -177,6 +179,8 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     bank: a.bank,
     type: a.type,
     role: a.role || 'principal',
+    is_joint: !!a.isJoint,
+    iban: a.iban || null,
     initial_balance: parseFloat(a.initialBalance) || 0,
     currency: a.currency || 'EUR',
     member_ids: a.memberIds || [],
@@ -1293,7 +1297,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   };
 
   const updateAccount = async (accId, patch) => {
-    const fieldMap = { initialBalance: 'initial_balance', memberIds: 'member_ids' };
+    const fieldMap = { initialBalance: 'initial_balance', memberIds: 'member_ids', isJoint: 'is_joint' };
     const apiPatch = {};
     for (const [k, v] of Object.entries(patch)) {
       apiPatch[fieldMap[k] || k] = k === 'initialBalance' ? (parseFloat(v) || 0) : v;

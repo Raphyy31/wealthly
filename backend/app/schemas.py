@@ -76,6 +76,8 @@ class AccountBase(BaseModel):
     bank: Optional[str] = None
     type: str = "checking"
     role: str = "principal"  # principal | depenses | epargne | investissement | professionnel
+    is_joint: bool = False  # flag compte joint famille (indépendant du rôle)
+    iban: Optional[str] = None
     initial_balance: float = 0.0
     currency: str = "EUR"  # ISO 4217 (EUR / USD / GBP / CHF / …)
 
@@ -89,6 +91,8 @@ class AccountUpdate(BaseModel):
     bank: Optional[str] = None
     type: Optional[str] = None
     role: Optional[str] = None
+    is_joint: Optional[bool] = None
+    iban: Optional[str] = None
     initial_balance: Optional[float] = None
     currency: Optional[str] = None
     member_ids: Optional[List[str]] = None

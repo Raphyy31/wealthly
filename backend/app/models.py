@@ -197,6 +197,15 @@ class Account(Base):
     #   investissement — broker; same rule as epargne for cashflow purposes
     #   professionnel  — fully excluded from personal patrimoine and cashflow
     role = Column(String, nullable=False, default="principal", index=True)
+    # Compte joint famille — flag indépendant du rôle. Un compte joint peut
+    # avoir n'importe quel rôle (principal pour un compte courant joint,
+    # epargne pour un Livret A joint, etc.). Sert au Mois type Famille pour
+    # agréger uniquement les comptes vraiment partagés.
+    is_joint = Column(Boolean, nullable=False, default=False, server_default="false", index=True)
+    # IBAN complet quand fourni par l'aggrégateur. Le frontend en affiche
+    # les 4 derniers caractères pour aider à distinguer plusieurs comptes
+    # de la même banque avec un nom similaire.
+    iban = Column(String, nullable=True)
     initial_balance = Column(Float, nullable=False, default=0.0)
     # ISO 4217 currency the account is denominated in (EUR / USD / GBP / CHF / …).
     # Lets us aggregate multi-currency holdings: the frontend converts to the

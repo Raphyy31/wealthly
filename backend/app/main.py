@@ -96,6 +96,10 @@ def _run_lightweight_migrations() -> None:
             # behaving exactly as before until the user opts in.
             "ALTER TABLE accounts ADD COLUMN IF NOT EXISTS role VARCHAR DEFAULT 'principal' NOT NULL",
             "CREATE INDEX IF NOT EXISTS ix_accounts_role ON accounts (role)",
+            # Joint household flag + IBAN (for last-4 display)
+            "ALTER TABLE accounts ADD COLUMN IF NOT EXISTS is_joint BOOLEAN DEFAULT FALSE NOT NULL",
+            "CREATE INDEX IF NOT EXISTS ix_accounts_is_joint ON accounts (is_joint)",
+            "ALTER TABLE accounts ADD COLUMN IF NOT EXISTS iban VARCHAR",
             # Manual override on the auto-detected internal-transfer flag
             "ALTER TABLE transactions ADD COLUMN IF NOT EXISTS is_transfer_override BOOLEAN",
             # ISO 4217 currency on every monetary entity. Default EUR keeps
