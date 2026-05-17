@@ -521,9 +521,23 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
 
 
   // ===== Visibility filtering =====
+  //   - Onglet Famille (activeMemberId='all') → uniquement les comptes joints
+  //     (marqués `is_joint`). Si aucun compte n'est encore marqué joint, on
+  //     retombe sur "tous les comptes" pour ne pas casser l'expérience
+  //     avant qu'un compte n'ait été tagué.
+  //   - Onglet adulte → comptes où l'adulte est listé ET qui ne sont PAS
+  //     joints (= ses comptes perso). Les comptes joints restent en Famille.
   const visibleAccountIds = useMemo(() => {
-    if (activeMemberId === 'all') return new Set(accounts.map(a => a.id));
-    return new Set(accounts.filter(a => (a.memberIds || []).includes(activeMemberId)).map(a => a.id));
+    if (activeMemberId === 'all') {
+      const joints = accounts.filter(a => a.isJoint);
+      const pool = joints.length > 0 ? joints : accounts;
+      return new Set(pool.map(a => a.id));
+    }
+    return new Set(
+      accounts
+        .filter(a => !a.isJoint && (a.memberIds || []).includes(activeMemberId))
+        .map(a => a.id)
+    );
   }, [accounts, activeMemberId]);
 
   const visibleAccounts = useMemo(() => accounts.filter(a => visibleAccountIds.has(a.id)), [accounts, visibleAccountIds]);
@@ -1297,6 +1311,14 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   };
 
   const updateAccount = async (accId, patch) => {
+    // Optimistic update : applique immédiatement le patch côté UI pour que
+    // le toggle réponde tout de suite. Si l'API rejette ou renvoie un état
+    // différent (ex : Railway en cours de déploiement avant migration),
+    // on réconcilie avec la réponse.
+    const localPatch = { ...patch };
+    if ('initialBalance' in localPatch) localPatch.initialBalance = parseFloat(localPatch.initialBalance) || 0;
+    setAccounts(prev => prev.map(a => a.id === accId ? { ...a, ...localPatch } : a));
+
     const fieldMap = { initialBalance: 'initial_balance', memberIds: 'member_ids', isJoint: 'is_joint' };
     const apiPatch = {};
     for (const [k, v] of Object.entries(patch)) {
