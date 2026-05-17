@@ -49,8 +49,9 @@ export function CategoryDropdown({
     ? categories.find(c => slugOf(c) === parentOf(selected))
     : null;
 
-  const q = search.toLowerCase().trim();
-  const matches = (c) => q === '' || (c.name || '').toLowerCase().includes(q);
+  const normalize = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const q = normalize(search.trim());
+  const matches = (c) => q === '' || normalize(c.name || '').includes(q);
   const showSearch = searchable && categories.length > 8;
 
   // Build the rows to render. In grouped mode we surface top-level cats and
