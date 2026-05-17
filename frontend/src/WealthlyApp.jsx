@@ -1055,6 +1055,8 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   };
 
   const updateTransactionCategory = async (txId, categoryId) => {
+    // 'transfer' is not a real category — it triggers the transfer-override flag instead.
+    if (categoryId === 'transfer') { setTransferOverride(txId, true); return; }
     const tx = transactions.find(x => x.id === txId);
     const prevCategoryId = tx?.categoryId;
     // Optimistic update — UI reflects the change instantly, even if Railway is cold-starting
@@ -1287,9 +1289,14 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   // Tri-state: true = force-transfer, false = force-not-transfer, null =
   // defer to auto-detection. Persisted to the backend via PUT /transactions.
   const setTransferOverride = async (txId, value) => {
-    setTransactions(prev => prev.map(t => t.id === txId ? { ...t, isTransferOverride: value } : t));
+    const tx = transactions.find(x => x.id === txId);
+    const prev = tx?.isTransferOverride ?? null;
+    setTransactions(ts => ts.map(t => t.id === txId ? { ...t, isTransferOverride: value } : t));
     try { await api.transactions.update(txId, { is_transfer_override: value }); }
-    catch (err) { showToast(t('toasts.genericError', { message: err.message }), 'error'); }
+    catch (err) {
+      setTransactions(ts => ts.map(t => t.id === txId ? { ...t, isTransferOverride: prev } : t));
+      showToast(t('toasts.genericError', { message: err.message }), 'error');
+    }
   };
 
   // Update transverse tags on a transaction. tags is the full new array.
