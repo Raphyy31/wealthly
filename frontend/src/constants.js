@@ -161,6 +161,24 @@ export const DEFAULT_CATEGORIES = [
   { id: 'childcare', name: 'Garde & Crèche', color: '#f59e0b', type: 'expense', icon: '🧸', kind: 'needs', parent: 'children' },
   { id: 'pharmacy', name: 'Pharmacie', color: '#ef4444', type: 'expense', icon: '💊', kind: 'needs', parent: 'health' },
 
+  // MÉNAGE
+  { id: 'household', name: 'Ménage', color: '#78716c', type: 'expense', icon: '🧹', kind: 'needs', parent: null },
+  { id: 'household_help', name: 'CESU / Aide à domicile', color: '#78716c', type: 'expense', icon: '🤲', kind: 'needs', parent: 'household' },
+  { id: 'household_cleaning', name: 'Produits ménagers', color: '#6e6762', type: 'expense', icon: '🧴', kind: 'needs', parent: 'household' },
+  { id: 'household_laundry', name: 'Pressing & blanchisserie', color: '#645d58', type: 'expense', icon: '👔', kind: 'needs', parent: 'household' },
+
+  // SOINS PERSONNELS
+  { id: 'personal_care', name: 'Soins personnels', color: '#db2777', type: 'expense', icon: '💅', kind: 'wants', parent: null },
+  { id: 'personal_care_hair', name: 'Coiffeur & barbier', color: '#db2777', type: 'expense', icon: '✂️', kind: 'wants', parent: 'personal_care' },
+  { id: 'personal_care_beauty', name: 'Cosmétiques & beauté', color: '#c72470', type: 'expense', icon: '💄', kind: 'wants', parent: 'personal_care' },
+  { id: 'personal_care_hygiene', name: 'Parfum & hygiène', color: '#b32069', type: 'expense', icon: '🧼', kind: 'needs', parent: 'personal_care' },
+
+  // ANIMAUX
+  { id: 'pets', name: 'Animaux', color: '#b45309', type: 'expense', icon: '🐾', kind: 'wants', parent: null },
+  { id: 'pets_vet', name: 'Vétérinaire', color: '#b45309', type: 'expense', icon: '🏥', kind: 'needs', parent: 'pets' },
+  { id: 'pets_food', name: 'Nourriture & accessoires', color: '#a34e09', type: 'expense', icon: '🦮', kind: 'needs', parent: 'pets' },
+  { id: 'pets_grooming', name: 'Toilettage', color: '#924908', type: 'expense', icon: '🛁', kind: 'wants', parent: 'pets' },
+
   // TECHNICAL
   { id: 'cash', name: 'Retrait DAB', color: '#64748b', type: 'expense', icon: '💵', kind: 'wants', parent: null },
   { id: 'transfer', name: 'Virements internes', color: '#94a3b8', type: 'transfer', icon: '🔄', kind: 'savings', parent: null },

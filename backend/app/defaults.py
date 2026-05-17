@@ -133,6 +133,24 @@ DEFAULT_CATEGORIES = [
     {"slug": "childcare", "name": "Garde & Crèche", "color": "#f59e0b", "type": "expense", "icon": "🧸", "kind": "needs", "parent_slug": "children"},
     {"slug": "pharmacy", "name": "Pharmacie", "color": "#ef4444", "type": "expense", "icon": "💊", "kind": "needs", "parent_slug": "health"},
 
+    # ============ TOP-LEVEL — MÉNAGE ============
+    {"slug": "household", "name": "Ménage", "color": "#78716c", "type": "expense", "icon": "🧹", "kind": "needs", "parent_slug": None},
+    {"slug": "household_help", "name": "CESU / Aide à domicile", "color": "#78716c", "type": "expense", "icon": "🤲", "kind": "needs", "parent_slug": "household"},
+    {"slug": "household_cleaning", "name": "Produits ménagers", "color": "#6e6762", "type": "expense", "icon": "🧴", "kind": "needs", "parent_slug": "household"},
+    {"slug": "household_laundry", "name": "Pressing & blanchisserie", "color": "#645d58", "type": "expense", "icon": "👔", "kind": "needs", "parent_slug": "household"},
+
+    # ============ TOP-LEVEL — SOINS PERSONNELS ============
+    {"slug": "personal_care", "name": "Soins personnels", "color": "#db2777", "type": "expense", "icon": "💅", "kind": "wants", "parent_slug": None},
+    {"slug": "personal_care_hair", "name": "Coiffeur & barbier", "color": "#db2777", "type": "expense", "icon": "✂️", "kind": "wants", "parent_slug": "personal_care"},
+    {"slug": "personal_care_beauty", "name": "Cosmétiques & beauté", "color": "#c72470", "type": "expense", "icon": "💄", "kind": "wants", "parent_slug": "personal_care"},
+    {"slug": "personal_care_hygiene", "name": "Parfum & hygiène", "color": "#b32069", "type": "expense", "icon": "🧼", "kind": "needs", "parent_slug": "personal_care"},
+
+    # ============ TOP-LEVEL — ANIMAUX ============
+    {"slug": "pets", "name": "Animaux", "color": "#b45309", "type": "expense", "icon": "🐾", "kind": "wants", "parent_slug": None},
+    {"slug": "pets_vet", "name": "Vétérinaire", "color": "#b45309", "type": "expense", "icon": "🏥", "kind": "needs", "parent_slug": "pets"},
+    {"slug": "pets_food", "name": "Nourriture & accessoires", "color": "#a34e09", "type": "expense", "icon": "🦮", "kind": "needs", "parent_slug": "pets"},
+    {"slug": "pets_grooming", "name": "Toilettage", "color": "#924908", "type": "expense", "icon": "🛁", "kind": "wants", "parent_slug": "pets"},
+
     # ============ TECHNICAL ============
     {"slug": "cash", "name": "Retrait DAB", "color": "#64748b", "type": "expense", "icon": "💵", "kind": "wants", "parent_slug": None},
     {"slug": "transfer", "name": "Virements internes", "color": "#94a3b8", "type": "transfer", "icon": "🔄", "kind": "savings", "parent_slug": None},
