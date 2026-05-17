@@ -271,29 +271,59 @@ export const dcaApi = {
 };
 
 // ============================================================================
-// REF MONTH (Mois type) — JSON budget template per user.
-// Demo mode persists in localStorage to mimic the backend behaviour.
+// REF MONTH (Mois type) — JSON budget template scoped per (household, member).
+// memberId = null/'all'/'household' → Famille (compte joint).
+// memberId = '<uuid>'              → Mois type personnel de cet adulte.
+// Demo mode persists a map { [scopeKey]: refMonth } in localStorage.
 // ============================================================================
-const REF_MONTH_DEMO_KEY = 'wealthly:demo_ref_month';
+const REF_MONTH_DEMO_KEY = 'wealthly:demo_ref_months';
+const REF_MONTH_DEMO_KEY_LEGACY = 'wealthly:demo_ref_month';
 function _emptyRefMonth() {
   return { version: 1, updated_at: null, lines: [] };
 }
-function _readDemoRefMonth() {
+function _scopeKey(memberId) {
+  return (!memberId || memberId === 'all' || memberId === 'household') ? '__household__' : String(memberId);
+}
+function _isHouseholdScope(memberId) {
+  return !memberId || memberId === 'all' || memberId === 'household';
+}
+function _readDemoRefMonths() {
   try {
     const raw = localStorage.getItem(REF_MONTH_DEMO_KEY);
-    return raw ? JSON.parse(raw) : _emptyRefMonth();
-  } catch { return _emptyRefMonth(); }
+    if (raw) return JSON.parse(raw);
+    // Lazy-migrate the legacy single-blob storage to the new map under household scope.
+    const legacy = localStorage.getItem(REF_MONTH_DEMO_KEY_LEGACY);
+    if (legacy) {
+      const map = { __household__: JSON.parse(legacy) };
+      localStorage.setItem(REF_MONTH_DEMO_KEY, JSON.stringify(map));
+      return map;
+    }
+    return {};
+  } catch { return {}; }
 }
-function _writeDemoRefMonth(payload) {
+function _readDemoRefMonth(memberId) {
+  const map = _readDemoRefMonths();
+  return map[_scopeKey(memberId)] || _emptyRefMonth();
+}
+function _writeDemoRefMonth(memberId, payload) {
   try {
+    const map = _readDemoRefMonths();
     const stamped = { ...payload, updated_at: new Date().toISOString().slice(0, 10) };
-    localStorage.setItem(REF_MONTH_DEMO_KEY, JSON.stringify(stamped));
+    map[_scopeKey(memberId)] = stamped;
+    localStorage.setItem(REF_MONTH_DEMO_KEY, JSON.stringify(map));
     return stamped;
   } catch { return payload; }
 }
+function _qs(memberId) {
+  return _isHouseholdScope(memberId) ? '' : `?member_id=${encodeURIComponent(memberId)}`;
+}
 export const refMonth = {
-  get: () => isDemo() ? Promise.resolve(_readDemoRefMonth()) : get('/me/ref-month'),
-  put: (payload) => isDemo() ? Promise.resolve(_writeDemoRefMonth(payload)) : put('/me/ref-month', payload),
+  get: (memberId) => isDemo()
+    ? Promise.resolve(_readDemoRefMonth(memberId))
+    : get(`/me/ref-month${_qs(memberId)}`),
+  put: (memberId, payload) => isDemo()
+    ? Promise.resolve(_writeDemoRefMonth(memberId, payload))
+    : put(`/me/ref-month${_qs(memberId)}`, payload),
 };
 
 // ============================================================================

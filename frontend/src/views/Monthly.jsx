@@ -53,11 +53,23 @@ export function Monthly({
   categoryAnalysis,
   fixedCharges, saveFixedCharge, deleteFixedCharge,
   refMonth, saveRefMonth,
+  refMonthScope = 'household',
+  activeMember = null,
+  activeMemberId = 'all',
   fiftyThirtyTwenty,
   transferIds = new Set(),
   memberShare,
   currentMonth, fmt,
 }) {
+  // Le scope détermine le libellé affiché et désactive l'édition pour les
+  // enfants (qui n'ont pas leur propre Mois type — leurs dépenses sont
+  // dans le scope Famille).
+  const isChildScope = activeMember?.role === 'child';
+  const scopeLabel = isChildScope
+    ? `${activeMember.name} (enfant)`
+    : refMonthScope === 'household'
+      ? 'Famille (compte joint)'
+      : (activeMember?.name || 'Personnel');
   const { t } = useTranslation();
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [showEditor, setShowEditor] = useState(false);
@@ -323,7 +335,12 @@ export function Monthly({
       <div className="subview-header">
         <div>
           <h1>{t('views.monthly.title')} <em>{t('views.monthly.titleAccent')}</em></h1>
-          <p>{t('views.monthly.subtitle')}</p>
+          <p>
+            {t('views.monthly.subtitle')}
+            <span className="mon-scope-chip" title={refMonthScope === 'household' ? 'Mois type partagé du foyer (compte joint)' : 'Mois type personnel'}>
+              {refMonthScope === 'household' ? '👪' : '👤'} {scopeLabel}
+            </span>
+          </p>
         </div>
         <div className="mon-actions">
           <button className="ds-btn ghost" onClick={() => setShowEvolution(true)}>
@@ -332,35 +349,52 @@ export function Monthly({
           <button className="ds-btn ghost" onClick={() => setShow5030(true)}>
             <Target size={14}/> {isNarrow ? '' : '50 / 30 / 20'}
           </button>
-          <button className="ds-btn primary" onClick={() => setShowEditor(true)}>
-            <Edit3 size={14}/> {isNarrow ? 'Mois type' : 'Éditer mois type'}
-          </button>
+          {!isChildScope && (
+            <button className="ds-btn primary" onClick={() => setShowEditor(true)}>
+              <Edit3 size={14}/> {isNarrow ? 'Mois type' : 'Éditer mois type'}
+            </button>
+          )}
         </div>
       </div>
 
+      {/* ── Child scope empty state — pas de Mois type perso pour les enfants ── */}
+      {isChildScope && (
+        <section className="card mon-empty-state">
+          <div className="mon-empty-illu">
+            <Target size={32}/>
+          </div>
+          <h3>Pas de <em>mois type</em> pour {activeMember.name}.</h3>
+          <p>Les dépenses des enfants apparaissent dans le Mois type de la <strong>Famille</strong> (compte joint). Bascule sur l'onglet Famille en haut pour l'éditer.</p>
+        </section>
+      )}
+
       {/* ── Month picker ────────────────────────────────────────────── */}
-      <MonthPicker
-        selectedMonth={selectedMonth}
-        currentMonth={currentMonth}
-        availableMonths={availableMonths}
-        onChange={setSelectedMonth}
-      />
+      {!isChildScope && (
+        <MonthPicker
+          selectedMonth={selectedMonth}
+          currentMonth={currentMonth}
+          availableMonths={availableMonths}
+          onChange={setSelectedMonth}
+        />
+      )}
 
 
       {/* ── KPI strip ───────────────────────────────────────────────── */}
-      <Kpi
-        realTotals={realTotals}
-        refTotals={refTotals}
-        hasRefMonth={hasRefMonth}
-        restToLive={restToLive}
-        dailyBudget={dailyBudget}
-        daysLeft={daysLeft}
-        isCurrentMonth={isCurrentMonth}
-        fmt={fmt}
-      />
+      {!isChildScope && (
+        <Kpi
+          realTotals={realTotals}
+          refTotals={refTotals}
+          hasRefMonth={hasRefMonth}
+          restToLive={restToLive}
+          dailyBudget={dailyBudget}
+          daysLeft={daysLeft}
+          isCurrentMonth={isCurrentMonth}
+          fmt={fmt}
+        />
+      )}
 
       {/* ── Empty state ─────────────────────────────────────────────── */}
-      {!hasRefMonth && (
+      {!isChildScope && !hasRefMonth && (
         <section className="card mon-empty-state">
           <div className="mon-empty-illu">
             <Sparkles size={20} className="mon-empty-spark mon-empty-spark-1"/>
@@ -376,7 +410,7 @@ export function Monthly({
       )}
 
       {/* ── Sankey du Mois type ─────────────────────────────────────── */}
-      {hasRefMonth && sankeyData.nodes.length > 0 && (
+      {!isChildScope && hasRefMonth && sankeyData.nodes.length > 0 && (
         <section className="card mon-sankey">
           <div className="card-header">
             <h3>Flux du mois type</h3>
@@ -404,7 +438,7 @@ export function Monthly({
       )}
 
       {/* ── Comparison table ────────────────────────────────────────── */}
-      {hasRefMonth && (
+      {!isChildScope && hasRefMonth && (
         <section className="card mon-compare">
           <div className="card-header">
             <h3>Réel vs Mois type — {monthLabel(selectedMonth)}</h3>
@@ -508,6 +542,8 @@ export function Monthly({
           transferIds={transferIds}
           currentMonth={currentMonth}
           fmt={fmt}
+          scopeLabel={scopeLabel}
+          isHouseholdScope={refMonthScope === 'household'}
           onClose={() => setShowEditor(false)}
         />
       )}

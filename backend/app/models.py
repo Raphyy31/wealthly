@@ -111,6 +111,31 @@ class User(Base):
     member_id = Column(String, ForeignKey("members.id", ondelete="SET NULL"), nullable=True)
 
 
+class RefMonth(Base):
+    """Mois type (budget template) — scoped per (household, member).
+
+    `member_id IS NULL` ⇒ ménage / "Famille" — comptes joints, dépenses
+    partagées, virements reçus des adultes.
+    `member_id IS NOT NULL` ⇒ Mois type personnel d'un adulte.
+
+    Migration : la colonne historique `users.ref_month` (JSON par-user)
+    est portée à la volée lors du premier GET vers une ligne de cette
+    table avec `member_id = user.member_id` (perso) si défini, sinon
+    `member_id = NULL` (ménage).
+    """
+    __tablename__ = "ref_months"
+    __table_args__ = (
+        UniqueConstraint("household_id", "member_id", name="uq_ref_month_scope"),
+    )
+
+    id = Column(String, primary_key=True, default=_uuid)
+    household_id = Column(String, ForeignKey("households.id", ondelete="CASCADE"), nullable=False, index=True)
+    member_id = Column(String, ForeignKey("members.id", ondelete="CASCADE"), nullable=True, index=True)
+    version = Column(Integer, nullable=False, default=1)
+    lines = Column(JSON, nullable=False, default=list)
+    updated_at = Column(DateTime, default=datetime.utcnow)
+
+
 class AuthEvent(Base):
     """Append-only audit log of every authentication attempt.
     Powers the /admin monitoring page + brute-force lockout logic.

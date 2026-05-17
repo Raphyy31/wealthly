@@ -196,6 +196,8 @@ export function RefMonthEditor({
   refMonth, saveRefMonth,
   categories, transactions, accounts, memberShare, transferIds,
   currentMonth, fmt, onClose,
+  scopeLabel = 'Famille',
+  isHouseholdScope = true,
 }) {
   const { t } = useTranslation();
   // First-time open with no saved Mois type → seed with classic categories
@@ -414,8 +416,14 @@ export function RefMonthEditor({
       <div className="modal rm-modal" onClick={e => e.stopPropagation()} role="dialog" aria-label="Éditer mon mois type">
         <div className="rm-head">
           <div>
-            <h2>Mon <em>mois type</em></h2>
-            <p className="ds-micro">Définissez votre budget mensuel de référence. L'app comparera chaque mois à ce modèle.</p>
+            <h2>
+              Mois type <em>· {scopeLabel}</em>
+            </h2>
+            <p className="ds-micro">
+              {isHouseholdScope
+                ? "Budget partagé du foyer — compte joint, dépenses communes (loyer, courses…) et virements reçus de chaque adulte."
+                : `Mois type personnel — salaire, dépenses propres et virement mensuel vers le compte joint.`}
+            </p>
           </div>
           <button className="ds-icon-btn" onClick={handleClose} aria-label="Fermer"><X size={18}/></button>
         </div>

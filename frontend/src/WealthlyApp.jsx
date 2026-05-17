@@ -101,7 +101,9 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   const [achievements, setAchievements] = useState([]);
   const [fixedCharges, setFixedCharges] = useState([]);
   const [dcaPlans, setDcaPlans] = useState([]);
-  const [refMonth, setRefMonth] = useState({ version: 1, updated_at: null, lines: [] });
+  // Mois type est scoped par (foyer, membre). Map { scopeKey: refMonth }.
+  // scopeKey = activeMemberId si adulte, sinon 'household' (Famille / compte joint).
+  const [refMonthsByScope, setRefMonthsByScope] = useState({});
   const [currentUser, setCurrentUser] = useState(() => {
     try { return JSON.parse(localStorage.getItem('w2:current_user') || 'null'); } catch { return null; }
   });
@@ -373,7 +375,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       setWealthHistory(d.wealthHistory || []);
       setCustomRules(d.customRules);
       dcaApi.list().then(setDcaPlans).catch(() => {});
-      api.refMonth.get().then(setRefMonth).catch(() => {});
+      api.refMonth.get().then(rm => setRefMonthsByScope({ household: rm })).catch(() => {});
       return;
     }
     try {
@@ -415,7 +417,10 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       setCustomRules((ruleList || []).map(r => ({ pattern: r.pattern, categoryId: r.category_slug, source: r.source, _id: r.id })));
       setBankConnections(connList || []);
       setDcaPlans(dcaList || []);
-      setRefMonth(rmData || { version: 1, updated_at: null, lines: [] });
+      // rmData est le Mois type 'Famille' (member_id absent → ménage).
+      // Les Mois types personnels des adultes se chargent à la demande quand
+      // l'utilisateur switche sur leur onglet.
+      setRefMonthsByScope({ household: rmData || { version: 1, updated_at: null, lines: [] } });
     } catch (err) {
       showToast(t('toasts.loadError', { message: err.message }), 'error');
     }
@@ -587,6 +592,19 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   const assetsValue = useMemo(() => visibleAssets.reduce((sum, a) => sum + (parseFloat(a.currentValue) || 0) * memberShare(a), 0), [visibleAssets, memberShare]);
   const liabilitiesValue = useMemo(() => visibleLiabilities.reduce((sum, l) => sum + (parseFloat(l.remainingCapital) || 0) * memberShare(l), 0), [visibleLiabilities, memberShare]);
   const netWorth = liquidWealth + assetsValue - liabilitiesValue;
+
+  // Patrimoine financier : exclut immobilier (valeur du bien) + emprunts immo
+  // (mortgage). C'est le patrimoine 'liquide' que l'user peut effectivement
+  // utiliser, sans l'équity bloquée dans la pierre.
+  const realEstateValue = useMemo(
+    () => visibleAssets.filter(a => a.type === 'real_estate').reduce((s, a) => s + (parseFloat(a.currentValue) || 0) * memberShare(a), 0),
+    [visibleAssets, memberShare]
+  );
+  const mortgageDebt = useMemo(
+    () => visibleLiabilities.filter(l => l.type === 'mortgage').reduce((s, l) => s + (parseFloat(l.remainingCapital) || 0) * memberShare(l), 0),
+    [visibleLiabilities, memberShare]
+  );
+  const financialWealth = liquidWealth + (assetsValue - realEstateValue) - (liabilitiesValue - mortgageDebt);
 
   // ---- Wealth snapshots (patrimoine history) ----
   const [wealthHistory, setWealthHistory] = useState([]);
@@ -1490,14 +1508,40 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     } catch (err) { showToast(t('toasts.genericError', { message: err.message }), 'error'); }
   };
 
-  // Persist the Mois type template. Optimistic local update, backend
-  // round-trip returns the canonical record (with updated_at) which we
-  // re-set to stay in sync.
+  // Scope helper — 'household' for famille (compte joint), sinon le memberId
+  // (Mois type personnel d'un adulte). Les enfants n'ont pas de Mois type.
+  const refMonthScope = useMemo(() => {
+    if (activeMemberId === 'all') return 'household';
+    const m = members.find(x => x.id === activeMemberId);
+    if (!m || m.role === 'child') return 'household';
+    return activeMemberId;
+  }, [activeMemberId, members]);
+
+  // Le Mois type courant — celui du scope actif. Fallback vide tant que
+  // le fetch n'a pas répondu (ex: switch vers un membre dont on n'a pas
+  // encore chargé le scope).
+  const refMonth = refMonthsByScope[refMonthScope] || { version: 1, updated_at: null, lines: [] };
+
+  // Charger à la volée le Mois type d'un scope quand l'utilisateur switche
+  // sur cet onglet membre pour la première fois.
+  useEffect(() => {
+    if (loading) return;
+    if (refMonthsByScope[refMonthScope]) return; // déjà chargé
+    const arg = refMonthScope === 'household' ? undefined : refMonthScope;
+    api.refMonth.get(arg)
+      .then(rm => setRefMonthsByScope(prev => ({ ...prev, [refMonthScope]: rm })))
+      .catch(() => {});
+  }, [refMonthScope, loading, refMonthsByScope]);
+
+  // Persist the Mois type template pour le scope actif. Optimistic update,
+  // backend round-trip réinjecte la version canonique (avec updated_at).
   const saveRefMonth = async (next) => {
-    setRefMonth(next);
+    const scope = refMonthScope;
+    setRefMonthsByScope(prev => ({ ...prev, [scope]: next }));
     try {
-      const saved = await api.refMonth.put({ version: next.version || 1, lines: next.lines || [] });
-      setRefMonth(saved);
+      const arg = scope === 'household' ? undefined : scope;
+      const saved = await api.refMonth.put(arg, { version: next.version || 1, lines: next.lines || [] });
+      setRefMonthsByScope(prev => ({ ...prev, [scope]: saved }));
     } catch (err) {
       showToast(t('toasts.genericError', { message: err.message }), 'error');
     }
@@ -1948,6 +1992,8 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
                 categoryAnalysis={categoryAnalysis}
                 fixedCharges={fixedCharges} saveFixedCharge={saveFixedCharge} deleteFixedCharge={deleteFixedCharge}
                 refMonth={refMonth} saveRefMonth={saveRefMonth}
+                refMonthScope={refMonthScope}
+                activeMember={activeMember} activeMemberId={activeMemberId}
                 fiftyThirtyTwenty={fiftyThirtyTwenty}
                 transferIds={transferIds}
                 memberShare={memberShare}
