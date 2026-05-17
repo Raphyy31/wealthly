@@ -40,10 +40,11 @@ def _ensure_default_categories(db: Session, household_id: str) -> None:
             db.add(Category(household_id=household_id, **cat))
             changed = True
         else:
-            # Backfill parent_slug if it was created before the 2-level taxonomy
+            # Sync parent_slug and name from defaults (fixes moved/renamed categories)
             row = existing[cat["slug"]]
-            if getattr(row, "parent_slug", None) is None and cat.get("parent_slug"):
-                row.parent_slug = cat["parent_slug"]
+            desired_parent = cat.get("parent_slug")
+            if row.parent_slug != desired_parent:
+                row.parent_slug = desired_parent
                 changed = True
     if changed:
         db.commit()

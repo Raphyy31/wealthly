@@ -49,7 +49,6 @@ export const DEFAULT_CATEGORIES = [
   // HOUSING
   { id: 'housing', name: 'Logement', color: '#f97316', type: 'expense', icon: '🏠', kind: 'needs', parent: null },
   { id: 'rent', name: 'Loyer', color: '#f97316', type: 'expense', icon: '🔑', kind: 'needs', parent: 'housing' },
-  { id: 'mortgage_interest', name: 'Crédit immo (intérêts)', color: '#ea7d2a', type: 'expense', icon: '🏦', kind: 'needs', parent: 'housing' },
   { id: 'condo_fees', name: 'Charges copropriété', color: '#e07a30', type: 'expense', icon: '🏢', kind: 'needs', parent: 'housing' },
   { id: 'home_maintenance', name: 'Entretien & travaux', color: '#d97534', type: 'expense', icon: '🔧', kind: 'needs', parent: 'housing' },
   { id: 'furniture', name: 'Mobilier & déco maison', color: '#cf7039', type: 'expense', icon: '🛋️', kind: 'wants', parent: 'housing' },
@@ -148,20 +147,19 @@ export const DEFAULT_CATEGORIES = [
   // FINANCIAL
   { id: 'financial', name: 'Finance & épargne', color: '#475569', type: 'expense', icon: '🏦', kind: 'savings', parent: null },
   { id: 'fees', name: 'Frais bancaires', color: '#dc2626', type: 'expense', icon: '💳', kind: 'needs', parent: 'financial' },
-  { id: 'credit_principal', name: 'Remboursement crédit (capital)', color: '#52525b', type: 'transfer', icon: '💸', kind: 'savings', parent: 'financial' },
-  { id: 'loan_student', name: 'Crédit étudiant', color: '#6366f1', type: 'expense', icon: '🎓', kind: 'needs', parent: 'financial' },
-  { id: 'loan_consumer', name: 'Crédit conso', color: '#dc2626', type: 'expense', icon: '💳', kind: 'needs', parent: 'financial' },
-  { id: 'loan_auto', name: 'Crédit auto', color: '#ea580c', type: 'expense', icon: '🚗', kind: 'needs', parent: 'financial' },
   { id: 'savings', name: 'Épargne', color: '#0891b2', type: 'transfer', icon: '🏦', kind: 'savings', parent: 'financial' },
   { id: 'investment', name: 'Investissements', color: '#0e7490', type: 'transfer', icon: '📊', kind: 'savings', parent: 'financial' },
 
   // CRÉDIT
   { id: 'loans', name: 'Crédit', color: '#4f46e5', type: 'expense', icon: '🏦', kind: 'needs', parent: null },
   { id: 'loan_mortgage', name: 'Crédit immobilier', color: '#4f46e5', type: 'expense', icon: '🏠', kind: 'needs', parent: 'loans' },
-  { id: 'loan_auto', name: 'Crédit auto', color: '#4845d4', type: 'expense', icon: '🚗', kind: 'needs', parent: 'loans' },
-  { id: 'loan_student', name: 'Crédit étudiant', color: '#4338ca', type: 'expense', icon: '🎓', kind: 'needs', parent: 'loans' },
-  { id: 'loan_personal', name: 'Prêt personnel', color: '#3e31be', type: 'expense', icon: '🤝', kind: 'needs', parent: 'loans' },
-  { id: 'loan_revolving', name: 'Crédit renouvelable', color: '#3730a3', type: 'expense', icon: '🔄', kind: 'needs', parent: 'loans' },
+  { id: 'mortgage_interest', name: 'Crédit immobilier', color: '#4845d4', type: 'expense', icon: '🏠', kind: 'needs', parent: 'loans' },
+  { id: 'loan_auto', name: 'Crédit auto', color: '#4338ca', type: 'expense', icon: '🚗', kind: 'needs', parent: 'loans' },
+  { id: 'loan_student', name: 'Crédit étudiant', color: '#3e31be', type: 'expense', icon: '🎓', kind: 'needs', parent: 'loans' },
+  { id: 'loan_consumer', name: 'Crédit conso', color: '#3a38b8', type: 'expense', icon: '💳', kind: 'needs', parent: 'loans' },
+  { id: 'loan_personal', name: 'Prêt personnel', color: '#3730a3', type: 'expense', icon: '🤝', kind: 'needs', parent: 'loans' },
+  { id: 'loan_revolving', name: 'Crédit renouvelable', color: '#322b97', type: 'expense', icon: '🔄', kind: 'needs', parent: 'loans' },
+  { id: 'credit_principal', name: 'Remboursement capital', color: '#2e268c', type: 'expense', icon: '💸', kind: 'needs', parent: 'loans' },
 
   // LEGACY ALIASES
   { id: 'sport', name: 'Sport & Fitness', color: '#f97316', type: 'expense', icon: '💪', kind: 'wants', parent: 'subscriptions' },
