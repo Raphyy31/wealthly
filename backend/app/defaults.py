@@ -127,10 +127,12 @@ DEFAULT_CATEGORIES = [
     {"slug": "savings", "name": "Épargne", "color": "#0891b2", "type": "transfer", "icon": "🏦", "kind": "savings", "parent_slug": "financial"},
     {"slug": "investment", "name": "Investissements", "color": "#0e7490", "type": "transfer", "icon": "📊", "kind": "savings", "parent_slug": "financial"},
 
-    # ============ TOP-LEVEL — LOANS ============
-    {"slug": "loans", "name": "Prêts & Emprunts", "color": "#4f46e5", "type": "expense", "icon": "🏦", "kind": "needs", "parent_slug": None},
+    # ============ TOP-LEVEL — CRÉDIT ============
+    {"slug": "loans", "name": "Crédit", "color": "#4f46e5", "type": "expense", "icon": "🏦", "kind": "needs", "parent_slug": None},
     {"slug": "loan_mortgage", "name": "Crédit immobilier", "color": "#4f46e5", "type": "expense", "icon": "🏠", "kind": "needs", "parent_slug": "loans"},
-    {"slug": "loan_personal", "name": "Prêt personnel", "color": "#4338ca", "type": "expense", "icon": "🤝", "kind": "needs", "parent_slug": "loans"},
+    {"slug": "loan_auto", "name": "Crédit auto", "color": "#4845d4", "type": "expense", "icon": "🚗", "kind": "needs", "parent_slug": "loans"},
+    {"slug": "loan_student", "name": "Crédit étudiant", "color": "#4338ca", "type": "expense", "icon": "🎓", "kind": "needs", "parent_slug": "loans"},
+    {"slug": "loan_personal", "name": "Prêt personnel", "color": "#3e31be", "type": "expense", "icon": "🤝", "kind": "needs", "parent_slug": "loans"},
     {"slug": "loan_revolving", "name": "Crédit renouvelable", "color": "#3730a3", "type": "expense", "icon": "🔄", "kind": "needs", "parent_slug": "loans"},
 
     # ============ LEGACY ALIASES (existing slugs from prior versions, mapped under new parents) ============

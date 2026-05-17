@@ -155,10 +155,12 @@ export const DEFAULT_CATEGORIES = [
   { id: 'savings', name: 'Épargne', color: '#0891b2', type: 'transfer', icon: '🏦', kind: 'savings', parent: 'financial' },
   { id: 'investment', name: 'Investissements', color: '#0e7490', type: 'transfer', icon: '📊', kind: 'savings', parent: 'financial' },
 
-  // LOANS
-  { id: 'loans', name: 'Prêts & Emprunts', color: '#4f46e5', type: 'expense', icon: '🏦', kind: 'needs', parent: null },
+  // CRÉDIT
+  { id: 'loans', name: 'Crédit', color: '#4f46e5', type: 'expense', icon: '🏦', kind: 'needs', parent: null },
   { id: 'loan_mortgage', name: 'Crédit immobilier', color: '#4f46e5', type: 'expense', icon: '🏠', kind: 'needs', parent: 'loans' },
-  { id: 'loan_personal', name: 'Prêt personnel', color: '#4338ca', type: 'expense', icon: '🤝', kind: 'needs', parent: 'loans' },
+  { id: 'loan_auto', name: 'Crédit auto', color: '#4845d4', type: 'expense', icon: '🚗', kind: 'needs', parent: 'loans' },
+  { id: 'loan_student', name: 'Crédit étudiant', color: '#4338ca', type: 'expense', icon: '🎓', kind: 'needs', parent: 'loans' },
+  { id: 'loan_personal', name: 'Prêt personnel', color: '#3e31be', type: 'expense', icon: '🤝', kind: 'needs', parent: 'loans' },
   { id: 'loan_revolving', name: 'Crédit renouvelable', color: '#3730a3', type: 'expense', icon: '🔄', kind: 'needs', parent: 'loans' },
 
   // LEGACY ALIASES
