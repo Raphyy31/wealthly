@@ -21,6 +21,7 @@ DEFAULT_CATEGORIES = [
     # ============ TOP-LEVEL — HOUSING ============
     {"slug": "housing", "name": "Logement", "color": "#f97316", "type": "expense", "icon": "🏠", "kind": "needs", "parent_slug": None},
     {"slug": "rent", "name": "Loyer", "color": "#f97316", "type": "expense", "icon": "🔑", "kind": "needs", "parent_slug": "housing"},
+    {"slug": "mortgage_interest", "name": "Crédit immo (intérêts)", "color": "#ea7d2a", "type": "expense", "icon": "🏦", "kind": "needs", "parent_slug": "housing"},
     {"slug": "condo_fees", "name": "Charges copropriété", "color": "#e07a30", "type": "expense", "icon": "🏢", "kind": "needs", "parent_slug": "housing"},
     {"slug": "home_maintenance", "name": "Entretien & travaux", "color": "#d97534", "type": "expense", "icon": "🔧", "kind": "needs", "parent_slug": "housing"},
     {"slug": "furniture", "name": "Mobilier & déco maison", "color": "#cf7039", "type": "expense", "icon": "🛋️", "kind": "wants", "parent_slug": "housing"},
@@ -116,20 +117,21 @@ DEFAULT_CATEGORIES = [
     {"slug": "tax_housing", "name": "Taxe d'habitation", "color": "#60230e", "type": "expense", "icon": "🏘️", "kind": "needs", "parent_slug": "taxes"},
     {"slug": "tax_urssaf", "name": "URSSAF / cotisations", "color": "#521e0c", "type": "expense", "icon": "📑", "kind": "needs", "parent_slug": "taxes"},
 
-    # ============ TOP-LEVEL — LOANS ============
-    {"slug": "loans", "name": "Prêts & Emprunts", "color": "#6366f1", "type": "expense", "icon": "🏦", "kind": "needs", "parent_slug": None},
-    {"slug": "mortgage_interest", "name": "Crédit immobilier", "color": "#6366f1", "type": "expense", "icon": "🏠", "kind": "needs", "parent_slug": "loans"},
-    {"slug": "loan_auto", "name": "Crédit auto", "color": "#5a5ee0", "type": "expense", "icon": "🚗", "kind": "needs", "parent_slug": "loans"},
-    {"slug": "loan_consumer", "name": "Crédit conso", "color": "#5056cf", "type": "expense", "icon": "💳", "kind": "needs", "parent_slug": "loans"},
-    {"slug": "loan_student", "name": "Crédit étudiant", "color": "#464ebf", "type": "expense", "icon": "🎓", "kind": "needs", "parent_slug": "loans"},
-    {"slug": "loan_personal", "name": "Prêt personnel", "color": "#3c45ae", "type": "expense", "icon": "🤝", "kind": "needs", "parent_slug": "loans"},
-    {"slug": "credit_principal", "name": "Remboursement capital", "color": "#323d9e", "type": "expense", "icon": "💸", "kind": "needs", "parent_slug": "loans"},
-
     # ============ TOP-LEVEL — FINANCIAL ============
-    {"slug": "financial", "name": "Finance & épargne", "color": "#475569", "type": "expense", "icon": "💰", "kind": "savings", "parent_slug": None},
+    {"slug": "financial", "name": "Finance & épargne", "color": "#475569", "type": "expense", "icon": "🏦", "kind": "savings", "parent_slug": None},
     {"slug": "fees", "name": "Frais bancaires", "color": "#dc2626", "type": "expense", "icon": "💳", "kind": "needs", "parent_slug": "financial"},
+    {"slug": "credit_principal", "name": "Remboursement crédit (capital)", "color": "#52525b", "type": "transfer", "icon": "💸", "kind": "savings", "parent_slug": "financial"},
+    {"slug": "loan_student", "name": "Crédit étudiant", "color": "#6366f1", "type": "expense", "icon": "🎓", "kind": "needs", "parent_slug": "financial"},
+    {"slug": "loan_consumer", "name": "Crédit conso", "color": "#dc2626", "type": "expense", "icon": "💳", "kind": "needs", "parent_slug": "financial"},
+    {"slug": "loan_auto", "name": "Crédit auto", "color": "#ea580c", "type": "expense", "icon": "🚗", "kind": "needs", "parent_slug": "financial"},
     {"slug": "savings", "name": "Épargne", "color": "#0891b2", "type": "transfer", "icon": "🏦", "kind": "savings", "parent_slug": "financial"},
     {"slug": "investment", "name": "Investissements", "color": "#0e7490", "type": "transfer", "icon": "📊", "kind": "savings", "parent_slug": "financial"},
+
+    # ============ TOP-LEVEL — LOANS ============
+    {"slug": "loans", "name": "Prêts & Emprunts", "color": "#4f46e5", "type": "expense", "icon": "🏦", "kind": "needs", "parent_slug": None},
+    {"slug": "loan_mortgage", "name": "Crédit immobilier", "color": "#4f46e5", "type": "expense", "icon": "🏠", "kind": "needs", "parent_slug": "loans"},
+    {"slug": "loan_personal", "name": "Prêt personnel", "color": "#4338ca", "type": "expense", "icon": "🤝", "kind": "needs", "parent_slug": "loans"},
+    {"slug": "loan_revolving", "name": "Crédit renouvelable", "color": "#3730a3", "type": "expense", "icon": "🔄", "kind": "needs", "parent_slug": "loans"},
 
     # ============ LEGACY ALIASES (existing slugs from prior versions, mapped under new parents) ============
     {"slug": "sport", "name": "Sport & Fitness", "color": "#f97316", "type": "expense", "icon": "💪", "kind": "wants", "parent_slug": "subscriptions"},
