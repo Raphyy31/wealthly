@@ -380,8 +380,41 @@ function ComptesSection({ accounts, accountBalances, members, transactions, upda
                   <div className="member-card-role">
                     {a.bank}
                     {a.iban && <span title={a.iban}> · •••• {a.iban.replace(/\s/g, '').slice(-4)}</span>}
-                    {' · '}{owners} · {fmt(accountBalances[a.id] || 0)}
+                    {' · '}{fmt(accountBalances[a.id] || 0)}
                   </div>
+                  {members.length > 0 && updateAccount && (
+                    <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+                      {members.map(m => {
+                        const assigned = (a.memberIds || []).includes(m.id);
+                        return (
+                          <button
+                            key={m.id}
+                            type="button"
+                            onClick={() => {
+                              const next = assigned
+                                ? (a.memberIds || []).filter(id => id !== m.id)
+                                : [...(a.memberIds || []), m.id];
+                              updateAccount(a.id, { memberIds: next });
+                            }}
+                            title={assigned ? `Retirer ${m.name} de ce compte` : `Assigner ${m.name} à ce compte`}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 4,
+                              padding: '2px 8px 2px 4px', borderRadius: 20,
+                              border: `1.5px solid ${assigned ? m.color : 'var(--border)'}`,
+                              background: assigned ? m.color + '22' : 'transparent',
+                              color: assigned ? m.color : 'var(--ink-3)',
+                              fontSize: 12, cursor: 'pointer', fontWeight: assigned ? 600 : 400,
+                            }}
+                          >
+                            <span style={{ width: 16, height: 16, borderRadius: '50%', background: m.color, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: '#fff', fontWeight: 700 }}>
+                              {m.name.charAt(0).toUpperCase()}
+                            </span>
+                            {m.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                   {showSuggestion && (
                     <div style={{ marginTop: 6, fontSize: 11.5, color: 'var(--text-tertiary)', fontStyle: 'italic', fontFamily: "'Newsreader', Georgia, serif" }}>
                       <span style={{ color: 'var(--primary)', fontStyle: 'normal', fontFamily: 'inherit' }}>↪ {t('settings.accounts.suggested', { role: ACCOUNT_ROLES[suggestion.role].label })}</span> — {suggestion.reason}{' '}
