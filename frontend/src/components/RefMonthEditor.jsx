@@ -21,7 +21,8 @@ function _uuid() {
 // Hoverable suggestion chip — shows mean by default, expands to a popover
 // listing the contributing transactions on hover. Helps the user understand
 // "where does this 39 €/mois come from?".
-function SuggestionHover({ sug, fmt }) {
+// onFill: optional callback(amount) — adds a "← utiliser" button to auto-fill.
+function SuggestionHover({ sug, fmt, onFill }) {
   const [open, setOpen] = useState(false);
   if (!sug) return <span className="ds-micro">Pas assez d'historique</span>;
   const sample = sug.txs.slice(0, 10);
@@ -33,6 +34,15 @@ function SuggestionHover({ sug, fmt }) {
       onMouseLeave={() => setOpen(false)}
     >
       ≈ {fmt(sug.mean)}/mois <span className="ds-micro">· moyenne {sug.months} mois</span>
+      {sug && onFill && (
+        <button
+          className="rm-suggest-use"
+          onClick={e => { e.stopPropagation(); onFill(sug.mean); }}
+          title={`Utiliser la moyenne : ${fmt(sug.mean)}/mois`}
+        >
+          ← utiliser
+        </button>
+      )}
       {open && (
         <span className="rm-suggest-pop">
           <span className="rm-suggest-pop-head">
@@ -167,7 +177,8 @@ const STARTER_TEMPLATE = [
   { kind: 'expense', category_id: 'utilities',     label: 'Internet & mobile' },
   // Vie quotidienne
   { kind: 'expense', category_id: 'groceries',     label: 'Courses' },
-  { kind: 'expense', category_id: 'food',          label: 'Restaurants & sorties' },
+  { kind: 'expense', category_id: 'household',     label: 'Ménage' },
+  { kind: 'expense', category_id: 'restaurants',   label: 'Restaurants & sorties' },
   { kind: 'expense', category_id: 'transport',     label: 'Transports' },
   { kind: 'expense', category_id: 'fuel',          label: 'Carburant' },
   // Assurances, santé, enfants
@@ -369,6 +380,7 @@ export function RefMonthEditor({
                   <div key={line.id} className="rm-line">
                     <input
                       className="rm-line-label"
+                      style={{ flex: 1, minWidth: 0 }}
                       value={line.label}
                       onChange={e => updateLine(line.id, { label: e.target.value })}
                       placeholder="Libellé (ex : Loyer)"
@@ -378,24 +390,31 @@ export function RefMonthEditor({
                         className="num"
                         type="number"
                         step="0.01"
+                        style={{ width: 88, textAlign: 'right' }}
                         value={line.amount}
                         onChange={e => updateLine(line.id, { amount: e.target.value, locked: true })}
                         placeholder="0"
                       />
                       <span className="rm-currency">€</span>
                     </div>
-                    <button
-                      className="ds-icon-btn"
-                      onClick={() => updateLine(line.id, { locked: !line.locked })}
-                      title={line.locked ? 'Déverrouiller (laissera la synchro écraser cette valeur)' : 'Verrouiller (la synchro ne touche plus à cette valeur)'}
-                    >
-                      {line.locked ? <Lock size={14}/> : <Unlock size={14}/>}
-                    </button>
-                    <button className="ds-icon-btn rm-trash" onClick={() => removeLine(line.id)} aria-label="Supprimer">
-                      <Trash2 size={14}/>
-                    </button>
+                    <div className="rm-line-actions">
+                      <button
+                        className="ds-icon-btn"
+                        onClick={() => updateLine(line.id, { locked: !line.locked })}
+                        title={line.locked ? 'Déverrouiller (laissera la synchro écraser cette valeur)' : 'Verrouiller (la synchro ne touche plus à cette valeur)'}
+                      >
+                        {line.locked ? <Lock size={14}/> : <Unlock size={14}/>}
+                      </button>
+                      <button className="ds-icon-btn rm-trash" onClick={() => removeLine(line.id)} aria-label="Supprimer">
+                        <Trash2 size={14}/>
+                      </button>
+                    </div>
                     <div className="rm-suggest">
-                      <SuggestionHover sug={sug} fmt={fmt}/>
+                      <SuggestionHover
+                        sug={sug}
+                        fmt={fmt}
+                        onFill={sug ? (v) => updateLine(line.id, { amount: v }) : undefined}
+                      />
                     </div>
                   </div>
                 );
@@ -469,64 +488,34 @@ export function RefMonthEditor({
   );
 }
 
-// Deux dropdowns liés. Les deux affichent la liste groupée complète
-// (top-level + sous-cats indentées). Clic sur une sous-cat dans n'importe
-// lequel des deux → l'autre se remplit avec son parent automatiquement.
-// targetId envoyé à onAdd = la sous-cat si choisie, sinon le parent.
+// Single CategoryDropdown for adding a new category line. Much simpler than
+// the old dual-select approach — one picker, one Ajouter button.
 function RefMonthAddCategory({ kind, cats, onAdd }) {
   const [open, setOpen] = useState(false);
-  const [topId, setTopId] = useState('');
-  const [subId, setSubId] = useState('');
-
-  const reset = () => { setOpen(false); setTopId(''); setSubId(''); };
-
-  // Shared resolver: décide quoi mettre dans top vs sub à partir d'un slug
-  // choisi (qu'il soit top-level ou sub).
-  const resolve = (slug) => {
-    if (!slug) return { top: '', sub: '' };
-    const cat = cats.find(c => (c.id || c.slug) === slug);
-    if (!cat) return { top: '', sub: '' };
-    const parent = cat.parent || cat.parent_slug;
-    return parent ? { top: parent, sub: slug } : { top: slug, sub: '' };
-  };
-  const onPickTop = (slug) => { const { top, sub } = resolve(slug); setTopId(top); setSubId(sub); };
-  const onPickSub = (slug) => { const { top, sub } = resolve(slug); setTopId(top); setSubId(sub); };
-
-  const targetId = subId || topId;
+  const [selectedId, setSelectedId] = useState('');
 
   if (!open) return (
     <button className="rm-add-cat" onClick={() => setOpen(true)}>
-      <Plus size={14}/> Ajouter une catégorie {kind === 'income' ? "d'entrée" : (kind === 'saving' ? "d'épargne" : 'de dépense')}
+      <Plus size={14}/> Ajouter une catégorie
     </button>
   );
 
   return (
-    <div className="rm-add-cat-form rm-add-cat-form-dual">
+    <div className="rm-add-cat-form">
       <CategoryDropdown
-        value={topId}
+        value={selectedId}
         categories={cats}
-        onChange={onPickTop}
-        placeholder="Catégorie"
-        grouped
-        clearable={false}
-        showParentInChip={false}
+        onChange={setSelectedId}
+        placeholder="Choisir une catégorie…"
+        grouped searchable clearable={false} align="left"
       />
-      <CategoryDropdown
-        value={subId}
-        categories={cats}
-        onChange={onPickSub}
-        placeholder="Détail (optionnel)"
-        grouped
-        emptyLabel="Aucun détail"
-      />
-      <button
-        className="ds-btn primary sm"
-        disabled={!targetId}
-        onClick={() => { if (targetId) { onAdd(targetId); reset(); } }}
-      >
+      <button className="ds-btn primary sm" disabled={!selectedId}
+        onClick={() => { if (selectedId) { onAdd(selectedId); setOpen(false); setSelectedId(''); } }}>
         Ajouter
       </button>
-      <button className="ds-btn ghost sm" onClick={reset}>Annuler</button>
+      <button className="ds-btn ghost sm" onClick={() => { setOpen(false); setSelectedId(''); }}>
+        Annuler
+      </button>
     </div>
   );
 }

@@ -1025,10 +1025,13 @@ html, body {
 .rm-cat-total { color: var(--ink-2); font-size: 12px; }
 .rm-line {
   display: grid;
-  grid-template-columns: minmax(0, 1.6fr) 130px auto auto;
+  grid-template-columns: minmax(0, 1fr) 110px auto;
   gap: 10px; align-items: center;
   padding: 10px 14px;
   border-bottom: 1px dashed var(--border);
+}
+.rm-line-actions {
+  display: flex; align-items: center; gap: 2px;
 }
 .rm-line:last-child { border-bottom: none; }
 .rm-line-label {
@@ -1069,6 +1072,23 @@ html, body {
   color: var(--accent);
 }
 .rm-suggest-chip .ds-micro { color: inherit; opacity: 0.75; }
+.rm-suggest-use {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  padding: 0 5px;
+  font: 500 10px var(--font-sans);
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 120ms;
+}
+.rm-suggest-chip:hover .rm-suggest-use,
+.rm-suggest-chip.open .rm-suggest-use { opacity: 1; }
+.rm-suggest-use:hover { background: var(--accent); color: #fff; }
 .rm-suggest-pop {
   position: absolute;
   top: calc(100% + 6px); left: 0;
@@ -1123,14 +1143,13 @@ html, body {
 }
 .rm-add-sub:hover, .rm-add-cat:hover { background: var(--bg-hover); color: var(--ink); border-style: solid; border-color: var(--border-strong); }
 .rm-add-cat-form {
-  display: flex; gap: 6px; align-items: center;
-  padding: 6px 12px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 12px 10px;
 }
-.rm-add-cat-form select { flex: 1; padding: 6px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); }
-.rm-add-cat-form-dual { flex-wrap: wrap; }
-.rm-add-cat-form-dual select { min-width: 0; flex: 1 1 140px; }
-.rm-add-cat-form-dual select:disabled { opacity: 0.5; cursor: not-allowed; }
-.rm-add-cat-form-dual .cat-dd { flex: 1 1 180px; min-width: 0; }
+.rm-add-cat-form .cat-dd { flex: 1; min-width: 200px; }
 
 /* ============================================================================
    CategoryDropdown — pill-based picker (parent / sub-category)
