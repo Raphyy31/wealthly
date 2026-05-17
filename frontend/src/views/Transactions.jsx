@@ -777,7 +777,7 @@ export function Transactions({ transactions, accounts, categories, members = [],
                       {accounts.map(a => (
                         <label key={a.id} className={`th-filter-chk ${filters.accs.includes(a.id) ? 'active' : ''}`}>
                           <input type="checkbox" checked={filters.accs.includes(a.id)} onChange={() => toggleInList('accs', a.id)}/>
-                          <span>{a.bank} — {a.name}</span>
+                          <span>{a.name || a.bank}{a.bank && a.name !== a.bank ? ` — ${a.bank}` : ''}</span>
                         </label>
                       ))}
                     </div>
@@ -930,7 +930,7 @@ export function Transactions({ transactions, accounts, categories, members = [],
                             )) : <span className="tx-card-col-empty">—</span>}
                           </div>
                           <div className="tx-card-col tx-card-col-acc">
-                            {acc ? <span className="tx-card-acc">{acc.bank || acc.name}</span> : <span className="tx-card-col-empty">—</span>}
+                            {acc ? <span className="tx-card-acc">{acc.name || acc.bank}</span> : <span className="tx-card-col-empty">—</span>}
                           </div>
                           <div className="tx-card-actions">
                             <button

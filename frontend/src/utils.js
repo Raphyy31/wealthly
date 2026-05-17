@@ -80,7 +80,7 @@ export const sortAccountsByRole = (accounts) => {
   return [...(accounts || [])].sort((a, b) => {
     const ra = orderOf(a.role), rb = orderOf(b.role);
     if (ra !== rb) return ra - rb;
-    return (a.bank || a.name || '').localeCompare(b.bank || b.name || '');
+    return (a.name || a.bank || '').localeCompare(b.name || b.bank || '');
   });
 };
 

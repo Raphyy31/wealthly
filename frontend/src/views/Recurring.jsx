@@ -165,7 +165,7 @@ export function Recurring({ recurringGroups = [], categories = [], accounts = []
                     </span>
                     <div className="rec-merchant-text">
                       <span className="rec-merchant-name">{g.label || 'Sans libellé'}</span>
-                      {g.acc && <span className="rec-merchant-acc">{g.acc.bank || g.acc.name}</span>}
+                      {g.acc && <span className="rec-merchant-acc">{g.acc.name || g.acc.bank}</span>}
                     </div>
                   </div>
                   <div className="rec-cat">
