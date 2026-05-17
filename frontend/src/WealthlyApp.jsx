@@ -31,7 +31,6 @@ import { Onboarding } from './views/Onboarding.jsx';
 import { Transactions } from './views/Transactions.jsx';
 import { Analysis } from './views/Analysis.jsx';
 import { Monthly } from './views/Monthly.jsx';
-import { Recurring } from './views/Recurring.jsx';
 import { Cashflow } from './views/Cashflow.jsx';
 import { Dashboard } from './views/Dashboard.jsx';
 import { Wealth } from './views/Wealth.jsx';
@@ -1871,9 +1870,6 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             <button onClick={() => setView('monthly')} className={view === 'monthly' ? 'on' : ''}>
               <Calendar size={16}/> <span>{t('nav.monthly')}</span>
             </button>
-            <button onClick={() => setView('recurring')} className={view === 'recurring' ? 'on' : ''}>
-              <Repeat size={16}/> <span>Récurrent</span>
-            </button>
             <button onClick={() => setView('tax')} className={view === 'tax' ? 'on' : ''}>
               <Calculator size={16}/> <span>{t('nav.tax')}</span>
             </button>
@@ -2033,15 +2029,6 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
               />
             )}
           </div>
-        )}
-        {view === 'recurring' && (
-          <Recurring
-            recurringGroups={recurringGroups}
-            categories={categories} accounts={accounts}
-            transactions={visibleTransactions}
-            fmt={fmt} setView={setView}
-            setInitialAccountFilter={setTxInitialAccountFilter}
-          />
         )}
         {view === 'tax' && (
           <Suspense fallback={<div className="chart-empty"><Calculator size={28}/><span>Chargement du simulateur…</span></div>}>
