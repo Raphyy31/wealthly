@@ -310,7 +310,10 @@
     "notes": "Notes",
     "notesPh": "Strategy, rebalancing rule…",
     "monthsSkipped_one": "{{count}} month skipped",
-    "monthsSkipped_other": "{{count}} months skipped"
+    "monthsSkipped_other": "{{count}} months skipped",
+    "executions": "Contributions",
+    "skipped": "Skipped",
+    "paid": "Paid"
   },
   "settings": {
     "title": "Settings",
@@ -569,11 +572,4 @@
     "tokenExpired": "Link expired or already used. Request a new one.",
     "generic": "Something went wrong. Try again."
   },
-  "dca": {
-    "executions": "Contributions",
-    "skipped": "Skipped",
-    "paid": "Paid",
-    "monthsSkipped_one": "{{count}} month skipped",
-    "monthsSkipped_other": "{{count}} months skipped"
-  }
 }
