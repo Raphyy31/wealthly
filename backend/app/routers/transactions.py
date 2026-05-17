@@ -317,7 +317,7 @@ def recategorize_transfers(db: Session = Depends(get_db), user: User = Depends(g
         Transaction.household_id == user.household_id,
         Transaction.is_transfer_override.is_(None),
     ).all()
-    flagged = 0
+    flagged_details = []
     for t in candidates:
         try:
             result = categorize_transaction(
@@ -338,9 +338,19 @@ def recategorize_transfers(db: Session = Depends(get_db), user: User = Depends(g
                 t.payee_id = result.payee_id
             if result.source and not t.cat_source:
                 t.cat_source = result.source
-            flagged += 1
+            flagged_details.append({
+                "id": t.id,
+                "date": t.date.isoformat() if t.date else None,
+                "label": t.label,
+                "amount": t.amount,
+                "account_id": t.account_id,
+            })
     db.commit()
-    return {"scanned": len(candidates), "flagged": flagged}
+    return {
+        "scanned": len(candidates),
+        "flagged": len(flagged_details),
+        "details": flagged_details,
+    }
 
 
 @router.delete("/{tx_id}", status_code=204)

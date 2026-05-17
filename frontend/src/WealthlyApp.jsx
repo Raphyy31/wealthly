@@ -1206,20 +1206,28 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   // never traversed the engine and still pollute period totals — typically
   // AMEX PRELEVEMENT AUTOMATIQUE arriving as +X via GoCardless and counted
   // as fake "income".
+  const [transferRecatResult, setTransferRecatResult] = useState(null);
   const recategorizeTransfers = async () => {
+    console.log('[recategorizeTransfers] click — démarrage…');
     try {
       const res = await api.transactions.recategorizeTransfers();
+      console.log('[recategorizeTransfers] réponse backend :', res);
       const flagged = res?.flagged ?? 0;
-      const scanned = res?.scanned ?? 0;
       if (flagged > 0) {
         // Reload tx so the frontend Set transferIds includes the new flags
         // and the Total période panel updates.
         await reloadAll();
-        showToast(`${flagged} virement(s) interne(s) détecté(s) sur ${scanned} transaction(s) analysée(s).`, 'success');
-      } else {
-        showToast(`Aucun virement interne détecté (${scanned} tx analysées).`, 'info');
       }
+      // Toujours afficher la modale — même si flagged=0, l'utilisateur veut
+      // savoir que le clic a fait quelque chose. C'est le retour visuel
+      // attendu (vs un toast qui peut passer inaperçu).
+      setTransferRecatResult({
+        scanned: res?.scanned ?? 0,
+        flagged,
+        details: res?.details ?? [],
+      });
     } catch (e) {
+      console.error('[recategorizeTransfers] erreur :', e);
       showToast(e.message || 'Erreur lors de la détection des virements internes.', 'error');
     }
   };
@@ -1659,6 +1667,59 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     <div className={`app theme-${theme}`}>
       <Styles theme={theme}/>
       {toast && <Toast message={toast.message} type={toast.type}/>}
+      {transferRecatResult && (
+        <div className="modal-backdrop" onClick={() => setTransferRecatResult(null)}>
+          <div
+            className="modal"
+            onClick={e => e.stopPropagation()}
+            style={{ maxWidth: 640, width: '92%' }}
+          >
+            <div className="modal-header">
+              <h2 style={{ margin: 0 }}>Détection des virements internes</h2>
+              <button className="ds-btn ghost" onClick={() => setTransferRecatResult(null)}>Fermer</button>
+            </div>
+            <div style={{ padding: '8px 4px 16px' }}>
+              <div style={{ marginBottom: 12, color: 'var(--ink-2)', fontSize: 13 }}>
+                <strong style={{ color: 'var(--ink)' }}>{transferRecatResult.scanned}</strong> transaction(s) analysée(s) ·{' '}
+                <strong style={{ color: 'var(--ink)' }}>{transferRecatResult.flagged}</strong> flaggée(s) comme virement interne.
+              </div>
+              {transferRecatResult.flagged === 0 ? (
+                <div style={{ padding: 16, background: 'var(--bg-sunk)', borderRadius: 8, fontSize: 13, color: 'var(--ink-2)' }}>
+                  Aucune nouvelle transaction à flagger. Toutes les tx éligibles ont
+                  déjà soit un override manuel, soit ont été traitées par le moteur.
+                </div>
+              ) : (
+                <div style={{ maxHeight: 360, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8 }}>
+                  <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
+                    <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-elev)' }}>
+                      <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                        <th style={{ textAlign: 'left', padding: '8px 10px', fontWeight: 500, color: 'var(--ink-3)' }}>Date</th>
+                        <th style={{ textAlign: 'left', padding: '8px 10px', fontWeight: 500, color: 'var(--ink-3)' }}>Libellé</th>
+                        <th style={{ textAlign: 'right', padding: '8px 10px', fontWeight: 500, color: 'var(--ink-3)' }}>Montant</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {transferRecatResult.details.map(d => (
+                        <tr key={d.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                          <td style={{ padding: '8px 10px', color: 'var(--ink-2)', whiteSpace: 'nowrap' }}>{d.date}</td>
+                          <td style={{ padding: '8px 10px' }}>{d.label}</td>
+                          <td className="num" style={{ padding: '8px 10px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                            {(d.amount >= 0 ? '+' : '') + (d.amount?.toFixed(2) ?? '0.00')} €
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <div style={{ marginTop: 14, fontSize: 12, color: 'var(--ink-3)' }}>
+                Ces transactions sont désormais exclues des totaux Revenus / Dépenses.
+                Tu peux toujours en débloquer une manuellement (clic sur le badge ↔ dans la liste).
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {syncBusy && (
         <div className="sync-busy-banner" role="status" aria-live="polite">
           <RefreshCw size={14} className="spin"/>
