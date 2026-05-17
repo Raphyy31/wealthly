@@ -571,5 +571,5 @@
     "emailExists": "This email is already in use",
     "tokenExpired": "Link expired or already used. Request a new one.",
     "generic": "Something went wrong. Try again."
-  },
+  }
 }
