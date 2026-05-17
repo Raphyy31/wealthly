@@ -371,43 +371,43 @@ export function RefMonthEditor({
                   <span className="rm-cat-icon" aria-hidden="true">{cat?.icon || '•'}</span>
                   {cat?.name || g.category_id}
                 </span>
-                <span className="rm-cat-total num">{fmt(g.lines.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0))}</span>
+                <span className="rm-cat-total">{fmt(g.lines.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0))}</span>
               </div>
               {g.lines.map(line => {
                 const sugKey = `${line.kind}::${line.category_id || 'uncategorized'}`;
                 const sug = suggestions[sugKey];
                 return (
                   <div key={line.id} className="rm-line">
-                    <input
-                      className="rm-line-label"
-                      style={{ flex: 1, minWidth: 0 }}
-                      value={line.label}
-                      onChange={e => updateLine(line.id, { label: e.target.value })}
-                      placeholder="Libellé (ex : Loyer)"
-                    />
-                    <div className="rm-line-input">
+                    <div className="rm-line-main">
                       <input
-                        className="num"
-                        type="number"
-                        step="0.01"
-                        style={{ width: 88, textAlign: 'right' }}
-                        value={line.amount}
-                        onChange={e => updateLine(line.id, { amount: e.target.value, locked: true })}
-                        placeholder="0"
+                        className="rm-line-label"
+                        value={line.label}
+                        onChange={e => updateLine(line.id, { label: e.target.value })}
+                        placeholder="Libellé…"
                       />
-                      <span className="rm-currency">€</span>
-                    </div>
-                    <div className="rm-line-actions">
-                      <button
-                        className="ds-icon-btn"
-                        onClick={() => updateLine(line.id, { locked: !line.locked })}
-                        title={line.locked ? 'Déverrouiller (laissera la synchro écraser cette valeur)' : 'Verrouiller (la synchro ne touche plus à cette valeur)'}
-                      >
-                        {line.locked ? <Lock size={14}/> : <Unlock size={14}/>}
-                      </button>
-                      <button className="ds-icon-btn rm-trash" onClick={() => removeLine(line.id)} aria-label="Supprimer">
-                        <Trash2 size={14}/>
-                      </button>
+                      <div className="rm-line-right">
+                        <div className="rm-line-amount">
+                          <input
+                            className="rm-line-amount-input"
+                            type="number"
+                            step="0.01"
+                            value={line.amount}
+                            onChange={e => updateLine(line.id, { amount: e.target.value })}
+                            placeholder="0"
+                          />
+                          <span className="rm-currency">€</span>
+                        </div>
+                        <button
+                          className="rm-line-btn"
+                          onClick={() => updateLine(line.id, { locked: !line.locked })}
+                          title={line.locked ? 'Déverrouiller' : 'Verrouiller (la synchro ne touchera plus à cette valeur)'}
+                        >
+                          {line.locked ? <Lock size={13}/> : <Unlock size={13}/>}
+                        </button>
+                        <button className="rm-line-btn rm-line-btn-del" onClick={() => removeLine(line.id)} aria-label="Supprimer">
+                          <Trash2 size={13}/>
+                        </button>
+                      </div>
                     </div>
                     <div className="rm-suggest">
                       <SuggestionHover
