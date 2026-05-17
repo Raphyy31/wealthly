@@ -12,6 +12,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X, RotateCcw, RefreshCw, Lock, Unlock, Plus, Trash2, TrendingUp, TrendingDown, PiggyBank } from 'lucide-react';
 import { monthKey } from '../utils.js';
+import { CategoryDropdown } from './CategoryDropdown.jsx';
 
 function _uuid() {
   return 'rm-' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
@@ -489,26 +490,21 @@ function RefMonthAddCategory({ kind, cats, onAdd }) {
 
   return (
     <div className="rm-add-cat-form rm-add-cat-form-dual">
-      <select value={topId} onChange={e => { setTopId(e.target.value); setSubId(''); }}>
-        <option value="">— Catégorie —</option>
-        {topCats.map(c => (
-          <option key={c.id || c.slug} value={c.id || c.slug}>
-            {c.icon ? `${c.icon} ` : ''}{c.name}
-          </option>
-        ))}
-      </select>
-      <select
+      <CategoryDropdown
+        value={topId}
+        categories={topCats}
+        onChange={(v) => { setTopId(v); setSubId(''); }}
+        placeholder="Catégorie"
+        clearable={false}
+      />
+      <CategoryDropdown
         value={subId}
-        onChange={e => setSubId(e.target.value)}
+        categories={subCats}
+        onChange={setSubId}
+        placeholder={subCats.length === 0 ? 'Aucun détail' : 'Détail (optionnel)'}
         disabled={!topId || subCats.length === 0}
-      >
-        <option value="">{subCats.length === 0 ? 'Aucun détail' : 'Détail (optionnel)'}</option>
-        {subCats.map(c => (
-          <option key={c.id || c.slug} value={c.id || c.slug}>
-            {c.icon ? `${c.icon} ` : ''}{c.name}
-          </option>
-        ))}
-      </select>
+        emptyLabel="Aucun détail"
+      />
       <button
         className="ds-btn primary sm"
         disabled={!targetId}

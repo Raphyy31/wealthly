@@ -9,6 +9,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { ChipSelect } from '../components/ChipSelect.jsx';
 import { Combobox } from '../components/Combobox.jsx';
+import { CategoryDropdown } from '../components/CategoryDropdown.jsx';
 import {
   Plus, Trash2, Edit3, Check, Upload, Download, Users, Wallet,
   Sparkles, Activity, AlertCircle, RefreshCw, Link2, Unlink, X, Cloud,
@@ -780,27 +781,21 @@ function CustomRulesSection({ categories }) {
           placeholder={t('settings.rules.patternPh')}
           style={{ minWidth: 0 }}
         />
-        <select
+        <CategoryDropdown
           value={newTopId}
-          onChange={(e) => { setNewTopId(e.target.value); setNewSubId(''); }}
-          style={{ minWidth: 0 }}
-        >
-          <option value="">Catégorie…</option>
-          {topCategories.map(c => (
-            <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
-          ))}
-        </select>
-        <select
+          categories={topCategories}
+          onChange={(v) => { setNewTopId(v); setNewSubId(''); }}
+          placeholder="Catégorie"
+          clearable={false}
+        />
+        <CategoryDropdown
           value={newSubId}
-          onChange={(e) => setNewSubId(e.target.value)}
+          categories={subCategories}
+          onChange={setNewSubId}
+          placeholder={subCategories.length === 0 ? 'Aucun détail' : 'Détail (optionnel)'}
           disabled={!newTopId || subCategories.length === 0}
-          style={{ minWidth: 0 }}
-        >
-          <option value="">{subCategories.length === 0 ? 'Aucun détail' : 'Détail (optionnel)'}</option>
-          {subCategories.map(c => (
-            <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
-          ))}
-        </select>
+          emptyLabel="Aucun détail"
+        />
         <button
           type="submit"
           className="primary-btn"
