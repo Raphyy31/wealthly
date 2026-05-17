@@ -426,6 +426,13 @@ function MergeModal({ accounts, sourceId, onConfirm, onClose }) {
 function ComptesSection({ accounts, accountBalances, members, transactions, updateAccount, deleteAccount, mergeAccounts, fmt, onImport }) {
   const { t } = useTranslation();
   const [mergingId, setMergingId] = useState(null);
+  const [editingNameId, setEditingNameId] = useState(null);
+  const [editingNameVal, setEditingNameVal] = useState('');
+  const commitName = (a) => {
+    const trimmed = editingNameVal.trim();
+    if (trimmed && trimmed !== a.name) updateAccount(a.id, { name: trimmed });
+    setEditingNameId(null);
+  };
   return (
     <section className="settings-panel">
       <header>
@@ -471,7 +478,23 @@ function ComptesSection({ accounts, accountBalances, members, transactions, upda
                   </span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                      <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--ink)' }}>{a.name || a.bank}</span>
+                      {editingNameId === a.id ? (
+                        <input
+                          autoFocus
+                          value={editingNameVal}
+                          onChange={e => setEditingNameVal(e.target.value)}
+                          onBlur={() => commitName(a)}
+                          onKeyDown={e => { if (e.key === 'Enter') commitName(a); if (e.key === 'Escape') setEditingNameId(null); }}
+                          style={{ fontWeight:600, fontSize:14, color:'var(--ink)', border:'none', borderBottom:'1.5px solid var(--accent)', background:'transparent', outline:'none', padding:'0 2px', minWidth:60, maxWidth:200 }}
+                        />
+                      ) : (
+                        <button type="button" onClick={() => { setEditingNameId(a.id); setEditingNameVal(a.name || ''); }}
+                          title="Cliquer pour renommer"
+                          style={{ fontWeight:600, fontSize:14, color:'var(--ink)', background:'none', border:'none', padding:0, cursor:'text', textAlign:'left' }}>
+                          {a.name || a.bank}
+                          <Edit3 size={11} style={{ marginLeft:5, color:'var(--ink-3)', verticalAlign:'middle' }}/>
+                        </button>
+                      )}
                       <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 4, letterSpacing: '.3px',
                         background: isGocardless ? 'var(--accent-soft)' : 'var(--bg-sunk)',
                         color: isGocardless ? 'var(--accent)' : 'var(--ink-3)' }}>
