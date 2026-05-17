@@ -416,7 +416,7 @@ async def _sync_one_connection(
                 external_id=gc_acc_id,
                 iban=acc_info.get("iban"),
                 source="gocardless",
-                members=household_members,  # visible to everyone in the household
+                members=[m for m in household_members if m.role == 'adult'],  # children excluded from account membership
             )
             db.add(wl_acc)
             db.flush()

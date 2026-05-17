@@ -28,6 +28,8 @@ def _to_out(account: Account, db: Session) -> dict:
         "household_id": account.household_id,
         "member_ids": [m.id for m in account.members],
         "current_balance": current,
+        "is_joint": account.is_joint,
+        "iban": account.iban,
     }
 
 
