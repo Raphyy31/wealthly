@@ -332,10 +332,78 @@ function FoyerSection({ members, setEditingMember, deleteMember, COLORS }) {
 // ============================================================================
 // SECTION : COMPTES & SYNCHRONISATION (merged accounts + GoCardless)
 // ============================================================================
+function MergeModal({ accounts, sourceId, onConfirm, onClose }) {
+  const source = accounts.find(a => a.id === sourceId);
+  const others = accounts.filter(a => a.id !== sourceId);
+  const [targetId, setTargetId] = useState(others[0]?.id || '');
+  const [direction, setDirection] = useState('sourceIntoTarget'); // sourceIntoTarget | targetIntoSource
+  const target = accounts.find(a => a.id === targetId);
+  const kept   = direction === 'sourceIntoTarget' ? target  : source;
+  const deleted = direction === 'sourceIntoTarget' ? source : target;
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal" style={{ maxWidth: 480 }} onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>Fusionner deux comptes</h3>
+          <button className="icon-btn" onClick={onClose}><X size={16}/></button>
+        </div>
+        <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <label style={{ fontSize: 12, color: 'var(--ink-2)', fontWeight: 600 }}>Fusionner avec</label>
+            <select
+              value={targetId}
+              onChange={e => setTargetId(e.target.value)}
+              style={{ fontSize: 13, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-elev)', color: 'var(--ink)' }}
+            >
+              {others.map(a => <option key={a.id} value={a.id}>{a.name || a.bank}</option>)}
+            </select>
+          </div>
+          {target && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <label style={{ fontSize: 12, color: 'var(--ink-2)', fontWeight: 600 }}>Lequel garder ?</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {[
+                  { val: 'targetIntoSource', keep: source,  del: target  },
+                  { val: 'sourceIntoTarget', keep: target,  del: source  },
+                ].map(opt => (
+                  <label key={opt.val} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px', borderRadius: 8, border: `1.5px solid ${direction === opt.val ? 'var(--accent)' : 'var(--border)'}`, background: direction === opt.val ? 'var(--accent-soft)' : 'var(--bg-elev)', cursor: 'pointer' }}>
+                    <input type="radio" name="direction" value={opt.val} checked={direction === opt.val} onChange={() => setDirection(opt.val)} style={{ marginTop: 2 }}/>
+                    <div style={{ fontSize: 13 }}>
+                      <div style={{ fontWeight: 600, color: 'var(--ink)' }}>Garder <span style={{ color: 'var(--positive)' }}>{opt.keep?.name || opt.keep?.bank}</span></div>
+                      <div style={{ color: 'var(--ink-3)', fontSize: 12, marginTop: 2 }}>Supprimer <span style={{ color: 'var(--negative)' }}>{opt.del?.name || opt.del?.bank}</span> — ses transactions migrent dans le compte gardé</div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+          <div style={{ padding: '10px 12px', borderRadius: 8, background: 'var(--bg-sunk)', fontSize: 12, color: 'var(--ink-2)' }}>
+            Les transactions en double (même identifiant bancaire) seront supprimées. L'identifiant GoCardless sera transféré sur le compte gardé pour que les prochains syncs fonctionnent correctement.
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button className="secondary-btn" onClick={onClose}>Annuler</button>
+          <button
+            className="primary-btn"
+            style={{ background: 'var(--negative)', borderColor: 'var(--negative)' }}
+            disabled={!targetId}
+            onClick={() => {
+              if (!confirm(`Fusionner "${deleted?.name || deleted?.bank}" dans "${kept?.name || kept?.bank}" ? Cette action est irréversible.`)) return;
+              const [tgt, src] = direction === 'sourceIntoTarget' ? [targetId, sourceId] : [sourceId, targetId];
+              onConfirm(tgt, src);
+            }}
+          >
+            Fusionner
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ComptesSection({ accounts, accountBalances, members, transactions, updateAccount, deleteAccount, mergeAccounts, fmt, onImport }) {
   const { t } = useTranslation();
-  const [mergingId, setMergingId] = useState(null);   // account being merged (source)
-  const [mergeTargetId, setMergeTargetId] = useState('');
+  const [mergingId, setMergingId] = useState(null);
   return (
     <section className="settings-panel">
       <header>
@@ -453,51 +521,14 @@ function ComptesSection({ accounts, accountBalances, members, transactions, upda
                   </div>
                 )}
                 {mergeAccounts && accounts.length > 1 && (
-                  mergingId === a.id ? (
-                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
-                      <select
-                        value={mergeTargetId}
-                        onChange={e => setMergeTargetId(e.target.value)}
-                        style={{ fontSize: 12, padding: '3px 6px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg-elev)', color: 'var(--ink)' }}
-                        autoFocus
-                      >
-                        <option value="">Fusionner dans…</option>
-                        {accounts.filter(x => x.id !== a.id).map(x => (
-                          <option key={x.id} value={x.id}>{x.name || x.bank}</option>
-                        ))}
-                      </select>
-                      <button
-                        className="primary-btn"
-                        style={{ padding: '3px 10px', fontSize: 12 }}
-                        disabled={!mergeTargetId}
-                        onClick={async () => {
-                          if (!confirm(`Fusionner "${a.name || a.bank}" dans le compte sélectionné ? Cette action est irréversible.`)) return;
-                          await mergeAccounts(mergeTargetId, a.id);
-                          setMergingId(null);
-                          setMergeTargetId('');
-                        }}
-                      >
-                        Confirmer
-                      </button>
-                      <button
-                        className="icon-btn-sm"
-                        onClick={() => { setMergingId(null); setMergeTargetId(''); }}
-                        title="Annuler"
-                        style={{ color: 'var(--ink-3)' }}
-                      >
-                        <X size={13}/>
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      className="icon-btn-sm"
-                      title="Fusionner avec un autre compte"
-                      onClick={() => { setMergingId(a.id); setMergeTargetId(''); }}
-                      style={{ color: 'var(--ink-3)', flexShrink: 0 }}
-                    >
-                      <ArrowLeftRight size={13}/>
-                    </button>
-                  )
+                  <button
+                    className="icon-btn-sm"
+                    title="Fusionner avec un autre compte"
+                    onClick={() => setMergingId(a.id)}
+                    style={{ color: 'var(--ink-3)', flexShrink: 0 }}
+                  >
+                    <ArrowLeftRight size={13}/>
+                  </button>
                 )}
                 <BusyButton className="icon-btn-sm" iconOnly spinnerSize={13} onClick={() => deleteAccount(a.id)} title="Supprimer ce compte"><Trash2 size={13}/></BusyButton>
               </div>
@@ -511,6 +542,18 @@ function ComptesSection({ accounts, accountBalances, members, transactions, upda
           <strong>Professionnel</strong> — exclu du patrimoine personnel.
         </p>
       </div>
+
+      {mergingId && (
+        <MergeModal
+          accounts={accounts}
+          sourceId={mergingId}
+          onClose={() => setMergingId(null)}
+          onConfirm={async (targetId, sourceId) => {
+            await mergeAccounts(targetId, sourceId);
+            setMergingId(null);
+          }}
+        />
+      )}
 
       <BankConnectionsSection />
     </section>
