@@ -1056,9 +1056,12 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
 
   const updateTransactionCategory = async (txId, categoryId) => {
     const tx = transactions.find(x => x.id === txId);
+    const prevCategoryId = tx?.categoryId;
+    // Optimistic update — UI reflects the change instantly, even if Railway is cold-starting
+    setTransactions(prev => prev.map(x => x.id === txId ? { ...x, categoryId, isManualCategory: true } : x));
+    let resp;
     try {
-      const resp = await api.transactions.update(txId, { category_slug: categoryId, is_manual_category: true });
-      setTransactions(prev => prev.map(x => x.id === txId ? { ...x, categoryId, isManualCategory: true } : x));
+      resp = await api.transactions.update(txId, { category_slug: categoryId, is_manual_category: true });
       // Si le backend a créé/mis à jour une règle apprise (Category Learning
       // a passé le seuil de 2 observations), on propose à l'user d'appliquer
       // la règle aux transactions historiques du même marchand.
@@ -1072,6 +1075,8 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
         });
       }
     } catch (err) {
+      // Roll back the optimistic update on failure
+      setTransactions(prev => prev.map(x => x.id === txId ? { ...x, categoryId: prevCategoryId, isManualCategory: tx?.isManualCategory } : x));
       showToast(t('toasts.genericError', { message: err.message }), 'error');
       return;
     }
