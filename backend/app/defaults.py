@@ -121,6 +121,9 @@ DEFAULT_CATEGORIES = [
     {"slug": "financial", "name": "Finance & épargne", "color": "#475569", "type": "expense", "icon": "🏦", "kind": "savings", "parent_slug": None},
     {"slug": "fees", "name": "Frais bancaires", "color": "#dc2626", "type": "expense", "icon": "💳", "kind": "needs", "parent_slug": "financial"},
     {"slug": "credit_principal", "name": "Remboursement crédit (capital)", "color": "#52525b", "type": "transfer", "icon": "💸", "kind": "savings", "parent_slug": "financial"},
+    {"slug": "loan_student", "name": "Crédit étudiant", "color": "#6366f1", "type": "expense", "icon": "🎓", "kind": "needs", "parent_slug": "financial"},
+    {"slug": "loan_consumer", "name": "Crédit conso", "color": "#dc2626", "type": "expense", "icon": "💳", "kind": "needs", "parent_slug": "financial"},
+    {"slug": "loan_auto", "name": "Crédit auto", "color": "#ea580c", "type": "expense", "icon": "🚗", "kind": "needs", "parent_slug": "financial"},
     {"slug": "savings", "name": "Épargne", "color": "#0891b2", "type": "transfer", "icon": "🏦", "kind": "savings", "parent_slug": "financial"},
     {"slug": "investment", "name": "Investissements", "color": "#0e7490", "type": "transfer", "icon": "📊", "kind": "savings", "parent_slug": "financial"},
 

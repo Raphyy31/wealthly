@@ -1088,6 +1088,9 @@ html, body {
   padding: 6px 12px 10px;
 }
 .rm-add-cat-form select { flex: 1; padding: 6px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); }
+.rm-add-cat-form-dual { flex-wrap: wrap; }
+.rm-add-cat-form-dual select { min-width: 0; flex: 1 1 140px; }
+.rm-add-cat-form-dual select:disabled { opacity: 0.5; cursor: not-allowed; }
 .rm-footer {
   padding: 16px 24px 18px;
   border-top: 1px solid var(--border);

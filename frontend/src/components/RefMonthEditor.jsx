@@ -10,7 +10,7 @@
 // ============================================================================
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, RotateCcw, Lock, Unlock, Plus, Trash2, TrendingUp, TrendingDown, PiggyBank } from 'lucide-react';
+import { X, RotateCcw, RefreshCw, Lock, Unlock, Plus, Trash2, TrendingUp, TrendingDown, PiggyBank } from 'lucide-react';
 import { monthKey } from '../utils.js';
 
 function _uuid() {
@@ -313,16 +313,27 @@ export function RefMonthEditor({
     }
   };
 
-  // Sorted list of categories per kind for the "add line" picker.
+  // "Tout réinitialiser" — back to the empty starter scaffold. Same state as
+  // first-time open. Save still required for the change to persist.
+  const handleReset = () => {
+    if (window.confirm('Tout réinitialiser ? Toutes les lignes seront remplacées par le modèle de départ (montants à 0).')) {
+      setDraft(_buildStarter());
+    }
+  };
+
+  // Sorted list of categories per kind for the "add line" picker. For saving
+  // we include transfer-typed categories (savings, investment, credit_principal…)
+  // since these are the natural buckets for the épargne section.
   const incomeCats = categories.filter(c => c.type === 'income');
   const expenseCats = categories.filter(c => c.type === 'expense' && c.id !== 'uncategorized');
+  const savingCats = categories.filter(c => (c.type === 'transfer' || c.kind === 'savings') && c.id !== 'uncategorized' && c.id !== 'transfer');
 
   // 2-column layout: Entrées + Épargne on the left, Dépenses on the right
   // (the biggest bucket gets its own column). Falls back to single column on
   // narrow screens via CSS.
   const renderKind = (kind) => {
     const groups = grouped.filter(g => g.kind === kind);
-    const cats = kind === 'income' ? incomeCats : expenseCats;
+    const cats = kind === 'income' ? incomeCats : (kind === 'saving' ? savingCats : expenseCats);
     const total = totals[kind] || 0;
     return (
       <section key={kind} className={`rm-section rm-section-${kind}`}>
@@ -412,6 +423,9 @@ export function RefMonthEditor({
           <button className="ds-btn ghost" onClick={resyncAll}>
             <RotateCcw size={14}/> Synchroniser depuis l'historique
           </button>
+          <button className="ds-btn ghost" onClick={handleReset}>
+            <RefreshCw size={14}/> Tout réinitialiser
+          </button>
           <span className="ds-micro rm-toolbar-meta">
             {refMonth?.updated_at ? `Maj ${refMonth.updated_at}` : 'Jamais enregistré'}
           </span>
@@ -446,22 +460,63 @@ export function RefMonthEditor({
   );
 }
 
+// Dual-select picker (Catégorie → Détail) — mirrors the dual-select pattern
+// from Settings → "Catégorisation automatique". The user can target a top-level
+// category alone, or drill into a sub-category. If a category has no children
+// the "Détail" select is disabled.
 function RefMonthAddCategory({ kind, cats, onAdd }) {
   const [open, setOpen] = useState(false);
-  const [value, setValue] = useState('');
+  const [topId, setTopId] = useState('');
+  const [subId, setSubId] = useState('');
+
+  const topCats = useMemo(
+    () => cats.filter(c => !c.parent && !c.parent_slug).sort((a, b) => (a.name || '').localeCompare(b.name || '')),
+    [cats]
+  );
+  const subCats = useMemo(
+    () => cats.filter(c => (c.parent === topId || c.parent_slug === topId)).sort((a, b) => (a.name || '').localeCompare(b.name || '')),
+    [cats, topId]
+  );
+  const targetId = subId || topId;
+
+  const reset = () => { setOpen(false); setTopId(''); setSubId(''); };
+
   if (!open) return (
     <button className="rm-add-cat" onClick={() => setOpen(true)}>
-      <Plus size={14}/> Ajouter une catégorie {kind === 'income' ? 'd\'entrée' : (kind === 'saving' ? 'd\'épargne' : 'de dépense')}
+      <Plus size={14}/> Ajouter une catégorie {kind === 'income' ? "d'entrée" : (kind === 'saving' ? "d'épargne" : 'de dépense')}
     </button>
   );
+
   return (
-    <div className="rm-add-cat-form">
-      <select value={value} onChange={e => setValue(e.target.value)}>
-        <option value="">— Choisir —</option>
-        {cats.map(c => <option key={c.id} value={c.id || c.slug}>{c.name}</option>)}
+    <div className="rm-add-cat-form rm-add-cat-form-dual">
+      <select value={topId} onChange={e => { setTopId(e.target.value); setSubId(''); }}>
+        <option value="">— Catégorie —</option>
+        {topCats.map(c => (
+          <option key={c.id || c.slug} value={c.id || c.slug}>
+            {c.icon ? `${c.icon} ` : ''}{c.name}
+          </option>
+        ))}
       </select>
-      <button className="ds-btn primary sm" onClick={() => { if (value) { onAdd(value); setOpen(false); setValue(''); } }}>Ajouter</button>
-      <button className="ds-btn ghost sm" onClick={() => { setOpen(false); setValue(''); }}>Annuler</button>
+      <select
+        value={subId}
+        onChange={e => setSubId(e.target.value)}
+        disabled={!topId || subCats.length === 0}
+      >
+        <option value="">{subCats.length === 0 ? 'Aucun détail' : 'Détail (optionnel)'}</option>
+        {subCats.map(c => (
+          <option key={c.id || c.slug} value={c.id || c.slug}>
+            {c.icon ? `${c.icon} ` : ''}{c.name}
+          </option>
+        ))}
+      </select>
+      <button
+        className="ds-btn primary sm"
+        disabled={!targetId}
+        onClick={() => { if (targetId) { onAdd(targetId); reset(); } }}
+      >
+        Ajouter
+      </button>
+      <button className="ds-btn ghost sm" onClick={reset}>Annuler</button>
     </div>
   );
 }
