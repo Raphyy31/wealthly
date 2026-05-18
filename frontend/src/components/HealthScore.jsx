@@ -13,9 +13,10 @@
 //   Diversification         20 pts   number of distinct asset classes
 //   Respect des budgets     15 pts   share of budgets currently on-target
 // ============================================================================
-import { useMemo } from 'react';
+import { useMemo, useEffect, useRef, useState } from 'react';
 import { Check, X } from 'lucide-react';
 import { ASSET_CLASS_MAP } from '../constants.js';
+import { gsap, EASES, DURATIONS } from '../utils/gsapSetup.js';
 
 // Polar → Cartesian where 0° = top, 90° = right (matches the visual mental
 // model of a clock face). SVG y-axis is flipped, so we shift by -90° to
@@ -173,8 +174,30 @@ export function HealthScore({ monthlyEvolution, liquidWealth, assetsValue, liabi
                     : score.total < 70 ? 'Correct'
                     : 'Solide';
 
-  // Foreground arc end angle, lerped between start and end of the gauge.
-  const fgEnd = GAUGE.startAngle + (Math.max(0, Math.min(100, score.total)) / 100) * (GAUGE.endAngle - GAUGE.startAngle);
+  // GSAP count-up sur le score numérique + arc draw progressif (C12).
+  // Le state `animatedScore` est piloté par un tween GSAP (ease + reduced-motion).
+  const [animatedScore, setAnimatedScore] = useState(0);
+  const tweenRef = useRef(null);
+  useEffect(() => {
+    const reduced = typeof window !== 'undefined'
+      && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (reduced) {
+      setAnimatedScore(score.total);
+      return;
+    }
+    if (tweenRef.current) tweenRef.current.kill();
+    const proxy = { val: animatedScore };
+    tweenRef.current = gsap.to(proxy, {
+      val: score.total,
+      duration: DURATIONS.hero,
+      ease: EASES.signature,
+      onUpdate: () => setAnimatedScore(proxy.val),
+    });
+    return () => { if (tweenRef.current) tweenRef.current.kill(); };
+  }, [score.total]);  // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Foreground arc end angle — pioche animatedScore (synchronise number+arc).
+  const fgEnd = GAUGE.startAngle + (Math.max(0, Math.min(100, animatedScore)) / 100) * (GAUGE.endAngle - GAUGE.startAngle);
 
   const bgArc = arcPath(GAUGE.cx, GAUGE.cy, GAUGE.r, GAUGE.startAngle, GAUGE.endAngle);
   const fgArc = arcPath(GAUGE.cx, GAUGE.cy, GAUGE.r, GAUGE.startAngle, fgEnd);
@@ -190,10 +213,10 @@ export function HealthScore({ monthlyEvolution, liquidWealth, assetsValue, liabi
         <div className="health-gauge-wrap">
           <svg viewBox={`0 0 ${GAUGE.size} ${GAUGE.size}`} className="health-gauge" aria-label={`Score santé ${score.total} sur 100`}>
             <path d={bgArc} fill="none" stroke="var(--border)" strokeWidth={GAUGE.stroke} strokeLinecap="round"/>
-            <path d={fgArc} fill="none" stroke={color} strokeWidth={GAUGE.stroke} strokeLinecap="round" style={{ transition: 'stroke 0.3s ease, d 0.4s ease' }}/>
+            <path d={fgArc} fill="none" stroke={color} strokeWidth={GAUGE.stroke} strokeLinecap="round" style={{ transition: 'stroke 0.3s ease' }}/>
           </svg>
           <div className="health-gauge-center">
-            <div className="health-score-value" style={{ color }}>{score.total}</div>
+            <div className="health-score-value" style={{ color }}>{Math.round(animatedScore)}</div>
             <div className="health-score-suffix">/ 100</div>
             <div className="health-score-rating" style={{ color }}>{ratingLabel}</div>
           </div>

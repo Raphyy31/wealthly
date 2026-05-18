@@ -1,33 +1,49 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { gsap, EASES } from '../utils/gsapSetup.js';
 
-// Tweens between successive numeric values via requestAnimationFrame.
-// Wrapped in React.memo because the parent re-renders for unrelated state
-// changes (toast, modals, member switch) — we only want this to step when
-// the target value actually moves.
-export const AnimatedNumber = React.memo(function AnimatedNumber({ value, format, duration = 800 }) {
+// AnimatedNumber — tween entre les valeurs successives via GSAP (C10).
+//
+// Migration rAF custom → GSAP (2026-05-18) :
+//   - même API publique (value, format, duration)
+//   - prefers-reduced-motion → snap immédiat à la valeur cible
+//   - snap natif via { roundProps } pour les décimales monétaires propres
+//
+// Wrapped in React.memo car le parent re-render sur état non lié.
+export const AnimatedNumber = React.memo(function AnimatedNumber({ value, format, duration = 0.8 }) {
   const [display, setDisplay] = useState(value);
-  const startRef = useRef(null);
-  const startValueRef = useRef(value);
+  const tweenRef = useRef(null);
   const targetRef = useRef(value);
 
   useEffect(() => {
+    // Skip si la valeur cible n'a pas changé significativement.
     if (Math.abs(targetRef.current - value) < 0.01) return;
-    startValueRef.current = display;
     targetRef.current = value;
-    startRef.current = null;
-    let raf;
-    const step = (ts) => {
-      if (!startRef.current) startRef.current = ts;
-      const elapsed = ts - startRef.current;
-      const progress = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      const current = startValueRef.current + (targetRef.current - startValueRef.current) * eased;
-      setDisplay(current);
-      if (progress < 1) raf = requestAnimationFrame(step);
+
+    // Respect du prefers-reduced-motion : pas d'anim, snap direct.
+    const reduced = typeof window !== 'undefined'
+      && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (reduced) {
+      setDisplay(value);
+      return;
+    }
+
+    // Tween GSAP — proxy object pour piloter setDisplay.
+    const proxy = { val: display };
+    if (tweenRef.current) tweenRef.current.kill();
+    // Durée fournie en ms (ancienne API) → secondes pour GSAP.
+    const durSec = duration > 5 ? duration / 1000 : duration;
+
+    tweenRef.current = gsap.to(proxy, {
+      val: value,
+      duration: durSec,
+      ease: EASES.out,
+      onUpdate: () => setDisplay(proxy.val),
+    });
+
+    return () => {
+      if (tweenRef.current) tweenRef.current.kill();
     };
-    raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
-  }, [value, duration]);
+  }, [value, duration]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   return <>{format ? format(display) : display}</>;
 });

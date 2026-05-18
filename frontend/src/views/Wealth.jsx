@@ -320,7 +320,9 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
 
         {filteredItems.length === 0 ? (
           <div className="wealth-empty-state">
-            <p>{t('wealth.emptyCategory', { category: t(currentSub.labelKey).toLowerCase() })}</p>
+            <p style={{ fontFamily: 'Newsreader,Georgia,serif', fontStyle: 'italic', color: 'var(--ink-2)', fontSize: 15, lineHeight: 1.5 }}>
+              {t('wealth.emptyCategory', { category: t(currentSub.labelKey).toLowerCase() })}
+            </p>
             <button className="primary-btn" onClick={() => (onOpenAddWizard ? onOpenAddWizard() : setShowAddPicker(true))}>
               <Plus size={14}/> Ajouter
             </button>
