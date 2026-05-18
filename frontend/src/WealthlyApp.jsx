@@ -1,6 +1,6 @@
 ﻿import React, { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react';
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, RadialBarChart, RadialBar, ComposedChart, Sankey, Layer, Rectangle } from 'recharts';
-import { Upload, Plus, TrendingUp, TrendingDown, Wallet, Home, Coins, CreditCard, Users, Settings, Download, Trash2, Edit3, Check, X, ChevronRight, ChevronLeft, ChevronDown, AlertCircle, AlertTriangle, Repeat, Calendar, ArrowUpDown, Eye, EyeOff, Sparkles, PiggyBank, Bitcoin, Banknote, Landmark, BarChart3, Target, Heart, Sun, Moon, Zap, Activity, ArrowUp, ArrowDown, Minus, PartyPopper, Lightbulb, Bell, ChevronUp, Play, Lock, Unlock, LogOut, Cloud, RefreshCw, FileText, Calculator, Link2, Unlink, Menu } from 'lucide-react';
+import { Upload, Plus, TrendingUp, TrendingDown, Wallet, Home, Coins, CreditCard, Users, Settings, Download, Trash2, Edit3, Check, X, ChevronRight, ChevronLeft, ChevronDown, AlertCircle, AlertTriangle, Repeat, Calendar, ArrowUpDown, Eye, EyeOff, Sparkles, PiggyBank, Bitcoin, Banknote, Landmark, BarChart3, Target, Heart, Sun, Moon, Zap, Activity, ArrowUp, ArrowDown, Minus, PartyPopper, Lightbulb, Bell, ChevronUp, Play, Lock, Unlock, LogOut, Cloud, RefreshCw, FileText, Calculator, Link2, Unlink, Menu, Search } from 'lucide-react';
 import * as api from './api.js';
 import { useTranslation } from 'react-i18next';
 import { LangButton } from './components/LangButton.jsx';
@@ -19,6 +19,7 @@ import {
   categorize, detectRecurring, extractMerchantFromLabel,
   accountIncludeInNetWorth, accountCountsAsIncome, accountCountsAsExpense,
   detectInternalTransfers, convertCurrency, ACCOUNT_ROLES, bankColor,
+  fmtAmount,
 } from './utils.js';
 import { useRates } from './hooks/useRates.js';
 import { useBaseCurrency } from './hooks/useBaseCurrency.js';
@@ -121,6 +122,11 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   // pour rendre la bannière + appeler /apply-retroactively.
   const [learningOffer, setLearningOffer] = useState(null);
   const [sidebarMenuOpen, setSidebarMenuOpen] = useState(false);
+  // C4 — Sidebar premium : workspace switcher (membres + Famille) ouvert/fermé,
+  // recherche de nav rapide (palette Cmd+K à câbler en P5).
+  const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
+  const [navSearchOpen, setNavSearchOpen] = useState(false);
+  const [navSearchQuery, setNavSearchQuery] = useState('');
 
   // Multi-currency: user's display currency + live FX rates (Frankfurter, 1h cache).
   // EUR base is implicit (rates table is { USD: 1.08, GBP: 0.85, CHF: 0.97 }).
@@ -1873,12 +1879,130 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       <div className="app-shell">
         {/* Desktop sidebar (â‰¥1024px) — Wealthly v3 handoff spec */}
         <aside className="ws-sidebar">
-          <div className="ws-brand" onClick={() => setView('dashboard')} style={{ cursor: 'pointer' }}>
-            <Logo size={24} wordmark wordmarkSize={15} />
+
+          {/* Workspace block (clickable → member switcher dropdown) */}
+          <div className="ws-workspace-wrap">
+            <button
+              type="button"
+              className={`ws-workspace ${workspaceMenuOpen ? 'open' : ''}`}
+              onClick={() => setWorkspaceMenuOpen(o => !o)}
+              aria-expanded={workspaceMenuOpen}
+              aria-haspopup="menu"
+              title={t('nav.switch_member') || 'Changer de membre'}
+            >
+              <div className="ws-workspace-mark"><Logo size={20} /></div>
+              <div className="ws-workspace-info">
+                <div className="ws-workspace-name">
+                  {activeMemberId === 'all'
+                    ? (t('nav.family_view') || 'Famille')
+                    : (members.find(m => m.id === activeMemberId)?.name || 'Wealthly')}
+                </div>
+                <div className="ws-workspace-sub">
+                  {activeMemberId === 'all'
+                    ? `${members.length || 1} ${(members.length || 1) > 1 ? (t('nav.members_plural') || 'membres') : (t('nav.members_singular') || 'membre')}`
+                    : (members.find(m => m.id === activeMemberId)?.role === 'child'
+                        ? (t('nav.role_child') || 'Enfant')
+                        : (t('nav.role_adult') || 'Adulte'))}
+                </div>
+              </div>
+              <ChevronDown size={14} className={`ws-workspace-chev ${workspaceMenuOpen ? 'on' : ''}`}/>
+            </button>
+
+            {workspaceMenuOpen && (
+              <>
+                <div className="ws-popover-overlay" onClick={() => setWorkspaceMenuOpen(false)}/>
+                <div className="ws-workspace-pop" role="menu">
+                  <div className="ws-popover-eyebrow">{t('nav.household_members') || 'Membres du foyer'}</div>
+
+                  <button
+                    type="button"
+                    className={`ws-member-row ${activeMemberId === 'all' ? 'on' : ''}`}
+                    onClick={() => { setActiveMemberId('all'); setWorkspaceMenuOpen(false); }}
+                    role="menuitemradio"
+                    aria-checked={activeMemberId === 'all'}
+                  >
+                    <span className="ws-member-avatar ws-member-avatar--family">
+                      <Users size={12}/>
+                    </span>
+                    <div className="ws-member-info">
+                      <div className="ws-member-name">{t('nav.family_view') || 'Vue famille'}</div>
+                      <div className="ws-member-meta">{t('nav.all_members') || 'Tous les membres'}</div>
+                    </div>
+                    {activeMemberId === 'all' && <Check size={14} className="ws-member-check"/>}
+                  </button>
+
+                  {members.length > 0 && <div className="ws-popover-divider"/>}
+
+                  {members.map(m => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      className={`ws-member-row ${activeMemberId === m.id ? 'on' : ''}`}
+                      onClick={() => { setActiveMemberId(m.id); setWorkspaceMenuOpen(false); }}
+                      role="menuitemradio"
+                      aria-checked={activeMemberId === m.id}
+                    >
+                      <span className="ws-member-avatar" style={{ background: m.color }}>
+                        {m.name.charAt(0).toUpperCase()}
+                      </span>
+                      <div className="ws-member-info">
+                        <div className="ws-member-name">{m.name}</div>
+                        <div className="ws-member-meta">
+                          {m.role === 'child' ? (t('nav.role_child') || 'Enfant') : (t('nav.role_adult') || 'Adulte')}
+                        </div>
+                      </div>
+                      {activeMemberId === m.id && <Check size={14} className="ws-member-check"/>}
+                    </button>
+                  ))}
+
+                  <div className="ws-popover-divider"/>
+
+                  <button
+                    type="button"
+                    className="ws-popover-cta"
+                    onClick={() => { setView('settings'); setWorkspaceMenuOpen(false); }}
+                  >
+                    <Plus size={13}/>
+                    <span>{t('nav.manage_members') || 'Gérer les membres'}</span>
+                  </button>
+                </div>
+              </>
+            )}
           </div>
 
-          <nav className="ws-nav">
-            <div className="ws-nav-group">{t('nav.group_pilotage')}</div>
+          {/* Quick search — palette Cmd+K (filtrage léger en P5) */}
+          <div className={`ws-search ${navSearchQuery ? 'has-query' : ''}`}>
+            <Search size={13} className="ws-search-icon"/>
+            <input
+              type="text"
+              className="ws-search-input"
+              placeholder={t('nav.search_placeholder') || 'Rechercher…'}
+              value={navSearchQuery}
+              onChange={e => setNavSearchQuery(e.target.value)}
+              onFocus={() => setNavSearchOpen(true)}
+              onBlur={() => setTimeout(() => setNavSearchOpen(false), 150)}
+              aria-label={t('nav.search_placeholder') || 'Rechercher'}
+            />
+            {navSearchQuery ? (
+              <button
+                type="button"
+                className="ws-search-clear"
+                onClick={() => setNavSearchQuery('')}
+                title="Effacer"
+              >
+                <X size={12}/>
+              </button>
+            ) : (
+              <kbd className="ws-kbd">⌘K</kbd>
+            )}
+          </div>
+
+          <nav className="ws-nav" aria-label="Navigation principale">
+
+            <div className="ws-nav-group">
+              <span className="ws-nav-group-num">§ 01</span>
+              <span className="ws-nav-group-label">{t('nav.group_pilotage')}</span>
+            </div>
             <button onClick={() => setView('dashboard')} className={view === 'dashboard' ? 'on' : ''}>
               <Activity size={16}/> <span>{t('nav.dashboard')}</span>
             </button>
@@ -1892,9 +2016,17 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
               <TrendingUp size={16}/> <span>{t('nav.analysis')}</span>
             </button>
 
-            <div className="ws-nav-group">{t('nav.group_gestion')}</div>
+            <div className="ws-nav-group">
+              <span className="ws-nav-group-num">§ 02</span>
+              <span className="ws-nav-group-label">{t('nav.group_gestion')}</span>
+            </div>
             <button onClick={() => setView('monthly')} className={view === 'monthly' ? 'on' : ''}>
               <Calendar size={16}/> <span>{t('nav.monthly')}</span>
+              {budgetsOverCount > 0 && (
+                <span className="ws-nav-dot" title={`${budgetsOverCount} budget(s) dépassé(s)`}>
+                  {budgetsOverCount}
+                </span>
+              )}
             </button>
             <button onClick={() => setView('tax')} className={view === 'tax' ? 'on' : ''}>
               <Calculator size={16}/> <span>{t('nav.tax')}</span>
@@ -1903,16 +2035,44 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
               <TrendingUp size={16}/> <span>{t('nav.dca')}</span>
             </button>
 
-            <div className="ws-nav-group">{t('nav.group_accounts')}</div>
-            {(accounts || []).map(a => (
-              <button key={a.id} onClick={() => setDrawerAccount(a)} className="ws-account-item">
-                <span className="ws-bank-dot" style={{ background: bankColor(a.bank) }}>
-                  {(a.name || a.bank || '?')[0].toUpperCase()}
-                </span>
-                <span>{a.name || a.bank}</span>
+            <div className="ws-nav-group ws-nav-group--with-cta">
+              <span className="ws-nav-group-num">§ 03</span>
+              <span className="ws-nav-group-label">{t('nav.group_accounts')}</span>
+              <button
+                type="button"
+                className="ws-nav-group-cta"
+                onClick={() => { setView('import'); setImportStep('upload'); }}
+                title={t('nav.add_account') || 'Ajouter un compte'}
+              >
+                <Plus size={11}/>
               </button>
-            ))}
-            <div className="ws-nav-group">{t('nav.group_config')}</div>
+            </div>
+            {(accounts || []).map(a => {
+              const balance = accountBalances?.[a.id];
+              return (
+                <button
+                  key={a.id}
+                  onClick={() => setDrawerAccount(a)}
+                  className="ws-account-item"
+                  title={a.name || a.bank}
+                >
+                  <span className="ws-bank-dot" style={{ background: bankColor(a.bank) }}>
+                    {(a.name || a.bank || '?')[0].toUpperCase()}
+                  </span>
+                  <span className="ws-account-name">{a.name || a.bank}</span>
+                  {Number.isFinite(balance) && !hideAmounts && (
+                    <span className="ws-account-balance">
+                      {fmtAmount(balance, 'card', { currency: a.currency || 'EUR' })}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+
+            <div className="ws-nav-group">
+              <span className="ws-nav-group-num">§ 04</span>
+              <span className="ws-nav-group-label">{t('nav.group_config')}</span>
+            </div>
             <button onClick={() => setView('settings')} className={view === 'settings' ? 'on' : ''}>
               <Settings size={16}/> <span>{t('nav.settings')}</span>
             </button>
@@ -1934,26 +2094,48 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
               </button>
             </div>
             {currentUser && (
-              <button className="ws-user" onClick={() => setSidebarMenuOpen(o => !o)} title={currentUser.email}>
+              <button
+                className={`ws-user ${sidebarMenuOpen ? 'open' : ''}`}
+                onClick={() => setSidebarMenuOpen(o => !o)}
+                title={currentUser.email}
+                aria-expanded={sidebarMenuOpen}
+                aria-haspopup="menu"
+              >
                 <div className="ws-user-avatar">
                   {(currentUser.full_name || currentUser.email || '?')[0].toUpperCase()}
                 </div>
                 <div className="ws-user-info">
-                  <div className="ws-user-name">{currentUser.full_name || currentUser.email.split('@')[0]}</div>
+                  <div className="ws-user-name">
+                    {currentUser.full_name || currentUser.email.split('@')[0]}
+                  </div>
                   <div className="ws-user-meta">
-                    {currentUser.plan || 'Gratuit'} · <span style={{ color: 'var(--positive)' }}>DSP2 ✓</span>
+                    <span className="ws-plan-badge">{currentUser.plan || 'Gratuit'}</span>
+                    <span className="ws-dsp2-badge" title="Open Banking DSP2 actif">DSP2</span>
                   </div>
                 </div>
-                <ChevronUp size={13} style={{ color: 'var(--ink-3)' }}/>
+                <ChevronUp size={13} className={`ws-user-chev ${sidebarMenuOpen ? 'open' : ''}`}/>
               </button>
             )}
             {sidebarMenuOpen && (
-              <div className="ws-popover">
-                <button onClick={() => { logout(); setSidebarMenuOpen(false); }} className="ws-popover-danger">
-                  <LogOut size={14}/>
-                  <span>Déconnexion</span>
-                </button>
-              </div>
+              <>
+                <div className="ws-popover-overlay" onClick={() => setSidebarMenuOpen(false)}/>
+                <div className="ws-popover" role="menu">
+                  <div className="ws-popover-eyebrow">{currentUser?.email}</div>
+                  <button onClick={() => { setView('settings'); setSidebarMenuOpen(false); }} role="menuitem">
+                    <Settings size={14}/>
+                    <span>{t('nav.settings')}</span>
+                  </button>
+                  <div className="ws-popover-divider"/>
+                  <button
+                    onClick={() => { logout(); setSidebarMenuOpen(false); }}
+                    className="ws-popover-danger"
+                    role="menuitem"
+                  >
+                    <LogOut size={14}/>
+                    <span>{t('nav.logout') || 'Déconnexion'}</span>
+                  </button>
+                </div>
+              </>
             )}
           </div>
         </aside>
