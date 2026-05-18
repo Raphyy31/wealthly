@@ -613,11 +613,215 @@ html, body {
   50%      { opacity: 0.35; }
 }
 
-/* Focus ring (utility) */
+/* Focus ring (utility, ancien) */
 .ds-focus:focus-visible {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   4.bis Composants C2 — variants & patterns canoniques
+
+   Tous additifs. Aucun composant existant (.ds-card, .ds-input,
+   .modal-backdrop, .modal) n'est modifié — les variants s'appliquent
+   en ajoutant un modifier --xxx. Les patterns .ds-table, .ds-modal*,
+   .ds-drawer sont nouveaux et n'écrasent rien.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* ── Card variants ──────────────────────────────────────────────────── */
+
+/* --kpi : dense, num en hero, eyebrow optionnel.
+   Markup : <div class="ds-card ds-card--kpi">
+              <div class="ds-card-eyebrow">§ 01 Patrimoine</div>
+              <div class="ds-card-value">124 532 €</div>
+              <div class="ds-card-delta">+5 432 € · 30 j</div>
+            </div>                                                     */
+.ds-card.ds-card--kpi {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ds-card--kpi .ds-card-eyebrow {
+  font: 500 var(--text-2xs)/1 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.ds-card--kpi .ds-card-value {
+  font: 600 var(--text-xl)/1.1 var(--font-sans);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.ds-card--kpi .ds-card-delta {
+  font-size: var(--text-xs);
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --insight : aéré, italique Newsreader autorisé dans le body, pour les
+   sections éditoriales ("Insights" Dashboard, empty states narratifs).  */
+.ds-card.ds-card--insight {
+  padding: 22px 26px;
+}
+.ds-card--insight .ds-card-lead {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: var(--text-md);
+  color: var(--ink-2);
+  line-height: var(--leading-loose);
+}
+
+/* --drilldown : liste interne, dotted divider, header sticky léger.    */
+.ds-card.ds-card--drilldown { padding: 0; overflow: hidden; }
+.ds-card--drilldown > .ds-card-head {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--bg-sunk);
+}
+.ds-card--drilldown > .ds-card-body > * + * { border-top: 1px dotted var(--border); }
+.ds-card--drilldown > .ds-card-body > * { padding: 12px 18px; }
+
+/* ── Table — pattern "relevé bancaire" canonique ────────────────────── */
+.ds-table {
+  width: 100%;
+  border-collapse: collapse;
+  font: 400 var(--text-sm)/1.45 var(--font-sans);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.ds-table thead th {
+  font: 500 var(--text-2xs)/1 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-strong);
+  background: color-mix(in oklab, var(--bg-elev) 92%, transparent);
+  text-align: left;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.ds-table tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px dotted var(--border);
+  vertical-align: middle;
+}
+.ds-table tbody tr:last-child td { border-bottom: 0; }
+.ds-table tbody tr:hover { background: var(--bg-hover); }
+.ds-table tbody tr.is-selected {
+  background: var(--accent-soft);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.ds-table td[data-num],
+.ds-table td.num,
+.ds-table th.num {
+  text-align: right;
+  padding-right: 16px;
+  font-variant-numeric: tabular-nums;
+}
+[data-density="data"] .ds-table tbody td { padding: 6px 12px; }
+[data-density="data"] .ds-table thead th { padding: 8px 12px; }
+
+/* ── Modal canonique (scale-only, no translate) ─────────────────────── */
+.ds-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: dsModalBackdropIn 180ms ease-out;
+}
+.ds-modal {
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  max-width: 540px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-pop);
+  animation: dsModalIn 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  transform-origin: center center;
+}
+.ds-modal--wide   { max-width: 720px; }
+.ds-modal--detail { max-width: 1100px; }
+.ds-modal-head { padding: 18px 22px 14px; border-bottom: 1px solid var(--border); }
+.ds-modal-title { font: 600 var(--text-md)/1.3 var(--font-sans); margin: 0; }
+.ds-modal-body { padding: 18px 22px; }
+.ds-modal-foot { padding: 14px 22px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
+@keyframes dsModalBackdropIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dsModalIn { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
+
+/* ── Drawer latéral (clip-path reveal, no translate) ─────────────────── */
+.ds-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 998;
+  animation: dsModalBackdropIn 180ms ease-out;
+}
+.ds-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  width: 480px;
+  max-width: 96vw;
+  background: var(--bg-elev);
+  border-left: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-pop);
+  z-index: 999;
+  overflow-y: auto;
+  animation: dsDrawerIn 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes dsDrawerIn { from { clip-path: inset(0 0 0 100%); } to { clip-path: inset(0 0 0 0); } }
+
+/* ── Input states (extension non-breaking de .ds-input) ─────────────── */
+.ds-input.is-error,
+.ds-input--error { border-color: var(--negative); }
+.ds-input.is-error:focus-visible,
+.ds-input--error:focus-visible { box-shadow: 0 0 0 3px var(--negative-soft); border-color: var(--negative); }
+.ds-input:disabled,
+.ds-input.is-disabled {
+  background: var(--bg-sunk);
+  color: var(--ink-3);
+  cursor: not-allowed;
+}
+.ds-input-label { display: block; font: 500 var(--text-xs)/1 var(--font-sans); color: var(--ink-2); margin-bottom: 6px; }
+.ds-input-help { font: 400 var(--text-xs)/1.4 var(--font-sans); color: var(--ink-3); margin-top: 6px; }
+.ds-input-help.is-error { color: var(--negative); }
+
+/* ── Press feedback utility (filter brightness, no translate) ───────── */
+.ds-press { transition: filter 80ms ease-out; }
+.ds-press:active { filter: var(--press-feedback); }
+
+/* ── Focus ring canonique (utilise --focus-ring posé en C1) ─────────── */
+.ds-focus-ring:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* ── Reduced motion : neutralise toutes les animations C2 ───────────── */
+@media (prefers-reduced-motion: reduce) {
+  .ds-modal-backdrop,
+  .ds-modal,
+  .ds-drawer-backdrop,
+  .ds-drawer { animation: none !important; }
+  .ds-press:active { filter: none; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
