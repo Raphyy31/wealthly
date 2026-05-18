@@ -207,6 +207,10 @@ def _run_lightweight_migrations() -> None:
             "END $$;",
             # Toggle Category Learning auto par foyer (2026-05-16)
             "ALTER TABLE households ADD COLUMN IF NOT EXISTS auto_learning_enabled BOOLEAN DEFAULT TRUE NOT NULL",
+            # Suppression mortgage_interest (2026-05-18) — remplacé par loan_mortgage.
+            # Reclasse les transactions existantes + les règles de catégorisation.
+            "UPDATE transactions SET category_slug = 'loan_mortgage' WHERE category_slug = 'mortgage_interest'",
+            "UPDATE categorisation_rules SET category_slug = 'loan_mortgage' WHERE category_slug = 'mortgage_interest'",
         ]
     with engine.begin() as conn:
         for stmt in statements:

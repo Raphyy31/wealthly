@@ -127,7 +127,6 @@ DEFAULT_CATEGORIES = [
 
     # ============ CRÉDIT ============
     {"slug": "loans",            "name": "Crédit",                "color": "#4f46e5", "type": "expense", "icon": "🏦", "kind": "needs", "parent_slug": None},
-    {"slug": "mortgage_interest","name": "Crédit immobilier",     "color": "#4f46e5", "type": "expense", "icon": "🏠", "kind": "needs", "parent_slug": "loans"},
     {"slug": "loan_auto",        "name": "Crédit auto",           "color": "#4845d4", "type": "expense", "icon": "🚗", "kind": "needs", "parent_slug": "loans"},
     {"slug": "loan_student",     "name": "Crédit étudiant",       "color": "#4338ca", "type": "expense", "icon": "🎓", "kind": "needs", "parent_slug": "loans"},
     {"slug": "loan_consumer",    "name": "Crédit conso",          "color": "#3e31be", "type": "expense", "icon": "💳", "kind": "needs", "parent_slug": "loans"},

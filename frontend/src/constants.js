@@ -156,7 +156,6 @@ export const DEFAULT_CATEGORIES = [
 
   // CRÉDIT
   { id: 'loans',            name: 'Crédit',                color: '#4f46e5', type: 'expense', icon: '🏦', kind: 'needs', parent: null },
-  { id: 'mortgage_interest',name: 'Crédit immobilier',     color: '#4f46e5', type: 'expense', icon: '🏠', kind: 'needs', parent: 'loans' },
   { id: 'loan_auto',        name: 'Crédit auto',           color: '#4845d4', type: 'expense', icon: '🚗', kind: 'needs', parent: 'loans' },
   { id: 'loan_student',     name: 'Crédit étudiant',       color: '#4338ca', type: 'expense', icon: '🎓', kind: 'needs', parent: 'loans' },
   { id: 'loan_consumer',    name: 'Crédit conso',          color: '#3e31be', type: 'expense', icon: '💳', kind: 'needs', parent: 'loans' },
