@@ -91,14 +91,27 @@
   --warning-soft:  #F2E7CE;
   --neutral-soft:  #ECE9DF;
 
-  /* Dataviz — 7 séries stables */
-  --d1: #2540D9;
-  --d2: #1F8E6E;
-  --d3: #C2733B;
-  --d4: #7B57C6;
-  --d5: #B85D7A;
-  --d6: #4D4D4D;
-  --d7: #E0B23E;
+  /* Dataviz — 9 séries stables (ordre figé pour cohérence inter-vues) */
+  --d1: #2540D9; /* cobalt — principale */
+  --d2: #1F8E6E; /* sage */
+  --d3: #C2733B; /* terracotta */
+  --d4: #7B57C6; /* mauve */
+  --d5: #B85D7A; /* rose */
+  --d6: #4D4D4D; /* graphite */
+  --d7: #E0B23E; /* ocre */
+  --d8: #2A7FA4; /* teal-bleu (extension C1) */
+  --d9: #8A8051; /* olive (extension C1) */
+
+  /* Dataviz softs — fonds discrets pour hover/active/badge (C1) */
+  --d1-soft: #BFC8FF;
+  --d2-soft: #B9DCC8;
+  --d3-soft: #ECCFB6;
+  --d4-soft: #D5C7EF;
+  --d5-soft: #ECC7D2;
+  --d6-soft: #C9C9C9;
+  --d7-soft: #F1DE9C;
+  --d8-soft: #BBDAE4;
+  --d9-soft: #DCD6BC;
 
   /* Radii */
   --radius-xs: 4px;
@@ -128,6 +141,31 @@
   /* Transitions */
   --t-fast: 120ms cubic-bezier(.2,.6,.2,1);
   --t-med:  180ms cubic-bezier(.2,.6,.2,1);
+
+  /* ── Typography scale (C1) — ratio modulaire, à consommer via les classes
+       .ds-text-* ou directement font-size: var(--text-md). Ne change pas par
+       thème (taille = invariant accessibilité). ───────────────────────── */
+  --text-2xs:   11px; /* eyebrow mono "§ 01", captions */
+  --text-xs:    12px; /* meta secondaire, labels formulaire */
+  --text-sm:    13px; /* body dense (tables, listes) */
+  --text-base:  14px; /* body défaut */
+  --text-md:    16px; /* h3, card titles */
+  --text-lg:    20px; /* h2 sections */
+  --text-xl:    28px; /* h1 sub-views */
+  --text-hero:  44px; /* hero number Dashboard */
+
+  --leading-tight:  1.2;
+  --leading-normal: 1.45;
+  --leading-loose:  1.6;
+
+  /* ── Focus ring canonique (C1) — à appliquer via box-shadow sur
+       :focus-visible des éléments interactifs. Contraste AA garanti
+       en light et dark (s'appuie sur --accent + --accent-soft). ──────── */
+  --focus-ring: 0 0 0 2px var(--accent-soft), 0 0 0 4px var(--accent);
+
+  /* ── Press feedback (C1) — alternative à translateY/scale, change la
+       luminosité au :active. Compatible direction "no-translate". ────── */
+  --press-feedback: brightness(0.97);
 
   /* Fonts */
   --font-sans:  'Geist', system-ui, -apple-system, sans-serif;
@@ -228,10 +266,26 @@
   --d5: #DA8AA1;
   --d6: #9C988B;
   --d7: #E5C75E;
+  --d8: #6FB0CC; /* teal-bleu dark (C1) */
+  --d9: #B5AB78; /* olive dark (C1) */
+
+  /* Dataviz softs dark (fonds discrets, basés sur l'inversion brand) */
+  --d1-soft: #1B214A;
+  --d2-soft: #15301F;
+  --d3-soft: #3A2615;
+  --d4-soft: #2E2244;
+  --d5-soft: #3A2127;
+  --d6-soft: #232220;
+  --d7-soft: #2F2716;
+  --d8-soft: #1A2A33;
+  --d9-soft: #25231A;
 
   --shadow-sm:  0 1px 0 rgba(0,0,0,.3), 0 1px 2px rgba(0,0,0,.3);
   --shadow-md:  0 1px 0 rgba(0,0,0,.3), 0 4px 12px -2px rgba(0,0,0,.4);
   --shadow-pop: 0 1px 0 rgba(0,0,0,.4), 0 12px 32px -8px rgba(0,0,0,.6);
+
+  /* Press feedback dark (C1) — légèrement éclairer au lieu d'assombrir */
+  --press-feedback: brightness(1.06);
 
   color-scheme: dark;
 }
@@ -277,6 +331,38 @@ html, body {
   white-space: nowrap;
 }
 
+
+/* ─────────────────────────────────────────────────────────────────────────
+   3.bis Density modes (C1) — appliquer via data-density sur un conteneur.
+   "data"      → tables, listes denses, KPI grids (rows 36, gap 8)
+   "narrative" → cards insight, empty states, hero (gap 16, pad 24)
+   (par défaut, sans attribut, chaque composant garde ses defaults)
+   ───────────────────────────────────────────────────────────────────────── */
+[data-density="data"] {
+  --row-h:     36px;
+  --row-gap:   8px;
+  --row-pad-x: 12px;
+  --row-pad-y: 6px;
+}
+[data-density="narrative"] {
+  --row-h:     56px;
+  --row-gap:   16px;
+  --row-pad-x: 24px;
+  --row-pad-y: 16px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   3.ter Helper classes pour la scale typo (C1) — usage optionnel, les
+   composants existants gardent leurs font-size en dur.
+   ───────────────────────────────────────────────────────────────────────── */
+.ds-text-2xs  { font-size: var(--text-2xs);  line-height: var(--leading-tight); }
+.ds-text-xs   { font-size: var(--text-xs);   line-height: var(--leading-normal); }
+.ds-text-sm   { font-size: var(--text-sm);   line-height: var(--leading-normal); }
+.ds-text-base { font-size: var(--text-base); line-height: var(--leading-normal); }
+.ds-text-md   { font-size: var(--text-md);   line-height: var(--leading-normal); }
+.ds-text-lg   { font-size: var(--text-lg);   line-height: var(--leading-tight); }
+.ds-text-xl   { font-size: var(--text-xl);   line-height: var(--leading-tight); }
+.ds-text-hero { font-size: var(--text-hero); line-height: var(--leading-tight); }
 
 /* ─────────────────────────────────────────────────────────────────────────
    4. Composants — Système nouveau (classes ds-*)
