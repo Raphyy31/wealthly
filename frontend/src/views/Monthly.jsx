@@ -508,27 +508,50 @@ export function Monthly({
               <span className="num">Écart</span>
               <span>Progression</span>
             </div>
-            {tableSections.map(section => (
+            {tableSections.map(section => {
+              const secReal = section.items.reduce((s, i) => s + i.real_total, 0);
+              const secRef  = section.items.reduce((s, i) => s + i.ref_total,  0);
+              return (
               <React.Fragment key={section.kind}>
-                <div className={`mon-row mon-row-section mon-row-section-${section.kind}`}>
-                  <span className="mon-section-icon">
-                    {section.kind === 'income'
-                      ? <TrendingUp size={12}/>
-                      : section.kind === 'saving'
-                      ? <PiggyBank size={12}/>
-                      : <TrendingDown size={12}/>}
+                <div className={`mon-row-section mon-row-section-${section.kind}`}>
+                  <span className="mon-section-left">
+                    <span className="mon-section-icon">
+                      {section.kind === 'income'
+                        ? <TrendingUp size={12}/>
+                        : section.kind === 'saving'
+                        ? <PiggyBank size={12}/>
+                        : <TrendingDown size={12}/>}
+                    </span>
+                    {section.title}
                   </span>
-                  {section.title}
+                  {(secReal > 0 || secRef > 0) && (
+                    <span className="mon-section-totals">
+                      {fmt(secReal)}{secRef > 0 && <><span className="sep">/</span>{fmt(secRef)} prévu</>}
+                    </span>
+                  )}
                 </div>
                 {section.items.length === 0 && (
-                  <div className="mon-row mon-row-empty ds-micro">Aucune ligne dans cette section</div>
+                  <div className="mon-row mon-row-empty">Aucune ligne dans cette section</div>
                 )}
                 {section.items.map(item => {
                   const cat = catFor(item.category_id);
                   const ecart = item.real_total - item.ref_total;
-                  const pct = item.ref_total > 0 ? Math.round((item.real_total / item.ref_total) * 100) : (item.real_total > 0 ? 999 : 0);
+                  const pct = item.ref_total > 0
+                    ? Math.round((item.real_total / item.ref_total) * 100)
+                    : (item.real_total > 0 ? 999 : 0);
                   const expanded = expandedRows.has(item.key);
                   const hasSubs = item.lines.length > 1;
+
+                  // Écart semantic color: income=more is good, expense=more is bad
+                  const ecartClass = ecart === 0 ? ''
+                    : item.kind === 'income'
+                      ? (ecart > 0 ? 'ecart-good' : 'ecart-bad')
+                      : (ecart > 0 ? 'ecart-bad' : 'ecart-good');
+
+                  // Progress bar state
+                  const barState = pct > 100 ? 'over' : pct > 85 ? 'warn' : '';
+                  const pctClass = pct > 100 ? 'pct-over' : pct > 85 ? 'pct-warn' : '';
+
                   return (
                     <React.Fragment key={item.key}>
                       <div
@@ -541,39 +564,42 @@ export function Monthly({
                             : <span style={{ width: 12, display: 'inline-block' }}/>}
                           <span className="mon-cat-dot" style={{ background: cat?.color || 'var(--border-strong)' }}/>
                           <span className="mon-cat-emoji" aria-hidden="true">{cat?.icon || '•'}</span>
-                          {item.cat_name}
-                          {item.is_unexpected && <span className="mon-pill warn">? Inattendu</span>}
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.cat_name}</span>
+                          {item.is_unexpected && <span className="mon-pill warn">Nouveau</span>}
                         </span>
                         <span className="num">{item.ref_total > 0 ? fmt(item.ref_total) : '—'}</span>
                         <span className="num">{item.real_total > 0 ? fmt(item.real_total) : '—'}</span>
-                        <span className="num">{ecart === 0 ? '—' : (ecart > 0 ? '+' : '') + fmt(ecart)}</span>
+                        <span className={`num ${ecartClass}`}>
+                          {ecart === 0 ? '—' : (ecart > 0 ? '+' : '') + fmt(Math.abs(ecart))}
+                        </span>
                         <span className="mon-bar-wrap">
-                          {item.ref_total > 0 && (
-                            <span className={`mon-bar ${pct > 100 ? 'over' : ''}`}>
-                              <span className="mon-bar-fill" style={{ width: Math.min(pct, 100) + '%' }}/>
-                              {pct > 100 && <span className="mon-bar-over" style={{ width: Math.min(pct - 100, 50) + '%' }}/>}
-                            </span>
+                          {item.ref_total > 0 ? (
+                            <>
+                              <span className={`mon-bar ${barState}`}>
+                                <span className="mon-bar-fill" style={{ width: Math.min(pct, 100) + '%' }}/>
+                              </span>
+                              <span className={`mon-bar-pct ${pctClass}`}>{pct}%</span>
+                            </>
+                          ) : (
+                            <span className="mon-bar-pct" style={{ color: 'var(--ink-3)' }}>—</span>
                           )}
-                          <span className="ds-micro num">{item.ref_total > 0 ? `${pct}%` : ''}</span>
                         </span>
                       </div>
-                      {expanded && item.lines.map(line => {
-                        const lineAmount = parseFloat(line.amount) || 0;
-                        return (
-                          <div key={line.id} className="mon-row mon-row-sub">
-                            <span className="mon-sub-label">{line.label}</span>
-                            <span className="num">{fmt(lineAmount)}</span>
-                            <span className="num">—</span>
-                            <span className="num">—</span>
-                            <span/>
-                          </div>
-                        );
-                      })}
+                      {expanded && item.lines.map(line => (
+                        <div key={line.id} className="mon-row mon-row-sub">
+                          <span className="mon-sub-label">{line.label}</span>
+                          <span className="num">{fmt(parseFloat(line.amount) || 0)}</span>
+                          <span className="num">—</span>
+                          <span className="num">—</span>
+                          <span/>
+                        </div>
+                      ))}
                     </React.Fragment>
                   );
                 })}
               </React.Fragment>
-            ))}
+              );
+            })}
             {/* Footer totals */}
             <div className="mon-row mon-row-foot">
               <span>Balance</span>
