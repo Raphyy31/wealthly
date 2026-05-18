@@ -137,19 +137,24 @@ export function Monthly({
   }, [transactions, accounts, memberShare, transferIds, selectedMonth]);
 
   // Per (kind, categoryId) totals for the selected real month.
+  // kind is derived from the category's type field, NOT the sign of the amount.
+  // This prevents refunds (positive amounts on expense categories) from appearing under "Entrées".
+  // Expense totals are signed: negative tx contributes positively, positive tx (refund) reduces.
   const realByCat = useMemo(() => {
     const map = new Map();
     for (const t of monthTx) {
       const catId = t.categoryId || 'uncategorized';
-      const kind = t.amount >= 0 ? 'income' : (isSavingCategory(catId) ? 'saving' : 'expense');
+      const cat = catFor(catId);
+      const kind = cat?.type === 'income' ? 'income' : isSavingCategory(catId) ? 'saving' : 'expense';
       const k = `${kind}::${catId}`;
       if (!map.has(k)) map.set(k, { kind, category_id: catId, total: 0, count: 0 });
       const v = map.get(k);
-      v.total += Math.abs(t.sharedAmount);
+      // income: sum amounts as-is (positive = received). expense/saving: negate so expenses are positive.
+      v.total += kind === 'income' ? t.sharedAmount : -t.sharedAmount;
       v.count += 1;
     }
     return map;
-  }, [monthTx]);
+  }, [monthTx, categories]);
 
   const realTotals = useMemo(() => {
     const t = { income: 0, expense: 0, saving: 0 };
@@ -296,17 +301,33 @@ export function Monthly({
       { kind: 'saving', title: 'Épargne', items: [] },
     ];
 
-    const allKeys = new Set();
-    for (const k of refByCat.keys()) allKeys.add(k);
-    for (const k of realByCat.keys()) allKeys.add(k);
+    // Roll up real entries: if a category has no direct mois type entry but its parent does,
+    // merge into the parent key. This handles cases like "supermarche" → "courses",
+    // or sub-insurance categories rolling up into the parent insurance line.
+    const realMerged = new Map();
+    for (const [key, val] of realByCat.entries()) {
+      const [kind, catId] = key.split('::');
+      const cat = catFor(catId);
+      const parentKey = cat?.parent ? `${kind}::${cat.parent}` : null;
+      const targetKey = (!refByCat.has(key) && parentKey && refByCat.has(parentKey)) ? parentKey : key;
+      if (!realMerged.has(targetKey)) {
+        const tCatId = targetKey.split('::')[1];
+        realMerged.set(targetKey, { kind, category_id: tCatId, total: 0, count: 0 });
+      }
+      const v = realMerged.get(targetKey);
+      v.total += val.total;
+      v.count += val.count;
+    }
+
+    const allKeys = new Set([...refByCat.keys(), ...realMerged.keys()]);
 
     for (const key of allKeys) {
       const [kind, catId] = key.split('::');
       const ref = refByCat.get(key);
-      const real = realByCat.get(key);
+      const real = realMerged.get(key);
       const cat = catFor(catId);
       const refTotal = ref?.total || 0;
-      const realTotal = real?.total || 0;
+      const realTotal = Math.max(0, real?.total || 0); // clamp: net refund > expense shows as 0
       const item = {
         key,
         kind,
@@ -315,7 +336,7 @@ export function Monthly({
         ref_total: refTotal,
         real_total: realTotal,
         lines: ref?.lines || [],
-        is_unexpected: !ref && real,
+        is_unexpected: !ref && (real?.total || 0) > 0,
       };
       const target = sections.find(s => s.kind === kind);
       if (target) target.items.push(item);
