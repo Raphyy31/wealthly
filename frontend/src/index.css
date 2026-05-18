@@ -1010,7 +1010,7 @@ html, body {
   border-radius: 12px;
   background: var(--bg-elev);
   margin-bottom: 10px;
-  overflow: hidden;
+  overflow: visible; /* must not be hidden — clips absolute CategoryDropdown popover */
   transition: box-shadow 0.15s;
 }
 .rm-group:hover { box-shadow: 0 4px 16px -6px rgba(0,0,0,0.08); }
@@ -1019,6 +1019,7 @@ html, body {
   padding: 11px 16px;
   border-bottom: 1px solid var(--border);
   background: var(--bg);
+  border-radius: 9px 9px 0 0; /* clip top corners without overflow:hidden on parent */
 }
 .rm-cat-name {
   display: flex; align-items: center; gap: 8px;
