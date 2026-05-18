@@ -24,6 +24,7 @@ import { useHideAmounts } from '../contexts/HideAmounts.jsx';
 import { BankMark } from '../components/ui/BankMark.jsx';
 import { Sparkline } from '../components/ui/Sparkline.jsx';
 import { Donut } from '../components/ui/Donut.jsx';
+import { fmtAmount, formatDelta } from '../utils.js';
 
 const PERIODS = [
   { id: '1m',  label: '1M',   months: 1 },
@@ -130,6 +131,36 @@ export function Dashboard({
     const last = chartData[chartData.length - 1].balance;
     return { abs: last - first, pct: first ? ((last - first) / Math.abs(first)) * 100 : 0 };
   }, [chartData]);
+
+  // Multi-deltas inline (C4) — 30j / 3M / YTD à partir de sortedEvo.
+  // Calcule abs + pct vs le point correspondant. Si pas assez d'historique
+  // disponible, le delta vaut { abs: 0, pct: 0, hasData: false }.
+  const multiDeltas = useMemo(() => {
+    if (!sortedEvo || sortedEvo.length < 2) {
+      return {
+        d30:  { abs: 0, pct: 0, hasData: false },
+        d3m:  { abs: 0, pct: 0, hasData: false },
+        ytd:  { abs: 0, pct: 0, hasData: false },
+      };
+    }
+    const last = sortedEvo[sortedEvo.length - 1];
+    const pickByOffset = (n) => sortedEvo[Math.max(0, sortedEvo.length - 1 - n)];
+    const computeAt = (ref) => {
+      if (!ref || ref === last) return { abs: 0, pct: 0, hasData: false };
+      const abs = last.balance - ref.balance;
+      const pct = ref.balance ? (abs / Math.abs(ref.balance)) * 100 : 0;
+      return { abs, pct, hasData: true };
+    };
+    const today = new Date();
+    const ytdKey = `${today.getFullYear()}-01`;
+    const ytdRef = sortedEvo.find(s => s.month === ytdKey)
+                || sortedEvo.find(s => s.month.startsWith(`${today.getFullYear()}-`));
+    return {
+      d30: computeAt(pickByOffset(1)),
+      d3m: computeAt(pickByOffset(3)),
+      ytd: computeAt(ytdRef && ytdRef !== last ? ytdRef : null),
+    };
+  }, [sortedEvo]);
 
   // KPI strip — 3 cellules : Actifs / Liquidités / Épargne mois
   // (passif retiré : il apparaît déjà en mini sous le hero number)
@@ -346,11 +377,14 @@ export function Dashboard({
         </div>
       </header>
 
-      {/* ── Hero KPI + Allocation ──────────────────────────────────────── */}
+      {/* ── §01 Hero KPI + Allocation ──────────────────────────────────── */}
       <section className="dash-hero-row">
         <div className="hero-card">
           <div className="hero-top">
-            <span className="ds-caption">{t('dashboard.totalNetWorth')}</span>
+            <div className="dash-eyebrow">
+              <span className="dash-eyebrow-num">§ 01</span>
+              <span className="dash-eyebrow-label">{t('dashboard.totalNetWorth')}</span>
+            </div>
             <div className="ds-range-tabs">
               {PERIODS.map(p => (
                 <button key={p.id}
@@ -380,6 +414,30 @@ export function Dashboard({
             </div>
           </div>
 
+          {/* Multi-deltas inline — 30j / 3M / YTD (C4) */}
+          <div className="dash-multi-deltas">
+            {[
+              { key: 'd30', label: '30 j',  data: multiDeltas.d30 },
+              { key: 'd3m', label: '3 mois', data: multiDeltas.d3m },
+              { key: 'ytd', label: 'YTD',    data: multiDeltas.ytd },
+            ].map(d => {
+              const delta = formatDelta(d.data.abs, 'amount');
+              const pct = d.data.hasData
+                ? `${d.data.pct >= 0 ? '+' : ''}${d.data.pct.toFixed(1).replace('.', ',')} %`
+                : '—';
+              return (
+                <div key={d.key} className="dash-multi-delta-cell">
+                  <div className="dash-multi-delta-label">{d.label}</div>
+                  <div className={`ds-delta ds-delta--${d.data.hasData ? delta.kind : 'neutral'}`}>
+                    <span className="ds-delta-chevron">{d.data.hasData ? delta.symbol : '·'}</span>
+                    <span>{hidden ? '···' : (d.data.hasData ? delta.formatted : '—')}</span>
+                  </div>
+                  <div className="dash-multi-delta-pct">{hidden ? '···' : pct}</div>
+                </div>
+              );
+            })}
+          </div>
+
           <HeroChart data={chartData} onHover={setHover} hover={hover}/>
 
           <div className="kpi-strip">
@@ -399,7 +457,10 @@ export function Dashboard({
 
         <div className="alloc-card">
           <div className="alloc-head">
-            <span className="ds-panel-title">{t('dashboard.allocation')}</span>
+            <div className="dash-eyebrow">
+              <span className="dash-eyebrow-num">§ 02</span>
+              <span className="dash-eyebrow-label">{t('dashboard.allocation')}</span>
+            </div>
             <button className="link-btn" onClick={() => setView?.('wealth')}>{t('dashboard.details')}</button>
           </div>
           <div className="alloc-body">
@@ -426,11 +487,12 @@ export function Dashboard({
         </div>
       </section>
 
-      {/* ── Mes comptes ────────────────────────────────────────────────── */}
+      {/* ── §03 Mes comptes ────────────────────────────────────────────── */}
       <section className="accounts-panel ds-panel">
         <div className="ds-panel-head">
-          <div>
-            <div className="ds-panel-title">{t('dashboard.accounts')} · {visibleAccounts?.length || 0}</div>
+          <div className="dash-eyebrow">
+            <span className="dash-eyebrow-num">§ 03</span>
+            <span className="dash-eyebrow-label">{t('dashboard.accounts')} · {visibleAccounts?.length || 0}</span>
           </div>
           <button className="link-btn" onClick={() => setView?.('settings')}>{t('dashboard.viewAll')} →</button>
         </div>
@@ -468,8 +530,9 @@ export function Dashboard({
             );
           })}
           {!visibleAccounts?.length && (
-            <div style={{ padding: '20px', color: 'var(--ink-3)', fontSize: 13 }}>
-              {t('dashboard.noAccounts')} <button className="link-btn" onClick={onAddAccount}>{t('dashboard.connectBank')}</button>
+            <div className="dash-empty">
+              <span className="dash-empty-lead">{t('dashboard.noAccounts')}</span>
+              <button className="link-btn" onClick={onAddAccount}>{t('dashboard.connectBank')}</button>
             </div>
           )}
         </div>
@@ -477,12 +540,15 @@ export function Dashboard({
 
       {/* ── Transactions + Budget + Insights ───────────────────────────── */}
       <section className="dash-bottom-row">
-        {/* Transactions panel */}
+        {/* §04 Transactions panel */}
         <div className="ds-panel">
           <div className="ds-panel-head">
             <div>
-              <div className="ds-panel-title">{t('dashboard.recent')}</div>
-              <div className="ds-panel-sub">{t('dashboard.recentMeta')}</div>
+              <div className="dash-eyebrow">
+                <span className="dash-eyebrow-num">§ 04</span>
+                <span className="dash-eyebrow-label">{t('dashboard.recent')}</span>
+              </div>
+              <div className="ds-panel-sub" style={{ marginTop: 4 }}>{t('dashboard.recentMeta')}</div>
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
               {[['all', t('dashboard.filterAll')], ['expense', t('dashboard.filterExpenses')], ['income', t('dashboard.filterIncome')]].map(([id, label]) => (
@@ -539,20 +605,23 @@ export function Dashboard({
               </div>
             ))}
             {!recentTx.length && (
-              <div style={{ padding: 20, color: 'var(--ink-3)', fontSize: 13 }}>
-                {t('dashboard.noTransactions')}
+              <div className="dash-empty">
+                <span className="dash-empty-lead">{t('dashboard.noTransactions')}</span>
               </div>
             )}
           </div>
         </div>
 
         <div className="dash-side-stack">
-          {/* Budget panel */}
+          {/* §05 Budget panel */}
           <div className="ds-panel">
             <div className="ds-panel-head">
               <div>
-                <div className="ds-panel-title">{t('dashboard.budgetTitle', { month: monthName(currentMonth) })}</div>
-                <div className="ds-panel-sub num">{formatEUR(totalSpent)} / {formatEUR(totalBudget)}</div>
+                <div className="dash-eyebrow">
+                  <span className="dash-eyebrow-num">§ 05</span>
+                  <span className="dash-eyebrow-label">{t('dashboard.budgetTitle', { month: monthName(currentMonth) })}</span>
+                </div>
+                <div className="ds-panel-sub num" style={{ marginTop: 4 }}>{formatEUR(totalSpent)} / {formatEUR(totalBudget)}</div>
               </div>
               <button className="link-btn" onClick={() => setView?.('budgets')}>{t('dashboard.viewAll')} →</button>
             </div>
@@ -581,19 +650,23 @@ export function Dashboard({
                 </div>
               ))}
               {!budgetItems.length && (
-                <div style={{ padding: 14, color: 'var(--ink-3)', fontSize: 13 }}>
-                  {t('dashboard.budgetEmpty')} <button className="link-btn" onClick={() => setView?.('budgets')}>{t('dashboard.budgetCreate')}</button>
+                <div className="dash-empty">
+                  <span className="dash-empty-lead">{t('dashboard.budgetEmpty')}</span>
+                  <button className="link-btn" onClick={() => setView?.('budgets')}>{t('dashboard.budgetCreate')}</button>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Insights panel */}
+          {/* §06 Insights panel */}
           <div className="ds-panel">
             <div className="ds-panel-head">
               <div>
-                <div className="ds-panel-title">{t('dashboard.insights')}</div>
-                <div className="ds-panel-sub">{t('dashboard.insightsGenerated')}</div>
+                <div className="dash-eyebrow">
+                  <span className="dash-eyebrow-num">§ 06</span>
+                  <span className="dash-eyebrow-label">{t('dashboard.insights')}</span>
+                </div>
+                <div className="ds-panel-sub" style={{ marginTop: 4 }}>{t('dashboard.insightsGenerated')}</div>
               </div>
             </div>
             <div className="insights-list">
@@ -607,8 +680,8 @@ export function Dashboard({
                 </div>
               ))}
               {!insights.length && (
-                <div style={{ padding: 14, color: 'var(--ink-3)', fontSize: 13 }}>
-                  {t('dashboard.insightsEmpty')}
+                <div className="dash-empty">
+                  <span className="dash-empty-lead">{t('dashboard.insightsEmpty')}</span>
                 </div>
               )}
             </div>
@@ -821,6 +894,74 @@ function DashStyles() {
 .hero-sub-debts { margin-top: 6px; color: var(--ink-2); font-size: 13px; font-variant-numeric: tabular-nums; }
 .hero-chart { margin: 8px -4px 0; position: relative; cursor: crosshair; }
 .hero-axis { display: flex; justify-content: space-between; padding: 4px 8px 12px; color: var(--ink-3); font-size: 11px; }
+
+/* Eyebrow Geist Mono "§ 0X" — pattern canonique des sections Dashboard (C4) */
+.dash-eyebrow { display: inline-flex; align-items: baseline; gap: 8px; }
+.dash-eyebrow-num {
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+  opacity: 0.7;
+}
+.dash-eyebrow-label {
+  font: 500 11px/1 var(--font-sans);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* Multi-deltas inline — 30j / 3M / YTD avec chevrons ▲/▼ (C4) */
+.dash-multi-deltas {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  margin: 14px -28px 0;
+  background: var(--border);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.dash-multi-delta-cell {
+  background: var(--bg-elev);
+  padding: 10px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 56px;
+  justify-content: center;
+}
+.dash-multi-delta-label {
+  font: 500 10.5px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.dash-multi-delta-cell .ds-delta {
+  font: 500 13.5px/1.2 var(--font-sans);
+}
+.dash-multi-delta-pct {
+  font: 400 11px/1 var(--font-sans);
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 760px) {
+  .dash-multi-deltas { grid-template-columns: 1fr; }
+}
+
+/* Empty states éditoriaux — Newsreader italic, ton sobre (C4) */
+.dash-empty {
+  padding: 22px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+.dash-empty-lead {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--ink-2);
+  line-height: 1.5;
+}
 
 .kpi-strip {
   display: grid; grid-template-columns: repeat(4, 1fr);
