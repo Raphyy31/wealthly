@@ -945,15 +945,24 @@ html, body {
   animation: rm-pop 200ms ease-out;
 }
 @keyframes rm-pop { from { transform: translateY(10px) scale(0.988); opacity: 0; } to { transform: none; opacity: 1; } }
-.rm-col { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.rm-col {
+  display: flex; flex-direction: column; gap: 0;
+  min-width: 0;
+  padding: 22px 20px;
+  border-right: 1px solid var(--border);
+}
+.rm-col:last-child { border-right: none; }
+.rm-col-expense { /* middle — wider for the densest bucket */ }
 .rm-body-grid {
   display: grid;
-  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.15fr);
-  gap: 28px;
-  padding: 24px 28px !important;
+  grid-template-columns: 1fr 1.55fr 1fr;
+  gap: 0;
+  padding: 0 !important;
 }
 @media (max-width: 880px) {
-  .rm-body-grid { grid-template-columns: 1fr; gap: 18px; padding: 18px !important; }
+  .rm-body-grid { grid-template-columns: 1fr; }
+  .rm-col { border-right: none; border-bottom: 1px solid var(--border); padding: 18px; }
+  .rm-col:last-child { border-bottom: none; }
   .rm-modal { width: 100vw; max-height: 100vh; border-radius: 0; }
 }
 .rm-toolbar-meta { margin-left: auto; color: var(--ink-3); }

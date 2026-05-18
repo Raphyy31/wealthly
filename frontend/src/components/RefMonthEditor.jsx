@@ -467,12 +467,14 @@ export function RefMonthEditor({
         </div>
 
         <div className="rm-body rm-body-grid">
-          <div className="rm-col rm-col-left">
+          <div className="rm-col">
             {renderKind('income')}
-            {renderKind('saving')}
           </div>
-          <div className="rm-col rm-col-right">
+          <div className="rm-col rm-col-expense">
             {renderKind('expense')}
+          </div>
+          <div className="rm-col">
+            {renderKind('saving')}
           </div>
         </div>
 
