@@ -212,12 +212,15 @@ def _run_lightweight_migrations() -> None:
             "UPDATE transactions SET category_slug = 'loan_mortgage' WHERE category_slug = 'mortgage_interest'",
             "UPDATE categorisation_rules SET category_slug = 'loan_mortgage' WHERE category_slug = 'mortgage_interest'",
         ]
-    with engine.begin() as conn:
-        for stmt in statements:
-            try:
+    # Each statement runs in its own transaction so a failed DDL/DML
+    # doesn't leave the connection in an aborted-transaction state and
+    # block every subsequent statement (and app queries) in the same block.
+    for stmt in statements:
+        try:
+            with engine.begin() as conn:
                 conn.execute(text(stmt))
-            except Exception as e:
-                logger.warning("[migrate] skipped statement (%s): %s", stmt[:80], e)
+        except Exception as e:
+            logger.warning("[migrate] skipped statement (%s): %s", stmt[:80], e)
 
 
 _run_lightweight_migrations()
