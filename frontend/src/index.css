@@ -1045,6 +1045,16 @@ html, body {
 .rm-line-label::placeholder { color: var(--ink-3); }
 .rm-line-label:focus { outline: none; }
 
+.rm-line-label-static {
+  flex: 1; min-width: 0;
+  font: 400 13.5px var(--font-sans); color: var(--ink);
+}
+
+.rm-add-sub-form {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 16px 10px;
+}
+
 .rm-line-right { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
 
 .rm-line-amount {

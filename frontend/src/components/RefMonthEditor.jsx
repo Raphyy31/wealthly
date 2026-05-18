@@ -244,12 +244,19 @@ export function RefMonthEditor({
 
   const catFor = (id) => categories.find(c => c.id === id || c.slug === id);
 
-  // Group draft lines by category for display.
+  // If a category has a parent, group under the parent. Top-level cats group under themselves.
+  const effectiveGroupId = (category_id) => {
+    const cat = catFor(category_id);
+    return cat?.parent || category_id || 'uncategorized';
+  };
+
+  // Group draft lines by PARENT category so sub-cats appear nested under their parent header.
   const grouped = useMemo(() => {
     const map = new Map();
     for (const line of draft) {
-      const k = `${line.kind}::${line.category_id || 'uncategorized'}`;
-      if (!map.has(k)) map.set(k, { kind: line.kind, category_id: line.category_id, lines: [] });
+      const groupId = effectiveGroupId(line.category_id);
+      const k = `${line.kind}::${groupId}`;
+      if (!map.has(k)) map.set(k, { kind: line.kind, category_id: groupId, lines: [] });
       map.get(k).lines.push(line);
     }
     return [...map.values()].sort((a, b) => {
@@ -379,12 +386,9 @@ export function RefMonthEditor({
                 return (
                   <div key={line.id} className="rm-line">
                     <div className="rm-line-main">
-                      <input
-                        className="rm-line-label"
-                        value={line.label}
-                        onChange={e => updateLine(line.id, { label: e.target.value })}
-                        placeholder="Libellé…"
-                      />
+                      <span className="rm-line-label-static">
+                        {(() => { const c = catFor(line.category_id); return c ? `${c.icon} ${c.name}` : (line.label || 'Ligne'); })()}
+                      </span>
                       <div className="rm-line-right">
                         <div className="rm-line-amount">
                           <input
@@ -419,9 +423,12 @@ export function RefMonthEditor({
                   </div>
                 );
               })}
-              <button className="rm-add-sub" onClick={() => addLine({ kind, category_id: g.category_id })}>
-                <Plus size={12}/> Ajouter une sous-ligne
-              </button>
+              <RefMonthAddSubLine
+                kind={kind}
+                parentCatId={g.category_id}
+                categories={categories}
+                onAdd={(catId) => addLine({ kind, category_id: catId })}
+              />
             </div>
           );
         })}
@@ -484,6 +491,41 @@ export function RefMonthEditor({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// "Ajouter une sous-ligne" inside a parent group.
+// If the parent has sub-categories, shows a dropdown filtered to its children.
+// If not (leaf category), adds a new line with the parent category directly.
+function RefMonthAddSubLine({ kind, parentCatId, categories, onAdd }) {
+  const [open, setOpen] = useState(false);
+  const subCats = categories.filter(c => c.parent === parentCatId);
+
+  const handleClick = () => {
+    if (subCats.length === 0) {
+      onAdd(parentCatId);
+    } else {
+      setOpen(true);
+    }
+  };
+
+  if (!open) return (
+    <button className="rm-add-sub" onClick={handleClick}>
+      <Plus size={12}/> Ajouter une sous-ligne
+    </button>
+  );
+
+  return (
+    <div className="rm-add-sub-form">
+      <CategoryDropdown
+        value=""
+        categories={subCats}
+        onChange={(catId) => { if (catId) { onAdd(catId); setOpen(false); } }}
+        placeholder="Choisir une sous-catégorie…"
+        searchable clearable={false} align="left"
+      />
+      <button className="ds-btn ghost sm" onClick={() => setOpen(false)}>Annuler</button>
     </div>
   );
 }
