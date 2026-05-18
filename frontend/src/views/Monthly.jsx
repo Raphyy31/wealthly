@@ -795,51 +795,60 @@ function MonthPicker({ selectedMonth, currentMonth, availableMonths, onChange })
   );
 }
 
+// Halo effect — white outline behind text so labels stay readable over colored flows.
+const HALO = { stroke: '#F7F6F2', strokeWidth: 5, strokeLinejoin: 'round', paintOrder: 'stroke' };
+
 function SankeyNode({ x, y, width, height, index, payload, fmt }) {
   if (!payload) return null;
-  const isLeft = payload.level === 0;
+  const isLeft   = payload.level === 0;
   const isMiddle = payload.level === 1;
-  const fill = payload.color || (payload.kind === 'income' ? 'var(--positive)' : '#94a3b8');
-  const labelX = isLeft ? x - 16 : x + width + 16;
-  const anchor = isLeft ? 'end' : 'start';
-  const midY = y + height / 2;
+  const fill = payload.color || '#94a3b8';
+
+  // Node bar — cap rx so tall nodes stay rectangular, not pill-shaped.
+  const rx = Math.min(5, Math.floor(width / 2));
+
+  // Label positioning
+  const labelX = isLeft ? x - 16 : x + width + 14;
+  const anchor  = isLeft ? 'end' : 'start';
+  const midY    = y + height / 2;
+
+  // Adaptive display: hide details on tiny nodes to avoid overlap.
+  const showName   = height >= 13;
+  const showAmount = height >= 26 && typeof payload.amount === 'number' && payload.amount > 0;
+  const nameY  = showAmount ? midY - 8 : midY;
+  const fontSize = height < 20 ? 10.5 : isLeft ? 13 : 12;
 
   const displayName = (payload.icon ? `${payload.icon} ` : '') + (payload.name || '');
-  const hasAmount = typeof payload.amount === 'number' && payload.amount > 0;
   const hasPct = isMiddle && typeof payload.pctOfIncome === 'number' && payload.pctOfIncome > 0;
-  const nameY = hasAmount ? midY - 8 : midY;
-  const amtStr = hasAmount ? (fmt ? fmt(payload.amount) : `${payload.amount}€`) : '';
+  const amtStr = showAmount ? (fmt ? fmt(payload.amount) : `${payload.amount}€`) : '';
   const pctStr = hasPct
-    ? ` · ${payload.pctOfIncome >= 10 ? payload.pctOfIncome.toFixed(0) : payload.pctOfIncome.toFixed(1)}% du revenu`
+    ? ` · ${payload.pctOfIncome >= 10 ? payload.pctOfIncome.toFixed(0) : payload.pctOfIncome.toFixed(1)}%`
     : '';
 
   return (
     <Layer key={`sn-${index}`}>
-      {/* Node bar — rounded pill */}
-      <rect x={x} y={y} width={width} height={height} rx={7} ry={7} fill={fill} fillOpacity={0.95}/>
-      {/* Subtle inner highlight */}
-      <rect x={x} y={y} width={width} height={Math.min(height, 3)} rx={7} ry={7} fill="#fff" fillOpacity={0.25}/>
-      {/* Category name */}
-      <text
-        x={labelX} y={nameY}
-        textAnchor={anchor}
-        fontSize={isLeft ? 13 : 12.5}
-        fontWeight={isLeft || isMiddle ? 600 : 500}
-        fill="var(--ink)"
-        dominantBaseline="middle"
-      >
-        {displayName}
-      </text>
-      {/* Amount + optional % */}
-      {hasAmount && (
-        <text
-          x={labelX} y={midY + 10}
-          textAnchor={anchor}
-          fontSize={11}
-          fill={hasPct ? payload.color || 'var(--ink-3)' : 'var(--ink-3)'}
-          dominantBaseline="middle"
-          style={{ fontVariantNumeric: 'tabular-nums' }}
-        >
+      {/* Subtle outer glow so the bar reads as separate from the flows */}
+      <rect x={x - 2} y={y} width={width + 4} height={height} rx={rx + 2} ry={rx + 2}
+        fill={fill} fillOpacity={0.18}/>
+      {/* Main node bar */}
+      <rect x={x} y={y} width={width} height={height} rx={rx} ry={rx}
+        fill={fill} fillOpacity={0.97}/>
+      {/* Top shine */}
+      <rect x={x} y={y} width={width} height={Math.min(height * 0.35, 4)} rx={rx} ry={rx}
+        fill="#fff" fillOpacity={0.22}/>
+
+      {/* Labels — halo stroke keeps them legible over flows */}
+      {showName && (
+        <text x={labelX} y={nameY} textAnchor={anchor} fontSize={fontSize}
+          fontWeight={isLeft || isMiddle ? 600 : 500} fill="var(--ink)"
+          dominantBaseline="middle" {...HALO}>
+          {displayName}
+        </text>
+      )}
+      {showAmount && (
+        <text x={labelX} y={midY + 11} textAnchor={anchor} fontSize={10.5}
+          fill={hasPct ? (payload.color || 'var(--ink-3)') : 'var(--ink-3)'}
+          dominantBaseline="middle" style={{ fontVariantNumeric: 'tabular-nums' }} {...HALO}>
           {amtStr}{pctStr}
         </text>
       )}
@@ -847,21 +856,29 @@ function SankeyNode({ x, y, width, height, index, payload, fmt }) {
   );
 }
 
-// Custom link with gradient from income green → category color.
+// Links: gradient from income green → category colour, with fill instead of stroke
+// so the flow shape is solid (not just an outline).
 function SankeyLink({ sourceX, targetX, sourceY, targetY, sourceControlX, targetControlX, linkWidth, payload, index }) {
-  const color = payload?.color || '#94a3b8';
+  const color  = payload?.color || '#94a3b8';
   const gradId = `sk-g-${index}`;
-  const sw = Math.max(1, linkWidth);
-  const d = `M${sourceX},${sourceY}C${sourceControlX},${sourceY} ${targetControlX},${targetY} ${targetX},${targetY}`;
+  const sw     = Math.max(1, linkWidth);
+  // Build a thick band path using two offset curves (top edge + bottom edge).
+  const half = sw / 2;
+  const band =
+    `M${sourceX},${sourceY - half}` +
+    `C${sourceControlX},${sourceY - half} ${targetControlX},${targetY - half} ${targetX},${targetY - half}` +
+    `L${targetX},${targetY + half}` +
+    `C${targetControlX},${targetY + half} ${sourceControlX},${sourceY + half} ${sourceX},${sourceY + half}Z`;
   return (
     <g>
       <defs>
         <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="var(--positive)" stopOpacity="0.35"/>
-          <stop offset="100%" stopColor={color} stopOpacity="0.5"/>
+          <stop offset="0%"   stopColor="#22c55e" stopOpacity="0.22"/>
+          <stop offset="60%"  stopColor={color}   stopOpacity="0.30"/>
+          <stop offset="100%" stopColor={color}   stopOpacity="0.42"/>
         </linearGradient>
       </defs>
-      <path d={d} stroke={`url(#${gradId})`} strokeWidth={sw} fill="none" strokeLinecap="round"/>
+      <path d={band} fill={`url(#${gradId})`} stroke="none"/>
     </g>
   );
 }
