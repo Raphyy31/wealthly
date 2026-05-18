@@ -2422,6 +2422,12 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .tx-month-chip:hover { border-color: var(--accent); color: var(--accent); }
 .tx-month-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 
+/* ─── Active filter chips row ─── */
+.tx-active-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 0 2px; }
+.tx-active-chip { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--accent); background: var(--accent-soft); color: var(--accent); font-size: 12px; font-weight: 500; cursor: pointer; font-family: inherit; transition: background .15s, color .15s; white-space: nowrap; }
+.tx-active-chip:hover { background: var(--accent); color: #fff; }
+.tx-active-chip svg { flex-shrink: 0; opacity: .7; }
+
 /* ─── Category filter search input ─── */
 .tx-filter-search-input { width: 100%; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); font-family: inherit; font-size: 13px; color: var(--ink); outline: none; margin-bottom: 8px; }
 .tx-filter-search-input:focus { border-color: var(--accent); }

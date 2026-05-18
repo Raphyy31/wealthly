@@ -7,7 +7,7 @@
 // ============================================================================
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Search, ArrowUpDown, Repeat, Trash2, Filter, X, RotateCcw, Sparkles, Plus } from 'lucide-react';
+import { Search, ArrowUpDown, Repeat, Trash2, Filter, X, RotateCcw, Sparkles, Plus, Download } from 'lucide-react';
 import { formatDate } from '../utils.js';
 
 const EMPTY_FILTERS = {
@@ -258,19 +258,24 @@ export function Transactions({ transactions, accounts, categories, members = [],
     return m;
   }, [accounts]);
 
+  // Effective category for a transaction: transfers (auto-detected or manual override)
+  // are treated as 'transfer', regardless of their stored categoryId.
+  const effectiveCatId = (tx) =>
+    transferIds.has(tx.id) ? 'transfer' : (tx.categoryId || 'uncategorized');
+
   // Per-category transaction counts (shown next to each checkbox in the panel).
   // A transaction with a sub-category (e.g. resto_meal) is also counted under
   // its parent (restaurants), so the filter count reflects all children too.
   const catCounts = useMemo(() => {
     const c = {};
     transactions.forEach(tx => {
-      const id = tx.categoryId || 'uncategorized';
+      const id = transferIds.has(tx.id) ? 'transfer' : (tx.categoryId || 'uncategorized');
       c[id] = (c[id] || 0) + 1;
       const cat = categories.find(cat => cat.id === id);
       if (cat?.parent) c[cat.parent] = (c[cat.parent] || 0) + 1;
     });
     return c;
-  }, [transactions, categories]);
+  }, [transactions, categories, transferIds]);
 
   // All tags in use across the household, with counts. Sorted by frequency desc.
   const { allTags, tagCounts } = useMemo(() => {
@@ -313,7 +318,7 @@ export function Transactions({ transactions, accounts, categories, members = [],
           if (!labelHit && !catHit) return false;
         }
         if (filters.cats.length > 0) {
-          const txCatId = tx.categoryId || 'uncategorized';
+          const txCatId = effectiveCatId(tx);
           const txCat = categories.find(c => c.id === txCatId);
           const matches = filters.cats.some(filterId => {
             if (filterId === txCatId) return true;
@@ -348,7 +353,7 @@ export function Transactions({ transactions, accounts, categories, members = [],
         else if (sortKey === 'label') cmp = (a.label || '').localeCompare(b.label || '');
         return sortDir === 'asc' ? cmp : -cmp;
       });
-  }, [transactions, search, filters, sortKey, sortDir, accountMembers, catSearchIndex]);
+  }, [transactions, search, filters, sortKey, sortDir, accountMembers, catSearchIndex, transferIds]);
 
   const toggleSort = (key) => {
     if (sortKey === key) setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
@@ -381,6 +386,37 @@ export function Transactions({ transactions, accounts, categories, members = [],
   const catSearchQ = catFilterSearch.toLowerCase();
   const expenseCats = categories.filter(c => c.type === 'expense' && (catSearchQ === '' || c.name.toLowerCase().includes(catSearchQ)));
   const incomeCats = categories.filter(c => c.type === 'income' && (catSearchQ === '' || c.name.toLowerCase().includes(catSearchQ)));
+  const transferCat = categories.find(c => c.id === 'transfer');
+  const transferCatVisible = (catSearchQ === '' || 'virements internes'.includes(catSearchQ)) && (catCounts['transfer'] || 0) > 0;
+
+  const exportCsv = () => {
+    const escape = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const header = ['Date', 'Libellé', 'Payee', 'Montant', 'Catégorie', 'Sous-catégorie', 'Source', 'Compte'];
+    const rows = filtered.map(tx => {
+      const effCat = effectiveCatId(tx);
+      const cat = categories.find(c => c.id === effCat);
+      const parentCat = cat?.parent ? categories.find(c => c.id === cat.parent) : null;
+      const acc = accounts.find(a => a.id === tx.accountId);
+      return [
+        tx.date,
+        tx.label || '',
+        tx.payeeName || '',
+        tx.amount,
+        parentCat ? parentCat.name : (cat?.name || effCat),
+        parentCat ? cat.name : '',
+        tx.catSource || '',
+        acc?.name || '',
+      ].map(escape).join(',');
+    });
+    const csv = [header.map(escape).join(','), ...rows].join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `wealthly-transactions-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="transactions-view">
@@ -389,20 +425,25 @@ export function Transactions({ transactions, accounts, categories, members = [],
           <h1>{t('views.transactions.title')} <em>{t('views.transactions.titleAccent')}</em></h1>
           <p>{t('views.transactions.subtitle')}</p>
         </div>
-        {onOpenAiPrompt && (() => {
-          const uncatCount = transactions.filter(tx => (!tx.categoryId || tx.categoryId === 'uncategorized') && (tx.label || '').trim()).length;
-          return (
-            <button
-              className={`ds-btn ${uncatCount > 0 ? 'primary' : 'ghost'}`}
-              onClick={onOpenAiPrompt}
-              title="Génère un prompt à coller dans Claude/ChatGPT pour catégoriser en lot (sans clé API)"
-              disabled={uncatCount === 0}
-            >
-              <Sparkles size={14}/> Catégoriser via IA
-              {uncatCount > 0 && <span className="ds-btn-badge">{uncatCount}</span>}
-            </button>
-          );
-        })()}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="ds-btn ghost" onClick={exportCsv} title={`Exporter les ${filtered.length} transactions visibles en CSV`}>
+            <Download size={14}/> Export CSV
+          </button>
+          {onOpenAiPrompt && (() => {
+            const uncatCount = transactions.filter(tx => (!tx.categoryId || tx.categoryId === 'uncategorized') && !transferIds.has(tx.id) && (tx.label || '').trim()).length;
+            return (
+              <button
+                className={`ds-btn ${uncatCount > 0 ? 'primary' : 'ghost'}`}
+                onClick={onOpenAiPrompt}
+                title="Génère un prompt à coller dans Claude/ChatGPT pour catégoriser en lot (sans clé API)"
+                disabled={uncatCount === 0}
+              >
+                <Sparkles size={14}/> Catégoriser via IA
+                {uncatCount > 0 && <span className="ds-btn-badge">{uncatCount}</span>}
+              </button>
+            );
+          })()}
+        </div>
       </div>
 
       <div className="filters-bar" ref={panelRef}>
@@ -511,6 +552,19 @@ export function Transactions({ transactions, accounts, categories, members = [],
                 value={catFilterSearch}
                 onChange={e => setCatFilterSearch(e.target.value)}
               />
+              {transferCatVisible && transferCat && (
+                <>
+                  <div className="tx-filter-sublabel">Virements</div>
+                  <div className="tx-filter-cat-grid">
+                    <label className={`tx-filter-cat ${filters.cats.includes('transfer') ? 'active' : ''}`}>
+                      <input type="checkbox" checked={filters.cats.includes('transfer')} onChange={() => toggleInList('cats', 'transfer')}/>
+                      <span className="tx-filter-cat-icon">{transferCat.icon}</span>
+                      <span className="tx-filter-cat-name">{transferCat.name}</span>
+                      <span className="tx-filter-cat-count">{catCounts['transfer'] || 0}</span>
+                    </label>
+                  </div>
+                </>
+              )}
               {incomeCats.length > 0 && (
                 <>
                   <div className="tx-filter-sublabel">Revenus</div>
@@ -571,6 +625,61 @@ export function Transactions({ transactions, accounts, categories, members = [],
           </div>
         )}
       </div>
+
+      {/* Active filter chips — shows what's filtering so the badge count makes sense */}
+      {activeCount > 0 && (
+        <div className="tx-active-chips">
+          {filters.cats.map(catId => {
+            const cat = categories.find(c => c.id === catId);
+            return cat ? (
+              <button key={catId} className="tx-active-chip" onClick={() => toggleInList('cats', catId)}>
+                {cat.icon} {cat.name} <X size={11}/>
+              </button>
+            ) : null;
+          })}
+          {filters.type !== 'all' && (
+            <button className="tx-active-chip" onClick={() => setField('type', 'all')}>
+              {filters.type === 'income' ? 'Revenus' : 'Dépenses'} <X size={11}/>
+            </button>
+          )}
+          {filters.month && (
+            <button className="tx-active-chip" onClick={() => setField('month', '')}>
+              {new Intl.DateTimeFormat('fr-FR', { month: 'short', year: '2-digit' }).format(new Date(filters.month + '-02'))} <X size={11}/>
+            </button>
+          )}
+          {filters.accs.map(accId => {
+            const acc = accounts.find(a => a.id === accId);
+            return acc ? (
+              <button key={accId} className="tx-active-chip" onClick={() => toggleInList('accs', accId)}>
+                {acc.name} <X size={11}/>
+              </button>
+            ) : null;
+          })}
+          {filters.members.map(mId => {
+            const m = members.find(x => x.id === mId);
+            return m ? (
+              <button key={mId} className="tx-active-chip" onClick={() => toggleInList('members', mId)}>
+                {m.name} <X size={11}/>
+              </button>
+            ) : null;
+          })}
+          {(filters.dateFrom || filters.dateTo) && (
+            <button className="tx-active-chip" onClick={() => { setField('dateFrom', ''); setField('dateTo', ''); }}>
+              {filters.dateFrom || '…'} → {filters.dateTo || '…'} <X size={11}/>
+            </button>
+          )}
+          {(filters.amountMin !== '' || filters.amountMax !== '') && (
+            <button className="tx-active-chip" onClick={() => { setField('amountMin', ''); setField('amountMax', ''); }}>
+              {filters.amountMin !== '' ? `≥ ${filters.amountMin}€` : ''}{filters.amountMin !== '' && filters.amountMax !== '' ? ' ' : ''}{filters.amountMax !== '' ? `≤ ${filters.amountMax}€` : ''} <X size={11}/>
+            </button>
+          )}
+          {filters.tags.map(tag => (
+            <button key={tag} className="tx-active-chip" onClick={() => toggleInList('tags', tag)}>
+              #{tag} <X size={11}/>
+            </button>
+          ))}
+        </div>
+      )}
 
       {availableMonths.length > 0 && (
         <div className="tx-month-bar">
