@@ -179,7 +179,9 @@ const amountsMatch = (a, b) => {
 };
 
 export const detectInternalTransfers = (transactions, options = {}) => {
-  const { windowDays = 3, requireLabelHint = false } = options;
+  // C15 (2026-05-18) : fenêtre élargie 3j → 5j pour couvrir les virements
+  // bancaires lents (SEPA 24-72h, weekend, jours fériés).
+  const { windowDays = 5, requireLabelHint = false } = options;
   const transferIds = new Set();
   const pairs = []; // [{ outTxId, inTxId, fromAccountId, toAccountId, amount, date }]
   if (!Array.isArray(transactions) || transactions.length < 2) {

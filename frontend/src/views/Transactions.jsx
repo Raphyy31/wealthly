@@ -1060,13 +1060,17 @@ export function Transactions({ transactions, accounts, categories, members = [],
                             {acc ? <span className="tx-card-acc">{acc.name || acc.bank}</span> : <span className="tx-card-col-empty">—</span>}
                           </div>
                           <div className="tx-card-actions">
-                            <button
-                              className={`tx-card-action recurring ${isRecurring ? 'active' : ''}`}
-                              onClick={() => toggleRecurring(tx.id, !isRecurring)}
-                              title={isRecurring ? 'Récurrent — clic pour annuler' : 'Marquer récurrent'}
-                            >
-                              <Repeat size={12}/>
-                            </button>
+                            {/* C14 (2026-05-18) : bouton "récurrent" manuel retiré.
+                                Le badge auto-détecté reste affiché en lecture seule (isRecurring),
+                                et un toast propose la création de FixedCharge après 3 occurrences. */}
+                            {isRecurring && (
+                              <span
+                                className="tx-card-action recurring active is-readonly"
+                                title="Détecté comme récurrent (3+ occurrences)"
+                              >
+                                <Repeat size={12}/>
+                              </span>
+                            )}
                             {!isTransfer && setTransferOverride && (
                               <button
                                 className="tx-card-action transfer-toggle"

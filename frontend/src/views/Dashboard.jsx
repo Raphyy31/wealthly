@@ -27,6 +27,7 @@ import { Donut } from '../components/ui/Donut.jsx';
 // Note: fmtAmount/formatDelta retirés du Dashboard avec la suppression
 // des multi-deltas 30j/3M/YTD (feedback user 2026-05-18 — perf % jugée
 // peu utile sur la vitrine). KPI strip réorienté patrimoine cash + immo.
+import { formatDate } from '../utils.js';
 
 const PERIODS = [
   { id: '1m',  label: '1M',   months: 1 },
@@ -571,6 +572,46 @@ export function Dashboard({
         </div>
       </section>
 
+      {/* ── Mouvements internes du mois (C15 2026-05-18) ──────────────── */}
+      {(() => {
+        // Filtre les paires détectées sur le mois courant + max 6 lignes
+        const cm = currentMonth || new Date().toISOString().slice(0, 7);
+        const monthPairs = (transferPairs || []).filter(p => (p.date || '').startsWith(cm)).slice(0, 6);
+        const totalPairs = (transferPairs || []).filter(p => (p.date || '').startsWith(cm)).length;
+        if (!monthPairs.length) return null;
+        const accName = id => visibleAccounts?.find(a => a.id === id)?.name
+          || accounts?.find(a => a.id === id)?.name
+          || '—';
+        return (
+          <section className="ds-panel xfer-panel">
+            <div className="ds-panel-head">
+              <div>
+                <div className="dash-eyebrow">
+                  <span className="dash-eyebrow-label">Mouvements internes · {totalPairs}</span>
+                </div>
+                <div className="ds-panel-sub" style={{ marginTop: 4 }}>
+                  Paires détectées automatiquement entre vos comptes, exclues du cashflow.
+                </div>
+              </div>
+            </div>
+            <div className="xfer-list">
+              {monthPairs.map((p, i) => (
+                <div key={i} className="xfer-row">
+                  <div className="xfer-arrow">↔</div>
+                  <div className="xfer-route">
+                    <span className="xfer-from">{accName(p.fromAccountId)}</span>
+                    <span className="xfer-sep">→</span>
+                    <span className="xfer-to">{accName(p.toAccountId)}</span>
+                  </div>
+                  <div className="xfer-amt num">{formatEUR(Math.abs(p.amount))}</div>
+                  <div className="xfer-date">{formatDate(p.date, { format: 'short' })}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+        );
+      })()}
+
       {/* ── Transactions + Budget + Insights ───────────────────────────── */}
       <section className="dash-bottom-row">
         {/* §04 Transactions panel */}
@@ -942,6 +983,61 @@ function DashStyles() {
 
 
 /* Empty states éditoriaux — Newsreader italic, ton sobre (C4) */
+/* ── Mouvements internes panel (C15 2026-05-18) ──────────────────────── */
+.xfer-panel { margin-top: 28px; padding: 18px 22px 14px; }
+.xfer-list { margin-top: 10px; display: flex; flex-direction: column; }
+.xfer-row {
+  display: grid;
+  grid-template-columns: 22px 1fr auto auto;
+  align-items: center;
+  gap: 14px;
+  padding: 9px 0;
+  border-bottom: 1px dotted var(--border);
+}
+.xfer-row:last-child { border-bottom: 0; }
+.xfer-arrow {
+  font-family: var(--font-mono);
+  color: var(--accent);
+  font-size: 16px;
+  font-weight: 500;
+  text-align: center;
+}
+.xfer-route {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink);
+  letter-spacing: -0.005em;
+  min-width: 0;
+}
+.xfer-route .xfer-from,
+.xfer-route .xfer-to {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.xfer-sep {
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+.xfer-amt {
+  font: 500 13px/1 var(--font-sans);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.xfer-date {
+  font: 400 11px/1 var(--font-mono);
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+@media (max-width: 760px) {
+  .xfer-row { grid-template-columns: 22px 1fr auto; }
+  .xfer-date { display: none; }
+}
+
 .dash-empty {
   padding: 22px 20px;
   display: flex;
