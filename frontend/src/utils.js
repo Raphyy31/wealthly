@@ -323,6 +323,89 @@ export const formatCompact = (amount, currency = 'EUR') => {
   }).format(amount);
 };
 
+// ─────────────────────────────────────────────────────────────────────────
+//  Système numérique canonique (C3) — fmtAmount + formatDelta
+//
+//  Quatre modes documentés pour aligner le rendu monétaire sur toute l'app.
+//  Les composants doivent passer par fmtAmount() plutôt que d'appeler
+//  formatCurrency/formatCompact/toFixed/Intl directement (audit 2026-05-18 :
+//  63 callsites bypass actuels à migrer en C4..C9).
+//
+//    hero    → relevé complet, deux décimales, séparateurs FR strict
+//              ex. "124 532,00 €"  (Dashboard hero net worth, Wealth total)
+//    card    → notation compacte 1 décimale (k / M)
+//              ex. "124,5 k€"      (KPI cards mobile, Wealth list rows)
+//    inline  → entier sans décimales, séparateurs FR
+//              ex. "5 432 €"       (badges, deltas court format, tooltips)
+//    delta   → entier avec signe explicite (+ ou -)
+//              ex. "+5 432 €"       (variations 30j/3M/YTD, comparatifs)
+//
+//  Options : { currency = 'EUR' }. Le signe est imposé par le mode delta ;
+//  les autres modes affichent le signe naturel (− pour négatif uniquement).
+// ─────────────────────────────────────────────────────────────────────────
+export const fmtAmount = (value, mode = 'hero', options = {}) => {
+  const { currency = 'EUR' } = options;
+  if (value == null || !Number.isFinite(value)) return '—';
+  const locale = CURRENCY_LOCALE[currency] || 'fr-FR';
+
+  if (mode === 'hero') {
+    return new Intl.NumberFormat(locale, {
+      style: 'currency', currency,
+      minimumFractionDigits: 2, maximumFractionDigits: 2,
+    }).format(value);
+  }
+  if (mode === 'card') {
+    return new Intl.NumberFormat(locale, {
+      style: 'currency', currency,
+      notation: 'compact',
+      maximumFractionDigits: 1, minimumFractionDigits: 0,
+    }).format(value);
+  }
+  if (mode === 'inline') {
+    return new Intl.NumberFormat(locale, {
+      style: 'currency', currency,
+      minimumFractionDigits: 0, maximumFractionDigits: 0,
+    }).format(value);
+  }
+  if (mode === 'delta') {
+    return new Intl.NumberFormat(locale, {
+      style: 'currency', currency,
+      minimumFractionDigits: 0, maximumFractionDigits: 0,
+      signDisplay: 'exceptZero',
+    }).format(value);
+  }
+  // fallback safety
+  return formatCurrency(value, { currency });
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+//  formatDelta(value, mode, options) → { symbol, formatted, kind }
+//
+//  Helper qui renvoie un objet structuré pour rendre un delta avec chevron
+//  ▲/▼ (Geist Mono, jamais translate) et la sémantique pos/neg/neutral.
+//
+//    mode = 'amount' → utilise fmtAmount(value, 'delta', ...)
+//    mode = 'pct'    → utilise formatPct(value, { digits: 1, sign: true })
+//
+//  Le composant consommateur doit :
+//    <span class="ds-delta ds-delta--{kind}">
+//      <span class="ds-delta-chevron">{symbol}</span> {formatted}
+//    </span>
+//
+//  kind ∈ {'pos','neg','neutral'} — couleur sémantique appliquée via CSS.
+// ─────────────────────────────────────────────────────────────────────────
+export const formatDelta = (value, mode = 'amount', options = {}) => {
+  if (value == null || !Number.isFinite(value)) {
+    return { symbol: '·', formatted: '—', kind: 'neutral', raw: null };
+  }
+  const kind = value > 0 ? 'pos' : value < 0 ? 'neg' : 'neutral';
+  const symbol = value > 0 ? '▲' : value < 0 ? '▼' : '·';
+  const formatted = mode === 'pct'
+    ? formatPct(value, { digits: 1, sign: true })
+    : fmtAmount(value, 'delta', options);
+  return { symbol, formatted, kind, raw: value };
+};
+
 export const formatDate = (dateStr, options = {}) => {
   const { format = 'short' } = options;
   const d = new Date(dateStr);

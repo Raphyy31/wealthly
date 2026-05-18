@@ -815,6 +815,36 @@ html, body {
   box-shadow: var(--focus-ring);
 }
 
+/* ── Delta badge (C3) — chevron ▲/▼ Geist Mono + sémantique pos/neg ─── */
+.ds-delta {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  font: 500 var(--text-xs)/1.2 var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.ds-delta-chevron {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1;
+  display: inline-block;
+  transform-origin: center;
+  /* jamais translateY — chevron en glyph Geist Mono, position stable */
+}
+.ds-delta--pos     { color: var(--positive); }
+.ds-delta--neg     { color: var(--negative); }
+.ds-delta--neutral { color: var(--ink-3); }
+
+/* Variant "inline" (plus discret, utilisé dans les rows de table) */
+.ds-delta--inline {
+  font-size: var(--text-2xs);
+  gap: 3px;
+}
+
 /* ── Reduced motion : neutralise toutes les animations C2 ───────────── */
 @media (prefers-reduced-motion: reduce) {
   .ds-modal-backdrop,
