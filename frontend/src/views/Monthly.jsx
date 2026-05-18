@@ -812,22 +812,24 @@ function SankeyNode({ x, y, width, height, index, payload, fmt }) {
   const anchor  = isLeft ? 'end' : 'start';
   const midY    = y + height / 2;
 
-  // Adaptive display: always show name, hide amount on tiny nodes to avoid overlap.
-  const showName   = true;
-  const showAmount = height >= 22 && typeof payload.amount === 'number' && payload.amount > 0;
-  const nameY  = showAmount ? midY - 8 : midY;
-  const fontSize = height < 16 ? 10.5 : isLeft ? 13 : 12;
-
-  const displayName = (payload.icon ? `${payload.icon} ` : '') + (payload.name || '');
-  const hasPct = isMiddle && typeof payload.pctOfIncome === 'number' && payload.pctOfIncome > 0;
-  const amtStr = showAmount ? (fmt ? fmt(payload.amount) : `${payload.amount}€`) : '';
-  const pctStr = hasPct
+  const hasAmount = typeof payload.amount === 'number' && payload.amount > 0;
+  const hasPct    = isMiddle && typeof payload.pctOfIncome === 'number' && payload.pctOfIncome > 0;
+  const amtStr    = hasAmount ? (fmt ? fmt(payload.amount) : `${payload.amount}€`) : '';
+  const pctStr    = hasPct
     ? ` · ${payload.pctOfIncome >= 10 ? payload.pctOfIncome.toFixed(0) : payload.pctOfIncome.toFixed(1)}%`
     : '';
 
+  // Always show name + amount on ONE line (avoids height constraints entirely).
+  // When the node is tall enough, split into two lines for breathing room.
+  const twoLines   = height >= 28 && hasAmount;
+  const nameLine   = (payload.icon ? `${payload.icon} ` : '') + (payload.name || '');
+  const singleLine = hasAmount ? `${nameLine}  ${amtStr}` : nameLine;
+  const nameY      = twoLines ? midY - 8 : midY;
+  const fontSize   = isLeft ? 13 : height < 18 ? 10.5 : 12;
+
   return (
     <Layer key={`sn-${index}`}>
-      {/* Subtle outer glow so the bar reads as separate from the flows */}
+      {/* Subtle outer glow */}
       <rect x={x - 2} y={y} width={width + 4} height={height} rx={rx + 2} ry={rx + 2}
         fill={fill} fillOpacity={0.18}/>
       {/* Main node bar */}
@@ -837,20 +839,29 @@ function SankeyNode({ x, y, width, height, index, payload, fmt }) {
       <rect x={x} y={y} width={width} height={Math.min(height * 0.35, 4)} rx={rx} ry={rx}
         fill="#fff" fillOpacity={0.22}/>
 
-      {/* Labels — halo stroke keeps them legible over flows */}
-      {showName && (
-        <text x={labelX} y={nameY} textAnchor={anchor} fontSize={fontSize}
+      {/* Single-line label: "🍽️ Restaurant  250€" — always visible */}
+      {!twoLines && (
+        <text x={labelX} y={midY} textAnchor={anchor} fontSize={fontSize}
           fontWeight={isLeft || isMiddle ? 600 : 500} fill="var(--ink)"
           dominantBaseline="middle" {...HALO}>
-          {displayName}
+          {singleLine}
         </text>
       )}
-      {showAmount && (
-        <text x={labelX} y={midY + 11} textAnchor={anchor} fontSize={10.5}
-          fill={hasPct ? (payload.color || 'var(--ink-3)') : 'var(--ink-3)'}
-          dominantBaseline="middle" style={{ fontVariantNumeric: 'tabular-nums' }} {...HALO}>
-          {amtStr}{pctStr}
-        </text>
+
+      {/* Two-line layout for taller nodes: name on top, amount + % below */}
+      {twoLines && (
+        <>
+          <text x={labelX} y={nameY} textAnchor={anchor} fontSize={fontSize}
+            fontWeight={isLeft || isMiddle ? 600 : 500} fill="var(--ink)"
+            dominantBaseline="middle" {...HALO}>
+            {nameLine}
+          </text>
+          <text x={labelX} y={midY + 10} textAnchor={anchor} fontSize={10.5}
+            fill={hasPct ? (payload.color || 'var(--ink-3)') : 'var(--ink-3)'}
+            dominantBaseline="middle" style={{ fontVariantNumeric: 'tabular-nums' }} {...HALO}>
+            {amtStr}{pctStr}
+          </text>
+        </>
       )}
     </Layer>
   );
