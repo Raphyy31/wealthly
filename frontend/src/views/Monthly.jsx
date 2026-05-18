@@ -442,14 +442,44 @@ export function Monthly({
             <h3>Flux du mois type</h3>
             <span className="card-meta">Entrées → Catégories → Sous-catégories</span>
           </div>
+          {/* Mini stats strip */}
+          <div className="mon-sankey-stats">
+            <div className="mon-sankey-stat">
+              <span className="mon-sankey-stat-dot" style={{ background: 'var(--positive)' }}/>
+              <span className="mon-sankey-stat-label">Entrées</span>
+              <span className="mon-sankey-stat-val">{fmt(refTotals.income)}</span>
+            </div>
+            <span className="mon-sankey-stat-arrow">→</span>
+            <div className="mon-sankey-stat">
+              <span className="mon-sankey-stat-dot" style={{ background: 'var(--negative)' }}/>
+              <span className="mon-sankey-stat-label">Dépenses</span>
+              <span className="mon-sankey-stat-val">{fmt(refTotals.expense)}</span>
+            </div>
+            {refTotals.saving > 0 && <>
+              <span className="mon-sankey-stat-arrow">·</span>
+              <div className="mon-sankey-stat">
+                <span className="mon-sankey-stat-dot" style={{ background: 'var(--accent)' }}/>
+                <span className="mon-sankey-stat-label">Épargne</span>
+                <span className="mon-sankey-stat-val">{fmt(refTotals.saving)}</span>
+              </div>
+            </>}
+            {refTotals.balance > 0 && <>
+              <span className="mon-sankey-stat-arrow">·</span>
+              <div className="mon-sankey-stat">
+                <span className="mon-sankey-stat-dot" style={{ background: 'var(--ink-3)' }}/>
+                <span className="mon-sankey-stat-label">Reste</span>
+                <span className="mon-sankey-stat-val positive">{fmt(refTotals.balance)}</span>
+              </div>
+            </>}
+          </div>
           <div className="mon-sankey-body">
-            <ResponsiveContainer width="100%" height={isNarrow ? 420 : Math.max(480, sankeyData.nodes.filter(n => n.level === 2).length * 32 + 80)}>
+            <ResponsiveContainer width="100%" height={isNarrow ? 440 : Math.max(520, sankeyData.nodes.filter(n => n.level === 2).length * 36 + 100)}>
               <Sankey
                 data={sankeyData}
-                nodePadding={isNarrow ? 14 : 22}
-                nodeWidth={8}
+                nodePadding={isNarrow ? 16 : 26}
+                nodeWidth={14}
                 iterations={64}
-                margin={{ top: 16, right: isNarrow ? 120 : 180, bottom: 16, left: isNarrow ? 80 : 130 }}
+                margin={{ top: 24, right: isNarrow ? 130 : 220, bottom: 24, left: isNarrow ? 100 : 160 }}
                 node={<SankeyNode fmt={fmt}/>}
                 link={<SankeyLink/>}
               >
@@ -741,60 +771,71 @@ function MonthPicker({ selectedMonth, currentMonth, availableMonths, onChange })
 
 function SankeyNode({ x, y, width, height, index, payload, fmt }) {
   if (!payload) return null;
-  const fill = payload.color || (payload.kind === 'income' ? 'var(--positive)' : 'var(--ink)');
   const isLeft = payload.level === 0;
-  const labelX = isLeft ? x - 10 : x + width + 10;
+  const isMiddle = payload.level === 1;
+  const fill = payload.color || (payload.kind === 'income' ? 'var(--positive)' : '#94a3b8');
+  const labelX = isLeft ? x - 16 : x + width + 16;
   const anchor = isLeft ? 'end' : 'start';
-  const labelY = y + height / 2;
-  const name = (payload.icon ? `${payload.icon} ` : '') + payload.name;
-  const amount = typeof payload.amount === 'number' ? payload.amount : null;
+  const midY = y + height / 2;
+
+  const displayName = (payload.icon ? `${payload.icon} ` : '') + (payload.name || '');
+  const hasAmount = typeof payload.amount === 'number' && payload.amount > 0;
+  const hasPct = isMiddle && typeof payload.pctOfIncome === 'number' && payload.pctOfIncome > 0;
+  const nameY = hasAmount ? midY - 8 : midY;
+  const amtStr = hasAmount ? (fmt ? fmt(payload.amount) : `${payload.amount}€`) : '';
+  const pctStr = hasPct
+    ? ` · ${payload.pctOfIncome >= 10 ? payload.pctOfIncome.toFixed(0) : payload.pctOfIncome.toFixed(1)}% du revenu`
+    : '';
 
   return (
     <Layer key={`sn-${index}`}>
-      {/* Capsule with the cat color, rounded ends */}
-      <rect
-        x={x} y={y} width={width} height={height}
-        rx={Math.min(width, 4)} ry={Math.min(width, 4)}
-        fill={fill} fillOpacity={0.92}
-      />
-      {/* Inner highlight for a tiny bit of depth */}
-      <rect
-        x={x} y={y} width={width / 2} height={height}
-        rx={Math.min(width, 4)} ry={Math.min(width, 4)}
-        fill="#ffffff" fillOpacity={0.08}
-      />
-      <text x={labelX} y={labelY - 2} dy="0.32em" fontSize={12} fontWeight={500} fill="var(--ink)" textAnchor={anchor}>
-        {name}
+      {/* Node bar — rounded pill */}
+      <rect x={x} y={y} width={width} height={height} rx={7} ry={7} fill={fill} fillOpacity={0.95}/>
+      {/* Subtle inner highlight */}
+      <rect x={x} y={y} width={width} height={Math.min(height, 3)} rx={7} ry={7} fill="#fff" fillOpacity={0.25}/>
+      {/* Category name */}
+      <text
+        x={labelX} y={nameY}
+        textAnchor={anchor}
+        fontSize={isLeft ? 13 : 12.5}
+        fontWeight={isLeft || isMiddle ? 600 : 500}
+        fill="var(--ink)"
+        dominantBaseline="middle"
+      >
+        {displayName}
       </text>
-      {amount !== null && amount > 0 && (
-        <text x={labelX} y={labelY + 12} dy="0.32em" fontSize={10.5} fill="var(--ink-3)" textAnchor={anchor} style={{ fontVariantNumeric: 'tabular-nums' }}>
-          {fmt ? fmt(amount) : amount}
-          {payload.level === 1 && typeof payload.pctOfIncome === 'number' && payload.pctOfIncome > 0 && (
-            <tspan fill={payload.color} fillOpacity={0.85} dx="6">
-              · {payload.pctOfIncome >= 10 ? payload.pctOfIncome.toFixed(0) : payload.pctOfIncome.toFixed(1)}% du revenu
-            </tspan>
-          )}
+      {/* Amount + optional % */}
+      {hasAmount && (
+        <text
+          x={labelX} y={midY + 10}
+          textAnchor={anchor}
+          fontSize={11}
+          fill={hasPct ? payload.color || 'var(--ink-3)' : 'var(--ink-3)'}
+          dominantBaseline="middle"
+          style={{ fontVariantNumeric: 'tabular-nums' }}
+        >
+          {amtStr}{pctStr}
         </text>
       )}
     </Layer>
   );
 }
 
-// Custom link that picks up the target-node color so each flow takes the
-// colour of where it lands (warm rainbow effect across the chart).
+// Custom link with gradient from income green → category color.
 function SankeyLink({ sourceX, targetX, sourceY, targetY, sourceControlX, targetControlX, linkWidth, payload, index }) {
-  const stroke = payload?.color || 'var(--accent)';
+  const color = payload?.color || '#94a3b8';
+  const gradId = `sk-g-${index}`;
+  const sw = Math.max(1, linkWidth);
   const d = `M${sourceX},${sourceY}C${sourceControlX},${sourceY} ${targetControlX},${targetY} ${targetX},${targetY}`;
   return (
     <g>
-      <path
-        d={d}
-        stroke={stroke}
-        strokeWidth={Math.max(1, linkWidth)}
-        strokeOpacity={0.32}
-        fill="none"
-        style={{ mixBlendMode: 'normal' }}
-      />
+      <defs>
+        <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="var(--positive)" stopOpacity="0.35"/>
+          <stop offset="100%" stopColor={color} stopOpacity="0.5"/>
+        </linearGradient>
+      </defs>
+      <path d={d} stroke={`url(#${gradId})`} strokeWidth={sw} fill="none" strokeLinecap="round"/>
     </g>
   );
 }

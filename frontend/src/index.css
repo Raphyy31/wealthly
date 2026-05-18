@@ -887,7 +887,17 @@ html, body {
 .mon-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 30px; color: var(--ink-3); }
 
 /* Sankey card */
-.mon-sankey-body { padding: 6px 0 0; }
+.mon-sankey-stats {
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 20px 14px; flex-wrap: wrap;
+}
+.mon-sankey-stat { display: flex; align-items: center; gap: 6px; }
+.mon-sankey-stat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.mon-sankey-stat-label { font-size: 12px; color: var(--ink-3); font-weight: 500; }
+.mon-sankey-stat-val { font-size: 12.5px; color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.mon-sankey-stat-val.positive { color: var(--positive); }
+.mon-sankey-stat-arrow { color: var(--border-strong); font-size: 14px; user-select: none; }
+.mon-sankey-body { padding: 0; overflow: hidden; }
 
 /* Comparison table */
 .mon-compare-table { display: flex; flex-direction: column; }
