@@ -305,6 +305,49 @@ BUILTIN_RULES: list[Rule] = [
     # ── Règlements carte de crédit (côté +) = transfer interne
     _r("xfer.credit_card_settlement","uncategorized", r"PRELEVEMENT\s*AUTOMATIQUE\s*ENREGISTRE-?MERCI", priority=200, amount_sign="credit", is_transfer=True, notes="AMEX/CB monthly statement payment received"),
     _r("xfer.echelonnement","uncategorized", r"DEPENSE\s*ECHELONNEE", priority=180, is_transfer=True, notes="AMEX installment plan, -X et +X paire"),
+
+    # ─────────────────────────────────────────────────────────────────────
+    # C13 (2026-05-18) — Règles ajoutées suite à l'audit du CSV de
+    # 204 tx corrigées manuellement par l'utilisateur. Cible : combler
+    # les patterns récurrents qui tombaient en `unknown`.
+    # ─────────────────────────────────────────────────────────────────────
+
+    # Échéance prêt étudiant Crédit Agricole (libellé typique :
+    # "PRELEVEMENT ECHEANCE PRET 00000750858 ECHEANCE 10/05/2026 PRET …
+    # GRE-00000…77 FR41ZZZ119164"). On flag en loan_student par défaut —
+    # l'utilisateur peut re-mapper sur loan_consumer si crédit non étudiant.
+    _r("loan.ca_echeance_pret", "loan_student", r"ECHEANCE\s*PRET\s*\d+", payee="Crédit Agricole — Prêt", priority=130, amount_sign="debit"),
+
+    # BNP Paribas Personal Finance (Cetelem, Cofidis…) — crédit conso
+    _r("loan.bnp_personal_finance", "loan_consumer", r"BNP\s*Paribas\s*Personal\s*Finance|CETELEM\b", payee="BNP Personal Finance", priority=120, amount_sign="debit"),
+
+    # Prévoyance Crédit Agricole — PREDICA assurance vie/décès
+    _r("ins.predica", "insurance_life", r"\bPREDICA\b|PREDICA\s*PREVOYANCE", payee="Predica", priority=110, amount_sign="debit"),
+
+    # Frais bancaires complémentaires (incidents, intérêts débiteurs)
+    _r("fees.incidents", "fees", r"FRAIS\s*IRREG(?:ULIERS)?\.?\s*ET\s*INCIDENTS", priority=110, amount_sign="debit"),
+    _r("fees.interets_debiteurs", "fees", r"INT[ÉE]R[ÊE]TS?\s*D[ÉE]BITEURS?", priority=100, amount_sign="debit"),
+    _r("fees.retro_commercial", "reimbursements", r"RETRO\s*A\s*TITRE\s*COMMERCIAL", priority=100, amount_sign="credit", notes="rétrocession commission d'intervention"),
+
+    # Mutuelle Helium — remboursements (toujours en crédit)
+    _r("income.helium_refund", "reimbursements", r"\bHELIUM\b", payee="Helium", priority=110, amount_sign="credit"),
+
+    # Distributeurs / snacks (NYX*, SELECTA, MCB POMPADOUR…) — petits
+    # montants ≤ 5 €, catégorisés en restaurants (faute de sous-cat dédiée
+    # — proposée en C16 features mais non créée ici pour ne pas toucher
+    # à DEFAULT_CATEGORIES). Priorité basse → user_rule prime si présente.
+    _r("food.vending_nyx", "restaurants", r"\bNYX\*", payee="Distributeur (NYX)", priority=60, amount_sign="debit"),
+    _r("food.vending_selecta", "restaurants", r"\bSELECTA\s*SAS\b|\bSELECTA\b", payee="Selecta", priority=60, amount_sign="debit"),
+    _r("food.vending_mcb", "restaurants", r"\bMCB\s+", payee="Distributeur (MCB)", priority=55, amount_sign="debit"),
+
+    # Virements internes auto-détectés : "M.OU MME [Nom Prénom]" qui
+    # est exactement le pattern d'un virement vers/depuis son propre
+    # compte joint. Flag comme transfer pour exclure du cashflow.
+    _r("xfer.self_couple", "uncategorized", r"VIREMENT\s*(?:EMIS\s*WEB\s*|EN\s*VOTRE\s*FAVEUR\s*(?:DE\s*)?)?M\.OU\s*MME\b", payee="Auto-virement", is_transfer=True, priority=190, notes="Couple/joint self-transfer pattern"),
+
+    # AMEX règlement côté débit (sortant du compte courant vers AMEX) —
+    # complète xfer.credit_card_settlement qui gère le côté crédit
+    _r("xfer.amex_settlement", "uncategorized", r"\bAMERICAN\s*EXPRESS\b.*Carte-?France|PRELEVEMENT\s*American\s*Express", payee="American Express", is_transfer=True, priority=190, amount_sign="debit", notes="Règlement relevé AMEX mensuel"),
 ]
 
 

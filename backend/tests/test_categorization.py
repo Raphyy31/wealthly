@@ -71,7 +71,7 @@ def _import_one(client, headers, account_id, label, amount=-10.0, date="2026-05-
     """Bulk-import a single tx without pre-set category — engine decides."""
     resp = client.post("/transactions/import", json={
         "account_id": account_id,
-        "transactions": [{"date": date, "label": label, "amount": amount}],
+        "transactions": [{"account_id": account_id, "date": date, "label": label, "amount": amount}],
     }, headers=headers)
     assert resp.status_code == 201, resp.text
     return resp.json()
@@ -139,6 +139,73 @@ def test_engine_categorizes_cotisation_premium_as_fees(client, auth_headers, set
     _import_one(client, auth_headers, setup_household, "COTISATION Offre Premium", -15.30)
     tx = _last_tx(client, auth_headers)
     assert tx["category_slug"] == "fees"
+
+
+# ─── C13 (2026-05-18) — Règles ajoutées depuis l'audit CSV utilisateur ──────
+
+def test_engine_categorizes_echeance_pret_as_loan_student(client, auth_headers, setup_household):
+    _import_one(client, auth_headers, setup_household,
+                "PRELEVEMENT ECHEANCE PRET 00000750858 ECHEANCE 10/05/2026 PRET 00000750858-00082147-10052026-1 GRE-000000000005775 FR41ZZZ119164",
+                -275.55)
+    tx = _last_tx(client, auth_headers)
+    assert tx["category_slug"] == "loan_student"
+    assert tx["cat_source"] == "builtin_rule"
+
+
+def test_engine_categorizes_bnp_personal_finance_as_loan_consumer(client, auth_headers, setup_household):
+    _import_one(client, auth_headers, setup_household,
+                "PRELEVEMENT BNP Paribas Personal Finance 42278135431101", -40.79)
+    tx = _last_tx(client, auth_headers)
+    assert tx["category_slug"] == "loan_consumer"
+    assert tx["payee_name"] == "BNP Personal Finance"
+
+
+def test_engine_categorizes_predica_as_insurance_life(client, auth_headers, setup_household):
+    _import_one(client, auth_headers, setup_household,
+                "PRELEVEMENT PREDICA PREVOYANCE DIALOGUE DU C CREDIT AGRICOLE GARANTIE DECES",
+                -4.78)
+    tx = _last_tx(client, auth_headers)
+    assert tx["category_slug"] == "insurance_life"
+    assert tx["payee_name"] == "Predica"
+
+
+def test_engine_categorizes_frais_incidents_as_fees(client, auth_headers, setup_household):
+    _import_one(client, auth_headers, setup_household,
+                "PRELEVEMENT FRAIS IRREG.ET INCIDENTS 03/2026", -32.00)
+    tx = _last_tx(client, auth_headers)
+    assert tx["category_slug"] == "fees"
+
+
+def test_engine_categorizes_interets_debiteurs_as_fees(client, auth_headers, setup_household):
+    _import_one(client, auth_headers, setup_household,
+                "PRELEVEMENT Intérets débiteurs", -7.20)
+    tx = _last_tx(client, auth_headers)
+    assert tx["category_slug"] == "fees"
+
+
+def test_engine_categorizes_helium_as_reimbursement(client, auth_headers, setup_household):
+    _import_one(client, auth_headers, setup_household,
+                "VIREMENT EN VOTRE FAVEUR HELIUM 202604643396 FM.HELIUM 202604643396", 60.00)
+    tx = _last_tx(client, auth_headers)
+    assert tx["category_slug"] == "reimbursements"
+    assert tx["payee_name"] == "Helium"
+
+
+def test_engine_flags_self_couple_transfer(client, auth_headers, setup_household):
+    _import_one(client, auth_headers, setup_household,
+                "VIREMENT EMIS WEB M.OU MME DARMON RAPHAEL", -3000.00)
+    tx = _last_tx(client, auth_headers)
+    assert tx["is_transfer_override"] is True
+    assert tx["cat_source"] == "builtin_rule"
+
+
+def test_engine_flags_amex_settlement_debit_side(client, auth_headers, setup_household):
+    _import_one(client, auth_headers, setup_household,
+                "PRELEVEMENT American Express Carte-France XXXX X57273 9XXXX",
+                -1202.21)
+    tx = _last_tx(client, auth_headers)
+    assert tx["is_transfer_override"] is True
+    assert tx["cat_source"] == "builtin_rule"
 
 
 def test_engine_categorizes_anthropic_as_cloud(client, auth_headers, setup_household):
