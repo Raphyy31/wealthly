@@ -328,7 +328,13 @@ export function RefMonthEditor({
     setSaving(true);
     try {
       await saveRefMonth({ version: 1, lines: draft.map(l => ({ ...l, amount: parseFloat(l.amount) || 0 })) });
+      // Succès confirmé — on peut fermer la modale
       onClose?.();
+    } catch (err) {
+      // FIX 2026-05-18 : si saveRefMonth re-throw, on NE FERME PAS la modale.
+      // Le toast d'erreur est déjà affiché par WealthlyApp.saveRefMonth.
+      // Le draft local reste à l'écran → l'user peut retry ou copier ses lignes.
+      console.error('[RefMonthEditor] save failed, keeping editor open:', err);
     } finally {
       setSaving(false);
     }

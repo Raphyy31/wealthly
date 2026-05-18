@@ -1589,15 +1589,32 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
 
   // Persist the Mois type template pour le scope actif. Optimistic update,
   // backend round-trip réinjecte la version canonique (avec updated_at).
+  //
+  // FIX 2026-05-18 (bug critique) : avant ce fix le catch silencieux avalait
+  // les erreurs réseau / 401 / 422 → l'utilisateur voyait l'optimistic en
+  // local mais le backend n'avait rien stocké. Au refresh, mois type vide.
+  //
+  // Comportement correct :
+  //   - en cas d'erreur : ROLLBACK de l'optimistic + toast explicite +
+  //     RE-THROW pour que l'appelant (RefMonthEditor.handleSave) ne ferme
+  //     PAS la modale.
+  //   - en cas de succès : on remplace l'optimistic par la version backend
+  //     (updated_at correct).
   const saveRefMonth = async (next) => {
     const scope = refMonthScope;
+    const previous = refMonthsByScope[scope] || { version: 1, updated_at: null, lines: [] };
     setRefMonthsByScope(prev => ({ ...prev, [scope]: next }));
     try {
       const arg = scope === 'household' ? undefined : scope;
       const saved = await api.refMonth.put(arg, { version: next.version || 1, lines: next.lines || [] });
       setRefMonthsByScope(prev => ({ ...prev, [scope]: saved }));
+      return saved;
     } catch (err) {
-      showToast(t('toasts.genericError', { message: err.message }), 'error');
+      // Rollback optimistic + alerte explicite — pas de toast générique
+      setRefMonthsByScope(prev => ({ ...prev, [scope]: previous }));
+      const detail = err?.detail || err?.message || 'erreur inconnue';
+      showToast(`Mois type non enregistré : ${detail}. Vos modifications locales ont été annulées.`, 'error');
+      throw err;  // ← critique : laisse RefMonthEditor savoir qu'il a échoué
     }
   };
 
