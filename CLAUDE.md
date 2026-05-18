@@ -7,6 +7,43 @@ Notes for Claude (and any future AI tooling) picking the project back up.
 
 ---
 
+## Session 2026-05-18 — Raphyy31 + Claude (Opus 4.7) — refonte UI/UX globale + GSAP + 2FA + tests
+
+Grosse session (15 commits) après audit complet (UI/UX + animations + architecture).
+Plan détaillé livré dans `docs/PLAN_2026-05-18.md` (22 chantiers / 6 phases).
+**P1+P2+P3+P4+P6 livrées dans la journée**. Reste P5 features pour plus tard.
+
+| Chantier | Commit | Livré |
+|---|---|---|
+| **C1** Tokens transversaux | `be72525` | Scale typo `--text-*`, dataviz +2 séries + softs, --focus-ring, --press-feedback, modes densité `[data-density]` |
+| **C2** Composants atomiques | `42db02b` | `.ds-card--kpi/insight/drilldown`, `.ds-table` pattern relevé, `.ds-modal-*` scale-only, `.ds-drawer` clip-path, input states canoniques |
+| **C3** Système numérique | `cb947bf` | `fmtAmount(value, mode)` 4 modes (hero/card/inline/delta), `formatDelta()` avec ▲/▼ Geist Mono, badge `.ds-delta` |
+| **C4** Sidebar refonte | `0e30497` puis `6ade130` | Brand row + member filter en **pills horizontales** (variant C+D, choisi user) avec mini-avatars + active cobalt-soft. Suppression de la search bar `⌘K` placeholder et de tous les "§ 0X" |
+| **C4** Dashboard refonte | `185308b` puis `6ade130` | KPI strip refondu : Patrimoine cash (liquidités+placements+épargne) / Patrimoine immo net (immo−crédits) / Épargne mois. Multi-deltas 30j/3M/YTD retirés (jugés peu utiles par user). Hero adaptatif état partiel (split actifs/passifs + bannière éditoriale). Empty states éditoriaux Newsreader italic. Compteur header sync visibleAccounts vs total |
+| **C6/7/8** Polish | `4648990` | Dropdowns conformes design system (anim scale-only catDdFade + cmbPanelIn, focus-ring C1, no-translate), empty states italic sur Transactions/Monthly, `<select>` natif MergeModal → Combobox |
+| **C9** Landing refonte | `71b424a` | Direction A masthead ("piloté avec rigueur"), 3 nouvelles sections : 4 icones Pourquoi (open-source/DSP2/sans pub/FR), Tarifs 3 cards (Solo/**Famille 5€**/Self-hosted GitHub), FAQ accordéon 4 questions, GitHub link colophon. Dark mode adouci `#0F0E0C → #16140F` (papier-chaud nocturne). GSAP setup (foundations C10 amorcées) avec gsap.matchMedia + DURATIONS + EASES exposés |
+| **C10/11/12** GSAP | `7f4a640` | AnimatedNumber migré rAF → `gsap.to({val})` avec snap + reduced-motion. Modal entry scale-only (translateY retirée). HealthScore count-up synchronisé arc draw (ease expo.out signature). Cohabite avec Framer Motion existant sur Landing/Dashboard (pas de rewrite) |
+| **C13** Catégorisation | `a75b55f` | **11 règles regex builtin** ajoutées depuis l'audit du CSV utilisateur de 204 tx : ECHEANCE PRET → loan_student, BNP Personal Finance → loan_consumer, PREDICA → insurance_life, FRAIS IRREG/intérêts → fees, HELIUM → reimbursements, NYX*/SELECTA/MCB → restaurants, M.OU MME → auto-virement, AMEX Carte-France → transfer. Bug helper pytest fixé en passant (account_id manquant → 22/28 tests faux). 28/28 tests verts |
+| **C14** Récurrent | `78127a7` | Bouton "récurrent" manuel retiré des cartes Transactions. Badge auto en lecture seule. Auto-création FixedCharge après 3 obs **reportée** (banner + workflow à faire dans session dédiée) |
+| **C15** Transferts internes | `78127a7` | Fenêtre détection 3j → 5j (SEPA lents). Nouveau panneau "Mouvements internes" sur Dashboard listant les paires du mois. Cohabite avec règles regex C13 + override per-tx + role compte |
+| **Bug critique RefMonth** | `882fb3c` | `saveRefMonth` catchait toute erreur en silence → l'utilisateur a perdu son mois type sans toast. Fix : rollback optimistic + re-throw + RefMonthEditor.handleSave ne ferme la modale qu'en cas de succès |
+| **C19** 2FA TOTP | `3298af1` | Backend pyotp 2.9 : `User.totp_secret/_enabled`, endpoints `/auth/totp/setup|verify|disable|status`, login flow exige `totp_code` step 2 si activé (401 `totp_required`). Frontend : `TwoFactorRow` + `TotpSetupModal` (QR via api.qrserver.com, secret manuel, input 6 chiffres mono) + `TotpDisableModal` (password + code optionnel). Audit log enrichi (totp_enabled/disabled/verify_failure). **Login step 2 frontend (écran code post-password) reporté** — backend prêt mais AuthScreen reste sur 1 étape. Workaround : ne pas se déconnecter avant l'implémentation step 2 |
+| **C20** Tests vitest | `3298af1` | `frontend/vitest.config.js` + scripts `npm test` + `npm run test:watch`. `taxFr.test.js` : 28 tests, 7 describe blocks couvrant abattement, parts, barème, marginal, crédits + plafond 10k niches, computeTax bout-en-bout, compareWithPAS, constantes 2025. Garde-fou anti-régression sur les valeurs légales (mises à jour annuellement) |
+
+**Direction visuelle ITÉRÉE** (pas figée — feedback user explicite 2026-05-18) :
+- Suppression des "§ 0X" eyebrows partout (jugés moches par user) → labels uppercase mono sans préfixe
+- Dark mode adouci `#0F0E0C → #16140F` papier-chaud nocturne
+- Workspace switcher en pills horizontales (variant C+D) plutôt que dropdown
+
+**Reste après cette session** :
+- 5 tests `test_password_reset.py` qui fail (préexistants, non liés à C19) → à investiguer
+- Login step 2 frontend (AuthScreen écran code TOTP) — bloquer cas user qui se déconnecte après activation 2FA
+- Auto-création FixedCharge quand 3+ obs récurrentes (banner sur Transactions)
+- Découpe Wealth.jsx 4 300 lignes (dette tech, non bloquant)
+- Brainstorm features (compte employeur Swile, alertes, projection retraite, OCR ticket)
+
+---
+
 ## Session 2026-05-16 (suite) — Raphyy31 + Claude (Opus 4.7) — polish catégorisation + cron + vue récurrent + tests
 
 Après la grosse refonte du matin (Payees + Learning + 120 règles), 5 chantiers de polish sur la même journée pour fermer les trous structurels mentionnés en debrief :
