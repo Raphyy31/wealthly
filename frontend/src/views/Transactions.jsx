@@ -778,8 +778,9 @@ export function Transactions({ transactions, accounts, categories, members = [],
         if (visible.length === 0) {
           return (
             <div className="tx-feed-empty">
-              <Search size={28}/>
-              <p>Aucune transaction ne correspond à tes filtres.</p>
+              <Search size={28} className="tx-feed-empty-ico"/>
+              <p className="tx-feed-empty-lead">Aucune transaction ne correspond à vos filtres.</p>
+              <p className="tx-feed-empty-hint">Essayez d'élargir la période ou de retirer un filtre.</p>
             </div>
           );
         }

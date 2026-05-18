@@ -531,7 +531,11 @@ export function Monthly({
                   )}
                 </div>
                 {section.items.length === 0 && (
-                  <div className="mon-row mon-row-empty">Aucune ligne dans cette section</div>
+                  <div className="mon-row mon-row-empty">
+                    <em style={{ fontFamily: 'Newsreader,Georgia,serif', fontStyle: 'italic', color: 'var(--ink-2)' }}>
+                      Aucune ligne dans cette section.
+                    </em>
+                  </div>
                 )}
                 {section.items.map(item => {
                   const cat = catFor(item.category_id);
@@ -919,7 +923,12 @@ function EvolutionModal({ monthlyEvolution, fmt, onClose }) {
             </ComposedChart>
           </ResponsiveContainer>
         ) : (
-          <div className="mon-empty"><BarChart3 size={28}/><span>Pas encore de données</span></div>
+          <div className="mon-empty">
+            <BarChart3 size={28}/>
+            <em style={{ fontFamily: 'Newsreader,Georgia,serif', fontStyle: 'italic', color: 'var(--ink-2)', fontSize: 14 }}>
+              Pas encore de données.
+            </em>
+          </div>
         )}
       </div>
     </div>

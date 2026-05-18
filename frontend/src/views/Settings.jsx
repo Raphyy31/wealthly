@@ -373,14 +373,13 @@ function MergeModal({ accounts, sourceId, onConfirm, onClose }) {
           <>
             <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <label style={{ fontSize: 12, color: 'var(--ink-2)', fontWeight: 600 }}>Fusionner avec</label>
-                <select
+                <label className="ds-input-label">Fusionner avec</label>
+                <Combobox
                   value={targetId}
-                  onChange={e => setTargetId(e.target.value)}
-                  style={{ fontSize: 13, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-elev)', color: 'var(--ink)' }}
-                >
-                  {others.map(a => <option key={a.id} value={a.id}>{a.name || a.bank}</option>)}
-                </select>
+                  onChange={setTargetId}
+                  options={others.map(a => ({ value: a.id, label: a.name || a.bank }))}
+                  placeholder="Choisir un compte…"
+                />
               </div>
               {target && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
