@@ -812,11 +812,11 @@ function SankeyNode({ x, y, width, height, index, payload, fmt }) {
   const anchor  = isLeft ? 'end' : 'start';
   const midY    = y + height / 2;
 
-  // Adaptive display: hide details on tiny nodes to avoid overlap.
-  const showName   = height >= 13;
-  const showAmount = height >= 26 && typeof payload.amount === 'number' && payload.amount > 0;
+  // Adaptive display: always show name, hide amount on tiny nodes to avoid overlap.
+  const showName   = true;
+  const showAmount = height >= 22 && typeof payload.amount === 'number' && payload.amount > 0;
   const nameY  = showAmount ? midY - 8 : midY;
-  const fontSize = height < 20 ? 10.5 : isLeft ? 13 : 12;
+  const fontSize = height < 16 ? 10.5 : isLeft ? 13 : 12;
 
   const displayName = (payload.icon ? `${payload.icon} ` : '') + (payload.name || '');
   const hasPct = isMiddle && typeof payload.pctOfIncome === 'number' && payload.pctOfIncome > 0;
