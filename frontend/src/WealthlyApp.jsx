@@ -122,11 +122,8 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   // pour rendre la bannière + appeler /apply-retroactively.
   const [learningOffer, setLearningOffer] = useState(null);
   const [sidebarMenuOpen, setSidebarMenuOpen] = useState(false);
-  // C4 — Sidebar premium : workspace switcher (membres + Famille) ouvert/fermé,
-  // recherche de nav rapide (palette Cmd+K à câbler en P5).
+  // C4 — workspace switcher (member dropdown, kept for fallback / future)
   const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
-  const [navSearchOpen, setNavSearchOpen] = useState(false);
-  const [navSearchQuery, setNavSearchQuery] = useState('');
 
   // Multi-currency: user's display currency + live FX rates (Frankfurter, 1h cache).
   // EUR base is implicit (rates table is { USD: 1.08, GBP: 0.85, CHF: 0.97 }).
@@ -1880,127 +1877,58 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
         {/* Desktop sidebar (â‰¥1024px) — Wealthly v3 handoff spec */}
         <aside className="ws-sidebar">
 
-          {/* Workspace block (clickable → member switcher dropdown) */}
-          <div className="ws-workspace-wrap">
-            <button
-              type="button"
-              className={`ws-workspace ${workspaceMenuOpen ? 'open' : ''}`}
-              onClick={() => setWorkspaceMenuOpen(o => !o)}
-              aria-expanded={workspaceMenuOpen}
-              aria-haspopup="menu"
-              title={t('nav.switch_member') || 'Changer de membre'}
-            >
-              <div className="ws-workspace-mark"><Logo size={20} /></div>
-              <div className="ws-workspace-info">
-                <div className="ws-workspace-name">
-                  {activeMemberId === 'all'
-                    ? (t('nav.family_view') || 'Famille')
-                    : (members.find(m => m.id === activeMemberId)?.name || 'Wealthly')}
-                </div>
-                <div className="ws-workspace-sub">
-                  {activeMemberId === 'all'
-                    ? `${members.length || 1} ${(members.length || 1) > 1 ? (t('nav.members_plural') || 'membres') : (t('nav.members_singular') || 'membre')}`
-                    : (members.find(m => m.id === activeMemberId)?.role === 'child'
-                        ? (t('nav.role_child') || 'Enfant')
-                        : (t('nav.role_adult') || 'Adulte'))}
-                </div>
-              </div>
-              <ChevronDown size={14} className={`ws-workspace-chev ${workspaceMenuOpen ? 'on' : ''}`}/>
-            </button>
-
-            {workspaceMenuOpen && (
-              <>
-                <div className="ws-popover-overlay" onClick={() => setWorkspaceMenuOpen(false)}/>
-                <div className="ws-workspace-pop" role="menu">
-                  <div className="ws-popover-eyebrow">{t('nav.household_members') || 'Membres du foyer'}</div>
-
-                  <button
-                    type="button"
-                    className={`ws-member-row ${activeMemberId === 'all' ? 'on' : ''}`}
-                    onClick={() => { setActiveMemberId('all'); setWorkspaceMenuOpen(false); }}
-                    role="menuitemradio"
-                    aria-checked={activeMemberId === 'all'}
-                  >
-                    <span className="ws-member-avatar ws-member-avatar--family">
-                      <Users size={12}/>
-                    </span>
-                    <div className="ws-member-info">
-                      <div className="ws-member-name">{t('nav.family_view') || 'Vue famille'}</div>
-                      <div className="ws-member-meta">{t('nav.all_members') || 'Tous les membres'}</div>
-                    </div>
-                    {activeMemberId === 'all' && <Check size={14} className="ws-member-check"/>}
-                  </button>
-
-                  {members.length > 0 && <div className="ws-popover-divider"/>}
-
-                  {members.map(m => (
-                    <button
-                      key={m.id}
-                      type="button"
-                      className={`ws-member-row ${activeMemberId === m.id ? 'on' : ''}`}
-                      onClick={() => { setActiveMemberId(m.id); setWorkspaceMenuOpen(false); }}
-                      role="menuitemradio"
-                      aria-checked={activeMemberId === m.id}
-                    >
-                      <span className="ws-member-avatar" style={{ background: m.color }}>
-                        {m.name.charAt(0).toUpperCase()}
-                      </span>
-                      <div className="ws-member-info">
-                        <div className="ws-member-name">{m.name}</div>
-                        <div className="ws-member-meta">
-                          {m.role === 'child' ? (t('nav.role_child') || 'Enfant') : (t('nav.role_adult') || 'Adulte')}
-                        </div>
-                      </div>
-                      {activeMemberId === m.id && <Check size={14} className="ws-member-check"/>}
-                    </button>
-                  ))}
-
-                  <div className="ws-popover-divider"/>
-
-                  <button
-                    type="button"
-                    className="ws-popover-cta"
-                    onClick={() => { setView('settings'); setWorkspaceMenuOpen(false); }}
-                  >
-                    <Plus size={13}/>
-                    <span>{t('nav.manage_members') || 'Gérer les membres'}</span>
-                  </button>
-                </div>
-              </>
-            )}
+          {/* Brand block — identité app fixe, séparée du filtre membre */}
+          <div className="ws-brand-row" onClick={() => setView('dashboard')} role="button" tabIndex={0}>
+            <div className="ws-brand-logo"><Logo size={20} /></div>
+            <div className="ws-brand-name">Wealthly</div>
           </div>
 
-          {/* Quick search — palette Cmd+K (filtrage léger en P5) */}
-          <div className={`ws-search ${navSearchQuery ? 'has-query' : ''}`}>
-            <Search size={13} className="ws-search-icon"/>
-            <input
-              type="text"
-              className="ws-search-input"
-              placeholder={t('nav.search_placeholder') || 'Rechercher…'}
-              value={navSearchQuery}
-              onChange={e => setNavSearchQuery(e.target.value)}
-              onFocus={() => setNavSearchOpen(true)}
-              onBlur={() => setTimeout(() => setNavSearchOpen(false), 150)}
-              aria-label={t('nav.search_placeholder') || 'Rechercher'}
-            />
-            {navSearchQuery ? (
+          {/* Member filter — pills horizontales avec mini-avatars (C+D hybride).
+              Toujours visible, scale jusqu'à ~5 membres dans 256 px. */}
+          <div className="ws-member-filter">
+            <div className="ws-member-filter-label">{t('nav.filtered_on')}</div>
+            <div className="ws-member-pills" role="radiogroup" aria-label={t('nav.switch_member')}>
               <button
                 type="button"
-                className="ws-search-clear"
-                onClick={() => setNavSearchQuery('')}
-                title="Effacer"
+                className={`ws-pill ws-pill--family ${activeMemberId === 'all' ? 'on' : ''}`}
+                onClick={() => setActiveMemberId('all')}
+                role="radio"
+                aria-checked={activeMemberId === 'all'}
+                title={t('nav.all_members')}
               >
-                <X size={12}/>
+                <span className="ws-pill-avatar"><Users size={10}/></span>
+                <span>{t('nav.family_view')}</span>
               </button>
-            ) : (
-              <kbd className="ws-kbd">⌘K</kbd>
-            )}
+              {members.map(m => (
+                <button
+                  key={m.id}
+                  type="button"
+                  className={`ws-pill ${activeMemberId === m.id ? 'on' : ''}`}
+                  onClick={() => setActiveMemberId(m.id)}
+                  role="radio"
+                  aria-checked={activeMemberId === m.id}
+                  title={`${m.name} · ${m.role === 'child' ? t('nav.role_child') : t('nav.role_adult')}`}
+                >
+                  <span className="ws-pill-avatar" style={{ background: m.color }}>
+                    {m.name.charAt(0).toUpperCase()}
+                  </span>
+                  <span>{m.name}</span>
+                </button>
+              ))}
+              <button
+                type="button"
+                className="ws-pill ws-pill--add"
+                onClick={() => setView('settings')}
+                title={t('nav.manage_members')}
+              >
+                <Plus size={11}/>
+              </button>
+            </div>
           </div>
 
           <nav className="ws-nav" aria-label="Navigation principale">
 
             <div className="ws-nav-group">
-              <span className="ws-nav-group-num">§ 01</span>
               <span className="ws-nav-group-label">{t('nav.group_pilotage')}</span>
             </div>
             <button onClick={() => setView('dashboard')} className={view === 'dashboard' ? 'on' : ''}>
@@ -2017,7 +1945,6 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             </button>
 
             <div className="ws-nav-group">
-              <span className="ws-nav-group-num">§ 02</span>
               <span className="ws-nav-group-label">{t('nav.group_gestion')}</span>
             </div>
             <button onClick={() => setView('monthly')} className={view === 'monthly' ? 'on' : ''}>
@@ -2036,7 +1963,6 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             </button>
 
             <div className="ws-nav-group ws-nav-group--with-cta">
-              <span className="ws-nav-group-num">§ 03</span>
               <span className="ws-nav-group-label">{t('nav.group_accounts')}</span>
               <button
                 type="button"
@@ -2070,7 +1996,6 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             })}
 
             <div className="ws-nav-group">
-              <span className="ws-nav-group-num">§ 04</span>
               <span className="ws-nav-group-label">{t('nav.group_config')}</span>
             </div>
             <button onClick={() => setView('settings')} className={view === 'settings' ? 'on' : ''}>
@@ -2193,6 +2118,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
           <Dashboard
             netWorth={netWorth} liquidWealth={liquidWealth} assetsValue={assetsValue} liabilitiesValue={liabilitiesValue}
             thisMonthStats={thisMonthStats} monthlyEvolution={monthlyEvolution}
+            accounts={accounts}
             visibleAccounts={visibleAccounts} accountBalances={accountBalances}
             visibleAssets={visibleAssets} visibleLiabilities={visibleLiabilities}
             members={members} activeMemberId={activeMemberId}

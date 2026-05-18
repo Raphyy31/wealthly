@@ -946,7 +946,102 @@ html, body {
   gap: 10px;
 }
 
-/* ── Workspace block (clickable → member switcher) ──────────────────── */
+/* ── Brand block (identité app fixe, séparée du filtre membre) ──────── */
+.ws-brand-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 10px 2px;
+  cursor: pointer;
+  outline: none;
+}
+.ws-brand-row:focus-visible {
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-sm);
+}
+.ws-brand-logo {
+  width: 28px; height: 28px;
+  border-radius: var(--radius-sm);
+  background: var(--ink);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.ws-brand-name {
+  font: 600 14px/1.1 var(--font-sans);
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+/* ── Member filter — pills horizontales (toujours visibles) ─────────── */
+.ws-member-filter {
+  padding: 4px 4px 6px;
+  border-bottom: 1px dotted var(--border);
+  margin-bottom: 4px;
+}
+.ws-member-filter-label {
+  font: 500 9.5px/1 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding: 0 6px 6px;
+}
+.ws-member-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.ws-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px 4px 5px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font: 500 11.5px/1 var(--font-sans);
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast);
+  font-family: inherit;
+  max-width: 100%;
+}
+.ws-pill:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-strong);
+  color: var(--ink);
+}
+.ws-pill.on {
+  background: var(--accent-soft);
+  border-color: transparent;
+  color: var(--accent-2);
+  font-weight: 600;
+}
+.ws-pill-avatar {
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font: 600 8.5px/1 var(--font-sans);
+  flex-shrink: 0;
+}
+.ws-pill--family .ws-pill-avatar {
+  background: transparent;
+  color: var(--ink-2);
+  border: 1px dashed var(--border-strong);
+}
+.ws-pill--family.on .ws-pill-avatar {
+  background: var(--accent);
+  color: #fff;
+  border-color: transparent;
+}
+.ws-pill--add {
+  padding: 4px 7px;
+  color: var(--ink-3);
+}
+.ws-pill--add:hover { color: var(--accent); border-color: var(--accent-line); }
+
+/* ── (legacy workspace block — conservé en no-op au cas où) ─────────── */
 .ws-workspace-wrap { position: relative; }
 .ws-workspace {
   display: flex;

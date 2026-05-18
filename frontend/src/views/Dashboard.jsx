@@ -24,7 +24,9 @@ import { useHideAmounts } from '../contexts/HideAmounts.jsx';
 import { BankMark } from '../components/ui/BankMark.jsx';
 import { Sparkline } from '../components/ui/Sparkline.jsx';
 import { Donut } from '../components/ui/Donut.jsx';
-import { fmtAmount, formatDelta } from '../utils.js';
+// Note: fmtAmount/formatDelta retirés du Dashboard avec la suppression
+// des multi-deltas 30j/3M/YTD (feedback user 2026-05-18 — perf % jugée
+// peu utile sur la vitrine). KPI strip réorienté patrimoine cash + immo.
 
 const PERIODS = [
   { id: '1m',  label: '1M',   months: 1 },
@@ -65,6 +67,7 @@ const greeting = (t) => {
 export function Dashboard({
   netWorth, liquidWealth, assetsValue, liabilitiesValue,
   thisMonthStats, monthlyEvolution,
+  accounts = [],
   visibleAccounts, accountBalances,
   visibleAssets, visibleLiabilities,
   members, activeMemberId,
@@ -132,43 +135,60 @@ export function Dashboard({
     return { abs: last - first, pct: first ? ((last - first) / Math.abs(first)) * 100 : 0 };
   }, [chartData]);
 
-  // Multi-deltas inline (C4) — 30j / 3M / YTD à partir de sortedEvo.
-  // Calcule abs + pct vs le point correspondant. Si pas assez d'historique
-  // disponible, le delta vaut { abs: 0, pct: 0, hasData: false }.
-  const multiDeltas = useMemo(() => {
-    if (!sortedEvo || sortedEvo.length < 2) {
-      return {
-        d30:  { abs: 0, pct: 0, hasData: false },
-        d3m:  { abs: 0, pct: 0, hasData: false },
-        ytd:  { abs: 0, pct: 0, hasData: false },
-      };
-    }
-    const last = sortedEvo[sortedEvo.length - 1];
-    const pickByOffset = (n) => sortedEvo[Math.max(0, sortedEvo.length - 1 - n)];
-    const computeAt = (ref) => {
-      if (!ref || ref === last) return { abs: 0, pct: 0, hasData: false };
-      const abs = last.balance - ref.balance;
-      const pct = ref.balance ? (abs / Math.abs(ref.balance)) * 100 : 0;
-      return { abs, pct, hasData: true };
-    };
-    const today = new Date();
-    const ytdKey = `${today.getFullYear()}-01`;
-    const ytdRef = sortedEvo.find(s => s.month === ytdKey)
-                || sortedEvo.find(s => s.month.startsWith(`${today.getFullYear()}-`));
-    return {
-      d30: computeAt(pickByOffset(1)),
-      d3m: computeAt(pickByOffset(3)),
-      ytd: computeAt(ytdRef && ytdRef !== last ? ytdRef : null),
-    };
-  }, [sortedEvo]);
-
-  // KPI strip — 3 cellules : Actifs / Liquidités / Épargne mois
-  // (passif retiré : il apparaît déjà en mini sous le hero number)
+  // KPI strip refondu (feedback user 2026-05-18) — 3 cellules orientées
+  // patrimoine plutôt que perf %.
+  //   1. Patrimoine cash = liquidités + placements + épargne + retraite
+  //   2. Patrimoine immo net = immobilier − crédits immo (mortgage)
+  //   3. Épargne du mois (conservée, utile en daily check)
   const monthSaving = (thisMonthStats?.income || 0) - (thisMonthStats?.expenses || 0);
+
+  const cashWealth = useMemo(() => {
+    let total = liquidWealth || 0;
+    (visibleAssets || []).forEach(a => {
+      const cls = ASSET_CLASS_MAP[a.type]?.class;
+      if (cls === 'Placements' || cls === 'Épargne' || cls === 'Retraite') {
+        total += (parseFloat(a.currentValue) || 0) * (memberShare?.(a) ?? 1);
+      }
+    });
+    return total;
+  }, [liquidWealth, visibleAssets, memberShare]);
+
+  const realEstateNet = useMemo(() => {
+    let immoAssets = 0;
+    (visibleAssets || []).forEach(a => {
+      if (ASSET_CLASS_MAP[a.type]?.class === 'Immobilier') {
+        immoAssets += (parseFloat(a.currentValue) || 0) * (memberShare?.(a) ?? 1);
+      }
+    });
+    let mortgageDebt = 0;
+    (visibleLiabilities || []).forEach(l => {
+      if (l.type === 'mortgage') {
+        const bal = parseFloat(l.currentBalance ?? l.current_balance ?? l.amount ?? 0) || 0;
+        mortgageDebt += bal * (memberShare?.(l) ?? 1);
+      }
+    });
+    return { value: immoAssets - mortgageDebt, assets: immoAssets, debt: mortgageDebt };
+  }, [visibleAssets, visibleLiabilities, memberShare]);
+
   const kpis = [
-    { label: t('dashboard.assets'),       value: assetsValue,                       delta: null },
-    { label: t('dashboard.liquidity'),    value: liquidWealth,                       delta: null },
-    { label: t('dashboard.savingsMonth'), value: monthSaving, delta: thisMonthStats?.income ? (monthSaving / thisMonthStats.income) * 100 : null },
+    {
+      label: 'Patrimoine cash',
+      sub: 'Liquidités + Placements + Épargne',
+      value: cashWealth,
+      delta: null,
+    },
+    {
+      label: 'Patrimoine immo net',
+      sub: 'Immo − Crédits immo',
+      value: realEstateNet.value,
+      delta: null,
+    },
+    {
+      label: t('dashboard.savingsMonth'),
+      sub: 'Revenus − dépenses',
+      value: monthSaving,
+      delta: thisMonthStats?.income ? (monthSaving / thisMonthStats.income) * 100 : null,
+    },
   ];
   const totalDebt = Math.abs(liabilitiesValue || 0);
 
@@ -336,6 +356,12 @@ export function Dashboard({
           </h1>
           <div className="dash-sub">
             {t('dashboard.accountsConnected', { count: visibleAccounts?.length || 0 })}
+            {accounts && visibleAccounts && accounts.length > visibleAccounts.length && (
+              <span className="dash-sub-aside">
+                {' · '}
+                {accounts.length - (visibleAccounts.length || 0)} {t('nav.account_count_filtered')}
+              </span>
+            )}
           </div>
         </div>
         <div className="dash-actions">
@@ -382,7 +408,6 @@ export function Dashboard({
         <div className="hero-card">
           <div className="hero-top">
             <div className="dash-eyebrow">
-              <span className="dash-eyebrow-num">§ 01</span>
               <span className="dash-eyebrow-label">{t('dashboard.totalNetWorth')}</span>
             </div>
             <div className="ds-range-tabs">
@@ -399,44 +424,49 @@ export function Dashboard({
           <div className="hero-number-row">
             <div className="hero-net-stack">
               <Amount value={hover?.balance ?? netWorth} hero/>
-              {totalDebt > 0 && (
-                <div className="hero-debt-mini num">
-                  {t('dashboard.liabilities')} · {formatEUR(-totalDebt)}
+              {/* État partiel : que des dettes, pas d'actifs → split visible */}
+              {(assetsValue || 0) === 0 && totalDebt > 0 ? (
+                <div className="hero-split">
+                  <span className="hero-split-cell">
+                    <span className="hero-split-label">Actifs</span>
+                    <span className="hero-split-val num">0 €</span>
+                  </span>
+                  <span className="hero-split-minus">−</span>
+                  <span className="hero-split-cell">
+                    <span className="hero-split-label">Passifs</span>
+                    <span className="hero-split-val num">{formatEUR(totalDebt)}</span>
+                  </span>
                 </div>
+              ) : (
+                totalDebt > 0 && (
+                  <div className="hero-debt-mini num">
+                    {t('dashboard.liabilities')} · {formatEUR(-totalDebt)}
+                  </div>
+                )
               )}
             </div>
-            <div className="hero-delta">
-              <span className={`ds-pill ${periodDelta.abs >= 0 ? 'pos' : 'neg'}`}>
-                {periodDelta.abs >= 0 ? <ArrowUp size={11}/> : <ArrowDown size={11}/>}
-                <span className="num">{periodDelta.abs >= 0 ? '+' : ''}{formatEUR(periodDelta.abs)} · {hidden ? '···' : `${periodDelta.pct >= 0 ? '+' : ''}${periodDelta.pct.toFixed(2).replace('.', ',')} %`}</span>
-              </span>
-              <span style={{ color: 'var(--ink-2)', fontSize: 13 }}>{t('dashboard.vsStart')}</span>
-            </div>
+            {periodDelta.abs !== 0 && (
+              <div className="hero-delta">
+                <span className={`ds-pill ${periodDelta.abs >= 0 ? 'pos' : 'neg'}`}>
+                  {periodDelta.abs >= 0 ? <ArrowUp size={11}/> : <ArrowDown size={11}/>}
+                  <span className="num">{periodDelta.abs >= 0 ? '+' : ''}{formatEUR(periodDelta.abs)} · {hidden ? '···' : `${periodDelta.pct >= 0 ? '+' : ''}${periodDelta.pct.toFixed(2).replace('.', ',')} %`}</span>
+                </span>
+                <span style={{ color: 'var(--ink-2)', fontSize: 13 }}>{t('dashboard.vsStart')}</span>
+              </div>
+            )}
           </div>
 
-          {/* Multi-deltas inline — 30j / 3M / YTD (C4) */}
-          <div className="dash-multi-deltas">
-            {[
-              { key: 'd30', label: '30 j',  data: multiDeltas.d30 },
-              { key: 'd3m', label: '3 mois', data: multiDeltas.d3m },
-              { key: 'ytd', label: 'YTD',    data: multiDeltas.ytd },
-            ].map(d => {
-              const delta = formatDelta(d.data.abs, 'amount');
-              const pct = d.data.hasData
-                ? `${d.data.pct >= 0 ? '+' : ''}${d.data.pct.toFixed(1).replace('.', ',')} %`
-                : '—';
-              return (
-                <div key={d.key} className="dash-multi-delta-cell">
-                  <div className="dash-multi-delta-label">{d.label}</div>
-                  <div className={`ds-delta ds-delta--${d.data.hasData ? delta.kind : 'neutral'}`}>
-                    <span className="ds-delta-chevron">{d.data.hasData ? delta.symbol : '·'}</span>
-                    <span>{hidden ? '···' : (d.data.hasData ? delta.formatted : '—')}</span>
-                  </div>
-                  <div className="dash-multi-delta-pct">{hidden ? '···' : pct}</div>
-                </div>
-              );
-            })}
-          </div>
+          {/* Bannière éditoriale quand l'état est partiel (pas d'actifs) */}
+          {(assetsValue || 0) === 0 && totalDebt > 0 && (
+            <div className="hero-banner">
+              <span className="hero-banner-lead">
+                Ajoutez vos actifs (immobilier, placements, comptes) pour une vue patrimoniale complète.
+              </span>
+              <button className="link-btn" onClick={() => setView?.('wealth')}>
+                Compléter mon patrimoine →
+              </button>
+            </div>
+          )}
 
           <HeroChart data={chartData} onHover={setHover} hover={hover}/>
 
@@ -444,7 +474,8 @@ export function Dashboard({
             {kpis.map((k, i) => (
               <div key={i} className="kpi-cell">
                 <div className="ds-micro">{k.label}</div>
-                <div className="kpi-val num">{formatEUR(k.value)}</div>
+                {k.sub && <div className="kpi-sub">{k.sub}</div>}
+                <div className="kpi-val num">{hidden ? '···' : formatEUR(k.value)}</div>
                 {k.delta != null && (
                   <div className={`kpi-delta num ${k.delta >= 0 ? 'pos' : 'neg'}`}>
                     {hidden ? '···' : `${k.delta >= 0 ? '+' : ''}${k.delta.toFixed(1).replace('.', ',')} %`}
@@ -458,32 +489,35 @@ export function Dashboard({
         <div className="alloc-card">
           <div className="alloc-head">
             <div className="dash-eyebrow">
-              <span className="dash-eyebrow-num">§ 02</span>
               <span className="dash-eyebrow-label">{t('dashboard.allocation')}</span>
             </div>
             <button className="link-btn" onClick={() => setView?.('wealth')}>{t('dashboard.details')}</button>
           </div>
-          <div className="alloc-body">
-            <Donut
-              data={allocationData}
-              size={140}
-              centerLabel={t('dashboard.allocCenterLabel')}
-              centerValue={formatEUR(allocationTotal, { abbr: true })}
-            />
-            <ul className="alloc-list">
-              {allocationData.map(d => (
-                <li key={d.name}>
-                  <span className="swatch" style={{ background: d.color }}/>
-                  <span className="alloc-name">{d.name}</span>
-                  <span className="alloc-val num">{formatEUR(d.value, { abbr: true })}</span>
-                  <span className="alloc-pct num">{hidden ? '···' : `${allocationTotal ? ((d.value / allocationTotal) * 100).toFixed(0) : '0'} %`}</span>
-                </li>
-              ))}
-              {!allocationData.length && (
-                <li style={{ color: 'var(--ink-3)', padding: '6px 0' }}>{t('dashboard.noAllocData')}</li>
-              )}
-            </ul>
-          </div>
+          {allocationData.length ? (
+            <div className="alloc-body">
+              <Donut
+                data={allocationData}
+                size={140}
+                centerLabel={t('dashboard.allocCenterLabel')}
+                centerValue={formatEUR(allocationTotal, { abbr: true })}
+              />
+              <ul className="alloc-list">
+                {allocationData.map(d => (
+                  <li key={d.name}>
+                    <span className="swatch" style={{ background: d.color }}/>
+                    <span className="alloc-name">{d.name}</span>
+                    <span className="alloc-val num">{formatEUR(d.value, { abbr: true })}</span>
+                    <span className="alloc-pct num">{hidden ? '···' : `${allocationTotal ? ((d.value / allocationTotal) * 100).toFixed(0) : '0'} %`}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <div className="dash-empty">
+              <span className="dash-empty-lead">{t('dashboard.noAllocData')}</span>
+              <button className="link-btn" onClick={() => setView?.('wealth')}>{t('dashboard.details')} →</button>
+            </div>
+          )}
         </div>
       </section>
 
@@ -491,7 +525,6 @@ export function Dashboard({
       <section className="accounts-panel ds-panel">
         <div className="ds-panel-head">
           <div className="dash-eyebrow">
-            <span className="dash-eyebrow-num">§ 03</span>
             <span className="dash-eyebrow-label">{t('dashboard.accounts')} · {visibleAccounts?.length || 0}</span>
           </div>
           <button className="link-btn" onClick={() => setView?.('settings')}>{t('dashboard.viewAll')} →</button>
@@ -545,7 +578,6 @@ export function Dashboard({
           <div className="ds-panel-head">
             <div>
               <div className="dash-eyebrow">
-                <span className="dash-eyebrow-num">§ 04</span>
                 <span className="dash-eyebrow-label">{t('dashboard.recent')}</span>
               </div>
               <div className="ds-panel-sub" style={{ marginTop: 4 }}>{t('dashboard.recentMeta')}</div>
@@ -618,7 +650,6 @@ export function Dashboard({
             <div className="ds-panel-head">
               <div>
                 <div className="dash-eyebrow">
-                  <span className="dash-eyebrow-num">§ 05</span>
                   <span className="dash-eyebrow-label">{t('dashboard.budgetTitle', { month: monthName(currentMonth) })}</span>
                 </div>
                 <div className="ds-panel-sub num" style={{ marginTop: 4 }}>{formatEUR(totalSpent)} / {formatEUR(totalBudget)}</div>
@@ -663,7 +694,6 @@ export function Dashboard({
             <div className="ds-panel-head">
               <div>
                 <div className="dash-eyebrow">
-                  <span className="dash-eyebrow-num">§ 06</span>
                   <span className="dash-eyebrow-label">{t('dashboard.insights')}</span>
                 </div>
                 <div className="ds-panel-sub" style={{ marginTop: 4 }}>{t('dashboard.insightsGenerated')}</div>
@@ -910,42 +940,6 @@ function DashStyles() {
   color: var(--ink-3);
 }
 
-/* Multi-deltas inline — 30j / 3M / YTD avec chevrons ▲/▼ (C4) */
-.dash-multi-deltas {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1px;
-  margin: 14px -28px 0;
-  background: var(--border);
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-}
-.dash-multi-delta-cell {
-  background: var(--bg-elev);
-  padding: 10px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-height: 56px;
-  justify-content: center;
-}
-.dash-multi-delta-label {
-  font: 500 10.5px/1 var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-}
-.dash-multi-delta-cell .ds-delta {
-  font: 500 13.5px/1.2 var(--font-sans);
-}
-.dash-multi-delta-pct {
-  font: 400 11px/1 var(--font-sans);
-  color: var(--ink-3);
-  font-variant-numeric: tabular-nums;
-}
-@media (max-width: 760px) {
-  .dash-multi-deltas { grid-template-columns: 1fr; }
-}
 
 /* Empty states éditoriaux — Newsreader italic, ton sobre (C4) */
 .dash-empty {
@@ -963,6 +957,71 @@ function DashStyles() {
   line-height: 1.5;
 }
 
+/* Header sub-aside — info de filtre membre (compteur "X filtrés sur") */
+.dash-sub-aside {
+  color: var(--ink-3);
+  font-size: 0.95em;
+}
+
+/* Hero split — état partiel (que des dettes ou que des actifs) */
+.hero-split {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-top: 4px;
+  padding-top: 4px;
+}
+.hero-split-cell {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.hero-split-label {
+  font: 500 9.5px/1 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.hero-split-val {
+  font: 500 14px/1 var(--font-sans);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.hero-split-minus {
+  font: 500 16px/1 var(--font-mono);
+  color: var(--ink-3);
+  align-self: flex-end;
+  padding-bottom: 1px;
+}
+
+/* Hero banner éditorial — quand l'état est partiel */
+.hero-banner {
+  margin: 14px -28px 0;
+  padding: 12px 28px;
+  background: var(--accent-soft);
+  border-top: 1px solid var(--accent-line);
+  border-bottom: 1px solid var(--accent-line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.hero-banner-lead {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 13.5px;
+  color: var(--accent-2);
+  line-height: 1.4;
+  flex: 1;
+  min-width: 240px;
+}
+.hero-banner .link-btn {
+  color: var(--accent-2);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
 .kpi-strip {
   display: grid; grid-template-columns: repeat(4, 1fr);
   margin: 0 -28px;
@@ -970,7 +1029,8 @@ function DashStyles() {
 }
 .kpi-cell { padding: 16px 20px; border-right: 1px solid var(--border); display: flex; flex-direction: column; gap: 4px; }
 .kpi-cell:last-child { border-right: none; }
-.kpi-val { font-size: 16px; font-weight: 500; color: var(--ink); }
+.kpi-val { font-size: 17px; font-weight: 500; color: var(--ink); font-variant-numeric: tabular-nums; letter-spacing: -0.005em; }
+.kpi-sub { font: 400 11px/1.3 'Newsreader', Georgia, serif; font-style: italic; color: var(--ink-3); margin-top: -2px; }
 .kpi-delta { font-size: 11px; }
 .kpi-delta.pos { color: var(--positive); }
 .kpi-delta.neg { color: var(--negative); }
