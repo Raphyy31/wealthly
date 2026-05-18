@@ -234,12 +234,15 @@
    2. Dark mode
    ───────────────────────────────────────────────────────────────────────── */
 :root[data-theme="dark"] {
-  --bg:           #0F0E0C;
-  --bg-elev:      #181714;
-  --bg-sunk:      #0A0908;
-  --bg-hover:     #1F1D19;
-  --border:       #2A2823;
-  --border-strong:#3A382F;
+  /* Dark adouci 2026-05-18 (feedback user "très noir") — papier-chaud
+     nocturne, garde le contraste AA avec --ink #F1EEE4 sans virer au noir
+     pur. Inspiré Linear/Pictet night mode. */
+  --bg:           #16140F;
+  --bg-elev:      #1F1C16;
+  --bg-sunk:      #0F0D09;
+  --bg-hover:     #25221B;
+  --border:       #2F2C25;
+  --border-strong:#3E3A31;
 
   --ink:        #F1EEE4;
   --ink-2:      #A29E91;

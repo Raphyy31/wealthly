@@ -12,6 +12,7 @@ import {
   useScroll, useTransform, useSpring,
 } from 'framer-motion';
 import Logo from '../components/Logo.jsx';
+import { gsap, ScrollTrigger, mm, DURATIONS, EASES } from '../utils/gsapSetup.js';
 
 // ─── Premium ease ─────────────────────────────────────────────────────────
 const ease = [0.22, 1, 0.36, 1];
@@ -256,6 +257,40 @@ export default function Landing({ onSignIn, onSignUp, onTryDemo }) {
     };
   }, []);
 
+  // GSAP ScrollTrigger reveals — uniquement pour les nouvelles sections
+  // marquées [data-anim]. Respecte prefers-reduced-motion via gsap.matchMedia.
+  // Les composants existants (Framer Motion) ne sont pas touchés.
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      mm.add('(prefers-reduced-motion: no-preference)', () => {
+        // Eyebrow + grid container → fade-in léger
+        gsap.utils.toArray('[data-anim="reveal"]').forEach(el => {
+          gsap.from(el, {
+            opacity: 0,
+            scale: 0.985,
+            duration: DURATIONS.medium,
+            ease: EASES.out,
+            scrollTrigger: { trigger: el, start: 'top 85%', toggleActions: 'play none none reverse' },
+          });
+        });
+        // Cellules enfants (4 icones / 3 tarifs) → stagger
+        document.querySelectorAll('[data-anim="reveal"]').forEach(parent => {
+          const children = parent.querySelectorAll('[data-anim="reveal-child"]');
+          if (!children.length) return;
+          gsap.from(children, {
+            opacity: 0,
+            scale: 0.95,
+            duration: DURATIONS.medium,
+            stagger: 0.07,
+            ease: EASES.out,
+            scrollTrigger: { trigger: parent, start: 'top 80%', toggleActions: 'play none none reverse' },
+          });
+        });
+      });
+    });
+    return () => ctx.revert();
+  }, []);
+
   return (
     <>
       <Styles />
@@ -297,7 +332,7 @@ export default function Landing({ onSignIn, onSignUp, onTryDemo }) {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.8, delay: 0.35, ease }}
                 >
-                  enfin clair.
+                  piloté avec rigueur.
                 </motion.em>
               </h1>
             </div>
@@ -307,8 +342,8 @@ export default function Landing({ onSignIn, onSignUp, onTryDemo }) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.6, ease }}
             >
-              Connectez vos comptes, suivez vos placements, votre immobilier et vos crypto.
-              <strong> Une seule app, zéro tableur.</strong>
+              Comptes, immobilier, placements, fiscalité — un seul écran.
+              <strong> Sans pub, sans revente de vos données.</strong>
             </motion.div>
           </div>
 
@@ -471,6 +506,88 @@ export default function Landing({ onSignIn, onSignUp, onTryDemo }) {
             </TiltTile>
           </motion.div>
 
+          {/* ============ POURQUOI WEALTHLY — 4 icones visuelles ============ */}
+          <section className="lc-why" data-anim="reveal">
+            <div className="lc-why-eyebrow">Pourquoi Wealthly</div>
+            <div className="lc-why-grid">
+              <div className="lc-why-cell" data-anim="reveal-child">
+                <GithubGlyph className="lc-why-ico"/>
+                <div className="lc-why-ttl">Open-source</div>
+                <div className="lc-why-sub">Code public. Auditable. Auto-hébergeable.</div>
+              </div>
+              <div className="lc-why-cell" data-anim="reveal-child">
+                <ShieldIcon className="lc-why-ico" size={32}/>
+                <div className="lc-why-ttl">DSP2 lecture seule</div>
+                <div className="lc-why-sub">GoCardless agréé. Aucun mouvement possible.</div>
+              </div>
+              <div className="lc-why-cell" data-anim="reveal-child">
+                <NoAdGlyph className="lc-why-ico"/>
+                <div className="lc-why-ttl">Sans pub. Sans revente.</div>
+                <div className="lc-why-sub">Pas de tracker. Pas de partenaire data.</div>
+              </div>
+              <div className="lc-why-cell" data-anim="reveal-child">
+                <FrFlagGlyph className="lc-why-ico"/>
+                <div className="lc-why-ttl">Patrimoine FR complet</div>
+                <div className="lc-why-sub">PEA, immo, IR, IFI, prêts — pensé France.</div>
+              </div>
+            </div>
+          </section>
+
+          {/* ============ TARIFS — 3 cards minimal ============ */}
+          <section className="lc-pricing" data-anim="reveal">
+            <div className="lc-why-eyebrow">Tarifs</div>
+            <div className="lc-pricing-grid">
+              <div className="lc-price-card" data-anim="reveal-child">
+                <div className="lc-price-name">Solo</div>
+                <div className="lc-price-val"><span className="num">0</span> €<span className="lc-price-per">/mois</span></div>
+                <div className="lc-price-line">1 banque connectée</div>
+                <div className="lc-price-line">Fiscalité de base</div>
+                <div className="lc-price-line">Démo immédiate</div>
+                <button className="lc-btn-ghost lc-price-cta" onClick={onSignUp}>Commencer →</button>
+              </div>
+              <div className="lc-price-card lc-price-card--featured" data-anim="reveal-child">
+                <div className="lc-price-badge">Populaire</div>
+                <div className="lc-price-name">Famille</div>
+                <div className="lc-price-val"><span className="num">5</span> €<span className="lc-price-per">/mois</span></div>
+                <div className="lc-price-line">Membres illimités</div>
+                <div className="lc-price-line">Sync bancaire temps réel</div>
+                <div className="lc-price-line">Simulateur fiscal complet</div>
+                <button className="lc-btn-primary lc-price-cta" onClick={onSignUp}>Choisir Famille →</button>
+              </div>
+              <div className="lc-price-card" data-anim="reveal-child">
+                <div className="lc-price-name">Self-hosted</div>
+                <div className="lc-price-val"><span className="num">0</span> €<span className="lc-price-per">/votre infra</span></div>
+                <div className="lc-price-line">Code source complet</div>
+                <div className="lc-price-line">Docker + Postgres</div>
+                <div className="lc-price-line">Aucune limite</div>
+                <a className="lc-btn-ghost lc-price-cta" href="https://github.com/Raphyy31/wealthly" target="_blank" rel="noopener">Voir sur GitHub →</a>
+              </div>
+            </div>
+          </section>
+
+          {/* ============ FAQ — 4 questions essentielles ============ */}
+          <section className="lc-faq" data-anim="reveal">
+            <div className="lc-why-eyebrow">Questions fréquentes</div>
+            <FaqList items={[
+              {
+                q: 'Mes données restent vraiment privées ?',
+                a: 'Oui. Connexion bancaire en lecture seule via GoCardless (agréé DSP2). Données chiffrées sur Postgres Supabase. Aucune revente, aucun partenaire publicitaire. Code public sur GitHub, auditable.',
+              },
+              {
+                q: 'Comment Wealthly se connecte à ma banque ?',
+                a: 'Via GoCardless Bank Account Data (ex-Nordigen), agréé DSP2 en France. Vous donnez votre consentement à votre banque pour 90 jours. Wealthly récupère vos transactions et soldes — sans jamais voir vos identifiants.',
+              },
+              {
+                q: 'Je peux exporter mes données ?',
+                a: 'Oui, à tout moment. CSV, JSON, ou export PDF de votre bilan complet.',
+              },
+              {
+                q: 'Comment auto-héberger Wealthly ?',
+                a: 'Clonez le repo GitHub, configurez votre Postgres (Supabase ou local), lancez le backend FastAPI et le frontend Vite. Doc complète dans le README.',
+              },
+            ]}/>
+          </section>
+
           {/* ============ FINAL CTA ============ */}
           <motion.div
             className="lc-final-cta"
@@ -489,8 +606,11 @@ export default function Landing({ onSignIn, onSignUp, onTryDemo }) {
 
           {/* ============ COLOPHON ============ */}
           <div className="lc-colophon">
-            <span>© {new Date().getFullYear()} Wealthly</span>
-            <span><button onClick={onSignIn} className="lc-link">Se connecter</button></span>
+            <span>© {new Date().getFullYear()} Wealthly · Open-source</span>
+            <span style={{ display: 'inline-flex', gap: 18 }}>
+              <a href="https://github.com/Raphyy31/wealthly" target="_blank" rel="noopener" className="lc-link">GitHub</a>
+              <button onClick={onSignIn} className="lc-link">Se connecter</button>
+            </span>
           </div>
         </div>
 
@@ -648,9 +768,10 @@ const ArrowRight = () => (
     <path d="M5 12h14M13 5l7 7-7 7"/>
   </svg>
 );
-const ShieldIcon = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+const ShieldIcon = ({ className, size = 13 }) => (
+  <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={size > 20 ? 1.4 : 2} strokeLinecap="round" strokeLinejoin="round">
     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+    {size > 20 && <path d="M9 12l2 2 4-4" />}
   </svg>
 );
 const LockIcon = () => (
@@ -668,6 +789,54 @@ const NoCardIcon = () => (
     <rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 11h20M5 17l14-14"/>
   </svg>
 );
+const GithubGlyph = ({ className }) => (
+  <svg className={className} width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+  </svg>
+);
+const NoAdGlyph = ({ className }) => (
+  <svg className={className} width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <circle cx="12" cy="12" r="10"/>
+    <path d="M5 5l14 14"/>
+    <path d="M8 10v4" />
+    <path d="M14 10v4M14 10h2M14 14h2" opacity="0.6"/>
+  </svg>
+);
+const FrFlagGlyph = ({ className }) => (
+  <svg className={className} width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <rect x="3" y="5" width="18" height="14" rx="2"/>
+    <line x1="9" y1="5" x2="9" y2="19" />
+    <line x1="15" y1="5" x2="15" y2="19" />
+  </svg>
+);
+const PlusGlyph = ({ open }) => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'transform .2s', transform: open ? 'rotate(45deg)' : 'rotate(0deg)' }}>
+    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+  </svg>
+);
+
+// FAQ accordéon — animation par hauteur naturelle, sans translate.
+function FaqList({ items }) {
+  const [openIdx, setOpenIdx] = useState(-1);
+  return (
+    <div className="lc-faq-list">
+      {items.map((it, i) => {
+        const open = openIdx === i;
+        return (
+          <div key={i} className={`lc-faq-item ${open ? 'is-open' : ''}`}>
+            <button className="lc-faq-q" onClick={() => setOpenIdx(open ? -1 : i)}>
+              <span>{it.q}</span>
+              <PlusGlyph open={open}/>
+            </button>
+            <div className="lc-faq-a-wrap" style={{ gridTemplateRows: open ? '1fr' : '0fr' }}>
+              <div className="lc-faq-a">{it.a}</div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 function Styles() {
   return <style dangerouslySetInnerHTML={{ __html: css }} />;
@@ -821,6 +990,168 @@ const css = `
 .lc-toc li::before { content: counter(section, decimal-leading-zero); font-family: 'Geist Mono', monospace; font-size: 11px; color: #75716A; }
 .lc-toc-nm em { font-family: 'Newsreader', Georgia, serif; font-style: italic; color: #A29E91; font-weight: 400; }
 .lc-toc-pg { font-family: 'Geist Mono', monospace; font-size: 11px; color: #75716A; }
+
+/* ============ POURQUOI WEALTHLY — 4 icones (C9) ============ */
+.lc-why { margin-top: 96px; padding-top: 40px; border-top: 1px dotted #2F2C25; }
+.lc-why-eyebrow {
+  font: 500 11px/1 'Geist Mono', monospace;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #75716A;
+  margin-bottom: 28px;
+}
+.lc-why-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 32px;
+}
+.lc-why-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding-right: 12px;
+}
+.lc-why-ico { color: #7E92FF; }
+.lc-why-ttl {
+  font: 500 16px/1.25 'Geist', sans-serif;
+  letter-spacing: -0.005em;
+  color: #F1EEE4;
+  margin-top: 6px;
+}
+.lc-why-sub {
+  font: 400 13px/1.55 'Geist', sans-serif;
+  color: #A29E91;
+  letter-spacing: -0.005em;
+}
+@media (max-width: 880px) {
+  .lc-why-grid { grid-template-columns: repeat(2, 1fr); gap: 24px; }
+}
+@media (max-width: 540px) {
+  .lc-why-grid { grid-template-columns: 1fr; }
+}
+
+/* ============ TARIFS — 3 cards (C9) ============ */
+.lc-pricing { margin-top: 96px; padding-top: 40px; border-top: 1px dotted #2F2C25; }
+.lc-pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.lc-price-card {
+  background: #1F1C16;
+  border: 1px solid #2F2C25;
+  border-radius: 12px;
+  padding: 28px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+}
+.lc-price-card--featured {
+  border-color: #2E3A7A;
+  background: linear-gradient(180deg, #1B214A 0%, #1F1C16 90%);
+  box-shadow: 0 12px 32px -16px rgba(126,146,255,.4);
+}
+.lc-price-badge {
+  position: absolute;
+  top: 12px; right: 14px;
+  font: 600 9.5px/1 'Geist Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #A6B4FF;
+  background: rgba(126,146,255,.15);
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+.lc-price-name {
+  font: 500 11.5px/1 'Geist Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #A29E91;
+}
+.lc-price-val {
+  font: 400 44px/1 'Newsreader', Georgia, serif;
+  font-style: italic;
+  color: #F1EEE4;
+  letter-spacing: -0.03em;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin: 4px 0 10px;
+}
+.lc-price-val .num { font-style: normal; font-family: 'Geist', sans-serif; font-weight: 500; font-size: 56px; }
+.lc-price-per {
+  font: 400 13px/1 'Geist', sans-serif;
+  font-style: normal;
+  color: #75716A;
+  letter-spacing: 0;
+}
+.lc-price-line {
+  font-size: 13.5px;
+  color: #A29E91;
+  letter-spacing: -0.005em;
+  padding: 2px 0;
+  border-top: 1px dotted #2F2C25;
+  padding-top: 8px;
+}
+.lc-price-line:first-of-type { border-top: none; padding-top: 0; }
+.lc-price-cta {
+  margin-top: auto;
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-decoration: none;
+}
+.lc-price-card .lc-price-cta { padding: 11px 16px; font-size: 13px; }
+@media (max-width: 880px) {
+  .lc-pricing-grid { grid-template-columns: 1fr; }
+}
+
+/* ============ FAQ — accordéon grid-rows (no translate) (C9) ============ */
+.lc-faq { margin-top: 96px; padding-top: 40px; border-top: 1px dotted #2F2C25; max-width: 760px; }
+.lc-faq-list {
+  display: flex;
+  flex-direction: column;
+}
+.lc-faq-item {
+  border-bottom: 1px solid #2F2C25;
+}
+.lc-faq-q {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 4px;
+  background: transparent;
+  border: none;
+  color: #F1EEE4;
+  font: 500 15px/1.4 'Geist', sans-serif;
+  letter-spacing: -0.005em;
+  cursor: pointer;
+  text-align: left;
+  transition: color .15s;
+}
+.lc-faq-q:hover { color: #A6B4FF; }
+.lc-faq-q svg { color: #75716A; flex-shrink: 0; }
+.lc-faq-item.is-open .lc-faq-q { color: #A6B4FF; }
+.lc-faq-item.is-open .lc-faq-q svg { color: #A6B4FF; }
+.lc-faq-a-wrap {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows .3s cubic-bezier(.2,.6,.2,1);
+}
+.lc-faq-a {
+  overflow: hidden;
+  font: 400 14px/1.6 'Geist', sans-serif;
+  color: #A29E91;
+  letter-spacing: -0.005em;
+  padding-right: 32px;
+}
+.lc-faq-item.is-open .lc-faq-a { padding-bottom: 18px; }
 
 /* FINAL CTA */
 .lc-final-cta { margin-top: 112px; padding: 56px 0; text-align: center; border-top: 1px solid #2A2823; }
