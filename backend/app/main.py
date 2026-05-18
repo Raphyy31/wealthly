@@ -26,7 +26,7 @@ logging.basicConfig(
 from app.config import settings
 from app.database import engine, Base
 from app.rate_limit import limiter, rate_limit_handler
-from app.routers import auth, members, accounts, transactions, wealth, other, categorize, banking, admin, quotes, fixed_charges, dca, ref_month, payees
+from app.routers import auth, members, accounts, transactions, wealth, other, categorize, banking, admin, quotes, fixed_charges, dca, ref_month, payees, totp
 
 logger = logging.getLogger("wealthly")
 
@@ -171,6 +171,9 @@ def _run_lightweight_migrations() -> None:
             # Mois type — JSON budget template stored per user. See
             # docs/superpowers/specs/2026-05-14-budget-mensuel-refonte-design.md.
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS ref_month JSON",
+            # 2FA TOTP (C19 2026-05-18) — secret base32 + enabled flag.
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_secret VARCHAR",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_enabled BOOLEAN NOT NULL DEFAULT FALSE",
             # ISIN code (ISO 6166) for stock / ETF positions — stored alongside
             # ticker so both are available for display and future lookups.
             "ALTER TABLE assets ADD COLUMN IF NOT EXISTS isin VARCHAR",
@@ -350,3 +353,4 @@ app.include_router(fixed_charges.router)
 app.include_router(dca.router)
 app.include_router(ref_month.router)
 app.include_router(payees.router)
+app.include_router(totp.router)

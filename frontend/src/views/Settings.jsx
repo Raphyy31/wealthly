@@ -679,6 +679,250 @@ function ChangePasswordModal({ onClose }) {
   );
 }
 
+// ─── 2FA TOTP (C19 2026-05-18) ───────────────────────────────────────────
+// Toggle ON/OFF + modal setup (affiche QR + verify code) + modal disable
+// (password requis anti-takeover). Utilise api.totp.{status, setup, verify,
+// disable}. QR généré via api.qrserver.com (pas de lib externe pour ~5KB).
+function TwoFactorRow({ t }) {
+  const [status, setStatus] = useState({ enabled: false, setup_in_progress: false });
+  const [loading, setLoading] = useState(true);
+  const [showSetup, setShowSetup] = useState(false);
+  const [showDisable, setShowDisable] = useState(false);
+
+  const reload = async () => {
+    try {
+      const s = await api.totp.status();
+      setStatus(s);
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => { reload(); }, []);
+
+  return (
+    <>
+      <div className="settings-field-row">
+        <div>
+          <div className="settings-field-label">Authentification à 2 facteurs (TOTP)</div>
+          <div className="settings-field-hint">
+            {status.enabled
+              ? 'Active — code 6 chiffres requis à chaque connexion.'
+              : 'Renforce la sécurité de votre compte avec Google Authenticator, Authy ou 1Password.'}
+          </div>
+        </div>
+        <div className="settings-field-control">
+          {loading ? (
+            <span style={{ color: 'var(--ink-3)', fontSize: 12 }}>Chargement…</span>
+          ) : status.enabled ? (
+            <button className="secondary-btn" onClick={() => setShowDisable(true)}>
+              Désactiver
+            </button>
+          ) : (
+            <button className="primary-btn" onClick={() => setShowSetup(true)}>
+              Activer
+            </button>
+          )}
+        </div>
+      </div>
+
+      {showSetup && (
+        <TotpSetupModal onClose={() => { setShowSetup(false); reload(); }} />
+      )}
+      {showDisable && (
+        <TotpDisableModal onClose={() => { setShowDisable(false); reload(); }} />
+      )}
+    </>
+  );
+}
+
+function TotpSetupModal({ onClose }) {
+  const [step, setStep] = useState('loading');  // loading → scan → verify → done
+  const [secret, setSecret] = useState('');
+  const [uri, setUri] = useState('');
+  const [code, setCode] = useState('');
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await api.totp.setup();
+        if (cancelled) return;
+        setSecret(r.secret);
+        setUri(r.otpauth_uri);
+        setStep('scan');
+      } catch (err) {
+        if (cancelled) return;
+        setError(err?.detail || err?.message || 'Erreur lors de l\'initialisation 2FA');
+        setStep('error');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleVerify = async (e) => {
+    e?.preventDefault?.();
+    if (!/^\d{6}$/.test(code)) {
+      setError('Le code doit comporter 6 chiffres.');
+      return;
+    }
+    setSubmitting(true);
+    setError('');
+    try {
+      await api.totp.verify(code);
+      setStep('done');
+    } catch (err) {
+      setError(err?.detail || 'Code incorrect. Vérifiez l\'horloge de votre appareil.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const qrSrc = uri
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(uri)}`
+    : '';
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 480 }}>
+        <div className="modal-header">
+          <h3>Activer l'authentification à 2 facteurs</h3>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+        <div className="modal-body">
+          {step === 'loading' && <p style={{ color: 'var(--ink-3)' }}>Préparation du secret…</p>}
+
+          {step === 'scan' && (
+            <>
+              <p style={{ marginBottom: 16 }}>
+                1. Ouvrez votre application d'authentification (Google Authenticator, Authy, 1Password…).
+                <br />2. Scannez le QR ou saisissez le code manuellement.
+                <br />3. Entrez le code 6 chiffres ci-dessous pour valider.
+              </p>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+                <img src={qrSrc} alt="QR code 2FA" width={180} height={180}
+                     style={{ borderRadius: 8, border: '1px solid var(--border)' }} />
+              </div>
+              <div style={{ marginBottom: 16 }}>
+                <div className="ds-input-label">Code manuel (si pas de QR)</div>
+                <div style={{
+                  fontFamily: 'var(--font-mono)', fontSize: 14, color: 'var(--ink-2)',
+                  background: 'var(--bg-sunk)', padding: 10, borderRadius: 6,
+                  letterSpacing: '0.08em', wordBreak: 'break-all',
+                }}>{secret}</div>
+              </div>
+              <form onSubmit={handleVerify}>
+                <label className="ds-input-label">Code 6 chiffres</label>
+                <input
+                  type="text" inputMode="numeric" autoComplete="one-time-code"
+                  maxLength={6} pattern="\d{6}"
+                  className="ds-input" placeholder="123456"
+                  value={code} onChange={e => setCode(e.target.value.replace(/\D/g, ''))}
+                  autoFocus
+                  style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.2em', textAlign: 'center' }}
+                />
+                {error && <div className="ds-input-help is-error" style={{ marginTop: 8 }}>{error}</div>}
+                <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
+                  <button type="button" className="secondary-btn" onClick={onClose} disabled={submitting}>
+                    Annuler
+                  </button>
+                  <button type="submit" className="primary-btn" disabled={submitting || code.length !== 6}>
+                    {submitting ? 'Vérification…' : 'Activer'}
+                  </button>
+                </div>
+              </form>
+            </>
+          )}
+
+          {step === 'done' && (
+            <div style={{ textAlign: 'center', padding: 20 }}>
+              <p style={{
+                fontFamily: 'Newsreader,Georgia,serif', fontStyle: 'italic',
+                fontSize: 16, color: 'var(--positive)', marginBottom: 16,
+              }}>
+                2FA activée avec succès.
+              </p>
+              <p style={{ color: 'var(--ink-2)', fontSize: 13, marginBottom: 20 }}>
+                À chaque connexion, votre application d'authentification vous donnera un nouveau code 6 chiffres.
+              </p>
+              <button className="primary-btn" onClick={onClose}>Terminé</button>
+            </div>
+          )}
+
+          {step === 'error' && (
+            <div>
+              <p style={{ color: 'var(--negative)' }}>{error}</p>
+              <button className="secondary-btn" onClick={onClose} style={{ marginTop: 12 }}>Fermer</button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TotpDisableModal({ onClose }) {
+  const [password, setPassword] = useState('');
+  const [code, setCode] = useState('');
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleDisable = async (e) => {
+    e?.preventDefault?.();
+    if (!password) { setError('Mot de passe requis.'); return; }
+    setSubmitting(true);
+    setError('');
+    try {
+      await api.totp.disable(password, code || null);
+      onClose();
+    } catch (err) {
+      setError(err?.detail || 'Échec de la désactivation.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 440 }}>
+        <div className="modal-header">
+          <h3>Désactiver la 2FA</h3>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+        <form onSubmit={handleDisable}>
+          <div className="modal-body">
+            <p style={{ color: 'var(--ink-2)', marginBottom: 16, fontSize: 13 }}>
+              Votre compte sera moins sécurisé après désactivation. Confirmez votre mot de passe.
+            </p>
+            <label className="ds-input-label">Mot de passe</label>
+            <input type="password" className="ds-input" autoFocus
+                   value={password} onChange={e => setPassword(e.target.value)} />
+            <label className="ds-input-label" style={{ marginTop: 12 }}>Code 2FA actuel (optionnel)</label>
+            <input
+              type="text" inputMode="numeric" maxLength={6}
+              className="ds-input" placeholder="123456"
+              value={code} onChange={e => setCode(e.target.value.replace(/\D/g, ''))}
+              style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.2em' }}
+            />
+            {error && <div className="ds-input-help is-error" style={{ marginTop: 8 }}>{error}</div>}
+          </div>
+          <div className="modal-footer" style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <button type="button" className="secondary-btn" onClick={onClose} disabled={submitting}>
+              Annuler
+            </button>
+            <button type="submit" className="primary-btn danger" disabled={submitting}>
+              {submitting ? 'Désactivation…' : 'Désactiver'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function SecuriteSection({ currentUser }) {
   const { t } = useTranslation();
   const [showPwdModal, setShowPwdModal] = useState(false);
@@ -726,15 +970,7 @@ function SecuriteSection({ currentUser }) {
           </div>
         </div>
 
-        <div className="settings-field-row">
-          <div>
-            <div className="settings-field-label">{t('settings.security.twoFA')}</div>
-            <div className="settings-field-hint">{t('settings.security.twoFAHint')}</div>
-          </div>
-          <div className="settings-field-control">
-            <span className="settings-coming-soon-badge">{t('settings.security.comingSoon')}</span>
-          </div>
-        </div>
+        <TwoFactorRow t={t} />
       </div>
 
       <div className="card">

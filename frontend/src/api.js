@@ -80,11 +80,19 @@ export const auth = {
       full_name: fullName,
       household_name: householdName,
     }),
-  login: (email, password) => post('/auth/login', { email, password }),
+  login: (email, password, totpCode) => post('/auth/login', { email, password, ...(totpCode ? { totp_code: totpCode } : {}) }),
   logout: () => post('/auth/logout', {}),
   me: () => get('/auth/me'),
   forgotPassword: (email) => post('/auth/forgot-password', { email }),
   resetPassword: (token, newPassword) => post('/auth/reset-password', { token, new_password: newPassword }),
+};
+
+// 2FA TOTP (C19 2026-05-18)
+export const totp = {
+  status:  ()                       => get('/auth/totp/status'),
+  setup:   ()                       => post('/auth/totp/setup', {}),
+  verify:  (code)                   => post('/auth/totp/verify', { code }),
+  disable: (password, code = null)  => post('/auth/totp/disable', { password, ...(code ? { code } : {}) }),
 };
 
 // ============================================================================

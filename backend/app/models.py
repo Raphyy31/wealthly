@@ -110,6 +110,13 @@ class User(Base):
     # Optional link to a Member entry (adult users usually have a Member counterpart)
     member_id = Column(String, ForeignKey("members.id", ondelete="SET NULL"), nullable=True)
 
+    # 2FA TOTP (C19 2026-05-18) — secret base32 généré par pyotp.random_base32().
+    # Stocké en clair (équivalent password — au pire compromis DB = comme leak pw).
+    # `totp_enabled` requis pour distinguer "secret en cours de setup" vs "vérifié".
+    # Si User.totp_enabled = True, login exige étape 2 (code 6 chiffres TOTP).
+    totp_secret = Column(String, nullable=True)
+    totp_enabled = Column(Boolean, default=False, nullable=False)
+
 
 class RefMonth(Base):
     """Mois type (budget template) — scoped per (household, member).

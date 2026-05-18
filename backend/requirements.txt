@@ -13,3 +13,4 @@ anthropic==0.40.0
 psycopg2-binary==2.9.10
 httpx==0.27.2
 slowapi==0.1.9
+pyotp==2.9.0

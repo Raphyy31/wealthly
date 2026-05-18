@@ -119,6 +119,24 @@ def login(request: Request, response: Response, payload: UserLogin, db: Session 
                           detail="bad_credentials" if user else "unknown_email")
         raise HTTPException(status_code=401, detail="Email ou mot de passe incorrect")
 
+    # 2FA TOTP (C19 2026-05-18) — si activé, exiger code 6 chiffres step 2.
+    if user.totp_enabled:
+        if not payload.totp_code:
+            # Pas de code fourni → frontend doit afficher écran step 2
+            raise HTTPException(status_code=401, detail="totp_required")
+        try:
+            import pyotp
+            totp = pyotp.TOTP(user.totp_secret)
+            # valid_window=1 → tolérance ±30s (clock skew normal)
+            if not totp.verify(payload.totp_code, valid_window=1):
+                record_auth_event(db, kind="login_failure", success=False, request=request,
+                                  email=payload.email, detail="bad_totp")
+                raise HTTPException(status_code=401, detail="Code 2FA incorrect")
+        except HTTPException:
+            raise
+        except Exception:
+            raise HTTPException(status_code=500, detail="Erreur vérification 2FA")
+
     token = create_access_token(user.id, user.household_id)
     set_auth_cookie(response, token)
     record_auth_event(db, kind="login_success", success=True, request=request,

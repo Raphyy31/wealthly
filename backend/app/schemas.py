@@ -23,11 +23,31 @@ class UserCreate(BaseModel):
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+    totp_code: Optional[str] = None  # 6 chiffres si 2FA activé
 
 
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+
+# ============================================================================
+# 2FA TOTP (C19 2026-05-18)
+# ============================================================================
+
+class TotpSetupOut(BaseModel):
+    """Réponse de POST /auth/totp/setup — affiche le QR + secret manuel."""
+    secret: str  # base32 à afficher en backup
+    otpauth_uri: str  # otpauth://totp/Wealthly:email?secret=...&issuer=Wealthly
+
+
+class TotpVerifyIn(BaseModel):
+    code: str = Field(min_length=6, max_length=6)
+
+
+class TotpDisableIn(BaseModel):
+    password: str  # exige le mot de passe pour désactiver (anti-takeover)
+    code: Optional[str] = None  # ou code TOTP si récente activation
 
 
 class UserOut(BaseModel):
