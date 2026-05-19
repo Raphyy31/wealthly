@@ -787,11 +787,18 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     const months = new Set();
     sortedTx.forEach(t => months.add(monthKey(t.date)));
     const sortedMonths = Array.from(months).sort();
-    // Net worth running balance counts every account whose role contributes
-    // to patrimoine net (everything except 'professionnel' by default).
-    let runningTotal = visibleAccounts
+    // Fix 2026-05-19 : avant on partait de initialBalance puis on ajoutait
+    // chronologiquement -> le balance final divergeait du solde courant
+    // affiche sur le Dashboard (last_known_balance officiel banque). Le
+    // chart d'evolution n'aboutissait pas au vrai chiffre courant.
+    //
+    // Maintenant : on part du solde CURRENT (= accountBalances qui pioche
+    // last_known_balance pour comptes synces, fallback initial+sumtx sinon)
+    // et on remonte dans le temps en soustrayant le net mensuel. Garantit
+    // que balance(mois le plus recent) === netWorth Dashboard.
+    const currentTotalNW = visibleAccounts
       .filter(a => accountIncludeInNetWorth(a.role))
-      .reduce((sum, a) => sum + (a.initialBalance || 0) * memberShare(a), 0);
+      .reduce((sum, a) => sum + (accountBalances[a.id] || 0) * memberShare(a), 0);
     sortedMonths.forEach(m => { monthly[m] = { month: m, income: 0, expenses: 0, net: 0, balance: 0, fixed: 0, variable: 0, savings: 0 }; });
     sortedTx.forEach(t => {
       const m = monthKey(t.date);
@@ -829,9 +836,17 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       // cancels it out at the foyer level).
       if (accountIncludeInNetWorth(role)) monthly[m].net += sharedAmount;
     });
-    sortedMonths.forEach(m => { runningTotal += monthly[m].net; monthly[m].balance = runningTotal; });
+    // Marche a rebours depuis le mois le plus recent en partant du solde
+    // courant officiel. balance(mois n) = solde a la fin du mois n.
+    // balance(mois n - 1) = balance(mois n) - net(mois n).
+    let cursor = currentTotalNW;
+    for (let i = sortedMonths.length - 1; i >= 0; i--) {
+      const m = sortedMonths[i];
+      monthly[m].balance = cursor;
+      cursor -= monthly[m].net;
+    }
     return Object.values(monthly);
-  }, [visibleTransactions, visibleAccounts, accounts, categories, recurringIds, memberShare, transferIds]);
+  }, [visibleTransactions, visibleAccounts, accounts, categories, recurringIds, memberShare, transferIds, accountBalances]);
 
   const currentMonth = useMemo(() => {
     const now = new Date();
