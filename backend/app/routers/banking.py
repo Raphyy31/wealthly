@@ -24,6 +24,7 @@ Tokens :
 """
 import asyncio
 import hashlib
+import hmac
 import logging
 import uuid
 from datetime import datetime, timedelta
@@ -47,9 +48,15 @@ def parse_iso_date(s: str):
 
 def _dedup_hash(account_id: str, date: str, amount: float, label: str) -> str:
     """Mirror the frontend hash used for CSV imports so synced + imported
-    transactions don't double up if both happen to flow through Wealthly."""
+    transactions don't double up if both happen to flow through Wealthly.
+
+    BLAKE2b 16 octets (sécu F2 2026-05-19) — SHA-1 cassé depuis 2017,
+    risque de faux positifs de dédup. BLAKE2b 128-bit suffit largement
+    pour de la dédup non-cryptographique et n'a aucune collision connue.
+    Note : les hashes existants restent valides (l'index dédup_hash en
+    DB est just un VARCHAR sans contrainte d'algorithme)."""
     payload = f"{account_id}|{date}|{amount:.2f}|{(label or '')[:60].lower()}"
-    return hashlib.sha1(payload.encode("utf-8")).hexdigest()
+    return hashlib.blake2b(payload.encode("utf-8"), digest_size=16).hexdigest()
 
 logger = logging.getLogger("wealthly.banking")
 router = APIRouter(prefix="/banking", tags=["banking"])
@@ -588,7 +595,8 @@ async def cron_sync_all(
     if not expected:
         raise HTTPException(status_code=503, detail="CRON_SECRET non configuré côté serveur")
     provided = request.headers.get("X-Cron-Secret", "")
-    if not provided or provided != expected:
+    # hmac.compare_digest pour timing-safe comparison (audit sécu M4 2026-05-19)
+    if not provided or not hmac.compare_digest(provided, expected):
         raise HTTPException(status_code=403, detail="Header X-Cron-Secret invalide")
 
     connections = db.query(BankConnection).filter(

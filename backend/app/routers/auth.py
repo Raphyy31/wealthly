@@ -62,9 +62,11 @@ def register(request: Request, response: Response, payload: UserCreate, db: Sess
     """Create a new household with its first admin user. Seeds default categories."""
     existing = db.query(User).filter(User.email == payload.email).first()
     if existing:
+        # Audit sécu H5 (2026-05-19) : message générique pour éviter l'énumération
+        # d'emails. L'erreur réelle reste tracée en audit log côté serveur.
         record_auth_event(db, kind="register_failure", success=False, request=request,
                           email=payload.email, detail="email_already_registered")
-        raise HTTPException(status_code=400, detail="Cet email est déjà utilisé")
+        raise HTTPException(status_code=400, detail="Inscription impossible avec ces informations. Si vous avez déjà un compte, essayez de vous connecter ou de réinitialiser votre mot de passe.")
 
     ok, err = validate_password(payload.password)
     if not ok:

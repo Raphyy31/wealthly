@@ -37,6 +37,10 @@ export default function AuthScreen({ onAuth, onTryDemo, onBackToLanding, initial
   const [info, setInfo] = useState(null);
   const [resetToken] = useState(initialResetToken);
   const [legal, setLegal] = useState(null);
+  // 2FA TOTP step 2 (H3 audit sécu 2026-05-19) : si login renvoie 401
+  // detail="totp_required", on switch sur cet écran pour demander le code.
+  const [totpStep, setTotpStep] = useState(false);
+  const [totpCode, setTotpCode] = useState('');
 
   // Force dark — cohérent avec la Landing magazine en encre profonde.
   useEffect(() => {
@@ -69,8 +73,21 @@ export default function AuthScreen({ onAuth, onTryDemo, onBackToLanding, initial
     setLoading(true);
     try {
       if (mode === 'login') {
-        await auth.login(email, password);
-        onAuth();
+        try {
+          await auth.login(email, password, totpStep ? totpCode : null);
+          onAuth();
+        } catch (err) {
+          // Le backend renvoie 401 detail="totp_required" si 2FA active.
+          // Le wrapper api.js attache `detail` sur l'Error.
+          const detail = err?.detail || err?.message || '';
+          if (detail === 'totp_required' || /totp.required/i.test(detail)) {
+            // Bascule vers l'écran step 2 sans afficher l'erreur "incorrect".
+            setTotpStep(true);
+            setError(null);
+          } else {
+            throw err;
+          }
+        }
       } else if (mode === 'register') {
         await auth.register(email, password, fullName, householdName || t('auth.defaultHousehold'));
         onAuth();
@@ -220,6 +237,34 @@ export default function AuthScreen({ onAuth, onTryDemo, onBackToLanding, initial
               />
             )}
 
+            {/* 2FA Step 2 — affiché uniquement après que le backend renvoie
+                401 totp_required (H3 audit sécu 2026-05-19) */}
+            {mode === 'login' && totpStep && (
+              <div className="auth-totp-block">
+                <div className="auth-totp-eyebrow">
+                  Code 2FA
+                </div>
+                <Field
+                  label="Code à 6 chiffres"
+                  icon={<Lock size={13}/>}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  pattern="\d{6}"
+                  autoComplete="one-time-code"
+                  value={totpCode}
+                  onChange={v => setTotpCode(v.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="123456"
+                  required
+                  autoFocus
+                />
+                <div className="auth-totp-hint">
+                  Ouvrez votre application d'authentification (Google Authenticator,
+                  Authy, 1Password) pour récupérer le code.
+                </div>
+              </div>
+            )}
+
             {error && (
               <div className="auth-error" role="alert">
                 <AlertCircle size={14}/> {error}
@@ -289,7 +334,7 @@ export default function AuthScreen({ onAuth, onTryDemo, onBackToLanding, initial
   );
 }
 
-function Field({ label, icon, type, value, onChange, placeholder, required, autoFocus, minLength, trailing }) {
+function Field({ label, icon, type, value, onChange, placeholder, required, autoFocus, minLength, maxLength, pattern, inputMode, autoComplete, trailing }) {
   return (
     <label className="auth-field">
       <span className="auth-field-label">{icon}{label}</span>
@@ -302,6 +347,10 @@ function Field({ label, icon, type, value, onChange, placeholder, required, auto
           required={required}
           autoFocus={autoFocus}
           minLength={minLength}
+          maxLength={maxLength}
+          pattern={pattern}
+          inputMode={inputMode}
+          autoComplete={autoComplete}
         />
         {trailing}
       </span>
@@ -474,6 +523,33 @@ const css = `
   transition: color 120ms, background 120ms;
 }
 .auth-pwd-toggle:hover { color: #F1EEE4; background: #1F1D19; }
+
+/* 2FA step 2 (H3 audit 2026-05-19) — bloc séparé pour signaler clairement
+   qu'on est dans une étape supplémentaire, pas dans le login standard. */
+.auth-totp-block {
+  padding: 14px 16px;
+  background: rgba(126, 146, 255, 0.08);
+  border: 1px solid rgba(126, 146, 255, 0.25);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.auth-totp-eyebrow {
+  font: 600 10.5px/1 'Geist Mono', monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #A6B4FF;
+}
+.auth-totp-block input {
+  font-family: 'Geist Mono', monospace !important;
+  letter-spacing: 0.2em !important;
+  text-align: center;
+}
+.auth-totp-hint {
+  font: 400 12px/1.4 'Geist', sans-serif;
+  color: #A29E91;
+}
 
 /* Submit */
 .auth-submit {

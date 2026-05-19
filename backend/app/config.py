@@ -79,6 +79,13 @@ class Settings:
     # Anthropic (optional — enables AI categorization)
     ANTHROPIC_API_KEY: str | None = os.getenv("ANTHROPIC_API_KEY")
 
+    # Email service (Resend) — utilisé par forgot-password + admin reset.
+    # Empty fallback → email_service.py retourne False silencieusement.
+    RESEND_API_KEY: str | None = os.getenv("RESEND_API_KEY")
+    EMAIL_FROM: str = os.getenv("EMAIL_FROM", "Wealthly <onboarding@resend.dev>")
+    # URL frontend utilisée dans les emails (lien reset password etc.)
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "https://wealthly-six.vercel.app")
+
     # GoCardless Bank Account Data (open banking sync, ex-Nordigen)
     # Get credentials at: https://bankaccountdata.gocardless.com/user/secrets/
     # Empty fallback acceptable : API GoCardless refusera, donc défense
@@ -90,6 +97,9 @@ class Settings:
         "https://wealthly-six.vercel.app"
     )
     GOCARDLESS_API_BASE: str = "https://bankaccountdata.gocardless.com/api/v2"
+    # Durées maximales pour le consentement bancaire (90 jours max par défaut DSP2)
+    GOCARDLESS_HISTORICAL_DAYS: int = int(os.getenv("GOCARDLESS_HISTORICAL_DAYS", "90"))
+    GOCARDLESS_ACCESS_VALID_DAYS: int = int(os.getenv("GOCARDLESS_ACCESS_VALID_DAYS", "90"))
 
     # Cron auth — partagé entre les jobs Railway (cron nightly sync, etc.)
     # et le backend. Si vide en prod, les endpoints /cron/* refusent toutes

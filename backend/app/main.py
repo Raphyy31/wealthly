@@ -298,14 +298,16 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
 
-# CORS — allow the frontend to call this API
+# CORS — restreint aux méthodes/headers réellement utilisés (audit sécu F3
+# 2026-05-19). allow_methods="*"+credentials est techniquement refusé par
+# certains navigateurs ; on liste explicitement.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
     allow_origin_regex=settings.CORS_ORIGIN_REGEX,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-CSRF-Token", "X-Cron-Secret"],
     expose_headers=["X-CSRF-Token"],
 )
 
@@ -321,15 +323,15 @@ async def security_headers_mw(request, call_next):
     return response
 
 # Global exception handler — surface la stack trace dans les logs Railway
-# au lieu de la swallow silencieusement (par défaut FastAPI catch les
-# Exception non gérées et renvoie 500 sans logger). Aide à diagnostiquer.
+# mais NE l'expose PAS au client (audit sécu C2 2026-05-19). Le client
+# reçoit un message générique 500. La stack reste loggable côté serveur.
 @app.exception_handler(Exception)
 async def _unhandled_exception_handler(request: Request, exc: Exception):
     tb = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
     logger.error("[unhandled] %s %s\n%s", request.method, request.url.path, tb)
     return JSONResponse(
         status_code=500,
-        content={"detail": f"{type(exc).__name__}: {exc}"},
+        content={"detail": "Erreur interne du serveur."},
     )
 
 

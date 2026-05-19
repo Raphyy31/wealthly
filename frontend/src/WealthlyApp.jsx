@@ -25,6 +25,7 @@ import { useRates } from './hooks/useRates.js';
 import { useBaseCurrency } from './hooks/useBaseCurrency.js';
 import { useQuotes } from './hooks/useQuotes.js';
 import { Combobox } from './components/Combobox.jsx';
+import { Mandatory2FAOverlay } from './components/Mandatory2FAOverlay.jsx';
 import { Styles } from './Styles.jsx';
 import { Toast } from './components/Toast.jsx';
 import { AnimatedNumber } from './components/AnimatedNumber.jsx';
@@ -1776,12 +1777,30 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
 
   const activeMember = members.find(m => m.id === activeMemberId);
 
+  // 2FA obligatoire (cyber expert request 2026-05-19) : tout utilisateur
+  // sans totp_enabled doit configurer la 2FA avant d'accéder à l'app.
+  // Le mode démo et l'admin sont exemptés (admin déjà sensibilisé).
+  const requires2FA = !demoMode
+    && currentUser
+    && currentUser.totp_enabled === false;
+
   return (
     <CurrencyContext.Provider value={{ baseCurrency, rates }}>
     <HideAmountsContext.Provider value={hideAmounts}>
     <div className={`app theme-${theme}`}>
       <Styles theme={theme}/>
       {toast && <Toast message={toast.message} type={toast.type}/>}
+      {requires2FA && (
+        <Mandatory2FAOverlay
+          onComplete={async () => {
+            try {
+              const me = await api.auth.me();
+              if (me) setCurrentUser(me);
+            } catch {}
+          }}
+          onLogoutEscape={() => { logout(); }}
+        />
+      )}
       {transferRecatResult && (
         <div className="modal-backdrop" onClick={() => setTransferRecatResult(null)}>
           <div

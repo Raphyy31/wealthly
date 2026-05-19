@@ -86,7 +86,7 @@ export function LegalModal({ section = 'cgu', onClose }) {
             <p>Pour exercer ces droits : <a href="mailto:contact@wealthly.app">contact@wealthly.app</a>. En cas de litige non résolu, vous pouvez saisir la CNIL (<a href="https://www.cnil.fr" target="_blank" rel="noopener noreferrer">cnil.fr</a>).</p>
 
             <h3>8. Cookies</h3>
-            <p>Wealthly n'utilise pas de cookies publicitaires. Un token JWT est stocké dans <code>localStorage</code> pour maintenir votre session. Il expire automatiquement après 7 jours.</p>
+            <p>Wealthly n'utilise pas de cookies publicitaires. Un cookie de session sécurisé (<code>HttpOnly</code>, <code>Secure</code>) est placé sur votre navigateur pour maintenir votre authentification ; il est inaccessible à tout script tiers (protection XSS). Il expire automatiquement après 7 jours, ou après 30 minutes sans activité (paramétrable dans Réglages → Sécurité).</p>
           </div>
         )}
 

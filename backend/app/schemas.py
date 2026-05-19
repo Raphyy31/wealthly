@@ -57,6 +57,9 @@ class UserOut(BaseModel):
     is_admin: bool
     household_id: str
     member_id: Optional[str] = None
+    # 2FA TOTP state — exposé pour permettre au frontend de forcer le setup
+    # quand obligatoire (politique sécu 2026-05-19).
+    totp_enabled: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
