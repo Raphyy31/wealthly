@@ -217,6 +217,14 @@ class Account(Base):
     # de la même banque avec un nom similaire.
     iban = Column(String, nullable=True)
     initial_balance = Column(Float, nullable=False, default=0.0)
+    # Solde officiel renvoyé par l'agrégateur GoCardless à la dernière sync.
+    # Source de vérité pour les comptes synchronisés — évite la divergence
+    # entre (initial_balance + Σtransactions) et le vrai solde côté banque
+    # quand des transactions pending ne sont pas encore visibles via DSP2.
+    # NULL pour les comptes manuels / CSV : le frontend retombe alors sur
+    # le calcul classique.
+    last_known_balance = Column(Float, nullable=True)
+    last_balance_at = Column(DateTime, nullable=True)
     # ISO 4217 currency the account is denominated in (EUR / USD / GBP / CHF / …).
     # Lets us aggregate multi-currency holdings: the frontend converts to the
     # user's display currency at render time using live ECB rates.

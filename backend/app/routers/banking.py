@@ -129,32 +129,87 @@ async def _get_access_token() -> str:
 
 
 async def _gc(method: str, path: str, body: dict | None = None, params: dict | None = None, _retry: bool = True) -> dict:
-    """Authenticated GoCardless request with single 401-retry (token refresh)."""
+    """Authenticated GoCardless request avec retry exponentiel sur les erreurs
+    transitoires (429 rate-limit, 500/502/503/504 server, network errors).
+
+    Retry policy : 3 tentatives, backoff 1.5s -> 3s -> 6s. Apres echec final,
+    levee HTTPException avec un detail user-friendly (pas de "erreur interne"
+    anonyme). Pattern utilise par tous les agregateurs serieux (Plaid, Tink,
+    TrueLayer) car GoCardless prepare les comptes en async cote leur cote —
+    le 1er appel apres une requisition peut renvoyer 429 ou 500 transitoire.
+    """
     token = await _get_access_token()
     url = f"{settings.GOCARDLESS_API_BASE}{path}"
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        r = await client.request(
-            method,
-            url,
-            headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
-            json=body if method != "GET" else None,
-            params=params,
-        )
-    if r.status_code == 401 and _retry:
-        # Drop cache and retry once
-        _token_cache["access"] = None
-        return await _gc(method, path, body=body, params=params, _retry=False)
-    if r.status_code >= 400:
+
+    last_exc: Exception | None = None
+    last_status: int | None = None
+    last_detail = None
+
+    for attempt in range(3):
+        if attempt > 0:
+            # Backoff exponentiel : 1.5s, 3s, 6s. Donne le temps a GoCardless
+            # de finir d'aggreger les comptes apres une requisition fraiche.
+            await asyncio.sleep(1.5 * (2 ** (attempt - 1)))
+            logger.info("[gocardless] retry %d/3 for %s %s", attempt + 1, method, path)
+
         try:
-            detail = r.json()
-        except Exception:
-            detail = r.text[:300]
-        logger.warning("[gocardless] %s %s → %s %s", method, path, r.status_code, detail)
-        raise HTTPException(status_code=502, detail=f"GoCardless {r.status_code}: {detail}")
-    # 204 No Content (e.g. DELETE)
-    if r.status_code == 204 or not r.text:
-        return {}
-    return r.json()
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                r = await client.request(
+                    method,
+                    url,
+                    headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
+                    json=body if method != "GET" else None,
+                    params=params,
+                )
+        except (httpx.TimeoutException, httpx.NetworkError) as e:
+            last_exc = e
+            last_status = None
+            logger.warning("[gocardless] network error attempt %d on %s %s: %s", attempt + 1, method, path, e)
+            continue
+
+        if r.status_code == 401 and _retry:
+            # Token expire — vider le cache et reessayer une fois sans
+            # consommer notre budget de retry general.
+            _token_cache["access"] = None
+            return await _gc(method, path, body=body, params=params, _retry=False)
+
+        # Codes transitoires : on retry. Autres 4xx (400/403/404/409) : non
+        # retryable, on echoue tout de suite avec un message utile.
+        if r.status_code in (429, 500, 502, 503, 504):
+            last_status = r.status_code
+            try:
+                last_detail = r.json()
+            except Exception:
+                last_detail = r.text[:300]
+            logger.warning("[gocardless] transient %s on %s %s, will retry", r.status_code, method, path)
+            continue
+
+        if r.status_code >= 400:
+            try:
+                detail = r.json()
+            except Exception:
+                detail = r.text[:300]
+            logger.warning("[gocardless] %s %s -> %s %s", method, path, r.status_code, detail)
+            # Messages user-friendly selon le code
+            if r.status_code == 403:
+                raise HTTPException(status_code=403, detail="Acces refuse par la banque (consentement expire ou revoque). Reconnectez la banque depuis Reglages.")
+            if r.status_code == 404:
+                raise HTTPException(status_code=404, detail="Compte introuvable cote banque. La connexion est peut-etre obsolete.")
+            raise HTTPException(status_code=502, detail=f"Erreur banque ({r.status_code})")
+
+        # 204 No Content (e.g. DELETE) or empty body
+        if r.status_code == 204 or not r.text:
+            return {}
+        return r.json()
+
+    # Tous les retries epuises — message user friendly selon la cause finale.
+    if last_status == 429:
+        raise HTTPException(status_code=429, detail="La banque est temporairement debordee. Reessayez dans une minute.")
+    if last_status in (500, 502, 503, 504):
+        raise HTTPException(status_code=502, detail="La banque ne repond pas correctement pour le moment. Reessayez dans quelques instants.")
+    if last_exc is not None:
+        raise HTTPException(status_code=504, detail="Connexion a la banque trop lente. Verifiez votre reseau et reessayez.")
+    raise HTTPException(status_code=502, detail="Echec de connexion a la banque apres plusieurs tentatives.")
 
 
 # ─── Request / response models ──────────────────────────────────────────────
@@ -382,22 +437,45 @@ async def _sync_one_connection(
             Account.household_id == household_id,
             Account.external_id == gc_acc_id,
         ).first()
-        if not wl_acc:
-            # Fetch a current balance to seed the account.
-            balance = 0.0
-            try:
-                bal_data = await _gc("GET", f"/accounts/{gc_acc_id}/balances/")
-                balances = bal_data.get("balances", []) or []
-                # Prefer interimAvailable then closingBooked
-                for kind in ("interimAvailable", "closingBooked", "expected"):
-                    match = next((b for b in balances if b.get("balanceType") == kind), None)
-                    if match:
-                        amt = match.get("balanceAmount", {})
-                        balance = float(amt.get("amount", 0) or 0)
-                        break
-            except Exception as e:
-                logger.warning("[banking] balance fetch failed for %s: %s", gc_acc_id, e)
+        # Recupere le solde officiel a CHAQUE sync, pas seulement a la creation
+        # (fix 2026-05-19 : retour user "solde Revolut totalement faux").
+        # Ordre de priorite ameliore base sur les usages reels :
+        #   interimAvailable : solde disponible immediat (Revolut, N26, Lydia)
+        #                      = cash + virements re�us mais non encore booked
+        #   closingAvailable : meme idee, certaines banques utilisent ce nom
+        #   closingBooked    : solde apres les seules tx confirmees (BNP, CA)
+        #   expected         : solde projete (rare)
+        #   openingBooked    : solde de debut de journee (dernier recours)
+        # Le 1er match trouve dans la liste ordonnee gagne.
+        BALANCE_PRIORITY = (
+            "interimAvailable",
+            "closingAvailable",
+            "closingBooked",
+            "expected",
+            "openingBooked",
+        )
+        official_balance = None
+        try:
+            bal_data = await _gc("GET", f"/accounts/{gc_acc_id}/balances/")
+            balances = bal_data.get("balances", []) or []
+            for kind in BALANCE_PRIORITY:
+                match = next((b for b in balances if b.get("balanceType") == kind), None)
+                if match:
+                    amt = match.get("balanceAmount", {})
+                    official_balance = float(amt.get("amount", 0) or 0)
+                    logger.info("[banking] balance %s for %s : %s = %s", kind, gc_acc_id, gc_acc_id[:8], official_balance)
+                    break
+            if official_balance is None and balances:
+                # Aucun balanceType connu — on prend le premier disponible
+                # avec un montant valide plutot que de laisser le solde a None.
+                first = next((b for b in balances if b.get("balanceAmount", {}).get("amount") is not None), None)
+                if first:
+                    official_balance = float(first["balanceAmount"]["amount"])
+                    logger.warning("[banking] no known balanceType for %s, fell back to first: %s", gc_acc_id, first.get("balanceType"))
+        except Exception as e:
+            logger.warning("[banking] balance fetch failed for %s: %s", gc_acc_id, e)
 
+        if not wl_acc:
             # Heuristic account type from the bank's "product" string + cashAccountType.
             # GoCardless returns these in the /accounts/{id}/details/ payload.
             product = (acc_info.get("product") or "").lower()
@@ -419,7 +497,7 @@ async def _sync_one_connection(
                 bank=conn.bank_name,
                 type=acc_type,
                 currency=(acc_info.get("currency") or "EUR").upper(),
-                initial_balance=balance,
+                initial_balance=official_balance if official_balance is not None else 0.0,
                 external_id=gc_acc_id,
                 iban=acc_info.get("iban"),
                 source="gocardless",
@@ -431,6 +509,11 @@ async def _sync_one_connection(
             # Backfill IBAN on accounts created before the column existed.
             if not wl_acc.iban and acc_info.get("iban"):
                 wl_acc.iban = acc_info.get("iban")
+
+        # Stocker le solde officiel a chaque sync (cle du fix solde Revolut).
+        if official_balance is not None:
+            wl_acc.last_known_balance = official_balance
+            wl_acc.last_balance_at = datetime.utcnow()
 
         # Transactions
         try:

@@ -14,9 +14,21 @@ router = APIRouter(prefix="/accounts", tags=["accounts"])
 
 
 def _to_out(account: Account, db: Session) -> dict:
-    """Serialize an Account, computing its current balance from transactions."""
-    tx_sum = db.query(Transaction).filter(Transaction.account_id == account.id).all()
-    current = (account.initial_balance or 0.0) + sum(t.amount for t in tx_sum)
+    """Serialize an Account.
+
+    Pour le `current_balance` on privilegie maintenant le solde officiel
+    GoCardless (`last_known_balance`) quand il est dispo. Sinon fallback
+    sur le calcul classique initial_balance + somme(transactions).
+
+    Fix 2026-05-19 : avant on retournait toujours le calcul, qui divergeait
+    du vrai solde banque a cause des transactions pending non remontees
+    par DSP2 (cas typique Revolut).
+    """
+    if account.last_known_balance is not None:
+        current = float(account.last_known_balance)
+    else:
+        tx_sum = db.query(Transaction).filter(Transaction.account_id == account.id).all()
+        current = (account.initial_balance or 0.0) + sum(t.amount for t in tx_sum)
     return {
         "id": account.id,
         "name": account.name,
@@ -28,6 +40,8 @@ def _to_out(account: Account, db: Session) -> dict:
         "household_id": account.household_id,
         "member_ids": [m.id for m in account.members],
         "current_balance": current,
+        "last_known_balance": account.last_known_balance,
+        "last_balance_at": account.last_balance_at.isoformat() if account.last_balance_at else None,
         "is_joint": account.is_joint,
         "iban": account.iban,
         "source": account.source or "manual",

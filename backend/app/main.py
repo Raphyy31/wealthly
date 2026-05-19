@@ -178,6 +178,11 @@ def _run_lightweight_migrations() -> None:
             # TOTP replay prevention (sec-audit 2026-05-19) — timestamp of last
             # accepted code; reject any code from the same 30s window.
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_last_otp_at TIMESTAMP WITHOUT TIME ZONE",
+            # Solde officiel GoCardless rafraichi a chaque sync (2026-05-19) —
+            # corrige le bug "solde Revolut affiche faux" en evitant la
+            # derive initial_balance + somme(tx) vs vrai solde banque.
+            "ALTER TABLE accounts ADD COLUMN IF NOT EXISTS last_known_balance DOUBLE PRECISION",
+            "ALTER TABLE accounts ADD COLUMN IF NOT EXISTS last_balance_at TIMESTAMP WITHOUT TIME ZONE",
             # ISIN code (ISO 6166) for stock / ETF positions — stored alongside
             # ticker so both are available for display and future lookups.
             "ALTER TABLE assets ADD COLUMN IF NOT EXISTS isin VARCHAR",
