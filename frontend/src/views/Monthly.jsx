@@ -800,7 +800,9 @@ function MonthPicker({ selectedMonth, currentMonth, availableMonths, onChange })
 }
 
 // Halo effect — white outline behind text so labels stay readable over colored flows.
-const HALO = { stroke: '#F7F6F2', strokeWidth: 5, strokeLinejoin: 'round', paintOrder: 'stroke' };
+// Halo derrière les labels SVG du Sankey — utilise --bg pour s'adapter au theme
+// (sinon bloc blanc criard sur dark mode, bug repéré 2026-05-19).
+const HALO = { stroke: 'var(--bg)', strokeWidth: 5, strokeLinejoin: 'round', paintOrder: 'stroke' };
 
 function SankeyNode({ x, y, width, height, index, payload, fmt }) {
   if (!payload) return null;
