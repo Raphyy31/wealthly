@@ -11,7 +11,9 @@ import {
   motion, useInView, useMotionValue, useReducedMotion, animate as fmAnimate,
   useScroll, useTransform, useSpring,
 } from 'framer-motion';
+// Landing v3 — iPhone scroll-pinned section added 2026-05-19
 import Logo from '../components/Logo.jsx';
+import { IphoneScrollSection } from '../components/IphoneScrollSection.jsx';
 import { gsap, ScrollTrigger, mm, DURATIONS, EASES } from '../utils/gsapSetup.js';
 
 // ─── Premium ease ─────────────────────────────────────────────────────────
@@ -387,6 +389,9 @@ export default function Landing({ onSignIn, onSignUp, onTryDemo }) {
             </ParallaxFrame>
             <div className="lc-mockup-glow" aria-hidden />
           </motion.div>
+
+          {/* ============ iPhone scroll-pinned (4 ecrans cyclent au scroll) ============ */}
+          <IphoneScrollSection />
 
           {/* ============ TEASER GRID — fonctionnalités produit ============ */}
           <motion.div
