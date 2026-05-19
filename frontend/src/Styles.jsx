@@ -351,7 +351,9 @@ export function Styles({ theme }) {
   .app-sidebar { display: none; }
   .app-header-mobile {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 10px 14px; gap: 8px; flex-wrap: nowrap;
+    /* Sprint mobile 2026-05-19 : safe-area-inset-top pour les notch iOS / Dynamic Island. */
+    padding: calc(10px + env(safe-area-inset-top, 0px)) 14px 10px;
+    gap: 8px; flex-wrap: nowrap;
     background: ${dark ? 'rgba(15, 14, 12, 0.78)' : 'rgba(247, 246, 242, 0.78)'};
     backdrop-filter: blur(14px) saturate(150%); -webkit-backdrop-filter: blur(14px) saturate(150%);
     border-bottom: 1px solid var(--border);
@@ -378,10 +380,17 @@ export function Styles({ theme }) {
   .bottom-nav button {
     flex: 1; position: relative;
     display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
-    padding: 6px 4px; border: none; background: transparent;
+    /* Sprint mobile 2026-05-19 : min-height 48dp Material / 44pt iOS pour
+       touch target accessible. padding bumped 6→9px top/bottom. */
+    min-height: 48px;
+    padding: 9px 4px; border: none; background: transparent;
     color: var(--text-tertiary); font-size: 10px; font-weight: 500; line-height: 1.1;
     border-radius: 6px; cursor: pointer; font-family: inherit; transition: color .15s;
     min-width: 0;
+  }
+  .bottom-nav button:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
   }
   .bottom-nav button svg { color: var(--text-tertiary); transition: color .15s; }
   .bottom-nav button:hover { color: var(--text-secondary); }

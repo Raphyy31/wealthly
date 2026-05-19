@@ -411,7 +411,9 @@ html, body {
 .ds-btn.ghost:hover { background: var(--bg-hover); }
 .ds-btn.danger { background: var(--negative); color: #fff; border-color: transparent; }
 
-/* Icon button */
+/* Icon button — taille visuelle 32px mais touch target étendu 44pt minimum
+   via ::before transparent (sprint mobile 2026-05-19, skill rule §2 touch-target-size).
+   Le visuel reste compact dans la sidebar/header mais tap accessible doigt. */
 .ds-icon-btn {
   display: inline-flex; align-items: center; justify-content: center;
   width: 32px; height: 32px;
@@ -421,6 +423,21 @@ html, body {
   color: var(--ink-2);
   cursor: pointer;
   transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
+  position: relative;
+}
+@media (pointer: coarse) {
+  /* Sur touch (mobile/tablet), étend la hit area à 44×44pt sans changer le visuel */
+  .ds-icon-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 44px; height: 44px;
+  }
+}
+.ds-icon-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 .ds-icon-btn:hover { background: var(--bg-hover); color: var(--ink); border-color: var(--border-strong); }
 
@@ -849,8 +866,32 @@ html, body {
   gap: 3px;
 }
 
-/* ── Reduced motion : neutralise toutes les animations C2 ───────────── */
+/* ── Screen-reader only utility (a11y sprint 2026-05-19) ─────────────── */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Reduced motion : neutralise toutes les animations C2 + global sweep
+   (sprint a11y 2026-05-19, skill rule reduced-motion). Tout ce qui anime
+   en spinner/shimmer/scale doit s'arrêter quand l'OS le demande. ─────── */
 @media (prefers-reduced-motion: reduce) {
+  /* Animations + transitions globalement coupées sauf opacity (sécu lecture) */
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  /* Composants connus pour anim — explicit override pour neutraliser */
   .ds-modal-backdrop,
   .ds-modal,
   .ds-drawer-backdrop,

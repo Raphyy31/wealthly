@@ -24,12 +24,25 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
+    // Bump warning limit — recharts seul fait ~600 KB, c'est attendu pour
+    // une app finance avec dataviz. Le code-split via manualChunks suffit
+    // pour le tree-shaking au runtime.
+    chunkSizeWarningLimit: 700,
     rollupOptions: {
       output: {
         manualChunks: {
+          // Dataviz lourde (~600 KB) — chargée uniquement quand un chart est visible
           recharts: ['recharts'],
+          // Icônes — chargées avec l'app shell mais isolées pour cache séparé
           icons: ['lucide-react'],
+          // PDF export — utilisé seulement quand l'user clique "Bilan PDF"
           pdf: ['jspdf', 'jspdf-autotable'],
+          // Spreadsheet — utilisé seulement à l'import CSV
+          xlsx: ['xlsx'],
+          // Animations — séparées du shell (peuvent être lazy si reduced-motion)
+          motion: ['framer-motion', 'gsap'],
+          // i18n — chargé tôt mais bénéficie d'un cache long séparé
+          i18n: ['i18next', 'react-i18next'],
         },
       },
     },

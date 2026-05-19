@@ -26,6 +26,7 @@ import { useBaseCurrency } from './hooks/useBaseCurrency.js';
 import { useQuotes } from './hooks/useQuotes.js';
 import { Combobox } from './components/Combobox.jsx';
 import { Mandatory2FAOverlay } from './components/Mandatory2FAOverlay.jsx';
+import { Skeleton } from './components/Skeleton.jsx';
 import { Styles } from './Styles.jsx';
 import { Toast } from './components/Toast.jsx';
 import { AnimatedNumber } from './components/AnimatedNumber.jsx';
@@ -1816,7 +1817,52 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     [hideAmounts, baseCurrency, rates]
   );
 
-  if (loading) return <div className="loading-screen"><Styles theme={theme}/><div className="spinner"/><span>Chargement…</span></div>;
+  if (loading) {
+    // Skeleton de chargement (sprint visuel 2026-05-19) — remplace le spinner
+    // bloquant par une silhouette de l'app shell + Dashboard pour donner une
+    // impression de chargement plus rapide et stable (pas de CLS au mount).
+    return (
+      <div className="app theme-light">
+        <Styles theme={theme}/>
+        <div style={{
+          display: 'flex',
+          height: '100vh',
+          background: 'var(--bg)',
+        }} role="status" aria-live="polite" aria-label="Chargement de l'application">
+          {/* Sidebar shell */}
+          <div style={{
+            width: 256,
+            borderRight: '1px solid var(--border)',
+            padding: 16,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 14,
+          }}>
+            <Skeleton w="60%" h={28} radius={6}/>
+            <Skeleton w="100%" h={32} radius={8}/>
+            <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} h={28} radius={6}/>)}
+            </div>
+          </div>
+          {/* Main shell */}
+          <div style={{ flex: 1, padding: 32, display: 'flex', flexDirection: 'column', gap: 24 }}>
+            <Skeleton w="40%" h={32}/>
+            <Skeleton w="22%" h={14}/>
+            <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 16, marginTop: 16 }}>
+              <Skeleton.Card height={280}/>
+              <Skeleton.Card height={280}/>
+            </div>
+            <div style={{ marginTop: 8 }}>
+              <Skeleton.Row/>
+              <Skeleton.Row/>
+              <Skeleton.Row/>
+            </div>
+          </div>
+        </div>
+        <span className="sr-only">Chargement…</span>
+      </div>
+    );
+  }
 
   if (!onboarded) {
     return (
