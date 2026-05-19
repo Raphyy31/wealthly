@@ -14,6 +14,8 @@ import {
 // Landing v3 — iPhone scroll-pinned section added 2026-05-19
 import Logo from '../components/Logo.jsx';
 import { IphoneScrollSection } from '../components/IphoneScrollSection.jsx';
+import { BanksMarquee } from '../components/BanksMarquee.jsx';
+import { MagneticCursor } from '../components/MagneticCursor.jsx';
 import { gsap, ScrollTrigger, mm, DURATIONS, EASES } from '../utils/gsapSetup.js';
 
 // ─── Premium ease ─────────────────────────────────────────────────────────
@@ -296,6 +298,7 @@ export default function Landing({ onSignIn, onSignUp, onTryDemo }) {
   return (
     <>
       <Styles />
+      <MagneticCursor />
       <div className="lc-page">
         <Aurora />
         <div className="lc-grain" aria-hidden />
@@ -308,7 +311,7 @@ export default function Landing({ onSignIn, onSignUp, onTryDemo }) {
             </div>
             <div className="lc-strip-actions">
               <button className="lc-strip-link" onClick={onSignIn}>Se connecter</button>
-              <button className="lc-strip-cta" onClick={onSignUp}>Essayer</button>
+              <button className="lc-strip-cta" onClick={onSignUp} data-magnetic>Essayer</button>
             </div>
           </div>
         </div>
@@ -356,24 +359,15 @@ export default function Landing({ onSignIn, onSignUp, onTryDemo }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.75, ease }}
           >
-            <button className="lc-btn-primary lc-btn-primary--pulse" onClick={onSignUp}>
+            <button className="lc-btn-primary lc-btn-primary--pulse" data-magnetic onClick={onSignUp}>
               Commencer gratuitement
               <ArrowRight />
             </button>
-            <button className="lc-btn-ghost" onClick={onTryDemo}>
+            <button className="lc-btn-ghost" onClick={onTryDemo} data-magnetic>
               Voir la démo →
             </button>
           </motion.div>
-          <motion.div
-            className="lc-trust"
-            initial="hidden"
-            animate="show"
-            transition={{ staggerChildren: 0.08, delayChildren: 0.9 }}
-          >
-            <TrustItem icon={<ShieldIcon />} label="DSP2 · lecture seule" />
-            <TrustItem icon={<LockIcon />} label="Chiffré bout-en-bout" />
-            <TrustItem icon={<NoCardIcon />} label="Sans carte bancaire" />
-          </motion.div>
+          {/* Trust badges retires 2026-05-19 — redondants avec la section Why. */}
 
           {/* ============ iPhone scroll-pinned (revelation produit unique) ==========
               Remplace le combo mockup hero + teasers grid (qui faisaient doublon
@@ -381,9 +375,8 @@ export default function Landing({ onSignIn, onSignUp, onTryDemo }) {
               textuel calme -> iPhone reveal au scroll -> arguments. */}
           <IphoneScrollSection />
 
-          {/* Teasers grid retire 2026-05-19 — faisait doublon avec l'iPhone
-              scroll-pinned qui cycle deja les 4 vues principales de l'app.
-              Plus epure : hero text -> iPhone reveal -> arguments. */}
+          {/* ============ Banques compatibles — marquee infinie ============ */}
+          <BanksMarquee />
 
           {/* ============ POURQUOI WEALTHLY — 4 icones visuelles ============ */}
           <section className="lc-why" data-anim="reveal">
@@ -478,7 +471,7 @@ export default function Landing({ onSignIn, onSignUp, onTryDemo }) {
             <h2 className="lc-h2">Prêt à commencer&nbsp;?</h2>
             <p className="lc-final-sub">Gratuit. Sans carte bancaire. Sans engagement.</p>
             <div className="lc-cta-row" style={{ justifyContent: 'center' }}>
-              <button className="lc-btn-primary lc-btn-primary--pulse" onClick={onSignUp}>Créer mon compte<ArrowRight /></button>
+              <button className="lc-btn-primary lc-btn-primary--pulse" data-magnetic onClick={onSignUp}>Créer mon compte<ArrowRight /></button>
               <button className="lc-btn-ghost" onClick={onTryDemo}>Voir la démo</button>
             </div>
           </motion.div>
