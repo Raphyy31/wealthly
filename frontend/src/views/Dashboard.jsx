@@ -14,6 +14,7 @@
 // ============================================================================
 import { useMemo, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useMagneticHover } from '../hooks/useMagneticHover.js';
 import {
   Plus, FileText, RefreshCw, ArrowUp, ArrowDown,
   TrendingUp, AlertTriangle, Sparkles, MoreHorizontal, Loader2,
@@ -96,6 +97,10 @@ export function Dashboard({
   const { t } = useTranslation();
   const formatEUR = useFormatEUR();
   const hidden = useHideAmounts();
+  // Magnetic hover sur le CTA primaire — pattern Apple/Stripe, le bouton
+  // s'attire legerement vers le curseur au hover. Hook auto skip sur touch
+  // et reduced-motion.
+  const newAccBtnRef = useMagneticHover({ strength: 0.25, scale: 1.04 });
   const [period, setPeriod] = useState('6m');
   const [txFilter, setTxFilter] = useState('all'); // all | expense | income
   const [hover, setHover] = useState(null); // chart hover point
@@ -426,7 +431,7 @@ export function Dashboard({
               : <><RefreshCw size={14}/> <span className="dash-btn-label">{t('dashboard.sync')}</span></>
             }
           </button>
-          <button className="ds-btn primary" onClick={onAddAccount}><Plus size={14}/> <span className="dash-btn-label">{t('dashboard.newAccount')}</span></button>
+          <button ref={newAccBtnRef} className="ds-btn primary" onClick={onAddAccount}><Plus size={14}/> <span className="dash-btn-label">{t('dashboard.newAccount')}</span></button>
         </div>
       </header>
 
