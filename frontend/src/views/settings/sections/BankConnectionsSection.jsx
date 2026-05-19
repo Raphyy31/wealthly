@@ -1,0 +1,190 @@
+// Source: Settings.jsx lines 1391-1576 — BankConnectionsSection
+import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Cloud, Plus, RefreshCw, AlertCircle, Unlink } from 'lucide-react';
+import * as api from '../../../api.js';
+import { BankConnectModal } from '../../../components/BankConnectModal.jsx';
+
+export function BankConnectionsSection() {
+  const { t } = useTranslation();
+  const [connections, setConnections] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [picker, setPicker] = useState(false);
+  const [syncingId, setSyncingId] = useState(null);
+  const [refreshingId, setRefreshingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [syncMessage, setSyncMessage] = useState(null);
+
+  const reload = useCallback(async () => {
+    setLoading(true);
+    try {
+      const list = await api.banking.listConnections();
+      setConnections(list || []);
+    } catch (e) {
+      setSyncMessage({ kind: 'error', text: e.message });
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { reload(); }, [reload]);
+
+  const handleSync = async (id) => {
+    setSyncingId(id);
+    setSyncMessage(null);
+    try {
+      const res = await api.banking.sync(id);
+      setSyncMessage({
+        kind: res.errors?.length ? 'warn' : 'ok',
+        text: res.errors?.length
+          ? t('settings.banks.syncedErrors', { imported: res.imported, skipped: res.skipped, errors: res.errors.join(', ') })
+          : t('settings.banks.syncedSummary', { count: res.imported, imported: res.imported, skipped: res.skipped }),
+      });
+      await reload();
+    } catch (e) {
+      setSyncMessage({ kind: 'error', text: e.message });
+    } finally {
+      setSyncingId(null);
+    }
+  };
+
+  const handleRefresh = async (id) => {
+    setRefreshingId(id);
+    setSyncMessage(null);
+    try {
+      const res = await api.banking.refreshConnection(id);
+      if (res.accounts?.length > 0) {
+        setSyncMessage({ kind: 'ok', text: t('settings.banks.fetchedAccounts', { count: res.accounts.length }) });
+      } else {
+        const debugKeys = res.debug_raw_keys ? ` (keys: ${res.debug_raw_keys.join(', ')})` : '';
+        setSyncMessage({ kind: 'warn', text: t('settings.banks.noAccountsReturned', { status: res.session_status || '?', debug: debugKeys }) });
+      }
+      await reload();
+    } catch (e) {
+      setSyncMessage({ kind: 'error', text: e.message });
+    } finally {
+      setRefreshingId(null);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    setDeletingId(id);
+    setConfirmDeleteId(null);
+    setSyncMessage(null);
+    try {
+      await api.banking.deleteConnection(id);
+      await reload();
+    } catch (e) {
+      setSyncMessage({ kind: 'error', text: e.message });
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  return (
+    <section className="card">
+      <div className="card-header">
+        <h3><Cloud size={16}/> {t('settings.banks.title')} {loading && <RefreshCw size={12} className="spin" style={{marginLeft:6,opacity:.5}}/>}</h3>
+        <button className="primary-btn" style={{ fontSize: 12, padding: '6px 14px' }} onClick={() => setPicker(true)}>
+          <Plus size={13}/> {t('settings.banks.connect')}
+        </button>
+      </div>
+
+      {syncMessage && (
+        <div className="settings-info" style={{
+          color: syncMessage.kind === 'error' ? 'var(--danger)' : syncMessage.kind === 'warn' ? 'var(--warning)' : 'var(--success)',
+        }}>
+          <AlertCircle size={14}/><span>{syncMessage.text}</span>
+        </div>
+      )}
+
+      {connections.length === 0 && !loading && (
+        <div className="empty-mini">
+          <Cloud size={24}/>
+          <p>{t('settings.banks.empty')}</p>
+          <button className="primary-btn" style={{ marginTop: 8 }} onClick={() => setPicker(true)}>
+            {t('settings.banks.connectMine')}
+          </button>
+        </div>
+      )}
+
+      <div className="member-list">
+        {connections.map((c) => (
+          <div key={c.id} className="member-card">
+            <span className="member-avatar large" style={{
+              background: c.status === 'authorized' ? '#10b981' : c.status === 'error' ? '#ef4444' : '#f59e0b',
+            }}>
+              {c.bank_name.charAt(0)}
+            </span>
+            <div className="member-card-info" style={{ flex: 1 }}>
+              <div className="member-card-name">{c.bank_name}</div>
+              <div className="member-card-role">
+                {c.status === 'authorized' ? t('settings.banks.connected') : c.status === 'error' ? t('settings.banks.error') : t('settings.banks.pending')}
+                {c.last_synced_at && ` · ${t('settings.banks.syncedAt', { date: new Date(c.last_synced_at).toLocaleDateString() })}`}
+                {c.accounts?.length > 0 && ` · ${t('settings.banks.accountsCount', { count: c.accounts.length })}`}
+              </div>
+              {c.error_message && (
+                <div style={{ fontSize: 11, color: 'var(--danger-text)', marginTop: 2 }}>{c.error_message}</div>
+              )}
+            </div>
+            {c.status === 'authorized' && (!c.accounts || c.accounts.length === 0) && (
+              <button
+                className="primary-btn"
+                style={{ fontSize: 11, padding: '5px 12px', whiteSpace: 'nowrap' }}
+                onClick={() => handleRefresh(c.id)}
+                disabled={refreshingId === c.id}
+                title={t('settings.banks.fetchAccountsTitle')}
+              >
+                <RefreshCw size={12} className={refreshingId === c.id ? 'spin' : ''}/> {t('settings.banks.fetchAccounts')}
+              </button>
+            )}
+            {c.status === 'authorized' && c.accounts?.length > 0 && (
+              <button
+                className="secondary-btn"
+                style={{ fontSize: 11, padding: '5px 10px', whiteSpace: 'nowrap' }}
+                onClick={() => handleSync(c.id)}
+                disabled={syncingId === c.id}
+              >
+                <RefreshCw size={12} className={syncingId === c.id ? 'spin' : ''}/> Sync
+              </button>
+            )}
+            {confirmDeleteId === c.id ? (
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{t('confirms.confirmShort')}</span>
+                <button
+                  className="danger-btn"
+                  style={{ fontSize: 11, padding: '4px 10px' }}
+                  onClick={() => handleDelete(c.id)}
+                  disabled={deletingId === c.id}
+                >
+                  {deletingId === c.id ? <RefreshCw size={11} className="spin"/> : t('actions.yes')}
+                </button>
+                <button
+                  className="secondary-btn"
+                  style={{ fontSize: 11, padding: '4px 10px' }}
+                  onClick={() => setConfirmDeleteId(null)}
+                >
+                  {t('actions.no')}
+                </button>
+              </div>
+            ) : (
+              <button
+                className="icon-btn-sm"
+                title={t('settings.banks.disconnect')}
+                onClick={() => setConfirmDeleteId(c.id)}
+                disabled={deletingId === c.id}
+              >
+                <Unlink size={13}/>
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <p className="settings-footnote" dangerouslySetInnerHTML={{ __html: t('settings.banks.footnote') }} />
+
+      {picker && <BankConnectModal onClose={() => { setPicker(false); reload(); }}/>}
+    </section>
+  );
+}
