@@ -72,12 +72,19 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   });
   // URL hash routing: #/<view>?m=<memberId>. Lets refresh / back-forward /
   // bookmark / share links restore the exact view + active member.
+  //
+  // Edge case 2026-05-19 : Settings utilise son propre format `#settings/<section>`
+  // (sans `/` après `#`). Sans normalisation, parseHash retournait "settings/securite"
+  // qui ne matchait aucune vue → fallback Dashboard sur refresh. On strip tout ce
+  // qui suit le premier `/` pour récupérer juste "settings".
   const parseHash = () => {
     if (typeof window === 'undefined') return { view: 'dashboard', memberId: 'all' };
     const raw = (window.location.hash || '').replace(/^#\/?/, '');
     const [path, query] = raw.split('?');
     const params = new URLSearchParams(query || '');
-    return { view: path || 'dashboard', memberId: params.get('m') || 'all' };
+    // Normalise les sous-chemins (ex: "settings/securite" → "settings")
+    const view = (path || 'dashboard').split('/')[0] || 'dashboard';
+    return { view, memberId: params.get('m') || 'all' };
   };
   const initialHash = parseHash();
   const [view, setView] = useState(initialHash.view);
@@ -341,6 +348,13 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   // Sync view + activeMember → URL hash, so refresh / back / forward / share work.
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    // Edge case 2026-05-19 : Settings gère son propre format de hash
+    // (#settings/<section>) pour permettre le deep-link vers la section
+    // sélectionnée. On ne réécrit PAS le hash dans ce cas, sinon le refresh
+    // perd la section et retombe sur 'profil' par défaut.
+    if (view === 'settings' && window.location.hash.startsWith('#settings/')) {
+      return;
+    }
     const params = activeMemberId && activeMemberId !== 'all' ? `?m=${activeMemberId}` : '';
     const next = `#/${view}${params}`;
     if (window.location.hash !== next) {
