@@ -3,6 +3,7 @@
 // ============================================================================
 import { useState } from 'react';
 import { ChipSelect } from '../components/ChipSelect.jsx';
+import { MagneticButton } from '../components/MagneticButton.jsx';
 import {
   Check, Users, Sparkles, Activity, Landmark, Play, X, Plus, Lightbulb,
   ChevronLeft, ChevronRight,
@@ -93,9 +94,9 @@ export function Onboarding({ onComplete }) {
                 </div>
               </div>
             </div>
-            <button className="primary-btn-large" onClick={() => setStep(1)}>
+            <MagneticButton className="primary-btn-large" onClick={() => setStep(1)}>
               <Play size={16}/> Commencer
-            </button>
+            </MagneticButton>
           </div>
         )}
 
@@ -184,9 +185,9 @@ export function Onboarding({ onComplete }) {
 
             <div className="onboarding-actions">
               <button className="secondary-btn" onClick={() => setStep(1)}><ChevronLeft size={14}/> Retour</button>
-              <button className="primary-btn-large" onClick={finish}>
+              <MagneticButton className="primary-btn-large" onClick={finish}>
                 <Sparkles size={16}/> Entrer dans Wealthly
-              </button>
+              </MagneticButton>
             </div>
           </div>
         )}

@@ -10,6 +10,7 @@
 // localStorage côté token de session.
 // ============================================================================
 import { useEffect, useState } from 'react';
+import { MagneticButton } from './components/MagneticButton.jsx';
 import { useTranslation } from 'react-i18next';
 import { Mail, Lock, User, Home, Eye, EyeOff, AlertCircle, ArrowLeft, Check, Sparkles } from 'lucide-react';
 import { auth } from './api.js';
@@ -276,13 +277,13 @@ export default function AuthScreen({ onAuth, onTryDemo, onBackToLanding, initial
               </div>
             )}
 
-            <button type="submit" className="auth-submit" disabled={loading}>
+            <MagneticButton type="submit" strength={0.2} scale={1.03} className="auth-submit" disabled={loading}>
               {loading ? t('auth.submitting') :
                mode === 'login'    ? t('auth.submitLogin') :
                mode === 'register' ? t('auth.submitRegister') :
                mode === 'forgot'   ? t('auth.submitForgot') :
                                      t('auth.submitReset')}
-            </button>
+            </MagneticButton>
           </form>
 
           {/* Liens secondaires sous le formulaire */}

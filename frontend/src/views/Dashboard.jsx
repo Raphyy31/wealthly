@@ -14,7 +14,7 @@
 // ============================================================================
 import { useMemo, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useMagneticHover } from '../hooks/useMagneticHover.js';
+import { MagneticButton } from '../components/MagneticButton.jsx';
 import {
   Plus, FileText, RefreshCw, ArrowUp, ArrowDown,
   TrendingUp, AlertTriangle, Sparkles, MoreHorizontal, Loader2,
@@ -97,10 +97,6 @@ export function Dashboard({
   const { t } = useTranslation();
   const formatEUR = useFormatEUR();
   const hidden = useHideAmounts();
-  // Magnetic hover sur le CTA primaire — pattern Apple/Stripe, le bouton
-  // s'attire legerement vers le curseur au hover. Hook auto skip sur touch
-  // et reduced-motion.
-  const newAccBtnRef = useMagneticHover({ strength: 0.25, scale: 1.04 });
   const [period, setPeriod] = useState('6m');
   const [txFilter, setTxFilter] = useState('all'); // all | expense | income
   const [hover, setHover] = useState(null); // chart hover point
@@ -397,7 +393,9 @@ export function Dashboard({
           </div>
         </div>
         <div className="dash-actions">
-          <button
+          <MagneticButton
+            strength={0.15}
+            scale={1.03}
             className="ds-btn"
             title={t('dashboard.pdfTitle')}
             onClick={async () => {
@@ -414,8 +412,10 @@ export function Dashboard({
             }}
           >
             <FileText size={14}/> <span className="dash-btn-label">{t('dashboard.pdf', 'Bilan PDF')}</span>
-          </button>
-          <button
+          </MagneticButton>
+          <MagneticButton
+            strength={0.15}
+            scale={1.03}
             className="ds-btn"
             disabled={syncing}
             onClick={async () => {
@@ -430,8 +430,8 @@ export function Dashboard({
               ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }}/> <span className="dash-btn-label">{t('dashboard.syncing')}</span></>
               : <><RefreshCw size={14}/> <span className="dash-btn-label">{t('dashboard.sync')}</span></>
             }
-          </button>
-          <button ref={newAccBtnRef} className="ds-btn primary" onClick={onAddAccount}><Plus size={14}/> <span className="dash-btn-label">{t('dashboard.newAccount')}</span></button>
+          </MagneticButton>
+          <MagneticButton className="ds-btn primary" onClick={onAddAccount}><Plus size={14}/> <span className="dash-btn-label">{t('dashboard.newAccount')}</span></MagneticButton>
         </div>
       </header>
 
