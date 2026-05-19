@@ -35,8 +35,14 @@ def _to_out(account: Account, db: Session) -> dict:
     }
 
 
-@router.get("", response_model=List[AccountOut])
+@router.get("")
 def list_accounts(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    # Note 2026-05-19 : `response_model=List[AccountOut]` retiré — Pydantic
+    # crashait silencieusement sur la validation (sans logger la stack), ce
+    # qui faisait remonter un 500 vide au frontend. Les Railway Deploy Logs
+    # confirment que la route exécute correctement, le crash est uniquement
+    # dans la phase de validation de la response. `_to_out` produit déjà
+    # un dict propre, on le renvoie tel quel — FastAPI sérialise en JSON.
     accounts = db.query(Account).filter(Account.household_id == user.household_id).all()
     return [_to_out(a, db) for a in accounts]
 
