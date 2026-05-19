@@ -4,7 +4,7 @@ update category/notes, delete.
 """
 from typing import List, Optional
 from datetime import date as date_type
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
 
@@ -18,6 +18,7 @@ from app.schemas import (
 from app.auth import get_current_user
 from app.categorization import categorize_transaction
 from app.categorization.learning import on_transaction_recategorized
+from app.rate_limit import limiter
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
 
@@ -139,9 +140,11 @@ def create_transaction(payload: TransactionCreate, db: Session = Depends(get_db)
 
 
 @router.post("/import", response_model=TransactionImportResult, status_code=201)
-def bulk_import(payload: TransactionImport, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+@limiter.limit("20/day")
+def bulk_import(payload: TransactionImport, request: Request, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     """Import a batch of transactions. Skips duplicates (same account+date+amount+label).
-    This is what the React frontend calls after parsing a CSV."""
+    This is what the React frontend calls after parsing a CSV.
+    Rate-limited à 20/jour pour éviter le DoS via batch CSV géants (audit sécu 2026-05-19)."""
     acc = db.query(Account).filter(
         Account.id == payload.account_id,
         Account.household_id == user.household_id,

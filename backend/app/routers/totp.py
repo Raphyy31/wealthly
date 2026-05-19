@@ -23,11 +23,13 @@ from app.schemas import (
     TotpSetupOut, TotpVerifyIn, TotpDisableIn, MessageOut,
 )
 from app.security import record_auth_event
+from app.rate_limit import limiter
 
 router = APIRouter(prefix="/auth/totp", tags=["auth", "totp"])
 
 
 @router.post("/setup", response_model=TotpSetupOut)
+@limiter.limit("5/hour")
 def totp_setup(
     request: Request,
     db: Session = Depends(get_db),
@@ -52,6 +54,7 @@ def totp_setup(
 
 
 @router.post("/verify", response_model=MessageOut)
+@limiter.limit("10/hour")
 def totp_verify(
     payload: TotpVerifyIn,
     request: Request,
@@ -74,6 +77,7 @@ def totp_verify(
 
 
 @router.post("/disable", response_model=MessageOut)
+@limiter.limit("5/hour")
 def totp_disable(
     payload: TotpDisableIn,
     request: Request,

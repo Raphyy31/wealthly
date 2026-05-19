@@ -252,6 +252,7 @@ def reset_password(request: Request, response: Response, payload: ResetPasswordR
 # breach HIBP via validate_password. Différent du reset par lien email.
 # ============================================================================
 @router.post("/change-password", response_model=MessageOut)
+@limiter.limit("5/hour")
 def change_password(
     payload: ChangePasswordRequest,
     request: Request,

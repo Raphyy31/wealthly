@@ -66,9 +66,9 @@ class UserOut(BaseModel):
 # ============================================================================
 
 class MemberBase(BaseModel):
-    name: str
+    name: str = Field(min_length=1, max_length=80)
     role: str = "adult"  # adult | child
-    color: str = "#3b82f6"
+    color: str = Field(default="#3b82f6", max_length=20)
 
 
 class MemberCreate(MemberBase):
@@ -76,9 +76,9 @@ class MemberCreate(MemberBase):
 
 
 class MemberUpdate(BaseModel):
-    name: Optional[str] = None
+    name: Optional[str] = Field(default=None, max_length=80)
     role: Optional[str] = None
-    color: Optional[str] = None
+    color: Optional[str] = Field(default=None, max_length=20)
 
 
 class MemberOut(MemberBase):
@@ -92,14 +92,14 @@ class MemberOut(MemberBase):
 # ============================================================================
 
 class AccountBase(BaseModel):
-    name: str
-    bank: Optional[str] = None
+    name: str = Field(min_length=1, max_length=120)
+    bank: Optional[str] = Field(default=None, max_length=120)
     type: str = "checking"
     role: str = "principal"  # principal | depenses | epargne | investissement | professionnel
     is_joint: bool = False  # flag compte joint famille (indépendant du rôle)
-    iban: Optional[str] = None
+    iban: Optional[str] = Field(default=None, max_length=40)
     initial_balance: float = 0.0
-    currency: str = "EUR"  # ISO 4217 (EUR / USD / GBP / CHF / …)
+    currency: str = Field(default="EUR", max_length=8)  # ISO 4217 (EUR / USD / GBP / CHF / …)
 
 
 class AccountCreate(AccountBase):
@@ -133,14 +133,14 @@ class AccountOut(AccountBase):
 class TransactionBase(BaseModel):
     account_id: str
     date: date
-    label: str = ""
+    label: str = Field(default="", max_length=500)
     amount: float
-    category_slug: Optional[str] = None
+    category_slug: Optional[str] = Field(default=None, max_length=80)
     is_manual_category: bool = False
     is_recurring_override: Optional[bool] = None
     is_transfer_override: Optional[bool] = None
-    notes: Optional[str] = ""
-    tags: List[str] = []
+    notes: Optional[str] = Field(default="", max_length=2000)
+    tags: List[str] = Field(default_factory=list, max_length=20)
 
 
 class TransactionCreate(TransactionBase):
@@ -148,13 +148,13 @@ class TransactionCreate(TransactionBase):
 
 
 class TransactionUpdate(BaseModel):
-    label: Optional[str] = None
-    category_slug: Optional[str] = None
+    label: Optional[str] = Field(default=None, max_length=500)
+    category_slug: Optional[str] = Field(default=None, max_length=80)
     is_manual_category: Optional[bool] = None
     is_recurring_override: Optional[bool] = None
     is_transfer_override: Optional[bool] = None
-    notes: Optional[str] = None
-    tags: Optional[List[str]] = None
+    notes: Optional[str] = Field(default=None, max_length=2000)
+    tags: Optional[List[str]] = Field(default=None, max_length=20)
 
 
 class TransactionOut(TransactionBase):
@@ -182,18 +182,18 @@ class TransactionImportResult(BaseModel):
 # ============================================================================
 
 class AssetBase(BaseModel):
-    type: str
-    name: str
+    type: str = Field(max_length=40)
+    name: str = Field(min_length=1, max_length=200)
     current_value: float = 0.0
-    currency: str = "EUR"  # ISO 4217
+    currency: str = Field(default="EUR", max_length=8)  # ISO 4217
     # Live-pricing: when ticker + quantity are set, the frontend overrides
     # current_value with quantity × live_price (Yahoo Finance via /quotes).
-    ticker: Optional[str] = None
-    isin: Optional[str] = None        # ISO 6166 — e.g. FR0007054358
+    ticker: Optional[str] = Field(default=None, max_length=20)
+    isin: Optional[str] = Field(default=None, max_length=20)  # ISO 6166 — e.g. FR0007054358
     quantity: Optional[float] = None
-    notes: Optional[str] = ""
+    notes: Optional[str] = Field(default="", max_length=2000)
     # Real estate enrichment — all optional, used by the immo wizard
-    subtype: Optional[str] = None
+    subtype: Optional[str] = Field(default=None, max_length=40)
     purchase_price: Optional[float] = None
     surface_m2: Optional[float] = None
     notary_fees: Optional[float] = None
@@ -203,7 +203,7 @@ class AssetBase(BaseModel):
     purchase_date: Optional[date] = None
     construction_year: Optional[int] = None
     ownership_pct: Optional[float] = 100.0
-    address: Optional[str] = None
+    address: Optional[str] = Field(default=None, max_length=300)
     # Parent envelope (PEA/CTO/AV/crypto) when this asset is an
     # imported position. Null for top-level assets.
     parent_asset_id: Optional[str] = None
@@ -214,16 +214,16 @@ class AssetCreate(AssetBase):
 
 
 class AssetUpdate(BaseModel):
-    type: Optional[str] = None
-    name: Optional[str] = None
+    type: Optional[str] = Field(default=None, max_length=40)
+    name: Optional[str] = Field(default=None, max_length=200)
     current_value: Optional[float] = None
-    currency: Optional[str] = None
-    ticker: Optional[str] = None
-    isin: Optional[str] = None
+    currency: Optional[str] = Field(default=None, max_length=8)
+    ticker: Optional[str] = Field(default=None, max_length=20)
+    isin: Optional[str] = Field(default=None, max_length=20)
     quantity: Optional[float] = None
-    notes: Optional[str] = None
+    notes: Optional[str] = Field(default=None, max_length=2000)
     member_ids: Optional[List[str]] = None
-    subtype: Optional[str] = None
+    subtype: Optional[str] = Field(default=None, max_length=40)
     purchase_price: Optional[float] = None
     surface_m2: Optional[float] = None
     notary_fees: Optional[float] = None
@@ -233,7 +233,7 @@ class AssetUpdate(BaseModel):
     purchase_date: Optional[date] = None
     construction_year: Optional[int] = None
     ownership_pct: Optional[float] = None
-    address: Optional[str] = None
+    address: Optional[str] = Field(default=None, max_length=300)
     parent_asset_id: Optional[str] = None
 
 
@@ -250,15 +250,15 @@ class AssetOut(AssetBase):
 # ============================================================================
 
 class LiabilityBase(BaseModel):
-    type: str
-    name: str
+    type: str = Field(max_length=40)
+    name: str = Field(min_length=1, max_length=200)
     initial_capital: float = 0.0
     remaining_capital: float = 0.0
     monthly_payment: float = 0.0
     interest_rate: float = 0.0
     end_date: Optional[date] = None
-    currency: str = "EUR"  # ISO 4217
-    notes: Optional[str] = ""
+    currency: str = Field(default="EUR", max_length=8)  # ISO 4217
+    notes: Optional[str] = Field(default="", max_length=2000)
     # Enriched fields — all optional, legacy loans still load fine
     down_payment: Optional[float] = None
     insurance_rate: Optional[float] = None
@@ -274,15 +274,15 @@ class LiabilityCreate(LiabilityBase):
 
 
 class LiabilityUpdate(BaseModel):
-    type: Optional[str] = None
-    name: Optional[str] = None
+    type: Optional[str] = Field(default=None, max_length=40)
+    name: Optional[str] = Field(default=None, max_length=200)
     initial_capital: Optional[float] = None
     remaining_capital: Optional[float] = None
     monthly_payment: Optional[float] = None
     interest_rate: Optional[float] = None
     end_date: Optional[date] = None
-    currency: Optional[str] = None
-    notes: Optional[str] = None
+    currency: Optional[str] = Field(default=None, max_length=8)
+    notes: Optional[str] = Field(default=None, max_length=2000)
     member_ids: Optional[List[str]] = None
     down_payment: Optional[float] = None
     insurance_rate: Optional[float] = None
@@ -317,19 +317,19 @@ class CategoryOut(BaseModel):
 
 
 class CategoryUpdate(BaseModel):
-    name: Optional[str] = None
-    color: Optional[str] = None
-    icon: Optional[str] = None
+    name: Optional[str] = Field(default=None, max_length=80)
+    color: Optional[str] = Field(default=None, max_length=20)
+    icon: Optional[str] = Field(default=None, max_length=20)
     kind: Optional[str] = None
 
 
 class CategoryCreate(BaseModel):
-    name: str
-    color: str = "#9ca3af"
-    icon: str = "🏷️"
+    name: str = Field(min_length=1, max_length=80)
+    color: str = Field(default="#9ca3af", max_length=20)
+    icon: str = Field(default="🏷️", max_length=20)
     type: str = "expense"  # income | expense | transfer
     kind: str = "needs"    # needs | wants | savings
-    parent_slug: Optional[str] = None  # None = top-level, else slug of parent
+    parent_slug: Optional[str] = Field(default=None, max_length=80)
 
 
 # ============================================================================

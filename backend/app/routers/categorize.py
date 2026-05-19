@@ -10,7 +10,7 @@ POST /categorize
 """
 import json
 import re
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -18,6 +18,7 @@ from app.database import get_db
 from app.auth import get_current_user
 from app.models import User, CategorisationRule, Category
 from app.config import settings
+from app.rate_limit import limiter
 
 router = APIRouter(prefix="/categorize", tags=["categorize"])
 
@@ -89,8 +90,10 @@ def _apply_regex_rules(label: str, rules: list) -> str | None:
 
 
 @router.post("", response_model=CategorizeResponse)
+@limiter.limit("100/day")
 def categorize(
     payload: CategorizeRequest,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
