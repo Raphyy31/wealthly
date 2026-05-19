@@ -103,7 +103,7 @@ function BMStyles() {
 .bm-section {
   position: relative;
   padding: 100px 0;
-  background: #0A0908;
+  background: #0F0E0C;
   overflow: hidden;
 }
 .bm-heading {

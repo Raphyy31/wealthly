@@ -374,7 +374,7 @@ function IphoneStyles() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #0A0908;
+  background: #0F0E0C;
   padding: 80px 0;
   overflow: hidden;
 }
