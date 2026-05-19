@@ -1,4 +1,4 @@
-﻿// ============================================================================
+// ============================================================================
 // Dashboard — Wealthly v3 (Refonte Claude Design)
 //
 // Spec source: design_handoff_wealthly_dashboard/README.md (Screen 01).
@@ -925,8 +925,9 @@ function DashStyles() {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  max-width: 1320px;
-  margin: 0 auto;
+  /* Pleine largeur — cap geree par .content. Avant cape a 1320 recreait du vide. */
+  max-width: 100%;
+  margin: 0;
 }
 .dash-v3 .mono { font-family: var(--font-mono); }
 .dash-v3 .link-btn {

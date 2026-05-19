@@ -2695,7 +2695,7 @@ html, body {
 /* ============================================================================
    Recurring view — toutes les charges récurrentes du foyer
    ============================================================================ */
-.rec-view { padding: 24px 32px; max-width: 1280px; margin: 0 auto; }
+.rec-view { padding: 24px 32px; max-width: 100%; margin: 0; }
 .rec-hero {
   display: flex; gap: 24px; align-items: center;
   padding: 18px 22px;

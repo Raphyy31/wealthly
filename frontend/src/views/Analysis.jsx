@@ -115,7 +115,7 @@ export function Analysis({ transactions, categories, recurringIds, recurringGrou
 
 function AnalysisStyles() {
   const css = `
-.analysis-view-v3 { display: flex; flex-direction: column; gap: 16px; max-width: 1320px; margin: 0 auto; }
+.analysis-view-v3 { display: flex; flex-direction: column; gap: 16px; max-width: 100%; margin: 0; }
 .analysis-view-v3 .mono { font-family: var(--font-mono); }
 .analysis-view-v3 .num { font-variant-numeric: tabular-nums; }
 .analysis-view-v3 .ana-chart-pad { padding: 16px 20px 20px; }

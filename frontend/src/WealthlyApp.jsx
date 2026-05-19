@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react';
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, RadialBarChart, RadialBar, ComposedChart, Sankey, Layer, Rectangle } from 'recharts';
 import { Upload, Plus, TrendingUp, TrendingDown, Wallet, Home, Coins, CreditCard, Users, Settings, Download, Trash2, Edit3, Check, X, ChevronRight, ChevronLeft, ChevronDown, AlertCircle, AlertTriangle, Repeat, Calendar, ArrowUpDown, Eye, EyeOff, Sparkles, PiggyBank, Bitcoin, Banknote, Landmark, BarChart3, Target, Heart, Sun, Moon, Zap, Activity, ArrowUp, ArrowDown, Minus, PartyPopper, Lightbulb, Bell, ChevronUp, Play, Lock, Unlock, LogOut, Cloud, RefreshCw, FileText, Calculator, Link2, Unlink, Menu, Search } from 'lucide-react';
 import * as api from './api.js';
