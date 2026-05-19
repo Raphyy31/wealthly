@@ -234,15 +234,16 @@
    2. Dark mode
    ───────────────────────────────────────────────────────────────────────── */
 :root[data-theme="dark"] {
-  /* Dark adouci 2026-05-18 (feedback user "très noir") — papier-chaud
-     nocturne, garde le contraste AA avec --ink #F1EEE4 sans virer au noir
-     pur. Inspiré Linear/Pictet night mode. */
-  --bg:           #16140F;
-  --bg-elev:      #1F1C16;
-  --bg-sunk:      #0F0D09;
-  --bg-hover:     #25221B;
-  --border:       #2F2C25;
-  --border-strong:#3E3A31;
+  /* Dark Espresso doux 2026-05-19 — itération suite feedback user
+     (toujours "très sombre" avec #16140F). Variante B ui-ux-pro-max :
+     bg = ex-bg-elev (lifted), elev encore plus chaud, sunk = ex-bg.
+     Reste papier-chaud nocturne, hiérarchie 3 niveaux mieux lisible. */
+  --bg:           #1F1C16;
+  --bg-elev:      #2A2620;
+  --bg-sunk:      #15130F;
+  --bg-hover:     #312D26;
+  --border:       #3E3A31;
+  --border-strong:#4D483D;
 
   --ink:        #F1EEE4;
   --ink-2:      #A29E91;
