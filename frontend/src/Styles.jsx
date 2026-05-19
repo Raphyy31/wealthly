@@ -1634,12 +1634,12 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .flow-actions { display: flex; justify-content: space-between; gap: 12px; }
 
 /* TOAST */
-.toast { position: fixed; top: 20px; right: 20px; z-index: 2000; padding: 12px 16px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-lg); animation: slideIn 0.3s ease-out; max-width: 360px; }
+.toast { position: fixed; top: 20px; right: 20px; z-index: 2000; padding: 14px 18px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 18px 48px -16px rgba(0, 0, 0, 0.28), 0 6px 18px -6px rgba(0, 0, 0, 0.14); animation: slideIn 0.48s cubic-bezier(0.16, 1, 0.3, 1); max-width: 380px; }
 .toast-success { border-color: var(--success); }
 .toast-warning { border-color: var(--warning); }
 .toast-error { border-color: var(--danger); }
 .toast-content { font-size: 13px; font-weight: 600; }
-@keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes slideIn { from { opacity: 0; transform: translateX(28px) scale(0.96); } to { opacity: 1; transform: translateX(0) scale(1); } }
 
 /* ============================================================================
  * MOBILE RESPONSIVE — bottom nav, full-screen modals, table compression

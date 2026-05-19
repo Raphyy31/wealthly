@@ -51,6 +51,7 @@ import { CreateRuleModal } from './components/CreateRuleModal.jsx';
 import { AiPromptModal } from './components/AiPromptModal.jsx';
 import { detectDuplicates } from './utils/duplicateDetector.js';
 import { DuplicateMergeModal } from './components/DuplicateMergeModal.jsx';
+import { gsap } from './utils/gsapSetup.js';
 import { useWealthItems } from './hooks/useWealthItems.js';
 
 const TaxSimulator = lazy(() => import('./TaxSimulator.jsx'));
@@ -90,6 +91,17 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   };
   const initialHash = parseHash();
   const [view, setView] = useState(initialHash.view);
+  // Page transitions GSAP : a chaque changement de view, le contenu fade-in
+  // depuis y+12 / opacity 0. Respect prefers-reduced-motion (skip si actif).
+  const contentRef = useRef(null);
+  useEffect(() => {
+    if (!contentRef.current) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    gsap.fromTo(contentRef.current,
+      { opacity: 0, y: 14 },
+      { opacity: 1, y: 0, duration: 0.42, ease: 'power3.out' }
+    );
+  }, [view]);
   // Account drawer + cross-view transaction filter (set when "voir toutes" is
   // clicked from the drawer, consumed by <Transactions> on mount).
   const [drawerAccount, setDrawerAccount] = useState(null);
@@ -2397,7 +2409,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             </div>
           )}
 
-          <main className="content">
+          <main ref={contentRef} className="content">
         {view === 'dashboard' && (
           <Dashboard
             netWorth={netWorth} liquidWealth={liquidWealth} assetsValue={assetsValue} liabilitiesValue={liabilitiesValue}
