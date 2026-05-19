@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react';
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, RadialBarChart, RadialBar, ComposedChart, Sankey, Layer, Rectangle } from 'recharts';
-import { Upload, Plus, TrendingUp, TrendingDown, Wallet, Home, Coins, CreditCard, Users, Settings, Download, Trash2, Edit3, Check, X, ChevronRight, ChevronLeft, ChevronDown, AlertCircle, AlertTriangle, Repeat, Calendar, ArrowUpDown, Eye, EyeOff, Sparkles, PiggyBank, Bitcoin, Banknote, Landmark, BarChart3, Target, Heart, Sun, Moon, Zap, Activity, ArrowUp, ArrowDown, Minus, PartyPopper, Lightbulb, Bell, ChevronUp, Play, Lock, Unlock, LogOut, Cloud, RefreshCw, FileText, Calculator, Link2, Unlink, Menu, Search } from 'lucide-react';
+import { Upload, Plus, TrendingUp, TrendingDown, Wallet, Home, Coins, CreditCard, Users, Settings, Download, Trash2, Edit3, Check, X, ChevronRight, ChevronLeft, ChevronDown, AlertCircle, AlertTriangle, Repeat, Calendar, ArrowUpDown, Eye, EyeOff, Sparkles, PiggyBank, Bitcoin, Banknote, Landmark, BarChart3, Target, Heart, Sun, Moon, Zap, Activity, ArrowUp, ArrowDown, Minus, PartyPopper, Lightbulb, Bell, ChevronUp, Play, Lock, Unlock, LogOut, Cloud, RefreshCw, FileText, FileUp, Calculator, Link2, Unlink, Menu, Search } from 'lucide-react';
 import * as api from './api.js';
 import { useTranslation } from 'react-i18next';
 import { LangButton } from './components/LangButton.jsx';
@@ -176,6 +176,10 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   const [bankingPendingState, setBankingPendingState] = useState(null); // state param from callback URL
 
   const [showAddAccount, setShowAddAccount] = useState(false);
+  // Etape initiale du modal compte bancaire (sidebar + button vs Dashboard
+  // CTA). null = ferme, 'choice' = ouvre sur le choix banque / manuel,
+  // 'bank-list' = skip directement a la liste des banques.
+  const [addBankAccountStep, setAddBankAccountStep] = useState(null);
   const [showBankConnect, setShowBankConnect] = useState(false);
   // Quand le wizard "+ Ajouter" termine en mode manuel, on stocke ici
   // { category, subtype } pour que la vue Patrimoine ouvre l'éditeur
@@ -2231,9 +2235,9 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
               <button
                 type="button"
                 className="ws-nav-group-cta"
-                onClick={() => setShowAddAccount(true)}
-                title="Ajouter un compte (banque ou import CSV)"
-                aria-label="Ajouter un compte"
+                onClick={() => setAddBankAccountStep('choice')}
+                title="Ajouter un compte bancaire (DSP2 ou manuel)"
+                aria-label="Ajouter un compte bancaire"
               >
                 <Plus size={11}/>
               </button>
@@ -2676,6 +2680,23 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
           initialStep="bank-list"
         />
       )}
+
+      {/* Bouton + sidebar (section Comptes) -> modal compte bancaire avec
+          choix DSP2 / manuel / CSV. Le 'choice' step affiche les 3 options
+          en cards cliquables ; le 'bank-list' skipperait direct vers les
+          banques (utilise par un autre flow). */}
+      {addBankAccountStep && (
+        <AddAccountModal
+          members={members}
+          onSave={async (fields) => {
+            await createAccount(fields);
+            setAddBankAccountStep(null);
+          }}
+          onClose={() => setAddBankAccountStep(null)}
+          onImportCsv={() => { setView('import'); setImportStep('upload'); }}
+          initialStep={addBankAccountStep}
+        />
+      )}
     </div>
     </HideAmountsContext.Provider>
     </CurrencyContext.Provider>
@@ -2704,7 +2725,7 @@ const BANK_COUNTRIES = [
   { code: 'GB', name: '🇬🇧 Royaume-Uni' },
 ];
 
-function AddAccountModal({ members = [], onSave, onClose, initialStep = 'choice' }) {
+function AddAccountModal({ members = [], onSave, onClose, onImportCsv, initialStep = 'choice' }) {
   // steps: 'choice' | 'bank-list' | 'manual'
   const [step, setStep] = useState(initialStep);
 
@@ -2884,6 +2905,42 @@ function AddAccountModal({ members = [], onSave, onClose, initialStep = 'choice'
               </div>
               <ChevronRight size={16} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }}/>
             </button>
+
+            {/* CSV import card — affichee uniquement si la prop onImportCsv
+                est fournie (sidebar context). Pas affichee depuis Dashboard
+                "Nouveau compte" qui ne propage pas ce callback. */}
+            {onImportCsv && (
+              <button
+                onClick={() => { onClose(); onImportCsv(); }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 16, padding: '18px 20px',
+                  background: 'var(--bg-elevated, var(--bg-card))',
+                  border: '1px solid var(--border)',
+                  borderRadius: 12, cursor: 'pointer', textAlign: 'left', width: '100%',
+                  transition: 'border-color .15s', fontFamily: 'inherit',
+                }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
+                onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+              >
+                <span style={{
+                  width: 44, height: 44, borderRadius: 10, flexShrink: 0,
+                  background: 'rgba(139,138,133,.10)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: 'var(--text-secondary)',
+                }}>
+                  <FileUp size={22}/>
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-primary)', marginBottom: 3 }}>
+                    Importer un CSV
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                    Importez l'historique d'une banque non compatible DSP2 depuis un fichier exporté.
+                  </div>
+                </div>
+                <ChevronRight size={16} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }}/>
+              </button>
+            )}
 
             <div style={{ marginTop: 4 }}>
               <button className="secondary-btn" style={{ width: '100%' }} onClick={onClose}>Annuler</button>
