@@ -375,141 +375,15 @@ export default function Landing({ onSignIn, onSignUp, onTryDemo }) {
             <TrustItem icon={<NoCardIcon />} label="Sans carte bancaire" />
           </motion.div>
 
-          {/* ============ HERO MOCKUP (le produit, gros, tout de suite) ============ */}
-          <motion.div
-            ref={mockupRef}
-            className="lc-mockup-wrap"
-            style={{ scale: mockupScale, rotateX: mockupRotateX, y: mockupY, opacity: mockupOpacity, transformPerspective: 1600, transformOrigin: '50% 0%' }}
-          >
-            <ParallaxFrame className="lc-mockup-parallax" intensity={4}>
-              <div className="lc-mockup-frame">
-                <DashboardMockup />
-                <div className="lc-mockup-shine" aria-hidden />
-              </div>
-            </ParallaxFrame>
-            <div className="lc-mockup-glow" aria-hidden />
-          </motion.div>
-
-          {/* ============ iPhone scroll-pinned (4 ecrans cyclent au scroll) ============ */}
+          {/* ============ iPhone scroll-pinned (revelation produit unique) ==========
+              Remplace le combo mockup hero + teasers grid (qui faisaient doublon
+              avec les 4 ecrans cycliques de l'iPhone). Plus epure : hero
+              textuel calme -> iPhone reveal au scroll -> arguments. */}
           <IphoneScrollSection />
 
-          {/* ============ TEASER GRID — fonctionnalités produit ============ */}
-          <motion.div
-            className="lc-section-head"
-            initial={{ opacity: 0, y: 12 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.5 }}
-            transition={{ duration: 0.7, ease }}
-          >
-            <h2 className="lc-h2">Tout ce qu'il faut.<br/><em>Rien de plus.</em></h2>
-          </motion.div>
-
-          <motion.div
-            className="lc-teasers"
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, amount: 0.15 }}
-            variants={{ hidden: {}, show: { transition: { staggerChildren: 0.08 } } }}
-          >
-            <TiltTile className="lc-tile lc-t-hero" intensity={3}>
-              <div className="lc-label-row">
-                <div className="lc-tag">Patrimoine net</div>
-                <div className="lc-range">
-                  <span>1M</span><span>3M</span><span className="on">6M</span><span>1A</span><span>5A</span>
-                </div>
-              </div>
-              <div className="lc-big num"><ScrambleNumber to={184720} delay={0.1} /><span className="lc-cents">,40&nbsp;€</span></div>
-              <div className="lc-delta">
-                <span className="lc-pill num">↑ +2&nbsp;340,12&nbsp;€&nbsp;·&nbsp;+1,28&nbsp;%</span>
-                <span className="lc-vs">vs. mois dernier</span>
-              </div>
-              <div className="lc-chart">
-                <svg viewBox="0 0 600 160" preserveAspectRatio="none">
-                  <defs>
-                    <linearGradient id="lc-grad" x1="0" x2="0" y1="0" y2="1">
-                      <stop offset="0%" stopColor="#7E92FF" stopOpacity="0.22"/>
-                      <stop offset="100%" stopColor="#7E92FF" stopOpacity="0"/>
-                    </linearGradient>
-                  </defs>
-                  <line x1="0" y1="40"  x2="600" y2="40"  stroke="#2A2823" strokeDasharray="2 4"/>
-                  <line x1="0" y1="80"  x2="600" y2="80"  stroke="#2A2823" strokeDasharray="2 4"/>
-                  <line x1="0" y1="120" x2="600" y2="120" stroke="#2A2823" strokeDasharray="2 4"/>
-                  <path d="M0,120 C40,115 80,100 130,95 C190,90 230,110 290,80 C340,55 380,72 430,55 C470,42 510,48 600,30 L600,160 L0,160 Z"
-                        fill="url(#lc-grad)"/>
-                  <path d="M0,120 C40,115 80,100 130,95 C190,90 230,110 290,80 C340,55 380,72 430,55 C470,42 510,48 600,30"
-                        fill="none" stroke="#7E92FF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <circle cx="600" cy="30" r="4" fill="#181714" stroke="#7E92FF" strokeWidth="2"/>
-                </svg>
-              </div>
-              <span className="lc-read">Découvrir le dashboard</span>
-            </TiltTile>
-
-            <TiltTile className="lc-tile lc-t-alloc">
-              <div className="lc-tag">Allocation</div>
-              <div className="lc-ttl">Tous vos actifs, par classe.</div>
-              <div className="lc-alloc-row">
-                <AnimatedDonut />
-                <div className="lc-legend">
-                  <div><span className="lc-sw" style={{ background: '#4FB57A' }}/>Immobilier</div>
-                  <div><span className="lc-sw" style={{ background: '#7E92FF' }}/>PEA &amp; CTO</div>
-                  <div><span className="lc-sw" style={{ background: '#E0975A' }}/>Ass.-vie</div>
-                  <div><span className="lc-sw" style={{ background: '#DA8AA1' }}/>Livrets</div>
-                  <div><span className="lc-sw" style={{ background: '#B69BF2' }}/>Crypto</div>
-                </div>
-              </div>
-              <span className="lc-read">Voir le détail</span>
-            </TiltTile>
-
-            <TiltTile className="lc-tile lc-t-tx">
-              <div className="lc-tag">Transactions</div>
-              <div className="lc-ttl">Catégorisées automatiquement.</div>
-              <div className="lc-tx-row">
-                <div className="lc-tx-ic lc-tx-p">CB</div>
-                <div>
-                  <div className="lc-tx-nm">Carrefour Market</div>
-                  <div className="lc-tx-mt">Alimentation · 14h22</div>
-                </div>
-                <div className="lc-tx-amt num">−47,30&nbsp;€</div>
-              </div>
-              <div className="lc-tx-row">
-                <div className="lc-tx-ic">SN</div>
-                <div>
-                  <div className="lc-tx-nm">SNCF Connect</div>
-                  <div className="lc-tx-mt">Transport · 09h08</div>
-                </div>
-                <div className="lc-tx-amt num">−84,00&nbsp;€</div>
-              </div>
-              <div className="lc-tx-row">
-                <div className="lc-tx-ic lc-tx-p">SA</div>
-                <div>
-                  <div className="lc-tx-nm">Salaire — Manuf.</div>
-                  <div className="lc-tx-mt">Revenu · 01 mai</div>
-                </div>
-                <div className="lc-tx-amt lc-tx-in num">+3&nbsp;280,00&nbsp;€</div>
-              </div>
-              <div className="lc-tx-fade"/>
-              <span className="lc-read">Plus loin</span>
-            </TiltTile>
-
-            <TiltTile className="lc-tile lc-t-range">
-              <div className="lc-tag">Indicateurs</div>
-              <div className="lc-ttl">Les chiffres qui comptent.</div>
-              <div className="lc-kpis">
-                <div className="lc-kpi"><div className="lc-kpi-lbl">Liquidités</div><div className="lc-kpi-val num"><CountUp to={12480} delay={0.2} />&nbsp;€</div><div className="lc-kpi-dt num">+3,2&nbsp;%</div></div>
-                <div className="lc-kpi"><div className="lc-kpi-lbl">Investi</div><div className="lc-kpi-val num"><CountUp to={84200} delay={0.3} />&nbsp;€</div><div className="lc-kpi-dt num">+1,8&nbsp;%</div></div>
-                <div className="lc-kpi"><div className="lc-kpi-lbl">Immobilier</div><div className="lc-kpi-val num"><CountUp to={88040} delay={0.4} />&nbsp;€</div><div className="lc-kpi-dt num">+0,4&nbsp;%</div></div>
-                <div className="lc-kpi"><div className="lc-kpi-lbl">Dettes</div><div className="lc-kpi-val num"><CountUp to={42100} delay={0.5} />&nbsp;€</div><div className="lc-kpi-dt lc-kpi-dt-n num">−0,9&nbsp;%</div></div>
-              </div>
-              <span className="lc-read">Lire la grille</span>
-            </TiltTile>
-
-            <TiltTile className="lc-tile lc-t-insights" onClick={onTryDemo} role="button" tabIndex={0}>
-              <div className="lc-tag">Démo</div>
-              <div className="lc-quote">Essayez Wealthly sans créer de compte.</div>
-              <div className="lc-quote-src">Données factices — 30 secondes</div>
-              <span className="lc-read">Lancer la démo</span>
-            </TiltTile>
-          </motion.div>
+          {/* Teasers grid retire 2026-05-19 — faisait doublon avec l'iPhone
+              scroll-pinned qui cycle deja les 4 vues principales de l'app.
+              Plus epure : hero text -> iPhone reveal -> arguments. */}
 
           {/* ============ POURQUOI WEALTHLY — 4 icones visuelles ============ */}
           <section className="lc-why" data-anim="reveal">
