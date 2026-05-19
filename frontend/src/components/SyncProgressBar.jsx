@@ -151,25 +151,29 @@ function SpbarStyles() {
   100% { transform: translateX(385%); }
 }
 
-/* ── Pill centree avec stage + compteur ─────────────────────────────── */
+/* ── Pill centree avec stage + compteur ──────────────────────────────
+   Taille montee a "hero" suite retour user 2026-05-19 (la pill 13px
+   etait trop discrete, "voir tres grand"). Maintenant 18-19px, padding
+   genereux, ombre plus marquee pour vraiment attirer l'oeil. */
 .spbar-pill {
   position: fixed;
-  top: 14px;
+  top: 22px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 1500;
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 9px 16px;
+  gap: 14px;
+  padding: 16px 26px;
   background: var(--bg-elev);
   color: var(--ink);
   border: 1px solid var(--border);
   border-radius: 999px;
-  box-shadow: 0 6px 24px -8px rgba(0, 0, 0, 0.18),
-              0 2px 6px -2px rgba(0, 0, 0, 0.08);
-  font: 500 13px/1 var(--font-sans);
-  letter-spacing: -0.005em;
+  box-shadow: 0 18px 48px -16px rgba(0, 0, 0, 0.28),
+              0 6px 18px -6px rgba(0, 0, 0, 0.14),
+              0 0 0 4px rgba(37, 64, 217, 0.04);
+  font: 500 17px/1 var(--font-sans);
+  letter-spacing: -0.01em;
   max-width: calc(100vw - 32px);
 }
 .spbar-pill-icon {
@@ -178,18 +182,24 @@ function SpbarStyles() {
   justify-content: center;
   color: var(--accent);
   flex-shrink: 0;
+  width: 22px;
+  height: 22px;
 }
+.spbar-pill-icon svg { width: 19px; height: 19px; }
+.spbar-pill-success { border-color: color-mix(in srgb, var(--positive) 40%, var(--border)); }
 .spbar-pill-success .spbar-pill-icon { color: var(--positive); }
+.spbar-pill-error { border-color: color-mix(in srgb, var(--negative) 40%, var(--border)); }
 .spbar-pill-error .spbar-pill-icon { color: var(--negative); }
 .spbar-pill-label {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 60vw;
+  font-weight: 500;
 }
 .spbar-pill-count {
-  font: 500 11px/1 var(--font-mono);
-  padding: 3px 8px;
+  font: 500 13px/1 var(--font-mono);
+  padding: 5px 11px;
   background: var(--bg-sunk);
   color: var(--ink-2);
   border-radius: 999px;
@@ -214,10 +224,14 @@ function SpbarStyles() {
 
 @media (max-width: 640px) {
   .spbar-pill {
-    top: 10px;
-    padding: 8px 14px;
-    font-size: 12.5px;
+    top: 14px;
+    padding: 13px 20px;
+    font-size: 15px;
+    gap: 11px;
   }
+  .spbar-pill-icon { width: 18px; height: 18px; }
+  .spbar-pill-icon svg { width: 16px; height: 16px; }
+  .spbar-pill-count { font-size: 12px; padding: 4px 9px; }
 }
 `;
   return <style dangerouslySetInnerHTML={{ __html: css }}/>;

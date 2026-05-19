@@ -208,6 +208,10 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     currency: a.currency || 'EUR',
     memberIds: a.member_ids || [],
     currentBalance: a.current_balance,
+    // Solde officiel banque rafraichi a chaque sync GoCardless. null = compte
+    // manuel/CSV (alors le frontend fallback sur initial + somme tx).
+    last_known_balance: a.last_known_balance,
+    last_balance_at: a.last_balance_at || null,
     source: a.source || 'manual',
     externalId: a.external_id || null,
   });
@@ -619,15 +623,36 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   const accountBalances = useMemo(() => {
     const balances = {};
     if (demoMode) {
-      // Demo accounts carry a pre-computed currentBalance — use it directly so
-      // displayed figures match the intended demo numbers instead of the raw
-      // transaction sum (which diverges because initialBalance is not set to
-      // match the 6-month transaction history).
       accounts.forEach(a => { balances[a.id] = a.currentBalance ?? (a.initialBalance || 0); });
       return balances;
     }
-    accounts.forEach(a => { balances[a.id] = a.initialBalance || 0; });
-    transactions.forEach(t => { balances[t.accountId] = (balances[t.accountId] || 0) + t.amount; });
+    // Fix 2026-05-19 (retour user "solde Revolut faux") : pour les comptes
+    // synchronises via GoCardless, on utilise EN PRIORITE le `currentBalance`
+    // renvoye par le backend (qui vaut last_known_balance officiel banque
+    // depuis le commit 3cedc26). Avant, on recalculait initial + Σtx, ce qui
+    // donnait un solde lisse sur la periode au lieu du solde courant — typique
+    // sur Revolut ou les transactions pending ne remontent pas via DSP2.
+    //
+    // Pour les comptes manuels / CSV (last_known_balance == null), on retombe
+    // sur le calcul classique car ces comptes n'ont pas de balance officiel.
+    accounts.forEach(a => {
+      const hasOfficial = a.last_known_balance !== null && a.last_known_balance !== undefined;
+      if (hasOfficial) {
+        balances[a.id] = a.currentBalance ?? a.last_known_balance ?? 0;
+      } else {
+        balances[a.id] = a.initialBalance || 0;
+      }
+    });
+    // Pour les comptes SANS solde officiel, on ajoute les tx. Pour les comptes
+    // AVEC solde officiel, le solde est deja correct — ne pas re-ajouter les
+    // tx (sinon double comptage).
+    const hasOfficial = new Set(
+      accounts.filter(a => a.last_known_balance !== null && a.last_known_balance !== undefined).map(a => a.id)
+    );
+    transactions.forEach(t => {
+      if (hasOfficial.has(t.accountId)) return;
+      balances[t.accountId] = (balances[t.accountId] || 0) + t.amount;
+    });
     return balances;
   }, [accounts, transactions, demoMode]);
 
@@ -2182,8 +2207,9 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
               <button
                 type="button"
                 className="ws-nav-group-cta"
-                onClick={() => { setView('import'); setImportStep('upload'); }}
-                title={t('nav.add_account') || 'Ajouter un compte'}
+                onClick={() => setShowAddAccount(true)}
+                title="Ajouter un compte (banque ou import CSV)"
+                aria-label="Ajouter un compte"
               >
                 <Plus size={11}/>
               </button>
