@@ -3,7 +3,55 @@
 Notes for Claude (and any future AI tooling) picking the project back up.
 **Read this first** before making non-trivial changes.
 
-> 📋 **Voir ROADMAP.md** pour la TODO list complète priorisée P0/P1/P2/P3.
+> 📋 **Plans actifs** :
+> - `docs/PLAN_2026-05-18.md` — roadmap produit (22 chantiers / 6 phases)
+> - `docs/SECURITY_ROADMAP.md` — état sécurité + chantiers restants (RLS, CSRF, etc.)
+
+---
+
+## Session 2026-05-19 — Raphyy31 + Claude (Opus 4.7) — découpe + audit sécu expert + dark adouci
+
+Suite directe de la session 2026-05-18. Plus calme côté UI, focus refactor +
+audit cybersécurité approfondi (3 audits successifs : input/rate-limit, puis
+Supabase data layer, puis low-level expert).
+
+| Domaine | Commit(s) | Livré |
+|---|---|---|
+| **Découpe Wealth.jsx** | `b8a20e3` | 3 853 → 554 lignes (-86 %). 17 sous-fichiers `views/wealth/{components,editors,details,styles,utils}` |
+| **Auto-déconnexion inactivité** | `805cc68` | `useIdleLogout` hook + `IdleTimeoutRow` dans Settings → Sécurité. Default 30 min, paramétrable 15/30/60/Jamais |
+| **Découpe Settings.jsx** | `a748d07` | 2 120 → 196 lignes (-91 %). 17 sous-fichiers `views/settings/{sections,modals}` |
+| **Audit sécu axe 1+2+3** | `76d1291` | Pydantic `max_length` sur tous champs texte, 6 nouveaux rate limiters (change-password 5/h, totp 5-10/h, transactions/import 20/j, categorize 100/j) |
+| **Audit Supabase** | `7b070d1` | Banni les fallbacks `SECRET_KEY="CHANGE_ME_..."` + `DATABASE_URL` avec password en dur — refuse boot en prod si vars manquent. Helper `_require_env()` avec mode DEBUG |
+| **Bug Sankey dark mode** | `090f595` | HALO label hardcodé `#F7F6F2` → `var(--bg)` (blocs blancs criards en dark) |
+| **Dark mode Espresso doux** | `92c0515` | Lift global tokens : `#16140F → #1F1C16` (bg), `#1F1C16 → #2A2620` (elev), `#0F0D09 → #15130F` (sunk). Plus chaud, hiérarchie 3 niveaux lisible |
+| **Audit low-level expert** | `405330c` | 9 fix XS (C1 missing Settings attrs, C2 stop leak `str(exc)` au client, H3 login step 2 TOTP frontend, H5 register message générique anti-énumération, M4 `hmac.compare_digest` CRON_SECRET, M6 RGPD cookie HttpOnly, F2 SHA-1→BLAKE2b dedup, F3 CORS methods/headers explicites) **+ 2FA obligatoire** (`Mandatory2FAOverlay` z-index 9999, non-dismissable, overlay tant que `currentUser.totp_enabled === false`. Admin compris, démo exemptée) |
+
+**Tests** : 65/65 pytest backend verts. 28/28 vitest frontend (taxFr.js).
+
+**Posture sécurité finale** : voir `docs/SECURITY_ROADMAP.md`.
+- ✅ Auth (bcrypt, HIBP, JWT cookie httpOnly, brute-force lockout, rate
+     limit auth + endpoints critiques, 2FA TOTP obligatoire + login step 2,
+     auto-logout 30 min)
+- ✅ Headers HTTP (HSTS, CSP, XCTO, XFO, Referrer, Permissions)
+- ✅ Input validation (Pydantic max_length partout, SQLAlchemy ORM, React
+     auto-escape, UUID4)
+- ✅ Rate limiting (login 10/min, register 5/min, totp 5-10/h, change-pwd
+     5/h, transactions/import 20/j, categorize 100/j)
+- ✅ Audit log (AuthEvent + record_auth_event sur toutes routes sensibles)
+- ✅ Secrets (aucun hardcodé, SECRET_KEY/DATABASE_URL obligatoires en prod,
+     hmac.compare_digest pour CRON_SECRET, BLAKE2b pour dedup)
+- ⏳ **Reste P0** : RLS Postgres (~1h30 dédié), invalidation JWT après
+     change-password (`password_version`), validation X-Forwarded-For
+
+**Reste à faire (TODO prochaine session)** :
+- RLS Postgres + middleware SET LOCAL `app.current_household_id`
+- H4 invalidation JWT après change-password
+- H1 validation X-Forwarded-For contre proxies Railway
+- **Bug remonté par user** : sync GoCardless figée (dernière op 15/05) —
+  vérifier cron Railway, ajouter bouton refresh manuel visible + status
+  "Synchronisé il y a Xh"
+- P5 features brainstorm (compte employeur Swile, alertes intelligentes,
+  projection retraite, scan ticket OCR)
 
 ---
 

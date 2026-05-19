@@ -1446,43 +1446,81 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     }
   };
 
-  const syncAllBankAccounts = async () => {
+  const syncAllBankAccounts = async ({ silent = false } = {}) => {
     if (!bankConnections || bankConnections.length === 0) {
-      showToast(t('toasts.noBankConnected'), 'info');
-      return;
+      if (!silent) showToast(t('toasts.noBankConnected'), 'info');
+      return { totalImported: 0, errors: 0 };
     }
-    setSyncBusy(`Synchronisation de ${bankConnections.length} banque${bankConnections.length > 1 ? 's' : ''}…`);
+    if (!silent) setSyncBusy(`Synchronisation de ${bankConnections.length} banque${bankConnections.length > 1 ? 's' : ''}…`);
     let totalImported = 0;
     let errors = 0;
+    let firstError = null;
     try {
       for (let i = 0; i < bankConnections.length; i++) {
         const conn = bankConnections[i];
-        setSyncBusy(`Synchronisation ${i + 1}/${bankConnections.length} — ${conn.bank_name || 'banque'}…`);
+        if (!silent) setSyncBusy(`Synchronisation ${i + 1}/${bankConnections.length} — ${conn.bank_name || 'banque'}…`);
         try {
           const result = await api.banking.sync(conn.id);
           totalImported += result.imported || 0;
-        } catch {
+        } catch (err) {
           errors++;
+          if (!firstError) firstError = err;
         }
       }
       await reloadAll();
     } finally {
-      setSyncBusy(null);
+      if (!silent) setSyncBusy(null);
     }
+    if (silent) return { totalImported, errors, firstError };
     if (errors > 0 && totalImported === 0) {
-      showToast(t('toasts.syncAllFail', { count: errors }), 'error');
+      // Détecte les erreurs 401/403 → consentement GoCardless expiré (90j max)
+      const msg = (firstError?.detail || firstError?.message || '').toLowerCase();
+      const expired = /expir|401|403|reconnexion|invalid.*consent/i.test(msg);
+      if (expired) {
+        showToast('Le consentement bancaire a expiré (max 90 jours). Reconnectez votre banque depuis Réglages → Comptes bancaires.', 'error');
+      } else {
+        showToast(t('toasts.syncAllFail', { count: errors }), 'error');
+      }
     } else if (errors > 0) {
       showToast(t('toasts.syncAllPartial', { count: totalImported, errors }), 'info');
+    } else if (totalImported > 0) {
+      showToast(t('toasts.syncImported', { count: totalImported }), 'success');
     } else {
-      showToast(
-        totalImported > 0
-          ? t('toasts.syncImported', { count: totalImported })
-          : t('toasts.syncRunning'),
-        'success'
-      );
+      // Synchronisation OK mais 0 nouvelle tx — banque à jour
+      showToast('Vos comptes sont à jour — aucune nouvelle opération.', 'info');
     }
     if (totalImported > 0) unlockAchievement('first_import');
   };
+
+  // Auto-sync au chargement de l'app — si au moins une connexion bancaire
+  // n'a pas été synchronisée depuis 6h, on déclenche un sync silencieux en
+  // arrière-plan (pas de toast, pas de spinner). Empêche le scénario
+  // "données pourries parce que l'utilisateur a oublié de cliquer Sync".
+  // Capped à 1 exécution par session (ref) pour éviter les boucles.
+  const autoSyncRef = useRef(false);
+  useEffect(() => {
+    if (autoSyncRef.current) return;
+    if (loading || demoMode) return;
+    if (!bankConnections || bankConnections.length === 0) return;
+    const STALE_HOURS = 6;
+    const now = Date.now();
+    const isStale = bankConnections.some(c => {
+      if (!c.last_synced_at) return true;
+      const last = new Date(c.last_synced_at).getTime();
+      return (now - last) > STALE_HOURS * 3600 * 1000;
+    });
+    if (!isStale) return;
+    autoSyncRef.current = true;
+    // Délai 2s après le mount pour laisser le rendu initial respirer
+    const tid = setTimeout(() => {
+      syncAllBankAccounts({ silent: true }).then(res => {
+        if (res?.totalImported > 0) {
+          showToast(`${res.totalImported} nouvelle${res.totalImported > 1 ? 's' : ''} opération${res.totalImported > 1 ? 's' : ''} récupérée${res.totalImported > 1 ? 's' : ''} en arrière-plan.`, 'success');
+        }
+      });
+    }, 2000);
+    return () => clearTimeout(tid);
+  }, [loading, demoMode, bankConnections]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   const deleteBankConnection = async (connectionId) => {
     if (!confirm(t('confirms.deleteBank'))) return;
