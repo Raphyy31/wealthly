@@ -27,6 +27,7 @@ import { useIsNarrow } from '../hooks/useIsNarrow.js';
 import { RefMonthEditor } from '../components/RefMonthEditor.jsx';
 import { FiftyThirtyTwentyModal } from '../components/FiftyThirtyTwentyModal.jsx';
 import { SubscriptionsWidget } from '../components/SubscriptionsWidget.jsx';
+import { MonthlyCompareV2 } from '../components/MonthlyCompareV2.jsx';
 
 const SAVING_SLUGS = new Set(['savings']);
 
@@ -493,127 +494,22 @@ export function Monthly({
         </section>
       )}
 
-      {/* ── Comparison table ────────────────────────────────────────── */}
+      {/* ── Comparison Reel vs Mois type — refonte 2026-05-19 (Direction A) ──
+           Diverging bars + hero summary + drawer transactions. Cf composant. */}
       {!isChildScope && hasRefMonth && (
-        <section className="card mon-compare">
-          <div className="card-header">
-            <h3>Réel vs Mois type — {monthLabel(selectedMonth)}</h3>
-            <span className="card-meta">{realByCat.size} catégorie{realByCat.size > 1 ? 's' : ''} ce mois</span>
-          </div>
-          <div className="mon-compare-table">
-            <div className="mon-row mon-row-head ds-micro">
-              <span>Catégorie</span>
-              <span className="num">Mois type</span>
-              <span className="num">Ce mois</span>
-              <span className="num">Écart</span>
-              <span>Progression</span>
-            </div>
-            {tableSections.map(section => {
-              const secReal = section.items.reduce((s, i) => s + i.real_total, 0);
-              const secRef  = section.items.reduce((s, i) => s + i.ref_total,  0);
-              return (
-              <React.Fragment key={section.kind}>
-                <div className={`mon-row-section mon-row-section-${section.kind}`}>
-                  <span className="mon-section-left">
-                    <span className="mon-section-icon">
-                      {section.kind === 'income'
-                        ? <TrendingUp size={12}/>
-                        : section.kind === 'saving'
-                        ? <PiggyBank size={12}/>
-                        : <TrendingDown size={12}/>}
-                    </span>
-                    {section.title}
-                  </span>
-                  {(secReal > 0 || secRef > 0) && (
-                    <span className="mon-section-totals">
-                      {fmt(secReal)}{secRef > 0 && <><span className="sep">/</span>{fmt(secRef)} prévu</>}
-                    </span>
-                  )}
-                </div>
-                {section.items.length === 0 && (
-                  <div className="mon-row mon-row-empty">
-                    <em style={{ fontFamily: 'Newsreader,Georgia,serif', fontStyle: 'italic', color: 'var(--ink-2)' }}>
-                      Aucune ligne dans cette section.
-                    </em>
-                  </div>
-                )}
-                {section.items.map(item => {
-                  const cat = catFor(item.category_id);
-                  const ecart = item.real_total - item.ref_total;
-                  const pct = item.ref_total > 0
-                    ? Math.round((item.real_total / item.ref_total) * 100)
-                    : (item.real_total > 0 ? 999 : 0);
-                  const expanded = expandedRows.has(item.key);
-                  const hasSubs = item.lines.length > 1;
-
-                  // Écart semantic color: income=more is good, expense=more is bad
-                  const ecartClass = ecart === 0 ? ''
-                    : item.kind === 'income'
-                      ? (ecart > 0 ? 'ecart-good' : 'ecart-bad')
-                      : (ecart > 0 ? 'ecart-bad' : 'ecart-good');
-
-                  // Progress bar state
-                  const barState = pct > 100 ? 'over' : pct > 85 ? 'warn' : '';
-                  const pctClass = pct > 100 ? 'pct-over' : pct > 85 ? 'pct-warn' : '';
-
-                  return (
-                    <React.Fragment key={item.key}>
-                      <div
-                        className={`mon-row mon-row-cat ${item.is_unexpected ? 'unexpected' : ''} ${hasSubs ? 'expandable' : ''}`}
-                        onClick={hasSubs ? () => toggleRow(item.key) : undefined}
-                      >
-                        <span className="mon-cat-name">
-                          {hasSubs
-                            ? (expanded ? <ChevronDown size={12}/> : <ChevronRight size={12}/>)
-                            : <span style={{ width: 12, display: 'inline-block' }}/>}
-                          <span className="mon-cat-dot" style={{ background: cat?.color || 'var(--border-strong)' }}/>
-                          <span className="mon-cat-emoji" aria-hidden="true">{cat?.icon || '•'}</span>
-                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.cat_name}</span>
-                          {item.is_unexpected && <span className="mon-pill warn">Nouveau</span>}
-                        </span>
-                        <span className="num">{item.ref_total > 0 ? fmt(item.ref_total) : '—'}</span>
-                        <span className="num">{item.real_total > 0 ? fmt(item.real_total) : '—'}</span>
-                        <span className={`num ${ecartClass}`}>
-                          {ecart === 0 ? '—' : (ecart > 0 ? '+' : '') + fmt(Math.abs(ecart))}
-                        </span>
-                        <span className="mon-bar-wrap">
-                          {item.ref_total > 0 ? (
-                            <>
-                              <span className={`mon-bar ${barState}`}>
-                                <span className="mon-bar-fill" style={{ width: Math.min(pct, 100) + '%' }}/>
-                              </span>
-                              <span className={`mon-bar-pct ${pctClass}`}>{pct}%</span>
-                            </>
-                          ) : (
-                            <span className="mon-bar-pct" style={{ color: 'var(--ink-3)' }}>—</span>
-                          )}
-                        </span>
-                      </div>
-                      {expanded && item.lines.map(line => (
-                        <div key={line.id} className="mon-row mon-row-sub">
-                          <span className="mon-sub-label">{line.label}</span>
-                          <span className="num">{fmt(parseFloat(line.amount) || 0)}</span>
-                          <span className="num">—</span>
-                          <span className="num">—</span>
-                          <span/>
-                        </div>
-                      ))}
-                    </React.Fragment>
-                  );
-                })}
-              </React.Fragment>
-              );
-            })}
-            {/* Footer totals */}
-            <div className="mon-row mon-row-foot">
-              <span>Balance</span>
-              <span className="num">{refTotals.balance >= 0 ? '+' : ''}{fmt(refTotals.balance)}</span>
-              <span className="num">{realTotals.balance >= 0 ? '+' : ''}{fmt(realTotals.balance)}</span>
-              <span className="num">{(realTotals.balance - refTotals.balance) >= 0 ? '+' : ''}{fmt(realTotals.balance - refTotals.balance)}</span>
-              <span/>
-            </div>
-          </div>
-        </section>
+        <MonthlyCompareV2
+          tableSections={tableSections}
+          refTotals={refTotals}
+          realTotals={realTotals}
+          selectedMonth={selectedMonth}
+          isCurrentMonth={isCurrentMonth}
+          daysInMonth={daysInMonth}
+          daysLeft={daysLeft}
+          monthTx={monthTx}
+          categories={categories}
+          fmt={fmt}
+          catFor={catFor}
+        />
       )}
 
       {/* ── Drawer / Modals ─────────────────────────────────────────── */}
