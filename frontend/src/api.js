@@ -382,6 +382,9 @@ export const banking = {
 
   /** Delete a connection (also revokes the GoCardless requisition) */
   deleteConnection: (id) => del(`/banking/connections/${id}`),
+
+  /** Diagnostic santé d'une connexion (ping GoCardless en temps réel) */
+  diagnose: (id) => get(`/banking/connections/${id}/diagnose`),
 };
 
 // ============================================================================

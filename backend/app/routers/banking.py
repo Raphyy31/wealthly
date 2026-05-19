@@ -660,6 +660,115 @@ def list_connections(
     ]
 
 
+@router.get("/connections/{connection_id}/diagnose")
+async def diagnose_connection(
+    connection_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Diagnostic santé d'une connexion bancaire (2026-05-19 — user request).
+
+    Ping GoCardless en temps réel et compare avec l'état local :
+    - status DB vs status GoCardless
+    - last_synced_at + âge (heures depuis dernier sync)
+    - expiration consentement (90 jours max — GoCardless ne renvoie pas
+      explicitement la date d'expiration mais on déduit depuis created_at)
+    - count des comptes et tx attachés
+
+    Retourne un objet avec verdict global : "ok" / "warning" / "expired" / "error"
+    + recommandation actionnable pour l'utilisateur.
+    """
+    household_id = current_user.household_id
+    conn = db.query(BankConnection).filter(
+        BankConnection.id == connection_id,
+        BankConnection.household_id == household_id,
+    ).first()
+    if not conn:
+        raise HTTPException(status_code=404, detail="Connexion introuvable")
+
+    result = {
+        "connection_id": conn.id,
+        "bank_name": conn.bank_name,
+        "local_status": conn.status,
+        "last_synced_at": conn.last_synced_at.isoformat() if conn.last_synced_at else None,
+        "created_at": conn.created_at.isoformat() if conn.created_at else None,
+        "session_id": conn.session_id,
+        "accounts_count": len(conn.accounts_data or []),
+        "verdict": "ok",
+        "issues": [],
+        "recommendation": None,
+    }
+
+    # 1. Âge de la dernière sync
+    if conn.last_synced_at:
+        age_hours = (datetime.utcnow() - conn.last_synced_at).total_seconds() / 3600
+        result["last_sync_age_hours"] = round(age_hours, 1)
+        if age_hours > 168:  # 7 jours
+            result["issues"].append(f"Dernière sync il y a {int(age_hours/24)} jours.")
+            result["verdict"] = "warning"
+    else:
+        result["last_sync_age_hours"] = None
+        result["issues"].append("Jamais synchronisé.")
+        result["verdict"] = "warning"
+
+    # 2. Âge de la connexion (GoCardless = 90 jours max DSP2)
+    if conn.created_at:
+        age_days = (datetime.utcnow() - conn.created_at).total_seconds() / 86400
+        result["connection_age_days"] = int(age_days)
+        if age_days > 83:
+            result["issues"].append(f"Consentement créé il y a {int(age_days)} jours — expiration imminente (max 90 j DSP2).")
+            result["verdict"] = "warning"
+        if age_days > 90:
+            result["issues"].append("Consentement probablement expiré.")
+            result["verdict"] = "expired"
+
+    # 3. Ping GoCardless pour récupérer le vrai status
+    if conn.session_id:
+        try:
+            requisition = await _gc("GET", f"/requisitions/{conn.session_id}/")
+            gc_status = requisition.get("status")
+            result["gocardless_status"] = gc_status
+            # Mapping status GoCardless :
+            # CR=created GC=giving_consent UA=undergoing_auth RJ=rejected
+            # SA=selecting_accounts GA=granting_access LN=linked SU=suspended EX=expired
+            if gc_status == "EX":
+                result["verdict"] = "expired"
+                result["issues"].append("GoCardless : consentement EXPIRÉ. Reconnexion requise.")
+                # Mettre à jour le local pour éviter les futures syncs qui échoueront
+                if conn.status != "error":
+                    conn.status = "error"
+                    conn.error_message = "Consentement GoCardless expiré (status EX)"
+                    db.commit()
+            elif gc_status in ("RJ", "SU"):
+                result["verdict"] = "error"
+                result["issues"].append(f"GoCardless : statut {gc_status} (refusé/suspendu).")
+            elif gc_status == "LN":
+                # Bon état GoCardless — si on a un local status error, c'était stale
+                if conn.status == "error":
+                    result["issues"].append("Local indique erreur mais GoCardless est OK — incohérence (mise à jour locale).")
+                    conn.status = "authorized"
+                    conn.error_message = None
+                    db.commit()
+        except Exception as e:
+            result["gocardless_status"] = "unreachable"
+            result["issues"].append(f"Impossible de joindre GoCardless : {type(e).__name__}")
+            # Ne pas dégrader le verdict — c'est probablement un timeout réseau
+    else:
+        result["gocardless_status"] = "no_session"
+        result["issues"].append("Aucun session_id GoCardless — la connexion n'a jamais été complétée.")
+        result["verdict"] = "error"
+
+    # 4. Recommandation
+    if result["verdict"] == "expired":
+        result["recommendation"] = "Reconnectez votre banque : Réglages → Comptes bancaires → Supprimer cette connexion → + Connecter ma banque"
+    elif result["verdict"] == "warning":
+        result["recommendation"] = "Cliquez 'Sync' pour récupérer les dernières opérations. Si le problème persiste, reconnectez votre banque."
+    elif result["verdict"] == "error":
+        result["recommendation"] = "Contactez le support ou reconnectez votre banque."
+
+    return result
+
+
 @router.post("/refresh/{connection_id}")
 async def refresh_connection(
     connection_id: str,

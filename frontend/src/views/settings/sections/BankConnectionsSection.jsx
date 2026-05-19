@@ -1,9 +1,32 @@
 // Source: Settings.jsx lines 1391-1576 — BankConnectionsSection
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Cloud, Plus, RefreshCw, AlertCircle, Unlink } from 'lucide-react';
+import { Cloud, Plus, RefreshCw, AlertCircle, Unlink, Activity } from 'lucide-react';
 import * as api from '../../../api.js';
 import { BankConnectModal } from '../../../components/BankConnectModal.jsx';
+
+// Helper "il y a Xj/Xh" pour rendre les dates de sync lisibles instantanément.
+function relativeTime(isoStr) {
+  if (!isoStr) return 'jamais';
+  const diffMs = Date.now() - new Date(isoStr).getTime();
+  const min = Math.floor(diffMs / 60000);
+  const h = Math.floor(min / 60);
+  const d = Math.floor(h / 24);
+  if (min < 1) return 'à l\'instant';
+  if (min < 60) return `il y a ${min} min`;
+  if (h < 24) return `il y a ${h} h`;
+  if (d < 7) return `il y a ${d} ${d > 1 ? 'jours' : 'jour'}`;
+  return `il y a ${Math.floor(d / 7)} sem.`;
+}
+
+// Stale = sync date > 24h. Critical = > 7 jours.
+function syncFreshness(isoStr) {
+  if (!isoStr) return 'never';
+  const ageH = (Date.now() - new Date(isoStr).getTime()) / 3600000;
+  if (ageH > 168) return 'critical';
+  if (ageH > 24) return 'stale';
+  return 'fresh';
+}
 
 export function BankConnectionsSection() {
   const { t } = useTranslation();
@@ -15,6 +38,8 @@ export function BankConnectionsSection() {
   const [deletingId, setDeletingId] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [syncMessage, setSyncMessage] = useState(null);
+  const [diagId, setDiagId] = useState(null);          // connection actuellement en cours de diagnostic
+  const [diagResult, setDiagResult] = useState(null);  // { connection_id, verdict, issues[], recommendation }
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -65,6 +90,20 @@ export function BankConnectionsSection() {
       setSyncMessage({ kind: 'error', text: e.message });
     } finally {
       setRefreshingId(null);
+    }
+  };
+
+  const handleDiagnose = async (id) => {
+    setDiagId(id);
+    setDiagResult(null);
+    setSyncMessage(null);
+    try {
+      const r = await api.banking.diagnose(id);
+      setDiagResult(r);
+    } catch (e) {
+      setSyncMessage({ kind: 'error', text: `Diagnostic impossible : ${e?.detail || e?.message || 'erreur inconnue'}` });
+    } finally {
+      setDiagId(null);
     }
   };
 
@@ -121,13 +160,75 @@ export function BankConnectionsSection() {
               <div className="member-card-name">{c.bank_name}</div>
               <div className="member-card-role">
                 {c.status === 'authorized' ? t('settings.banks.connected') : c.status === 'error' ? t('settings.banks.error') : t('settings.banks.pending')}
-                {c.last_synced_at && ` · ${t('settings.banks.syncedAt', { date: new Date(c.last_synced_at).toLocaleDateString() })}`}
+                {' · '}
+                {(() => {
+                  const fresh = syncFreshness(c.last_synced_at);
+                  const colors = {
+                    fresh: 'var(--positive)',
+                    stale: 'var(--warning)',
+                    critical: 'var(--negative)',
+                    never: 'var(--ink-3)',
+                  };
+                  return (
+                    <span style={{ color: colors[fresh], fontWeight: fresh === 'critical' || fresh === 'never' ? 600 : 400 }}>
+                      synchronisé {relativeTime(c.last_synced_at)}
+                    </span>
+                  );
+                })()}
                 {c.accounts?.length > 0 && ` · ${t('settings.banks.accountsCount', { count: c.accounts.length })}`}
               </div>
               {c.error_message && (
                 <div style={{ fontSize: 11, color: 'var(--danger-text)', marginTop: 2 }}>{c.error_message}</div>
               )}
+              {/* Diagnostic result (panneau dépliable sous la connexion) */}
+              {diagResult && diagResult.connection_id === c.id && (
+                <div className="bank-diag-result" style={{
+                  marginTop: 10, padding: 12, borderRadius: 8,
+                  background: diagResult.verdict === 'ok' ? 'var(--positive-soft)'
+                            : diagResult.verdict === 'expired' || diagResult.verdict === 'error' ? 'var(--negative-soft)'
+                            : 'var(--warning-soft)',
+                  border: '1px solid ' + (diagResult.verdict === 'ok' ? 'var(--positive)'
+                            : diagResult.verdict === 'expired' || diagResult.verdict === 'error' ? 'var(--negative)'
+                            : 'var(--warning)'),
+                  fontSize: 12,
+                  color: 'var(--ink)',
+                }}>
+                  <div style={{ fontWeight: 600, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em', fontSize: 10.5 }}>
+                    Diagnostic · {diagResult.verdict}
+                  </div>
+                  {diagResult.last_sync_age_hours != null && (
+                    <div>Dernière sync : il y a {diagResult.last_sync_age_hours} h</div>
+                  )}
+                  {diagResult.connection_age_days != null && (
+                    <div>Consentement âgé de {diagResult.connection_age_days} j (max 90 j DSP2)</div>
+                  )}
+                  {diagResult.gocardless_status && (
+                    <div>Status GoCardless : <code style={{ background: 'var(--bg-sunk)', padding: '1px 4px', borderRadius: 3 }}>{diagResult.gocardless_status}</code></div>
+                  )}
+                  {diagResult.issues?.length > 0 && (
+                    <ul style={{ margin: '6px 0 0 18px', padding: 0 }}>
+                      {diagResult.issues.map((iss, i) => <li key={i}>{iss}</li>)}
+                    </ul>
+                  )}
+                  {diagResult.recommendation && (
+                    <div style={{ marginTop: 8, fontStyle: 'italic', fontFamily: 'Newsreader,Georgia,serif' }}>
+                      → {diagResult.recommendation}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
+            {c.status === 'authorized' && (
+              <button
+                className="secondary-btn"
+                style={{ fontSize: 11, padding: '5px 10px', whiteSpace: 'nowrap' }}
+                onClick={() => handleDiagnose(c.id)}
+                disabled={diagId === c.id}
+                title="Diagnostiquer la connexion (ping GoCardless en temps réel)"
+              >
+                <Activity size={12} className={diagId === c.id ? 'spin' : ''}/> Diagnostic
+              </button>
+            )}
             {c.status === 'authorized' && (!c.accounts || c.accounts.length === 0) && (
               <button
                 className="primary-btn"
