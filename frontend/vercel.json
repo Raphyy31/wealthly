@@ -5,5 +5,14 @@
       "destination": "https://wealthly-production-45aa.up.railway.app/:path*"
     },
     { "source": "/((?!assets/|api/|sw\\.js|manifest\\.webmanifest|icon.*\\.svg|robots\\.txt).*)", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/api/:path*",
+      "headers": [
+        { "key": "x-vercel-enable-rewrite-caching", "value": "0" },
+        { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate, private" }
+      ]
+    }
   ]
 }
