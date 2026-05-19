@@ -30,6 +30,7 @@ import { Skeleton } from './components/Skeleton.jsx';
 import { Styles } from './Styles.jsx';
 import { Toast } from './components/Toast.jsx';
 import { AnimatedNumber } from './components/AnimatedNumber.jsx';
+import { SyncProgressBar } from './components/SyncProgressBar.jsx';
 import { Onboarding } from './views/Onboarding.jsx';
 import { Transactions } from './views/Transactions.jsx';
 import { Analysis } from './views/Analysis.jsx';
@@ -122,9 +123,32 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     else document.documentElement.removeAttribute('data-hide-amounts');
   }, [hideAmounts]);
   const [toast, setToast] = useState(null);
-  // Persistent banner shown during long-running async ops (bank sync can take
-  // 10-30s; a 3.5s toast is gone before it finishes). null = idle, string = label.
-  const [syncBusy, setSyncBusy] = useState(null);
+  // Sync orchestration — remplace le syncBusy string par un objet structure
+  // qui pilote SyncProgressBar (top bar + pill stages). Shape :
+  //   null                                = idle
+  //   { stage, label, current, total, progress } = en cours
+  //   stage = 'connecting' | 'balance' | 'transactions' | 'success' | 'error'
+  // Helper utilitaires juste apres.
+  const [syncStatus, setSyncStatus] = useState(null);
+  const setSyncStage = useCallback((stage, label, opts = {}) => {
+    setSyncStatus({
+      stage,
+      label,
+      current: opts.current || 1,
+      total: opts.total || 1,
+      progress: typeof opts.progress === 'number' ? opts.progress : null,
+    });
+  }, []);
+  // Garde une compat avec les callsites existants qui passent juste un string.
+  // Resout en stage 'connecting' (= spinner) pour ne casser ni les anciens
+  // appels ni l'API setSyncBusy ailleurs dans le code.
+  const setSyncBusy = useCallback((labelOrNull) => {
+    if (labelOrNull === null || labelOrNull === undefined) {
+      setSyncStatus(null);
+    } else {
+      setSyncStage('connecting', labelOrNull);
+    }
+  }, [setSyncStage]);
   // Category Learning : quand le backend crée une règle apprise après 2
   // recatégorisations manuelles du même payee, on propose à l'user d'appliquer
   // la règle aux tx historiques du marchand. null = idle, sinon les infos
@@ -1416,18 +1440,34 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
         // Auto-sync the freshly-connected bank so the user doesn't have to
         // chase down a hidden Sync button to see their transactions.
         if (result.connection_id) {
-          // Persistent banner so the user knows we're working (3.5s toast
-          // disappears way before GC sync finishes — can take 10-30s).
-          setSyncBusy('Synchronisation de la banque… cela peut prendre 30 secondes.');
+          // Stages dedies pour la 1ere sync post-connexion (moment le plus
+          // visible — l'utilisateur vient de finir le flow OAuth banque).
+          setSyncStage('balance', 'Lecture du solde de votre compte…', { current: 1, total: 1 });
           try {
+            // Petit delai cosmetique : laisse le user voir "Lecture du solde"
+            // avant de passer en "Récupération des opérations" — sinon le stage
+            // change si vite qu'on ne voit que le dernier.
+            await new Promise(r => setTimeout(r, 400));
+            setSyncStage('transactions', 'Récupération de vos opérations…', { current: 1, total: 1 });
             const syncRes = await api.banking.sync(result.connection_id);
-            showToast(t('toasts.syncImported', { count: syncRes.imported }), 'success');
+            setSyncStage('success',
+              syncRes.imported > 0
+                ? `${syncRes.imported} opération${syncRes.imported > 1 ? 's' : ''} importée${syncRes.imported > 1 ? 's' : ''}`
+                : 'Banque connectée',
+              { current: 1, total: 1, progress: 1 }
+            );
             await reloadAll();
             if (syncRes.imported > 0) unlockAchievement('first_import');
+            setTimeout(() => setSyncStatus(null), 1800);
           } catch (syncErr) {
-            showToast(t('toasts.syncError', { message: syncErr.message }), 'error');
-          } finally {
-            setSyncBusy(null);
+            setSyncStage('error',
+              syncErr?.detail || syncErr?.message || 'Erreur pendant la synchronisation',
+              { current: 1, total: 1, progress: 1 }
+            );
+            // Erreur du backend deja user-friendly grace a _gc() retry.
+            const friendly = syncErr?.detail || syncErr?.message || 'Réessayez dans quelques instants.';
+            showToast(friendly, 'error');
+            setTimeout(() => setSyncStatus(null), 3500);
           }
         }
       } else {
@@ -1448,16 +1488,30 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   }, [bankingPendingState, loading, completeBankCallback]);
 
   const syncBankConnection = async (connectionId) => {
-    setSyncBusy('Synchronisation de la banque… cela peut prendre 30 secondes.');
+    const conn = bankConnections.find(c => c.id === connectionId);
+    const bankLabel = conn?.bank_name || 'votre banque';
+    setSyncStage('balance', `Lecture du solde — ${bankLabel}…`, { current: 1, total: 1 });
     try {
+      await new Promise(r => setTimeout(r, 400));
+      setSyncStage('transactions', `${bankLabel} — récupération des opérations…`, { current: 1, total: 1 });
       const result = await api.banking.sync(connectionId);
-      showToast(t('toasts.syncImported', { count: result.imported }), 'success');
+      setSyncStage('success',
+        result.imported > 0
+          ? `${result.imported} opération${result.imported > 1 ? 's' : ''} importée${result.imported > 1 ? 's' : ''}`
+          : 'Banque à jour',
+        { current: 1, total: 1, progress: 1 }
+      );
       await reloadAll();
       if (result.imported > 0) unlockAchievement('first_import');
+      setTimeout(() => setSyncStatus(null), 1800);
     } catch (err) {
-      showToast(t('toasts.syncError', { message: err.message }), 'error');
-    } finally {
-      setSyncBusy(null);
+      setSyncStage('error',
+        err?.detail || err?.message || 'Erreur pendant la synchronisation',
+        { current: 1, total: 1, progress: 1 }
+      );
+      const friendly = err?.detail || err?.message || 'Réessayez dans quelques instants.';
+      showToast(friendly, 'error');
+      setTimeout(() => setSyncStatus(null), 3500);
     }
   };
 
@@ -1466,14 +1520,27 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       if (!silent) showToast(t('toasts.noBankConnected'), 'info');
       return { totalImported: 0, errors: 0 };
     }
-    if (!silent) setSyncBusy(`Synchronisation de ${bankConnections.length} banque${bankConnections.length > 1 ? 's' : ''}…`);
+    const N = bankConnections.length;
+    if (!silent) {
+      setSyncStage('connecting',
+        N === 1
+          ? `Connexion à ${bankConnections[0].bank_name || 'votre banque'}…`
+          : `Synchronisation de ${N} banques…`,
+        { current: 1, total: N }
+      );
+    }
     let totalImported = 0;
     let errors = 0;
     let firstError = null;
     try {
-      for (let i = 0; i < bankConnections.length; i++) {
+      for (let i = 0; i < N; i++) {
         const conn = bankConnections[i];
-        if (!silent) setSyncBusy(`Synchronisation ${i + 1}/${bankConnections.length} — ${conn.bank_name || 'banque'}…`);
+        if (!silent) {
+          setSyncStage('transactions',
+            `${conn.bank_name || 'Banque'} — récupération des opérations…`,
+            { current: i + 1, total: N, progress: N > 1 ? i / N : null }
+          );
+        }
         try {
           const result = await api.banking.sync(conn.id);
           totalImported += result.imported || 0;
@@ -1484,7 +1551,25 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       }
       await reloadAll();
     } finally {
-      if (!silent) setSyncBusy(null);
+      if (!silent) {
+        // Stage final : success ou error. On laisse la barre une seconde
+        // visible pour que l'utilisateur voie l'aboutissement avant cleanup.
+        if (errors === 0) {
+          setSyncStage('success',
+            totalImported > 0
+              ? `${totalImported} opération${totalImported > 1 ? 's' : ''} importée${totalImported > 1 ? 's' : ''}`
+              : 'Comptes à jour',
+            { current: N, total: N, progress: 1 }
+          );
+          setTimeout(() => setSyncStatus(null), 1800);
+        } else {
+          setSyncStage('error',
+            errors === N ? 'Échec de la synchronisation' : `${N - errors}/${N} banques synchronisées`,
+            { current: N, total: N, progress: 1 }
+          );
+          setTimeout(() => setSyncStatus(null), 3000);
+        }
+      }
     }
     if (silent) return { totalImported, errors, firstError };
     if (errors > 0 && totalImported === 0) {
@@ -1494,14 +1579,15 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       if (expired) {
         showToast('Le consentement bancaire a expiré (max 90 jours). Reconnectez votre banque depuis Réglages → Comptes bancaires.', 'error');
       } else {
-        showToast(t('toasts.syncAllFail', { count: errors }), 'error');
+        // Message du backend si dispo (maintenant user-friendly grace au retry _gc)
+        const detail = firstError?.detail || firstError?.message;
+        showToast(detail || t('toasts.syncAllFail', { count: errors }), 'error');
       }
     } else if (errors > 0) {
       showToast(t('toasts.syncAllPartial', { count: totalImported, errors }), 'info');
     } else if (totalImported > 0) {
       showToast(t('toasts.syncImported', { count: totalImported }), 'success');
     } else {
-      // Synchronisation OK mais 0 nouvelle tx — banque à jour
       showToast('Vos comptes sont à jour — aucune nouvelle opération.', 'info');
     }
     if (totalImported > 0) unlockAchievement('first_import');
@@ -1952,12 +2038,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
           </div>
         </div>
       )}
-      {syncBusy && (
-        <div className="sync-busy-banner" role="status" aria-live="polite">
-          <RefreshCw size={14} className="spin"/>
-          <span>{syncBusy}</span>
-        </div>
-      )}
+      <SyncProgressBar status={syncStatus}/>
 
       {learningOffer && (
         <div className="learning-banner" role="status">
