@@ -136,22 +136,35 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
       : visibleItems.filter(i => currentSub.categories.includes(i.category))
   ), [visibleItems, currentSub.categories]);
 
+  // Bug fix 2026-05-19 (user signalé) : avant, le header total appliquait
+  // memberShare mais les rows individuels affichaient la valeur full →
+  // incohérence x2 (ex: header 339k€ vs rows 678k€). Décision UX :
+  // → afficher la valeur **full du foyer** partout dans le listing Wealth
+  //   (les biens joints sont des biens réels du foyer, pas une fraction)
+  // → memberShare ne s'applique QU'au Patrimoine net Total Dashboard,
+  //   pour le calcul d'équité personnelle d'un membre filtré.
   const subviewTotal = filteredItems
     .filter(i => i.sourceTable !== 'liability')
-    .reduce((s, i) => s + (parseFloat(i.value) || 0) * memberShare(i), 0);
+    .reduce((s, i) => s + (parseFloat(i.value) || 0), 0);
   const subviewLiabTotal = filteredItems
     .filter(i => i.sourceTable === 'liability')
-    .reduce((s, i) => s + (parseFloat(i.value) || 0) * memberShare(i), 0);
+    .reduce((s, i) => s + (parseFloat(i.value) || 0), 0);
 
-  const totalAssets = visibleAssets.reduce((s, a) => s + (parseFloat(a.currentValue) || 0) * memberShare(a), 0);
-  const totalLiabilities = visibleLiabilities.reduce((s, l) => s + (parseFloat(l.remainingCapital) || 0) * memberShare(l), 0);
+  // Convention de calcul Wealth (bug fix 2026-05-19) — TOUS les calculs
+  // affichés dans cette vue utilisent la valeur **full** du foyer.
+  // Rationale : un bien immo joint vaut sa valeur réelle (1.5M€), pas la
+  // moitié (750k€) — Wealthly Wealth = inventaire des biens du foyer.
+  // Le memberShare s'applique uniquement au "Patrimoine net total" du
+  // Dashboard pour les calculs d'équité d'un membre adulte filtré.
+  const totalAssets = visibleAssets.reduce((s, a) => s + (parseFloat(a.currentValue) || 0), 0);
+  const totalLiabilities = visibleLiabilities.reduce((s, l) => s + (parseFloat(l.remainingCapital) || 0), 0);
   const netWealthAssets = totalAssets - totalLiabilities;
 
   // Patrimoine financier : exclut immobilier + prêts immo
   const realEstateValue = visibleAssets.filter(a => a.type === 'real_estate')
-    .reduce((s, a) => s + (parseFloat(a.currentValue) || 0) * memberShare(a), 0);
+    .reduce((s, a) => s + (parseFloat(a.currentValue) || 0), 0);
   const mortgageDebt = visibleLiabilities.filter(l => l.type === 'mortgage')
-    .reduce((s, l) => s + (parseFloat(l.remainingCapital) || 0) * memberShare(l), 0);
+    .reduce((s, l) => s + (parseFloat(l.remainingCapital) || 0), 0);
   const financialWealthLocal = liquidWealth + (totalAssets - realEstateValue) - (totalLiabilities - mortgageDebt);
 
   // Asset class allocation for donut chart
@@ -160,20 +173,20 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
     visibleAssets.forEach(a => {
       const cls = ASSET_CLASS_MAP[a.type]?.class || 'Divers';
       const color = ASSET_CLASS_MAP[a.type]?.color || '#6b7280';
-      const val = (parseFloat(a.currentValue) || 0) * memberShare(a);
+      const val = (parseFloat(a.currentValue) || 0);
       if (!classes[cls]) classes[cls] = { value: 0, color };
       classes[cls].value += val;
     });
     return Object.entries(classes).filter(([, d]) => d.value > 0)
       .map(([name, d]) => ({ name, value: d.value, color: d.color, pct: totalAssets > 0 ? (d.value / totalAssets) * 100 : 0 }))
       .sort((a, b) => b.value - a.value);
-  }, [visibleAssets, memberShare, totalAssets]);
+  }, [visibleAssets, totalAssets]);
 
   // Private wealth KPIs
   const debtRatioWealth = totalAssets > 0 ? (totalLiabilities / totalAssets) * 100 : null;
-  const totalMonthlyDebt = visibleLiabilities.reduce((s, l) => s + (parseFloat(l.monthlyPayment) || 0) * memberShare(l), 0);
+  const totalMonthlyDebt = visibleLiabilities.reduce((s, l) => s + (parseFloat(l.monthlyPayment) || 0), 0);
   const iliquidAssets = visibleAssets.filter(a => ['real_estate'].includes(a.type))
-    .reduce((s, a) => s + (parseFloat(a.currentValue) || 0) * memberShare(a), 0);
+    .reduce((s, a) => s + (parseFloat(a.currentValue) || 0), 0);
   const illiquidRatio = totalAssets > 0 ? (iliquidAssets / totalAssets) * 100 : null;
 
   return (
@@ -214,7 +227,7 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
             <div className="subview-hero-value">{fmt(isLiabilitiesOnly ? subviewLiabTotal : subviewTotal)}</div>
             <div className="subview-hero-meta">
               {isLiabilitiesOnly
-                ? `${filteredItems.length} prêt${filteredItems.length > 1 ? 's' : ''} · ${fmt(visibleLiabilities.reduce((s, l) => s + (parseFloat(l.monthlyPayment) || 0) * memberShare(l), 0))} / mois`
+                ? `${filteredItems.length} prêt${filteredItems.length > 1 ? 's' : ''} · ${fmt(visibleLiabilities.reduce((s, l) => s + (parseFloat(l.monthlyPayment) || 0), 0))} / mois`
                 : `${filteredItems.length} actif${filteredItems.length > 1 ? 's' : ''} · ${totalAssets > 0 ? ((subviewTotal / totalAssets) * 100).toFixed(0) : 0}% du patrimoine`}
             </div>
           </div>

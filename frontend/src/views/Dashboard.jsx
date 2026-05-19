@@ -164,7 +164,11 @@ export function Dashboard({
     let mortgageDebt = 0;
     (visibleLiabilities || []).forEach(l => {
       if (l.type === 'mortgage') {
-        const bal = parseFloat(l.currentBalance ?? l.current_balance ?? l.amount ?? 0) || 0;
+        // Bug fix 2026-05-19 : frontend utilise `remainingCapital` (camelCase),
+        // pas `currentBalance` qui n'existe pas → renvoyait toujours 0 →
+        // "Patrimoine immo net" affichait la valeur brute de l'immo au lieu
+        // de (immo − emprunt restant). Fallback snake_case pour robustesse.
+        const bal = parseFloat(l.remainingCapital ?? l.remaining_capital ?? 0) || 0;
         mortgageDebt += bal * (memberShare?.(l) ?? 1);
       }
     });

@@ -399,7 +399,16 @@ export function Styles({ theme }) {
   .bottom-nav button .nav-alert-dot { position: absolute; top: 4px; right: 16px; min-width: 14px; height: 14px; padding: 0 4px; font-size: 9px; }
 }
 
-.content { padding: 28px 32px 60px; max-width: 1280px; margin: 0 auto; min-height: calc(100vh - 140px); width: 100%; }
+/* Fix 2026-05-19 (user signalé) : avant, .content avait margin: 0 auto qui
+   centrait le contenu dans .app-main (= flex:1 = très large sur grand écran).
+   Résultat : ~200px de blanc entre la sidebar et le début du contenu.
+   Fix : margin gauche=0 (collé au flex), margin droite=auto pour ne pas
+   coller au bord droit. Pattern Linear/Stripe/Notion. */
+.content { padding: 28px 32px 60px; max-width: 1280px; margin: 0 auto 0 0; min-height: calc(100vh - 140px); width: 100%; }
+@media (max-width: 1024px) {
+  /* Sur mobile/tablet sans sidebar : recentrer pour ne pas coller à gauche */
+  .content { margin: 0 auto; }
+}
 @media (max-width: 767px) {
   .content { padding: 16px 14px calc(96px + env(safe-area-inset-bottom, 0px)); max-width: none; }
 }
