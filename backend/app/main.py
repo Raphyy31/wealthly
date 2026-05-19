@@ -10,6 +10,7 @@ import traceback
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy import text
@@ -174,6 +175,9 @@ def _run_lightweight_migrations() -> None:
             # 2FA TOTP (C19 2026-05-18) — secret base32 + enabled flag.
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_secret VARCHAR",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_enabled BOOLEAN NOT NULL DEFAULT FALSE",
+            # TOTP replay prevention (sec-audit 2026-05-19) — timestamp of last
+            # accepted code; reject any code from the same 30s window.
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_last_otp_at TIMESTAMP WITHOUT TIME ZONE",
             # ISIN code (ISO 6166) for stock / ETF positions — stored alongside
             # ticker so both are available for display and future lookups.
             "ALTER TABLE assets ADD COLUMN IF NOT EXISTS isin VARCHAR",
@@ -321,6 +325,24 @@ async def security_headers_mw(request, call_next):
     response = await call_next(request)
     apply_security_headers(response)
     return response
+
+# Pydantic validation error handler — sanitize internal field structure from
+# responses (sec-audit 2026-05-19). Default FastAPI 422 response exposes
+# model internals like {"loc":["body","password"],"type":"string_too_short"}.
+# We replace it with a human-readable flat message list.
+@app.exception_handler(RequestValidationError)
+async def _validation_error_handler(request: Request, exc: RequestValidationError):
+    messages = []
+    for err in exc.errors():
+        loc = " → ".join(str(l) for l in err.get("loc", []) if l not in ("body",))
+        msg = err.get("msg", "Valeur invalide")
+        if loc and loc not in ("",):
+            messages.append(f"{loc} : {msg}")
+        else:
+            messages.append(msg)
+    detail = " | ".join(messages) if messages else "Paramètres invalides."
+    return JSONResponse(status_code=422, content={"detail": detail})
+
 
 # Global exception handler — surface la stack trace dans les logs Railway
 # mais NE l'expose PAS au client (audit sécu C2 2026-05-19). Le client

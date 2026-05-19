@@ -50,9 +50,26 @@ def _hash_reset_token(token: str) -> str:
 
 
 def _client_ip(request: Request) -> str | None:
+    """Extract the real client IP.
+
+    Railway's proxy appends the client IP to X-Forwarded-For as the LAST
+    entry before its own proxy IP. We use the second-to-last entry when
+    there are multiple hops, or the first entry when there is only one.
+
+    Using xff[0] (the first entry) is spoofable: an attacker can send
+    X-Forwarded-For: fake_ip, and the proxy will prepend it.
+    Using xff[-1] is safer but gives the proxy's own IP when behind Railway.
+    Using xff[-2] (penultimate) gives the true client IP behind Railway.
+    Fallback to request.client.host (direct connection IP) if XFF is absent.
+
+    sec-audit 2026-05-19: changed from [0] (spoofable) to [-2] or [-1].
+    """
     xff = request.headers.get("x-forwarded-for")
     if xff:
-        return xff.split(",")[0].strip()
+        hops = [h.strip() for h in xff.split(",") if h.strip()]
+        if len(hops) >= 2:
+            return hops[-2]   # penultimate = client IP when behind 1 proxy
+        return hops[-1]       # only one entry → trust it (direct or single proxy)
     return request.client.host if request.client else None
 
 
@@ -127,13 +144,28 @@ def login(request: Request, response: Response, payload: UserLogin, db: Session 
             # Pas de code fourni → frontend doit afficher écran step 2
             raise HTTPException(status_code=401, detail="totp_required")
         try:
-            import pyotp
+            import pyotp, math, time
+            from datetime import datetime, timezone
             totp = pyotp.TOTP(user.totp_secret)
             # valid_window=1 → tolérance ±30s (clock skew normal)
             if not totp.verify(payload.totp_code, valid_window=1):
                 record_auth_event(db, kind="login_failure", success=False, request=request,
                                   email=payload.email, detail="bad_totp")
                 raise HTTPException(status_code=401, detail="Code 2FA incorrect")
+            # Anti-replay: reject if this 30s window was already used
+            TOTP_STEP = 30
+            if user.totp_last_otp_at is not None:
+                last = user.totp_last_otp_at
+                if last.tzinfo is None:
+                    last = last.replace(tzinfo=timezone.utc)
+                window_start = math.floor(time.time() / TOTP_STEP) * TOTP_STEP
+                if datetime.fromtimestamp(window_start, tz=timezone.utc) <= last:
+                    record_auth_event(db, kind="login_failure", success=False, request=request,
+                                      email=payload.email, detail="totp_replay")
+                    raise HTTPException(status_code=401, detail="Code 2FA déjà utilisé. Attendez le prochain code.")
+            # Mark code as used
+            user.totp_last_otp_at = datetime.now(timezone.utc)
+            db.commit()
         except HTTPException:
             raise
         except Exception:
@@ -172,8 +204,12 @@ def logout(request: Request, response: Response, db: Session = Depends(get_db)):
 
 
 @router.get("/me", response_model=UserOut)
-def me(current_user: User = Depends(get_current_user)):
-    """Return the current authenticated user."""
+@limiter.limit("60/minute")
+def me(request: Request, current_user: User = Depends(get_current_user)):
+    """Return the current authenticated user.
+    Rate-limited to prevent probing / credential stuffing via this endpoint.
+    60/min is generous for legitimate use (app polls on focus) but blocks bots.
+    """
     return current_user
 
 

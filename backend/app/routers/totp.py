@@ -12,7 +12,10 @@ Flow utilisateur :
 
 Lib : pyotp 2.9.0 (utilisée par GitHub, Vault, Stripe en prod).
 """
+import math
+import time
 import pyotp
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
@@ -26,6 +29,36 @@ from app.security import record_auth_event
 from app.rate_limit import limiter
 
 router = APIRouter(prefix="/auth/totp", tags=["auth", "totp"])
+
+TOTP_STEP = 30  # seconds per TOTP window
+
+
+def _current_totp_window() -> int:
+    """Return the current TOTP counter (floor(unix_ts / 30))."""
+    return math.floor(time.time() / TOTP_STEP)
+
+
+def _is_replay(user, window_offset: int = 0) -> bool:
+    """Return True if the TOTP code for (now + window_offset*30s) was already used.
+
+    We store the UTC timestamp of the last accepted code. A code is a replay
+    if its 30s window start ≤ totp_last_otp_at (i.e. the same or older window).
+    """
+    if user.totp_last_otp_at is None:
+        return False
+    # Convert stored timestamp to aware UTC
+    last = user.totp_last_otp_at
+    if last.tzinfo is None:
+        last = last.replace(tzinfo=timezone.utc)
+    code_window_start = (_current_totp_window() + window_offset) * TOTP_STEP
+    code_window_start_dt = datetime.fromtimestamp(code_window_start, tz=timezone.utc)
+    return code_window_start_dt <= last
+
+
+def _mark_totp_used(db, user) -> None:
+    """Record the current time as the last accepted TOTP timestamp."""
+    user.totp_last_otp_at = datetime.now(timezone.utc)
+    db.commit()
 
 
 @router.post("/setup", response_model=TotpSetupOut)
@@ -69,8 +102,14 @@ def totp_verify(
         record_auth_event(db, kind="totp_verify_failure", success=False,
                           request=request, user_id=user.id, email=user.email)
         raise HTTPException(status_code=401, detail="Code 2FA incorrect")
+    # Anti-replay: reject if this 30s window was already used
+    if _is_replay(user):
+        record_auth_event(db, kind="totp_verify_failure", success=False,
+                          request=request, user_id=user.id, email=user.email,
+                          detail="replay_attack")
+        raise HTTPException(status_code=401, detail="Code 2FA déjà utilisé. Attendez le prochain code.")
     user.totp_enabled = True
-    db.commit()
+    _mark_totp_used(db, user)
     record_auth_event(db, kind="totp_enabled", success=True,
                       request=request, user_id=user.id, email=user.email)
     return MessageOut(message="2FA activé avec succès.")

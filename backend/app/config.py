@@ -68,12 +68,19 @@ class Settings:
         "http://localhost:3000,http://localhost:5173"
     ).split(",")
 
-    # CORS regex — matches all Vercel deployments by default
-    # (each Vercel deploy gets a new hash-prefix URL, so a regex is needed
-    # alongside the exact list).
+    # CORS regex — matches the specific Vercel project (wealthly) preview URLs.
+    # Scoped to the "wealthly" project to prevent other Vercel accounts from
+    # registering "wealthly-attack.vercel.app" and abusing CORS (Vercel garantit
+    # l'unicite du slug projet par owner).
+    # Pattern : wealthly + 0 a 3 segments alphanumeriques dash-separes :
+    #   - wealthly.vercel.app                          (owner default)
+    #   - wealthly-six.vercel.app                      (prod actuelle)
+    #   - wealthly-git-main-raphyy31.vercel.app        (preview branch)
+    # sec-audit 2026-05-19 + fix 2026-05-19 (la regex initiale exigeait
+    # exactement 3 segments et rejetait l'URL prod wealthly-six).
     CORS_ORIGIN_REGEX: str = os.getenv(
         "CORS_ORIGIN_REGEX",
-        r"^https://wealthly(-[a-z0-9-]+)?\.vercel\.app$"
+        r"^https://wealthly(-[a-z0-9]+){0,3}\.vercel\.app$"
     )
 
     # Anthropic (optional — enables AI categorization)

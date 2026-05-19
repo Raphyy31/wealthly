@@ -15,7 +15,8 @@ from pydantic import BaseModel, EmailStr, Field, ConfigDict
 
 class UserCreate(BaseModel):
     email: EmailStr
-    password: str = Field(min_length=8)
+    # min_length matches validate_password() rule (sec-audit 2026-05-19: was 8)
+    password: str = Field(min_length=10)
     full_name: str
     household_name: Optional[str] = "Mon foyer"
 

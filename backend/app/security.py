@@ -43,8 +43,13 @@ def record_auth_event(
         ua = None
         if request is not None:
             # Honour X-Forwarded-For when behind a proxy (Railway adds it).
+            # Use penultimate XFF hop (behind Railway proxy) — see auth.py._client_ip
             xff = request.headers.get("x-forwarded-for")
-            ip = xff.split(",")[0].strip() if xff else (request.client.host if request.client else None)
+            if xff:
+                hops = [h.strip() for h in xff.split(",") if h.strip()]
+                ip = hops[-2] if len(hops) >= 2 else hops[-1]
+            else:
+                ip = request.client.host if request.client else None
             ua = request.headers.get("user-agent")
         event = AuthEvent(
             user_id=user_id,

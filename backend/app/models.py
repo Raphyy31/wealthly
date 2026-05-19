@@ -116,6 +116,9 @@ class User(Base):
     # Si User.totp_enabled = True, login exige étape 2 (code 6 chiffres TOTP).
     totp_secret = Column(String, nullable=True)
     totp_enabled = Column(Boolean, default=False, nullable=False)
+    # Timestamp of the last accepted TOTP code (anti-replay).
+    # A new code is accepted only if its 30s window is strictly after this.
+    totp_last_otp_at = Column(DateTime, nullable=True)
 
 
 class RefMonth(Base):
