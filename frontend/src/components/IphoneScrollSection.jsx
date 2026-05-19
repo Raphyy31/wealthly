@@ -87,16 +87,18 @@ export function IphoneScrollSection() {
           });
 
           // ── Timeline scrubable pinnée sur la section ──────────────────
-          // Durée = 4 × hauteur du viewport (1 vh = 1 step). Ajustable selon
-          // l'envie de vitesse de scroll. 3-4 fois la viewport est le sweet
-          // spot des pages produit (Apple, Linear, Mercury).
+          // Pin range = ~3 viewport heights pour 4 screens — feedback user
+          // 2026-05-19 "trop lent + page trop longue". Avant : 4.5 vh, trop
+          // lourd. Maintenant chaque screen prend ~0.75 vh de scroll, le
+          // sweet spot des pages produit Apple/Linear/Mercury. scrub:0.5
+          // pour une sync plus snappy avec le scroll.
           const tl = gsap.timeline({
             scrollTrigger: {
               trigger: rootRef.current,
               start: 'top top',
-              end: () => `+=${window.innerHeight * (total + 0.5)}`,
+              end: () => `+=${window.innerHeight * (total * 0.75)}`,
               pin: true,
-              scrub: 1,
+              scrub: 0.5,
               anticipatePin: 1,
               invalidateOnRefresh: true,
             },
@@ -134,17 +136,17 @@ export function IphoneScrollSection() {
           if (phoneRef.current) {
             gsap.fromTo(
               phoneRef.current,
-              { rotationY: -8, rotationX: 4, rotationZ: -1 },
+              { rotationY: -6, rotationX: 3, rotationZ: -0.5 },
               {
-                rotationY: 8,
-                rotationX: -4,
-                rotationZ: 1,
+                rotationY: 6,
+                rotationX: -3,
+                rotationZ: 0.5,
                 ease: 'none',
                 scrollTrigger: {
                   trigger: rootRef.current,
                   start: 'top top',
-                  end: () => `+=${window.innerHeight * (total + 0.5)}`,
-                  scrub: 2,
+                  end: () => `+=${window.innerHeight * (total * 0.75)}`,
+                  scrub: 1,
                 },
               }
             );
