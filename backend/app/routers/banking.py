@@ -41,6 +41,24 @@ from app.database import get_db
 from app.models import Account, BankConnection, Transaction, User, Category
 
 
+def _iso_utc(dt) -> str | None:
+    """Serialize a datetime as ISO 8601 WITH explicit UTC marker (`Z` suffix).
+
+    Tous les datetime stockes dans la DB sont en UTC (datetime.utcnow). Sans
+    le marker `Z` ou un offset, le frontend JavaScript parse la string comme
+    local time -> ecart de 1-2h selon l'heure d'ete vs UTC. Bug remonte par
+    user 2026-05-19 ("sync il y a 2h alors que j'ai sync il y a 5 min").
+
+    Convention : on suffixe avec 'Z' (RFC 3339, plus court que +00:00, accepte
+    par tous les parsers JS / Python).
+    """
+    if dt is None:
+        return None
+    # isoformat() sans tzinfo retourne "2026-05-19T16:30:00". On strippe les
+    # microsecondes pour plus de proprete, puis on ajoute Z.
+    return dt.replace(microsecond=0).isoformat() + "Z"
+
+
 def parse_iso_date(s: str):
     """Parse a YYYY-MM-DD date string into a date object."""
     return datetime.strptime(s[:10], "%Y-%m-%d").date()
@@ -635,7 +653,7 @@ async def _sync_one_connection(
         "updated": total_updated,
         "skipped": total_skipped,
         "errors": errors,
-        "last_synced_at": conn.last_synced_at.isoformat(),
+        "last_synced_at": _iso_utc(conn.last_synced_at),
     }
 
 
@@ -713,7 +731,7 @@ async def cron_sync_all(
         "total_skipped": total_skipped,
         "results": results,
         "failures": failures,
-        "completed_at": datetime.utcnow().isoformat(),
+        "completed_at": _iso_utc(datetime.utcnow()),
     }
 
 
@@ -735,8 +753,8 @@ def list_connections(
             "bank_country": c.bank_country,
             "status": c.status,
             "accounts": c.accounts_data or [],
-            "last_synced_at": c.last_synced_at.isoformat() if c.last_synced_at else None,
-            "created_at": c.created_at.isoformat() if c.created_at else None,
+            "last_synced_at": _iso_utc(c.last_synced_at),
+            "created_at": _iso_utc(c.created_at),
             "error_message": c.error_message,
         }
         for c in rows
@@ -773,8 +791,8 @@ async def diagnose_connection(
         "connection_id": conn.id,
         "bank_name": conn.bank_name,
         "local_status": conn.status,
-        "last_synced_at": conn.last_synced_at.isoformat() if conn.last_synced_at else None,
-        "created_at": conn.created_at.isoformat() if conn.created_at else None,
+        "last_synced_at": _iso_utc(conn.last_synced_at),
+        "created_at": _iso_utc(conn.created_at),
         "session_id": conn.session_id,
         "accounts_count": len(conn.accounts_data or []),
         "verdict": "ok",
@@ -907,15 +925,29 @@ async def refresh_connection(
     }
 
 
-@router.delete("/connections/{connection_id}", status_code=204)
+@router.delete("/connections/{connection_id}", status_code=200)
 async def delete_connection(
     connection_id: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Remove the connection locally and best-effort delete the requisition
-    on GoCardless side. Wealthly accounts already imported stay — only the
-    open-banking link is severed."""
+    """Supprime la connexion bancaire ET les comptes Wealthly qui en dependent.
+
+    Fix 2026-05-19 (retour user) : avant on gardait les Account orphelins,
+    ce qui faisait apparaitre des "comptes fantomes" en sidebar apres
+    deconnexion. Comportement contre-intuitif — l'utilisateur s'attend a
+    un nettoyage complet quand il deconnecte la banque (pattern Lydia,
+    Bankin, Linxo).
+
+    Pour les comptes synces (source=gocardless, external_id match), cascade
+    delete : Account.id -> ondelete CASCADE sur Transaction.account_id donc
+    les transactions disparaissent aussi. Pour les comptes manuels lies
+    historiquement, on les laisse intacts.
+
+    Retourne le compte de comptes / transactions supprimes pour que le
+    frontend puisse afficher un toast "Banque X deconnectee, N comptes
+    retires" et pousse un reloadAll().
+    """
     household_id = current_user.household_id
     conn = db.query(BankConnection).filter(
         BankConnection.id == connection_id,
@@ -923,11 +955,43 @@ async def delete_connection(
     ).first()
     if not conn:
         raise HTTPException(status_code=404, detail="Connexion introuvable")
+
+    # Best-effort : supprime la requisition cote GoCardless. On ignore l'erreur
+    # pour ne pas bloquer la deconnexion locale si GoCardless est down.
     if conn.session_id:
         try:
             await _gc("DELETE", f"/requisitions/{conn.session_id}/")
         except Exception as e:
             logger.warning("[gocardless] delete requisition %s failed: %s", conn.session_id, e)
+
+    # Recupere les external_id des comptes lies a cette connexion via
+    # accounts_data (rempli pendant /complete).
+    gc_account_ids = [
+        a.get("id") for a in (conn.accounts_data or [])
+        if a.get("id")
+    ]
+
+    deleted_accounts = 0
+    deleted_transactions = 0
+    if gc_account_ids:
+        # Liste les Wealthly Account a supprimer pour pouvoir aussi compter
+        # les transactions dans la reponse.
+        to_delete = db.query(Account).filter(
+            Account.household_id == household_id,
+            Account.source == 'gocardless',
+            Account.external_id.in_(gc_account_ids),
+        ).all()
+        for acc in to_delete:
+            tx_count = db.query(Transaction).filter(Transaction.account_id == acc.id).count()
+            deleted_transactions += tx_count
+            db.delete(acc)
+            deleted_accounts += 1
+
     db.delete(conn)
     db.commit()
-    return None
+    logger.info("[banking] disconnected %s — removed %d accounts, %d transactions",
+                conn.bank_name or conn.id, deleted_accounts, deleted_transactions)
+    return {
+        "deleted_accounts": deleted_accounts,
+        "deleted_transactions": deleted_transactions,
+    }

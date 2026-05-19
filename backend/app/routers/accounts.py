@@ -41,7 +41,10 @@ def _to_out(account: Account, db: Session) -> dict:
         "member_ids": [m.id for m in account.members],
         "current_balance": current,
         "last_known_balance": account.last_known_balance,
-        "last_balance_at": account.last_balance_at.isoformat() if account.last_balance_at else None,
+        # ISO 8601 avec marker Z (UTC). Sans le Z, JS parse en local time
+        # -> ecart de 1-2h selon le fuseau, donne "il y a 2h" alors qu'on a
+        # sync il y a 5 min. Bug user 2026-05-19.
+        "last_balance_at": (account.last_balance_at.replace(microsecond=0).isoformat() + "Z") if account.last_balance_at else None,
         "is_joint": account.is_joint,
         "iban": account.iban,
         "source": account.source or "manual",

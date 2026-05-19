@@ -5,10 +5,27 @@ import { Cloud, Plus, RefreshCw, AlertCircle, Unlink, Activity } from 'lucide-re
 import * as api from '../../../api.js';
 import { BankConnectModal } from '../../../components/BankConnectModal.jsx';
 
+// Parse defensif d'un ISO timestamp en UTC. Si la string n'a pas de suffix
+// Z ni d'offset (+HH:MM), JS la traite comme local time -> ecart de 1-2h
+// pendant l'heure d'ete francaise. Bug remonte par user 2026-05-19
+// ("sync il y a 5 min affiche il y a 2h"). Le backend envoie maintenant
+// avec Z mais on garde le defensif pour les anciennes valeurs en cache.
+function parseUtcIso(isoStr) {
+  if (!isoStr) return null;
+  const s = String(isoStr);
+  // Detecte la presence d'un suffix timezone (Z ou +HH:MM ou -HH:MM).
+  // Si absent, on suffixe Z pour forcer une lecture UTC.
+  const hasTz = /[Z]$|[+-]\d{2}:?\d{2}$/.test(s);
+  return new Date(hasTz ? s : s + 'Z');
+}
+
 // Helper "il y a Xj/Xh" pour rendre les dates de sync lisibles instantanément.
 function relativeTime(isoStr) {
-  if (!isoStr) return 'jamais';
-  const diffMs = Date.now() - new Date(isoStr).getTime();
+  const d0 = parseUtcIso(isoStr);
+  if (!d0 || Number.isNaN(d0.getTime())) return 'jamais';
+  const diffMs = Date.now() - d0.getTime();
+  // Clamp negatif (clock skew leger) sur "a l'instant" plutot que "il y a -1 min".
+  if (diffMs < 0) return 'à l\'instant';
   const min = Math.floor(diffMs / 60000);
   const h = Math.floor(min / 60);
   const d = Math.floor(h / 24);
@@ -21,8 +38,9 @@ function relativeTime(isoStr) {
 
 // Stale = sync date > 24h. Critical = > 7 jours.
 function syncFreshness(isoStr) {
-  if (!isoStr) return 'never';
-  const ageH = (Date.now() - new Date(isoStr).getTime()) / 3600000;
+  const d0 = parseUtcIso(isoStr);
+  if (!d0 || Number.isNaN(d0.getTime())) return 'never';
+  const ageH = (Date.now() - d0.getTime()) / 3600000;
   if (ageH > 168) return 'critical';
   if (ageH > 24) return 'stale';
   return 'fresh';

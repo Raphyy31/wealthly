@@ -212,6 +212,9 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     // manuel/CSV (alors le frontend fallback sur initial + somme tx).
     last_known_balance: a.last_known_balance,
     last_balance_at: a.last_balance_at || null,
+    // Alias camelCase pour les vues (Dashboard) qui affichent "synced il y a X".
+    // Reflete la derniere fois ou le solde officiel a ete rafraichi.
+    lastSyncedAt: a.last_balance_at || null,
     source: a.source || 'manual',
     externalId: a.external_id || null,
   });
@@ -1649,13 +1652,34 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   }, [loading, demoMode, bankConnections]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   const deleteBankConnection = async (connectionId) => {
-    if (!confirm(t('confirms.deleteBank'))) return;
+    const conn = bankConnections.find(c => c.id === connectionId);
+    const bankLabel = conn?.bank_name || 'cette banque';
+    // Confirm dialog clair sur l'effet — le backend cascade-delete les
+    // comptes + transactions GoCardless liees (cf delete_connection).
+    const ok = window.confirm(
+      `Déconnecter ${bankLabel} ?\n\n` +
+      `Les comptes synchronisés et leur historique seront retirés. ` +
+      `Vous pourrez reconnecter cette banque plus tard.`
+    );
+    if (!ok) return;
     try {
-      await api.banking.deleteConnection(connectionId);
-      setBankConnections(prev => prev.filter(c => c.id !== connectionId));
-      showToast(t('toasts.bankDeleted'), 'info');
+      const result = await api.banking.deleteConnection(connectionId);
+      // reloadAll pour refresh accounts + transactions cote frontend
+      // (le simple setBankConnections suffit pas — les Account etaient
+      // toujours en state local, d'ou le bug "comptes fantomes en sidebar").
+      await reloadAll();
+      const nAcc = result?.deleted_accounts || 0;
+      const nTx = result?.deleted_transactions || 0;
+      let msg = `${bankLabel} déconnectée.`;
+      if (nAcc > 0) {
+        msg += ` ${nAcc} compte${nAcc > 1 ? 's' : ''} retiré${nAcc > 1 ? 's' : ''}`;
+        if (nTx > 0) msg += ` (${nTx} opération${nTx > 1 ? 's' : ''})`;
+        msg += '.';
+      }
+      showToast(msg, 'success');
     } catch (err) {
-      showToast(t('toasts.genericError', { message: err.message }), 'error');
+      const friendly = err?.detail || err?.message || 'Échec de la déconnexion.';
+      showToast(friendly, 'error');
     }
   };
 

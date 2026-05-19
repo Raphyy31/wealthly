@@ -47,7 +47,18 @@ const INITIAL = (s) => {
 };
 
 // "il y aX min" relative time pour la sync
-const relTime = (d = new Date(Date.now() - 4 * 60_000), tFn = (k) => k) => {
+function parseUtcDate(input) {
+  if (!input) return null;
+  if (input instanceof Date) return input;
+  const s = String(input);
+  const hasTz = /[Z]$|[+-]\d{2}:?\d{2}$/.test(s);
+  return new Date(hasTz ? s : s + 'Z');
+}
+const relTime = (input, tFn = (k) => k) => {
+  const d = parseUtcDate(input) || (input instanceof Date ? input : new Date(Date.now() - 4 * 60_000));
+  if (!d || Number.isNaN(d.getTime())) return '—';
+  const diffMs = Date.now() - d.getTime();
+  if (diffMs < 0) return 'a l\'instant';
   const sec = Math.floor((Date.now() - d.getTime()) / 1000);
   if (sec < 60) return `il y a${sec} s`;
   const min = Math.floor(sec / 60);
