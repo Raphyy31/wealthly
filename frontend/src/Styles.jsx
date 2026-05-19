@@ -2373,16 +2373,19 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .cmb-panel {
   background: var(--bg-elev);
   border: 1.5px solid var(--accent);
-  border-radius: 10px;
-  box-shadow: 0 12px 32px -4px rgba(22,21,15,.15), 0 4px 12px -4px rgba(22,21,15,.08);
+  border-radius: 12px;
+  box-shadow:
+    0 18px 48px -16px rgba(22,21,15,.22),
+    0 6px 18px -6px rgba(22,21,15,.14),
+    0 0 0 3px color-mix(in srgb, var(--accent) 8%, transparent);
   overflow: hidden;
   min-width: 160px;
-  animation: cmbPanelIn 160ms cubic-bezier(.2,.6,.2,1);
+  animation: cmbPanelIn 220ms cubic-bezier(0.16, 1, 0.3, 1);
   transform-origin: top center;
 }
 @keyframes cmbPanelIn {
-  from { opacity: 0; transform: scale(0.97); }
-  to   { opacity: 1; transform: scale(1); }
+  from { opacity: 0; transform: scale(0.94) translateY(-6px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 @media (prefers-reduced-motion: reduce) {
   .cmb-panel { animation: none !important; }
