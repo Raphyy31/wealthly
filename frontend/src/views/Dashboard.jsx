@@ -192,7 +192,18 @@ export function Dashboard({
       label: t('dashboard.savingsMonth'),
       sub: 'Revenus − dépenses',
       value: monthSaving,
-      delta: thisMonthStats?.income ? (monthSaving / thisMonthStats.income) * 100 : null,
+      // Bug fix 2026-05-19 : avant on calculait (monthSaving / income) * 100
+      // ce qui donnait -59 423 % quand income était un petit remboursement
+      // (ex. 8 €). Garde-fou : on n'affiche le taux d'épargne que si les
+      // revenus du mois sont >= 500 € ET que le résultat reste dans
+      // [-100 %, +100 %].
+      delta: (() => {
+        const income = thisMonthStats?.income || 0;
+        if (income < 500) return null;
+        const rate = (monthSaving / income) * 100;
+        if (!Number.isFinite(rate) || rate < -100 || rate > 100) return null;
+        return rate;
+      })(),
     },
   ];
   const totalDebt = Math.abs(liabilitiesValue || 0);
@@ -429,12 +440,17 @@ export function Dashboard({
           <div className="hero-number-row">
             <div className="hero-net-stack">
               <Amount value={hover?.balance ?? netWorth} hero/>
-              {/* État partiel : que des dettes, pas d'actifs → split visible */}
-              {(assetsValue || 0) === 0 && totalDebt > 0 ? (
+              {/* Décomposition Actifs − Passifs = Net visible en permanence
+                  (feedback user 2026-05-19 : "Patrimoine Net c'est pas 457K,
+                  ça sort d'où ?"). Avant on cachait la décomposition sauf
+                  quand assetsValue=0 — l'utilisateur n'avait aucun moyen
+                  de relier le chiffre hero à ses données. Maintenant la
+                  formule est toujours lisible. */}
+              {(totalDebt > 0 || (assetsValue || 0) > 0 || (liquidWealth || 0) > 0) && (
                 <div className="hero-split">
                   <span className="hero-split-cell">
                     <span className="hero-split-label">Actifs</span>
-                    <span className="hero-split-val num">0 €</span>
+                    <span className="hero-split-val num">{formatEUR((liquidWealth || 0) + (assetsValue || 0))}</span>
                   </span>
                   <span className="hero-split-minus">−</span>
                   <span className="hero-split-cell">
@@ -442,12 +458,6 @@ export function Dashboard({
                     <span className="hero-split-val num">{formatEUR(totalDebt)}</span>
                   </span>
                 </div>
-              ) : (
-                totalDebt > 0 && (
-                  <div className="hero-debt-mini num">
-                    {t('dashboard.liabilities')} · {formatEUR(-totalDebt)}
-                  </div>
-                )
               )}
             </div>
             {periodDelta.abs !== 0 && (
