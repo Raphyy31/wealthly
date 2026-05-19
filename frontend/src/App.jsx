@@ -3,6 +3,13 @@ import { auth } from './api.js';
 import AuthScreen from './AuthScreen.jsx';
 import WealthlyApp from './WealthlyApp.jsx';
 import { isDemoMode, disableDemoMode, enableDemoMode } from './demoData.js';
+import { useIdleLogout } from './hooks/useIdleLogout.js';
+
+// Auto-logout après inactivité (C19 bis 2026-05-18) — paramétrable depuis
+// Réglages → Sécurité. Lit la valeur dans localStorage si l'utilisateur l'a
+// personnalisée, sinon 30 min par défaut.
+const DEFAULT_IDLE_TIMEOUT_MIN = 30;
+const DEFAULT_IDLE_WARN_MIN = 25;
 
 const Landing = lazy(() => import('./views/Landing.jsx'));
 
@@ -61,6 +68,40 @@ export default function App() {
     setAuthState('unauthed');
     setRefreshKey((k) => k + 1);
   };
+
+  // Lecture de la préférence utilisateur (en minutes) — 0 / null = désactivé.
+  const idleTimeoutMin = (() => {
+    try {
+      const raw = localStorage.getItem('wealthly:idleTimeoutMin');
+      if (raw === null) return DEFAULT_IDLE_TIMEOUT_MIN;
+      const n = parseInt(raw, 10);
+      return Number.isFinite(n) ? n : DEFAULT_IDLE_TIMEOUT_MIN;
+    } catch {
+      return DEFAULT_IDLE_TIMEOUT_MIN;
+    }
+  })();
+
+  useIdleLogout({
+    enabled: authState === 'authed' && idleTimeoutMin > 0,
+    timeoutMinutes: idleTimeoutMin,
+    warnAtMinutes: Math.max(1, idleTimeoutMin - 5),
+    onWarn: (remainingMin) => {
+      // Toast léger directement via DOM — évite de dépendre du toast pipeline
+      // de WealthlyApp qui n'est pas exposé ici.
+      try {
+        const el = document.createElement('div');
+        el.textContent = `Déconnexion automatique dans ${remainingMin} min`;
+        el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;padding:10px 16px;border-radius:8px;font:500 13px/1.2 Geist,sans-serif;z-index:10000;box-shadow:0 8px 24px -8px rgba(0,0,0,.25);';
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 6000);
+      } catch {}
+    },
+    onLogout: async () => {
+      try { await auth.logout(); } catch {}
+      setAuthState('unauthed');
+      setUnauthedView('auth');
+    },
+  });
 
   if (authState === 'checking') {
     // Empty div — index.html's #root:empty CSS already renders the cobalt

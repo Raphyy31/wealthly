@@ -683,6 +683,42 @@ function ChangePasswordModal({ onClose }) {
 // Toggle ON/OFF + modal setup (affiche QR + verify code) + modal disable
 // (password requis anti-takeover). Utilise api.totp.{status, setup, verify,
 // disable}. QR généré via api.qrserver.com (pas de lib externe pour ~5KB).
+// ─── Auto-déconnexion après inactivité (C19 bis 2026-05-18) ─────────────
+// Préférence stockée localement (wealthly:idleTimeoutMin). 0 = désactivé.
+// Lecture dans App.jsx au mount (la valeur s'applique à la prochaine session
+// ou au prochain refresh).
+function IdleTimeoutRow() {
+  const STORAGE_KEY = 'wealthly:idleTimeoutMin';
+  const options = [
+    { value: '15', label: '15 min' },
+    { value: '30', label: '30 min' },
+    { value: '60', label: '1 h' },
+    { value: '0',  label: 'Jamais' },
+  ];
+  const [value, setValue] = useState(() => {
+    try { return localStorage.getItem(STORAGE_KEY) ?? '30'; } catch { return '30'; }
+  });
+  const onChange = (v) => {
+    setValue(v);
+    try { localStorage.setItem(STORAGE_KEY, v); } catch {}
+  };
+  return (
+    <div className="settings-field-row">
+      <div>
+        <div className="settings-field-label">Déconnexion automatique</div>
+        <div className="settings-field-hint">
+          {value === '0'
+            ? 'Désactivée. Vous restez connecté tant que vous ne vous déconnectez pas.'
+            : `Au bout de ${options.find(o => o.value === value)?.label} sans activité, vous serez automatiquement déconnecté (avertissement 5 min avant).`}
+        </div>
+      </div>
+      <div className="settings-field-control">
+        <ChipSelect options={options} value={value} onChange={onChange} />
+      </div>
+    </div>
+  );
+}
+
 function TwoFactorRow({ t }) {
   const [status, setStatus] = useState({ enabled: false, setup_in_progress: false });
   const [loading, setLoading] = useState(true);
@@ -971,6 +1007,7 @@ function SecuriteSection({ currentUser }) {
         </div>
 
         <TwoFactorRow t={t} />
+        <IdleTimeoutRow />
       </div>
 
       <div className="card">
