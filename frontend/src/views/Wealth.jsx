@@ -166,6 +166,8 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
   const mortgageDebt = visibleLiabilities.filter(l => l.type === 'mortgage')
     .reduce((s, l) => s + (parseFloat(l.remainingCapital) || 0), 0);
   const financialWealthLocal = liquidWealth + (totalAssets - realEstateValue) - (totalLiabilities - mortgageDebt);
+  // Patrimoine immo net = valorisation residence - emprunt residence
+  const realEstateNetWealth = realEstateValue - mortgageDebt;
 
   // Asset class allocation for donut chart
   const classAllocation = useMemo(() => {
@@ -298,26 +300,50 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
         <RegulatoryCaps visibleAssets={visibleAssets} memberShare={memberShare} fmt={fmt}/>
       )}
 
-      {/* Asset class allocation — only on 'all' */}
+      {/* Allocation donut + legend en mini-bars — refonte 2026 */}
       {isAll && classAllocation.length > 0 && (
         <section className="card allocation-card">
-          <div className="card-header"><h3><BarChart3 size={16}/> {t('wealth.allocationByClass')}</h3></div>
+          <div className="card-header">
+            <h3><BarChart3 size={16}/> {t('wealth.allocationByClass')}</h3>
+            <span className="card-meta">{classAllocation.length} classe{classAllocation.length > 1 ? 's' : ''} · répartition sur {fmt(totalAssets)}</span>
+          </div>
           <div className="allocation-body">
-            <ResponsiveContainer width={200} height={200}>
-              <PieChart>
-                <Pie data={classAllocation} dataKey="value" cx="50%" cy="50%" innerRadius={55} outerRadius={88} paddingAngle={2}>
-                  {classAllocation.map((entry, i) => <Cell key={i} fill={entry.color}/>)}
-                </Pie>
-                <Tooltip formatter={(v) => fmt(v)} contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}/>
-              </PieChart>
-            </ResponsiveContainer>
+            <div className="allocation-donut">
+              <ResponsiveContainer width={220} height={220}>
+                <PieChart>
+                  <Pie
+                    data={classAllocation}
+                    dataKey="value"
+                    cx="50%" cy="50%"
+                    innerRadius={68}
+                    outerRadius={100}
+                    paddingAngle={2}
+                    cornerRadius={3}
+                    stroke="none"
+                  >
+                    {classAllocation.map((entry, i) => <Cell key={i} fill={entry.color}/>)}
+                  </Pie>
+                  <Tooltip formatter={(v) => fmt(v)} contentStyle={{ background: 'var(--bg-elev)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, boxShadow: '0 4px 12px -4px rgba(0,0,0,.12)' }}/>
+                </PieChart>
+              </ResponsiveContainer>
+              {/* Total au centre */}
+              <div className="allocation-center">
+                <div className="allocation-center-label">Total actifs</div>
+                <div className="allocation-center-value num"><AnimatedNumber value={totalAssets} format={(v) => fmt(v)}/></div>
+              </div>
+            </div>
             <div className="allocation-legend">
               {classAllocation.map((c, i) => (
                 <div key={i} className="alloc-row">
-                  <div className="alloc-dot" style={{ background: c.color }}/>
-                  <div className="alloc-name">{c.name}</div>
-                  <div className="alloc-pct">{c.pct.toFixed(1)}%</div>
-                  <div className="alloc-val">{fmt(c.value)}</div>
+                  <div className="alloc-row-head">
+                    <div className="alloc-dot" style={{ background: c.color }}/>
+                    <div className="alloc-name">{c.name}</div>
+                    <div className="alloc-val num">{fmt(c.value)}</div>
+                  </div>
+                  <div className="alloc-bar">
+                    <div className="alloc-bar-fill" style={{ width: `${c.pct}%`, background: c.color }}/>
+                  </div>
+                  <div className="alloc-pct num">{c.pct.toFixed(1)}%</div>
                 </div>
               ))}
             </div>
@@ -325,16 +351,52 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
         </section>
       )}
 
+      {/* HERO : 2 cards principales — les 2 chiffres qui comptent pour user */}
       {isAll && (
-        <section className="wealth-summary-net">
-          <div className="wsn-card">
-            <div className="wsn-label">Patrimoine financier <span style={{ fontSize: '0.75em', color: 'var(--ink-3)', fontWeight: 400 }}>· hors immobilier</span></div>
-            <div className="wsn-value"><AnimatedNumber value={financialWealthLocal} format={(v) => fmt(v)}/></div>
-            {totalLiabilities > 0 && (
-              <div className="wsn-debt-mini num">
-                {t('wealth.totalLiabilities')} · {fmt(-totalLiabilities)} ({visibleLiabilities.length} prêt{visibleLiabilities.length > 1 ? 's' : ''})
-              </div>
-            )}
+        <section className="wealth-hero">
+          <div className="wealth-hero-card wealth-hero-card--financial">
+            <div className="wealth-hero-eyebrow">
+              <PiggyBank size={12}/>
+              <span>Patrimoine financier</span>
+            </div>
+            <div className="wealth-hero-value num">
+              <AnimatedNumber value={financialWealthLocal} format={(v) => fmt(v)}/>
+            </div>
+            <div className="wealth-hero-meta">
+              Liquidités, investissements, cryptos · hors immobilier
+            </div>
+            <div className="wealth-hero-breakdown">
+              <span><span className="wh-dot" style={{ background: 'var(--d2)' }}/> Liquidités <strong className="num">{fmt(liquidWealth)}</strong></span>
+              {(totalAssets - realEstateValue) > 0 && (
+                <span><span className="wh-dot" style={{ background: 'var(--d1)' }}/> Invest. + crypto <strong className="num">{fmt(totalAssets - realEstateValue)}</strong></span>
+              )}
+              {(totalLiabilities - mortgageDebt) > 0 && (
+                <span><span className="wh-dot" style={{ background: 'var(--negative)' }}/> Conso/auto <strong className="num">−{fmt(totalLiabilities - mortgageDebt)}</strong></span>
+              )}
+            </div>
+          </div>
+          <div className="wealth-hero-card wealth-hero-card--realestate">
+            <div className="wealth-hero-eyebrow">
+              <Home size={12}/>
+              <span>Patrimoine immobilier net</span>
+            </div>
+            <div className={`wealth-hero-value num ${realEstateNetWealth < 0 ? 'neg' : ''}`}>
+              <AnimatedNumber value={realEstateNetWealth} format={(v) => fmt(v)}/>
+            </div>
+            <div className="wealth-hero-meta">
+              Valorisation résidence − emprunt résidence
+            </div>
+            <div className="wealth-hero-breakdown">
+              {realEstateValue > 0 && (
+                <span><span className="wh-dot" style={{ background: 'var(--d3)' }}/> Valorisation <strong className="num">{fmt(realEstateValue)}</strong></span>
+              )}
+              {mortgageDebt > 0 && (
+                <span><span className="wh-dot" style={{ background: 'var(--negative)' }}/> Emprunt <strong className="num">−{fmt(mortgageDebt)}</strong></span>
+              )}
+              {realEstateValue === 0 && (
+                <span className="wealth-hero-empty">Pas encore de bien immobilier</span>
+              )}
+            </div>
           </div>
         </section>
       )}

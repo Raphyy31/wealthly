@@ -840,6 +840,92 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 
 /* WEALTH */
 .wealth-view { display: flex; flex-direction: column; gap: 20px; }
+/* HERO Patrimoine : 2 cards principales (Financier | Immo Net) */
+.wealth-hero {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 900px) {
+  .wealth-hero { grid-template-columns: 1fr; }
+}
+.wealth-hero-card {
+  position: relative;
+  padding: 24px 26px 22px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  transition: border-color 0.22s, box-shadow 0.22s;
+}
+.wealth-hero-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: 0 4px 14px -6px color-mix(in oklab, var(--ink) 10%, transparent);
+}
+.wealth-hero-card::before {
+  /* Subtle accent stripe top — different per card */
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--accent);
+}
+.wealth-hero-card--realestate::before { background: var(--d3); }
+.wealth-hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 600 10.5px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 12px;
+}
+.wealth-hero-eyebrow svg { color: var(--accent); }
+.wealth-hero-card--realestate .wealth-hero-eyebrow svg { color: var(--d3); }
+.wealth-hero-value {
+  font: 500 clamp(34px, 4.5vw, 44px)/1.05 var(--font-sans);
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.wealth-hero-value.neg { color: var(--negative); }
+.wealth-hero-meta {
+  font: 400 12px/1.4 var(--font-sans);
+  color: var(--ink-3);
+  margin-top: 6px;
+}
+.wealth-hero-breakdown {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 22px;
+  font: 400 12.5px/1.4 var(--font-sans);
+  color: var(--ink-2);
+}
+.wealth-hero-breakdown span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.wealth-hero-breakdown strong {
+  color: var(--ink);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.wh-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.wealth-hero-empty {
+  color: var(--ink-3);
+  font-style: italic;
+}
+
 .wealth-kpis {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -901,13 +987,105 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
   margin-top: 4px;
 }
 .allocation-card .card-header { border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 16px; }
-.allocation-body { display: flex; align-items: center; gap: 32px; flex-wrap: wrap; }
-.allocation-legend { flex: 1; min-width: 180px; display: flex; flex-direction: column; gap: 8px; }
-.alloc-row { display: flex; align-items: center; gap: 10px; }
-.alloc-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-.alloc-name { flex: 1; font-size: 13px; font-weight: 600; color: var(--text-primary); }
-.alloc-pct { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text-secondary); min-width: 42px; text-align: right; }
-.alloc-val { font-size: 13px; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--text-tertiary); min-width: 90px; text-align: right; }
+.allocation-body {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  align-items: center;
+  gap: 32px;
+}
+@media (max-width: 720px) {
+  .allocation-body { grid-template-columns: 1fr; }
+}
+
+/* Donut avec total au centre */
+.allocation-donut {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.allocation-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.allocation-center-label {
+  font: 600 10px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.allocation-center-value {
+  font: 500 22px/1.1 var(--font-sans);
+  letter-spacing: -0.025em;
+  color: var(--ink);
+  margin-top: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Legend avec bar chart inline */
+.allocation-legend {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.alloc-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.alloc-row-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.alloc-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  align-self: center;
+}
+.alloc-name {
+  flex: 1;
+  font: 500 13px/1.2 var(--font-sans);
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.alloc-val {
+  font: 600 13px/1 var(--font-sans);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+.alloc-bar {
+  height: 4px;
+  background: var(--bg-sunk);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-left: 18px;
+  margin-right: 36px;
+  position: relative;
+}
+.alloc-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.alloc-pct {
+  position: absolute;
+  right: 0;
+  margin-top: -16px;
+  font: 500 11.5px/1 var(--font-mono);
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
 .wealth-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
 .wealth-summary-net { margin-bottom: 14px; }
 .wsn-card { padding: 22px 24px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; display: flex; flex-direction: column; gap: 4px; }
@@ -2152,6 +2330,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
    WealthItemRow (v6 unified patrimoine list)
    ============================================================================ */
 .wealth-items-list { display: flex; flex-direction: column; }
+/* WealthItemRow refonte : icones Lucide colorees, chevron, no italic */
 .wealth-item-row {
   display: flex;
   justify-content: space-between;
@@ -2161,49 +2340,118 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
   border: 1px solid var(--border);
   border-radius: 10px;
   margin-bottom: 8px;
-  transition: border-color .15s;
+  transition: border-color 0.18s, background 0.18s, box-shadow 0.22s;
 }
-.wealth-item-row[role="button"]:hover { border-color: var(--accent); }
-.wealth-item-row-left { display: flex; gap: 12px; align-items: center; }
+.wealth-item-row.is-clickable { cursor: pointer; }
+.wealth-item-row.is-clickable:hover {
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 4%, var(--bg-elev));
+  box-shadow: 0 2px 8px -4px color-mix(in oklab, var(--accent) 20%, transparent);
+}
+.wealth-item-row.is-clickable:hover .wealth-item-chevron { color: var(--accent); transform: translateX(2px); }
+.wealth-item-row.is-clickable:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+.wealth-item-row-left { display: flex; gap: 12px; align-items: center; min-width: 0; flex: 1; }
+.wealth-item-id { min-width: 0; }
 .wealth-item-icon {
   width: 36px; height: 36px; border-radius: 8px;
-  background: var(--bg-sunk); color: var(--ink-2);
   display: flex; align-items: center; justify-content: center;
-  font-weight: 600; font-size: 13px;
+  flex-shrink: 0;
+  transition: transform 0.22s;
 }
-.wealth-item-name { font-weight: 600; font-size: 14px; color: var(--ink); }
-.wealth-item-meta { font-size: 11px; color: var(--ink-2); margin-top: 2px; display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.wealth-item-row.is-clickable:hover .wealth-item-icon { transform: scale(1.05); }
+
+.wealth-item-name {
+  font: 600 14px/1.3 var(--font-sans);
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wealth-item-meta {
+  font: 400 11px/1.3 var(--font-sans);
+  color: var(--ink-2);
+  margin-top: 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
 .wealth-item-meta-muted { color: var(--ink-3); }
-.wealth-item-bank { font-weight: 500; color: var(--ink); letter-spacing: 0.01em; }
+.wealth-item-bank {
+  font-weight: 500;
+  color: var(--ink);
+  letter-spacing: 0.01em;
+}
 .wealth-item-bank::after { content: '·'; margin-left: 6px; color: var(--ink-3); }
+
 .badge {
   padding: 2px 6px;
   border-radius: 4px;
-  font-size: 10.5px;
-  font-weight: 500;
+  font: 500 10.5px/1 var(--font-mono);
+  letter-spacing: 0.02em;
   display: inline-block;
 }
 .badge-synced { background: var(--accent-soft); color: var(--accent); }
 .badge-manual { background: var(--bg-sunk); color: var(--ink-2); }
-.wealth-item-row-right { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
-.wealth-item-value {
-  font-family: 'Newsreader', Georgia, serif;
-  font-style: italic;
-  font-weight: 400;
-  font-size: 18px;
-  color: var(--ink);
+
+.wealth-item-row-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
 }
-.wealth-item-delta { font-size: 11px; margin-top: 2px; }
+.wealth-item-value-wrap {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+.wealth-item-value {
+  font: 600 16px/1.1 var(--font-sans);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.015em;
+}
+.wealth-item-delta {
+  font: 500 11px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
 .wealth-item-delta.up { color: var(--positive); }
 .wealth-item-delta.down { color: var(--negative); }
-.wealth-item-delete-btn {
-  display: none; align-items: center; justify-content: center;
-  width: 24px; height: 24px; border-radius: 6px; border: none;
-  background: transparent; color: var(--negative); cursor: pointer;
-  margin-top: 2px; opacity: .7; transition: opacity .15s, background .15s;
+
+.wealth-item-chevron {
+  color: var(--ink-3);
+  transition: color 0.18s, transform 0.22s;
+  flex-shrink: 0;
 }
-.wealth-item-delete-btn:hover { background: color-mix(in srgb, var(--negative) 10%, transparent); opacity: 1; }
+
+.wealth-item-delete-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--negative);
+  cursor: pointer;
+  opacity: 0.65;
+  transition: opacity 0.15s, background 0.15s;
+}
+.wealth-item-delete-btn:hover {
+  background: color-mix(in srgb, var(--negative) 12%, transparent);
+  opacity: 1;
+}
 .wealth-item-row:hover .wealth-item-delete-btn { display: flex; }
+
+/* Mobile : layout stack */
+@media (max-width: 640px) {
+  .wealth-item-row { flex-direction: column; align-items: stretch; gap: 12px; }
+  .wealth-item-row-right { justify-content: space-between; }
+  .wealth-item-chevron { display: none; }
+}
 .wealth-empty-state {
   text-align: center;
   padding: 60px 24px;
