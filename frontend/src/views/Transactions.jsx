@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { Search, ArrowUpDown, Repeat, Trash2, Filter, X, RotateCcw, Sparkles, Plus, Download, ArrowLeftRight, PiggyBank, CreditCard } from 'lucide-react';
 import { formatDate, getTransferType, getTransferDestAccountId, buildTransferDestTag, ACCOUNT_ROLES } from '../utils.js';
 import { gsap } from '../utils/gsapSetup.js';
+import { AnimatedNumber } from '../components/AnimatedNumber.jsx';
 
 const EMPTY_FILTERS = {
   cats: [],          // string[] — empty means "all"
@@ -451,9 +452,20 @@ export function Transactions({ transactions, accounts, categories, members = [],
       </div>
 
       <div className="filters-bar" ref={panelRef}>
-        <div className="search-box">
+        <div className={`search-box ${search ? 'has-value' : ''}`}>
           <Search size={16}/>
           <input placeholder={t('views.transactions.searchPlaceholder')} value={search} onChange={(e) => setSearch(e.target.value)}/>
+          {search && (
+            <button
+              type="button"
+              className="search-clear"
+              onClick={() => setSearch('')}
+              title="Vider la recherche"
+              aria-label="Vider la recherche"
+            >
+              <X size={13}/>
+            </button>
+          )}
         </div>
 
         <button
@@ -472,7 +484,10 @@ export function Transactions({ transactions, accounts, categories, members = [],
           </button>
         )}
 
-        <span className="result-count">{filtered.length} transaction{filtered.length > 1 ? 's' : ''}</span>
+        <span className="result-count">
+          <strong className="num"><AnimatedNumber value={filtered.length} duration={0.4} format={(v) => Math.round(v).toString()}/></strong>
+          {' '}transaction{filtered.length > 1 ? 's' : ''}
+        </span>
 
         {showPanel && (
           <div className="tx-filter-panel">
