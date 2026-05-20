@@ -20,38 +20,39 @@ import autoTable from 'jspdf-autotable';
 import { buildAmortization } from './utils.js';
 
 // ---------- Palette (RGB tuples for jsPDF) ----------
-// Mirrors the app's v3 dark theme — encre profonde + cobalt lifté.
-// Same hex roots as index.css [data-theme="dark"] so a printed page feels
-// like the same product as the in-app dark mode.
+// Mirrors the app's LIGHT theme — papier chaud + cobalt sobre.
+// Identique aux tokens index.css par defaut (data-theme non set), pour qu'une
+// page imprimee se sente comme le meme produit que l'app en mode light.
 const C = {
-  ink:        [241, 238, 228],   // --ink   #F1EEE4 (cream — text primary on dark)
-  body:       [200, 196, 184],   // body text slightly dimmer than ink
-  muted:      [162, 158, 145],   // --ink-2 #A29E91
-  faint:      [117, 113, 106],   // --ink-3 #75716A
-  rule:       [58, 56, 47],      // --border-strong #3A382F
-  hairline:   [42, 40, 35],      // --border #2A2823
-  paper:      [15, 14, 12],      // --bg page #0F0E0C
-  cream:      [24, 23, 20],      // --bg-elev card #181714
-  cardFill:   [24, 23, 20],      // raised card surface (= bg-elev, contrast↑ vs page in dark)
-  accent:     [126, 146, 255],   // --accent cobalt lifté #7E92FF
-  accentDark: [166, 180, 255],   // --accent-2 #A6B4FF
-  accentSoft: [27, 33, 74],      // --accent-soft #1B214A
-  sage:       [79, 181, 122],    // --positive #4FB57A
-  terracotta: [224, 122, 110],   // --negative #E07A6E
-  amber:      [212, 167, 76],    // --warning  #D4A74C
-  // Dataviz v3 (dark) — cobalt lifté, sage, ocre, mauve, pink, grey, ocre clair
+  ink:        [22, 21, 15],      // --ink   #16150F (text primary)
+  body:       [56, 54, 45],      // body text — entre ink et ink-2
+  muted:      [86, 84, 74],      // --ink-2 #56544A
+  faint:      [140, 137, 121],   // --ink-3 #8C8979
+  rule:       [210, 206, 192],   // --border-strong #D2CEC0
+  hairline:   [228, 225, 216],   // --border #E4E1D8
+  paper:      [247, 246, 242],   // --bg page #F7F6F2 (papier chaud)
+  cream:      [255, 255, 255],   // --bg-elev card #FFFFFF
+  cardFill:   [255, 255, 255],   // raised card surface (white on cream)
+  cardSunk:   [239, 237, 230],   // --bg-sunk #EFEDE6 (subtle alt panels)
+  accent:     [37, 64, 217],     // --accent cobalt sobre #2540D9
+  accentDark: [26, 47, 168],     // --accent-2 #1A2FA8
+  accentSoft: [231, 235, 255],   // --accent-soft #E7EBFF
+  sage:       [19, 109, 62],     // --positive #136D3E
+  terracotta: [176, 57, 43],     // --negative #B0392B
+  amber:      [142, 100, 26],    // --warning  #8E641A
+  // Dataviz v3 (light) — cobalt sobre, sage, terracotta, mauve, pink, grey, ocre
   pieClasses: [
-    [126, 146, 255],   // d1 cobalt #7E92FF
-    [79, 181, 122],    // d2 sage   #4FB57A
-    [224, 151, 90],    // d3 ocre   #E0975A
-    [182, 155, 242],   // d4 mauve  #B69BF2
-    [218, 138, 161],   // d5 pink   #DA8AA1
-    [156, 152, 139],   // d6 grey   #9C988B
-    [229, 199, 94],    // d7 ocre   #E5C75E
+    [37, 64, 217],     // d1 cobalt #2540D9
+    [31, 142, 110],    // d2 sage   #1F8E6E
+    [194, 115, 59],    // d3 terracotta #C2733B
+    [123, 87, 198],    // d4 mauve  #7B57C6
+    [184, 93, 122],    // d5 pink   #B85D7A
+    [77, 77, 77],      // d6 grey   #4D4D4D
+    [224, 178, 62],    // d7 ocre   #E0B23E
   ],
-  // Legacy aliases (kept so existing draw functions don't all need touching)
-  gold:       [126, 146, 255],   // map to cobalt lifté
-  goldDark:   [166, 180, 255],
+  // Legacy aliases (gold -> cobalt sobre pour rester sur le mapping existant)
+  gold:       [37, 64, 217],     // accent cobalt
+  goldDark:   [26, 47, 168],
 };
 
 const FONT   = 'helvetica'; // body, captions, tables (jsPDF default sans)

@@ -33,7 +33,6 @@ import { AnimatedNumber } from './components/AnimatedNumber.jsx';
 import { SyncProgressBar } from './components/SyncProgressBar.jsx';
 import { Onboarding } from './views/Onboarding.jsx';
 import { Transactions } from './views/Transactions.jsx';
-import { Analysis } from './views/Analysis.jsx';
 import { Monthly } from './views/Monthly.jsx';
 import { Cashflow } from './views/Cashflow.jsx';
 import { Dashboard } from './views/Dashboard.jsx';
@@ -2380,10 +2379,6 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             <button onClick={() => setView('transactions')} className={view === 'transactions' ? 'on' : ''}>
               <BarChart3 size={16}/> <span>{t('nav.transactions')}</span>
             </button>
-            <button onClick={() => setView('analysis')} className={view === 'analysis' ? 'on' : ''}>
-              <TrendingUp size={16}/> <span>{t('nav.analysis')}</span>
-            </button>
-
             <div className="ws-nav-group">
               <span className="ws-nav-group-label">{t('nav.group_gestion')}</span>
             </div>
@@ -2643,14 +2638,6 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             initialAccountFilter={txInitialAccountFilter}
             onConsumeInitialFilter={() => setTxInitialAccountFilter(null)}
             onOpenAiPrompt={() => setShowAiPromptModal(true)}
-          />
-        )}
-        {view === 'analysis' && (
-          <Analysis
-            transactions={visibleTransactions} categories={categories}
-            recurringIds={recurringIds} recurringGroups={recurringGroups} monthlyEvolution={monthlyEvolution}
-            accounts={accounts} memberShare={memberShare} fmt={fmt}
-            transferIds={transferIds}
           />
         )}
         {view === 'settings' && (
