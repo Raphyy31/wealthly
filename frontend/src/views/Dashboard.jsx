@@ -12,9 +12,11 @@
 //  fmt, memberShare, categoryAnalysis, budgets, transferIds, setView,
 //  onAccountClick)
 // ============================================================================
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MagneticButton } from '../components/MagneticButton.jsx';
+import { gsap } from '../utils/gsapSetup.js';
+import { MiniCashflowCard } from './dashboard/MiniCashflowCard.jsx';
 import {
   Plus, FileText, RefreshCw, ArrowUp, ArrowDown,
   TrendingUp, AlertTriangle, Sparkles, MoreHorizontal, Loader2,
@@ -101,6 +103,23 @@ export function Dashboard({
   const [txFilter, setTxFilter] = useState('all'); // all | expense | income
   const [hover, setHover] = useState(null); // chart hover point
   const [syncing, setSyncing] = useState(false);
+
+  // GSAP page-enter stagger — fade-in en cascade des sections principales
+  // a chaque mount du Dashboard. Donne une sensation premium 'app qui se
+  // construit sous les yeux'. Respecte prefers-reduced-motion.
+  const dashRef = useRef(null);
+  useEffect(() => {
+    if (!dashRef.current) return;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        ['.dash-head', '.dash-hero-row', '.mcc-card', '.accounts-panel', '.ds-panel'],
+        { opacity: 0, y: 12 },
+        { opacity: 1, y: 0, duration: 0.42, ease: 'expo.out', stagger: 0.07, clearProps: 'transform' }
+      );
+    }, dashRef);
+    return () => ctx.revert();
+  }, []);
 
   // ── Allocation : liquidités + actifs par classe ─────────────────────────
   const allocationData = useMemo(() => {
@@ -372,7 +391,7 @@ export function Dashboard({
     || '';
 
   return (
-    <div className="dash-v3">
+    <div className="dash-v3" ref={dashRef}>
       <DashStyles/>
 
       {/* ── Header ─────────────────────────────────────────────────────── */}
@@ -453,6 +472,21 @@ export function Dashboard({
             </div>
           </div>
 
+          {/* Sparkline inline 6m a la Apple Stocks — sprint Dashboard 2026-05-20 */}
+          {chartData.length >= 2 && (
+            <div className="hero-sparkline-wrap" aria-hidden="true">
+              <span className="hero-sparkline-label">{period.toUpperCase()}</span>
+              <Sparkline
+                data={chartData.map(d => d.balance)}
+                width={null}
+                height={36}
+                stroke={periodDelta.abs >= 0 ? 'var(--positive)' : 'var(--negative)'}
+                strokeWidth={2}
+                fill="none"
+                className="hero-sparkline-svg"
+              />
+            </div>
+          )}
           <div className="hero-number-row">
             <div className="hero-net-stack">
               <Amount value={hover?.balance ?? netWorth} hero/>
@@ -551,6 +585,15 @@ export function Dashboard({
           )}
         </div>
       </section>
+
+      {/* ── §02 Cashflow mini — vue du mois en cours (sprint 2026-05-20) ── */}
+      <MiniCashflowCard
+        thisMonthStats={thisMonthStats}
+        currentMonth={currentMonth}
+        formatEUR={formatEUR}
+        hidden={hidden}
+        onOpenMonthly={() => setView?.('monthly')}
+      />
 
       {/* ── §03 Mes comptes ────────────────────────────────────────────── */}
       <section className="accounts-panel ds-panel">
@@ -1237,6 +1280,84 @@ function DashStyles() {
 .insight.neg .insight-icon { background: var(--negative-soft); color: var(--negative); }
 .insight-title { font-size: 13px; font-weight: 500; color: var(--ink); }
 .insight-body { font-size: 12px; color: var(--ink-2); line-height: 1.45; margin-top: 2px; }
+
+/* ── MiniCashflowCard (sprint Dashboard 2026-05-20) ─────────────────── */
+.mcc-card {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.mcc-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.mcc-title { margin: 6px 0 0; font: 500 18px/1.2 var(--font-sans); letter-spacing: -0.02em; color: var(--ink); }
+.mcc-title em { font: italic 400 18px var(--font-serif); color: var(--accent); letter-spacing: -0.025em; }
+.mcc-link { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.mcc-rows { display: flex; flex-direction: column; gap: 10px; }
+.mcc-row {
+  display: grid;
+  grid-template-columns: 96px 1fr 110px;
+  align-items: center;
+  gap: 12px;
+}
+.mcc-row-label { display: inline-flex; align-items: center; gap: 6px; font: 500 12.5px var(--font-sans); color: var(--ink-2); }
+.mcc-row-ic {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.mcc-row-ic.tone-positive { background: color-mix(in oklab, var(--positive) 14%, transparent); color: var(--positive); }
+.mcc-row-ic.tone-negative { background: color-mix(in oklab, var(--negative) 12%, transparent); color: var(--negative); }
+.mcc-row-ic.tone-accent   { background: var(--accent-soft); color: var(--accent); }
+.mcc-bar-track {
+  height: 8px;
+  background: var(--bg-sunk);
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+}
+.mcc-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  transition: none; /* GSAP gere la transition */
+}
+.mcc-bar-fill.tone-positive { background: linear-gradient(90deg, color-mix(in oklab, var(--positive) 70%, transparent), var(--positive)); }
+.mcc-bar-fill.tone-negative { background: linear-gradient(90deg, color-mix(in oklab, var(--negative) 70%, transparent), var(--negative)); }
+.mcc-bar-fill.tone-accent   { background: linear-gradient(90deg, var(--accent-soft), var(--accent)); }
+.mcc-row-val { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; font-size: 13px; }
+.mcc-row-val.tone-positive { color: var(--positive); }
+.mcc-row-val.tone-negative { color: var(--negative); }
+.mcc-row-val.tone-accent   { color: var(--accent); }
+
+@media (max-width: 640px) {
+  .mcc-card { padding: 14px 14px 16px; }
+  .mcc-title { font-size: 16px; }
+  .mcc-title em { font-size: 16px; }
+  .mcc-row { grid-template-columns: 78px 1fr 88px; gap: 8px; }
+  .mcc-row-label { font-size: 11.5px; }
+  .mcc-row-val { font-size: 12px; }
+}
+
+/* ── Hero sparkline (option d) — petite courbe 6m dans le hero ─────── */
+.hero-sparkline-wrap {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px dotted var(--border);
+}
+.hero-sparkline-label {
+  font: 500 11px var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.hero-sparkline-svg { flex: 1; min-width: 0; }
 
 /* Mobile */
 @media (max-width: 768px) {
