@@ -1813,6 +1813,37 @@ html, body {
   .mon-kpi .num:first-of-type { font-size: 18px; }
 }
 
+/* Banner CTA pour 'configure ton mois type perso' quand on a deja des tx */
+.mon-cta-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+}
+.mon-cta-banner-icon {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg-elev);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.mon-cta-banner-body {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.mon-cta-banner-body strong {
+  font: 600 13.5px/1.2 var(--font-sans);
+  color: var(--ink);
+}
+.mon-cta-banner-body span {
+  font: 400 12px/1.4 var(--font-sans);
+  color: var(--ink-2);
+}
+
 /* Empty state */
 .mon-empty-state {
   display: flex; flex-direction: column; align-items: center; gap: 12px;

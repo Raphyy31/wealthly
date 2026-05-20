@@ -672,8 +672,8 @@ export function Monthly({
       )}
 
 
-      {/* ── Empty state ─────────────────────────────────────────────── */}
-      {!isChildScope && !hasRefMonth && (
+      {/* ── Empty state : pas de Mois type ET pas de tx reelles ─────── */}
+      {!isChildScope && !hasRefMonth && realSankeyData.nodes.length === 0 && (
         <section className="card mon-empty-state">
           <div className="mon-empty-illu">
             <Sparkles size={20} className="mon-empty-spark mon-empty-spark-1"/>
@@ -688,9 +688,27 @@ export function Monthly({
         </section>
       )}
 
+      {/* Banner CTA quand on a des tx reelles mais pas de Mois type perso —
+          aide l'user a configurer son template sans bloquer la visualisation
+          de ses depenses reelles */}
+      {!isChildScope && !hasRefMonth && realSankeyData.nodes.length > 0 && (
+        <section className="card mon-cta-banner">
+          <div className="mon-cta-banner-icon"><Target size={18}/></div>
+          <div className="mon-cta-banner-body">
+            <strong>Configure ton mois type personnel</strong>
+            <span>Tu vois tes dépenses réelles ci-dessous. Définis ton plan habituel pour comparer chaque mois.</span>
+          </div>
+          <button className="ds-btn primary" onClick={() => setShowEditor(true)}>
+            <Edit3 size={13}/> Configurer
+          </button>
+        </section>
+      )}
+
       {/* ── Sankey duo : Mois type + Mois en cours ───────────────────
-           50/50 teaser au mount, clic = focus 60/40, re-clic = collapse. */}
-      {!isChildScope && hasRefMonth && (sankeyData.nodes.length > 0 || realSankeyData.nodes.length > 0) && (
+           Affiche si AU MOINS un des deux a des donnees (avant gardait
+           uniquement si hasRefMonth -> bug user avec compte perso pas
+           de mois type configure ne voyait rien). */}
+      {!isChildScope && (sankeyData.nodes.length > 0 || realSankeyData.nodes.length > 0) && (
         <section className="mon-sankey-duo" data-expanded={sankeyLayoutMode}>
           <SankeyCard
             kind="type"
