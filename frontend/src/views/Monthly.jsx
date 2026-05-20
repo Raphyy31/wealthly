@@ -20,7 +20,7 @@ import {
 import {
   Edit3, Target, TrendingUp, TrendingDown, PiggyBank, Wallet,
   ChevronDown, ChevronRight, X, BarChart3, Calendar,
-  ChevronLeft, Coins, Sparkles,
+  ChevronLeft, Coins, Sparkles, Maximize2,
 } from 'lucide-react';
 import { formatCurrency, formatDate, monthKey, getTransferType } from '../utils.js';
 import { useIsNarrow } from '../hooks/useIsNarrow.js';
@@ -464,6 +464,8 @@ export function Monthly({
   // UI state — quelles cartes Sankey sont expanded ? Set ('type' et/ou 'real').
   // Vide = 50/50 teaser. Une seule = 60/40. Les deux = 50/50 expanded.
   const [expandedSankey, setExpandedSankey] = useState(() => new Set());
+  // Modal plein ecran d'un Sankey (cliquer Maximize2 du card head)
+  const [maximizedSankey, setMaximizedSankey] = useState(null); // 'type' | 'real' | null
   const toggleSankey = (key) => {
     setExpandedSankey(prev => {
       const next = new Set(prev);
@@ -721,6 +723,7 @@ export function Monthly({
             isTeaser={!expandedSankey.has('type')}
             isCompact={sankeyLayoutMode === 'both'}
             onClick={() => toggleSankey('type')}
+            onMaximize={() => setMaximizedSankey('type')}
             fmt={fmt}
             isNarrow={isNarrow}
             empty={sankeyData.nodes.length === 0}
@@ -736,12 +739,26 @@ export function Monthly({
             isTeaser={!expandedSankey.has('real')}
             isCompact={sankeyLayoutMode === 'both'}
             onClick={() => toggleSankey('real')}
+            onMaximize={() => setMaximizedSankey('real')}
             fmt={fmt}
             isNarrow={isNarrow}
             empty={realSankeyData.nodes.length === 0}
             deltaVs={refTotals.expense > 0 ? realTotals.expense - refTotals.expense : null}
           />
         </section>
+      )}
+
+      {/* Modal plein écran Sankey — quand maximizedSankey set */}
+      {maximizedSankey && (
+        <SankeyFullscreenModal
+          kind={maximizedSankey}
+          data={maximizedSankey === 'type' ? sankeyData : realSankeyData}
+          totals={maximizedSankey === 'type' ? refTotals : realTotals}
+          label={maximizedSankey === 'type' ? 'Mois type' : monthHumanLabel(selectedMonth)}
+          eyebrow={maximizedSankey === 'type' ? 'Prévu' : 'Réel'}
+          fmt={fmt}
+          onClose={() => setMaximizedSankey(null)}
+        />
       )}
 
       {/* ── Comparaison par categorie — accordeon ─────────────────────
@@ -1239,7 +1256,7 @@ function monthHumanLabel(monthKey) {
 // SankeyCard — encapsule un Sankey + son header (label, KPI strip).
 // En mode teaser : Sankey dimme et flouté, overlay invitant a cliquer.
 // En mode expanded : tout est visible normalement.
-function SankeyCard({ kind, eyebrow, label, subtitle, data, totals, isExpanded, isTeaser, isCompact, onClick, fmt, isNarrow, empty, deltaVs }) {
+function SankeyCard({ kind, eyebrow, label, subtitle, data, totals, isExpanded, isTeaser, isCompact, onClick, onMaximize, fmt, isNarrow, empty, deltaVs }) {
   const hasData = !empty && data.nodes.length > 0;
 
   // Hauteur dynamique du Sankey selon le nombre de feuilles. Teaser garde
@@ -1272,6 +1289,17 @@ function SankeyCard({ kind, eyebrow, label, subtitle, data, totals, isExpanded, 
           <h3>{label}</h3>
           <span className="mon-sankey-card-subtitle">{subtitle}</span>
         </div>
+        {isExpanded && hasData && onMaximize && (
+          <button
+            type="button"
+            className="mon-sankey-card-maximize"
+            onClick={(e) => { e.stopPropagation(); onMaximize(); }}
+            title="Voir en grand"
+            aria-label="Voir en grand"
+          >
+            <Maximize2 size={14}/>
+          </button>
+        )}
         {isExpanded && hasData && (
           <div className="mon-sankey-card-stats">
             <div className="mon-sankey-stat">
@@ -1342,6 +1370,82 @@ function SankeyCard({ kind, eyebrow, label, subtitle, data, totals, isExpanded, 
             <span className="mon-sankey-card-cta">Cliquer pour agrandir →</span>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ─── SankeyFullscreenModal ─────────────────────────────────────────
+// Affiche un Sankey en plein ecran quand l'user clique sur le bouton
+// Maximize2 du SankeyCard. Marges genereuses + nodes plus epais pour
+// que les labels respirent. ESC + click overlay pour fermer.
+function SankeyFullscreenModal({ kind, data, totals, label, eyebrow, fmt, onClose }) {
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    // Lock body scroll while modal open
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [onClose]);
+
+  const leafCount = data.nodes.filter(n => n.level === 2).length;
+  const sankeyHeight = Math.max(560, leafCount * 38 + 120);
+
+  return (
+    <div className="sankey-fullscreen-overlay" onClick={onClose}>
+      <div className="sankey-fullscreen-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={`${label} — plein écran`}>
+        <header className="sankey-fullscreen-head">
+          <div className="sankey-fullscreen-titles">
+            {eyebrow && <span className={`mon-sankey-card-eyebrow mon-sankey-card-eyebrow--${kind}`}>{eyebrow}</span>}
+            <h2>{label}</h2>
+            <div className="sankey-fullscreen-stats">
+              <div className="mon-sankey-stat">
+                <span className="mon-sankey-stat-dot" style={{ background: 'var(--positive)' }}/>
+                <span className="mon-sankey-stat-label">Entrées</span>
+                <span className="mon-sankey-stat-val">{fmt(totals.income)}</span>
+              </div>
+              <span className="mon-sankey-stat-arrow">→</span>
+              <div className="mon-sankey-stat">
+                <span className="mon-sankey-stat-dot" style={{ background: 'var(--negative)' }}/>
+                <span className="mon-sankey-stat-label">Dépenses</span>
+                <span className="mon-sankey-stat-val">{fmt(totals.expense)}</span>
+              </div>
+              {totals.saving > 0 && <>
+                <span className="mon-sankey-stat-arrow">·</span>
+                <div className="mon-sankey-stat">
+                  <span className="mon-sankey-stat-dot" style={{ background: 'var(--accent)' }}/>
+                  <span className="mon-sankey-stat-label">Épargne</span>
+                  <span className="mon-sankey-stat-val">{fmt(totals.saving)}</span>
+                </div>
+              </>}
+            </div>
+          </div>
+          <button className="sankey-fullscreen-close" onClick={onClose} aria-label="Fermer">
+            <X size={20}/>
+          </button>
+        </header>
+        <div className="sankey-fullscreen-body" style={{ height: sankeyHeight }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <Sankey
+              data={data}
+              nodePadding={32}
+              nodeWidth={18}
+              iterations={64}
+              margin={{ top: 30, right: 240, bottom: 30, left: 180 }}
+              node={<SankeyNode fmt={fmt} teaser={false} compact={false}/>}
+              link={<SankeyLink/>}
+            >
+              <Tooltip
+                formatter={(v) => fmt(v)}
+                contentStyle={{ background: 'var(--bg-elev)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, boxShadow: '0 8px 24px -8px rgba(0,0,0,.18)' }}
+              />
+            </Sankey>
+          </ResponsiveContainer>
+        </div>
       </div>
     </div>
   );
