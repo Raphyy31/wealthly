@@ -840,13 +840,66 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 
 /* WEALTH */
 .wealth-view { display: flex; flex-direction: column; gap: 20px; }
-.wealth-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
-.wk-card { padding: 18px 20px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; box-shadow: none; transition: border-color .2s; }
-.wk-card:hover { border-color: var(--border-strong); }
-.wk-card.warn { border-color: var(--warning); background: var(--bg-card); }
-.wk-label { font-size: 10px; color: var(--text-tertiary); font-weight: 500; text-transform: uppercase; letter-spacing: 0.16em; }
-.wk-value { font-size: 26px; font-weight: 500; letter-spacing: -0.025em; font-variant-numeric: tabular-nums; margin-top: 8px; line-height: 1.05; color: var(--text-primary); }
-.wk-meta { font-size: 11.5px; color: var(--text-tertiary); margin-top: 4px; }
+.wealth-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+.wk-card {
+  position: relative;
+  padding: 18px 20px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: none;
+  transition: border-color 0.22s, box-shadow 0.22s, transform 0.22s;
+  overflow: hidden;
+}
+.wk-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: 0 2px 8px -4px color-mix(in oklab, var(--ink) 8%, transparent);
+}
+.wk-card.warn {
+  border-color: var(--warning);
+  background: color-mix(in oklab, var(--warning) 4%, var(--bg-elev));
+}
+.wk-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.wk-card-icon {
+  width: 28px; height: 28px;
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-soft);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.wk-card.warn .wk-card-icon {
+  background: color-mix(in oklab, var(--warning) 14%, transparent);
+  color: var(--warning);
+}
+.wk-label {
+  font: 600 10.5px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.wk-value {
+  font: 500 26px/1.05 var(--font-sans);
+  letter-spacing: -0.025em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.wk-meta {
+  font: 400 11.5px/1.4 var(--font-sans);
+  color: var(--ink-3);
+  margin-top: 4px;
+}
 .allocation-card .card-header { border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 16px; }
 .allocation-body { display: flex; align-items: center; gap: 32px; flex-wrap: wrap; }
 .allocation-legend { flex: 1; min-width: 180px; display: flex; flex-direction: column; gap: 8px; }
@@ -1548,21 +1601,108 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .cashflow-cat-amount.negative { color: var(--danger); }
 
 /* Patrimoine sub-nav */
-.wealth-subnav { display: flex; gap: 4px; padding: 4px; background: var(--bg-subtle); border: 1px solid var(--border-light); border-radius: 10px; overflow-x: auto; }
-.wealth-subnav-btn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border: none; background: transparent; color: var(--text-secondary); font-size: 13px; font-weight: 500; border-radius: 7px; cursor: pointer; transition: color 0.18s, background 0.18s; font-family: inherit; white-space: nowrap; letter-spacing: -0.01em; }
-.wealth-subnav-btn svg { color: var(--text-tertiary); transition: color 0.18s; }
-.wealth-subnav-btn:hover { background: var(--bg-card); color: var(--text-primary); }
-.wealth-subnav-btn:hover svg { color: var(--text-secondary); }
-.wealth-subnav-btn.active { background: var(--bg-card); color: var(--primary); box-shadow: 0 1px 0 0 var(--border-light), inset 0 0 0 1px var(--border); font-weight: 600; }
-.wealth-subnav-btn.active svg { color: var(--primary); }
-.wealth-subnav-count { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; font-size: 10.5px; background: var(--bg-subtle); color: var(--text-tertiary); font-weight: 600; }
-.wealth-subnav-btn.active .wealth-subnav-count { background: var(--primary-soft); color: var(--primary); }
+/* Sub-nav style segmented control — coherent avec Settings reg-tabs */
+.wealth-subnav {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--bg-sunk);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.wealth-subnav::-webkit-scrollbar { display: none; }
+.wealth-subnav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  color: var(--ink-3);
+  font: 600 13.5px/1 var(--font-sans);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: color 0.18s, background 0.18s, box-shadow 0.22s;
+  font-family: inherit;
+  white-space: nowrap;
+  letter-spacing: -0.005em;
+}
+.wealth-subnav-btn svg {
+  color: var(--ink-3);
+  transition: color 0.18s, transform 0.22s;
+  flex-shrink: 0;
+}
+.wealth-subnav-btn:hover {
+  background: color-mix(in oklab, var(--ink-3) 8%, transparent);
+  color: var(--ink-2);
+}
+.wealth-subnav-btn:hover svg { color: var(--ink-2); }
+.wealth-subnav-btn.active {
+  background: var(--bg-elev);
+  color: var(--accent);
+  box-shadow: 0 1px 3px color-mix(in oklab, var(--ink) 8%, transparent),
+              0 1px 2px color-mix(in oklab, var(--ink) 4%, transparent);
+}
+.wealth-subnav-btn.active svg {
+  color: var(--accent);
+  transform: scale(1.05);
+}
+.wealth-subnav-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  font: 600 10.5px/1 var(--font-mono);
+  background: color-mix(in oklab, var(--ink-3) 14%, transparent);
+  color: var(--ink-3);
+}
+.wealth-subnav-btn.active .wealth-subnav-count {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+@media (max-width: 720px) {
+  .wealth-subnav-btn span { display: none; }
+  .wealth-subnav-btn { padding: 10px 12px; }
+}
 
-.subview-hero { display: flex; align-items: flex-end; justify-content: space-between; padding: 26px 28px; }
-.subview-hero-info { display: flex; flex-direction: column; gap: 6px; }
-.subview-hero-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.18em; color: var(--text-tertiary); font-weight: 500; }
-.subview-hero-value { font-size: clamp(36px, 6vw, 56px); font-weight: 500; letter-spacing: -0.04em; line-height: 1.05; font-variant-numeric: tabular-nums; color: var(--text-primary); }
-.subview-hero-meta { font-size: 12.5px; color: var(--text-tertiary); margin-top: 4px; }
+.subview-hero {
+  display: flex;
+  align-items: flex-end;
+  gap: 20px;
+  padding: 26px 28px;
+}
+.subview-hero-icon-wrap {
+  width: 52px; height: 52px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--accent-soft);
+  color: var(--accent);
+  flex-shrink: 0;
+  margin-bottom: 6px;
+}
+.subview-hero-info { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
+.subview-hero-label {
+  font: 600 10.5px/1 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.subview-hero-value {
+  font: 500 clamp(36px, 6vw, 56px)/1.05 var(--font-sans);
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.subview-hero-meta {
+  font: 400 12.5px/1.4 var(--font-sans);
+  color: var(--ink-3);
+  margin-top: 4px;
+}
 
 /* Compléter mon patrimoine picker */
 .patrimoine-picker-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; max-height: 420px; overflow-y: auto; padding-right: 4px; }

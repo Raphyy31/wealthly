@@ -8,7 +8,7 @@ import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
 } from 'recharts';
 import {
-  Plus, Wallet, BarChart3, Bitcoin, TrendingUp, CreditCard, Home, Sparkles,
+  Plus, Wallet, BarChart3, Bitcoin, TrendingUp, TrendingDown, CreditCard, Home, Sparkles, PiggyBank,
 } from 'lucide-react';
 import { ASSET_CLASS_MAP } from '../constants.js';
 import { AnimatedNumber } from '../components/AnimatedNumber.jsx';
@@ -220,19 +220,27 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
       </nav>
 
       {/* Subview header (when not 'all') */}
-      {!isAll && (
-        <section className="card subview-hero">
-          <div className="subview-hero-info">
-            <div className="subview-hero-label">{t(currentSub.labelKey)}</div>
-            <div className="subview-hero-value">{fmt(isLiabilitiesOnly ? subviewLiabTotal : subviewTotal)}</div>
-            <div className="subview-hero-meta">
-              {isLiabilitiesOnly
-                ? `${filteredItems.length} prêt${filteredItems.length > 1 ? 's' : ''} · ${fmt(visibleLiabilities.reduce((s, l) => s + (parseFloat(l.monthlyPayment) || 0), 0))} / mois`
-                : `${filteredItems.length} actif${filteredItems.length > 1 ? 's' : ''} · ${totalAssets > 0 ? ((subviewTotal / totalAssets) * 100).toFixed(0) : 0}% du patrimoine`}
+      {!isAll && (() => {
+        const SubIcon = currentSub.icon || BarChart3;
+        return (
+          <section className="card subview-hero">
+            <div className="subview-hero-icon-wrap">
+              <SubIcon size={22}/>
             </div>
-          </div>
-        </section>
-      )}
+            <div className="subview-hero-info">
+              <div className="subview-hero-label">{t(currentSub.labelKey)}</div>
+              <div className="subview-hero-value">
+                <AnimatedNumber value={isLiabilitiesOnly ? subviewLiabTotal : subviewTotal} format={(v) => fmt(v)}/>
+              </div>
+              <div className="subview-hero-meta">
+                {isLiabilitiesOnly
+                  ? `${filteredItems.length} prêt${filteredItems.length > 1 ? 's' : ''} · ${fmt(visibleLiabilities.reduce((s, l) => s + (parseFloat(l.monthlyPayment) || 0), 0))} / mois`
+                  : `${filteredItems.length} actif${filteredItems.length > 1 ? 's' : ''} · ${totalAssets > 0 ? ((subviewTotal / totalAssets) * 100).toFixed(0) : 0}% du patrimoine`}
+              </div>
+            </div>
+          </section>
+        );
+      })()}
 
       {/* Patrimoine history with brut / net / financier toggle */}
       {isAll && wealthHistory.length >= 1 && (
@@ -241,32 +249,44 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
         </section>
       )}
 
-      {/* Private wealth KPI strip */}
+      {/* Private wealth KPI strip — icones + AnimatedNumber pulse */}
       {isAll && totalAssets > 0 && (
         <section className="wealth-kpis">
           <div className="wk-card">
-            <div className="wk-label">{t('wealth.netAssets')}</div>
-            <div className="wk-value">{fmt(netWealthAssets)}</div>
+            <div className="wk-card-head">
+              <span className="wk-card-icon"><PiggyBank size={14}/></span>
+              <span className="wk-label">{t('wealth.netAssets')}</span>
+            </div>
+            <div className="wk-value"><AnimatedNumber value={netWealthAssets} format={(v) => fmt(v)}/></div>
             <div className="wk-meta">{t('wealth.ofAssets', { amount: fmt(totalAssets) })}</div>
           </div>
           {debtRatioWealth !== null && (
             <div className={`wk-card ${debtRatioWealth > 50 ? 'warn' : ''}`}>
-              <div className="wk-label">{t('wealth.debtRatio')}</div>
+              <div className="wk-card-head">
+                <span className="wk-card-icon"><TrendingDown size={14}/></span>
+                <span className="wk-label">{t('wealth.debtRatio')}</span>
+              </div>
               <div className="wk-value">{debtRatioWealth.toFixed(1)}%</div>
               <div className="wk-meta">{debtRatioWealth < 30 ? t('wealth.low') : debtRatioWealth < 50 ? t('wealth.moderate') : t('wealth.high')}</div>
             </div>
           )}
           {illiquidRatio !== null && (
             <div className="wk-card">
-              <div className="wk-label">{t('wealth.realEstateShare')}</div>
+              <div className="wk-card-head">
+                <span className="wk-card-icon"><Home size={14}/></span>
+                <span className="wk-label">{t('wealth.realEstateShare')}</span>
+              </div>
               <div className="wk-value">{illiquidRatio.toFixed(1)}%</div>
               <div className="wk-meta">{illiquidRatio > 70 ? t('wealth.concentrated') : t('wealth.balanced')}</div>
             </div>
           )}
           {totalMonthlyDebt > 0 && (
             <div className="wk-card">
-              <div className="wk-label">{t('wealth.totalMonthly')}</div>
-              <div className="wk-value">{fmt(totalMonthlyDebt)}</div>
+              <div className="wk-card-head">
+                <span className="wk-card-icon"><CreditCard size={14}/></span>
+                <span className="wk-label">{t('wealth.totalMonthly')}</span>
+              </div>
+              <div className="wk-value"><AnimatedNumber value={totalMonthlyDebt} format={(v) => fmt(v)}/></div>
               <div className="wk-meta">{t('wealth.perMonthAllLoans')}</div>
             </div>
           )}
