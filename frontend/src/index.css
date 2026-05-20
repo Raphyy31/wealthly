@@ -3496,6 +3496,81 @@ html, body {
   height: 1px;
   background: var(--border);
 }
+
+/* ── Settings > Categories : tabs horizontales (segmented control) ─── */
+.reg-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  background: var(--bg-sunk);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin-bottom: 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.reg-tabs::-webkit-scrollbar { display: none; }
+.reg-tab {
+  flex: 1;
+  min-width: 130px;
+  padding: 9px 14px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--ink-2);
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-sans);
+  display: flex; flex-direction: column; gap: 2px;
+  transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast);
+}
+.reg-tab:hover {
+  background: var(--bg-elev);
+  color: var(--ink);
+}
+.reg-tab.is-active {
+  background: var(--bg-elev);
+  border-color: var(--accent);
+  color: var(--ink);
+  box-shadow: 0 2px 8px -4px color-mix(in oklab, var(--accent) 30%, transparent);
+}
+.reg-tab-label {
+  font: 600 13px/1.1 var(--font-sans);
+  white-space: nowrap;
+}
+.reg-tab.is-active .reg-tab-label { color: var(--accent); }
+.reg-tab-hint {
+  font: 400 11px/1.2 var(--font-sans);
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+
+.reg-content {
+  display: flex; flex-direction: column; gap: 12px;
+  min-height: 200px;
+}
+.reg-explainer {
+  padding: 12px 14px;
+  background: var(--accent-soft);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  font: 400 13px/1.5 var(--font-sans);
+  color: var(--ink-2);
+}
+.reg-explainer strong { color: var(--ink); }
+.reg-explainer code {
+  font: 500 12px/1 var(--font-mono);
+  padding: 2px 6px;
+  background: var(--bg-elev);
+  border-radius: 4px;
+  color: var(--ink);
+}
+
+@media (max-width: 640px) {
+  .reg-tab-hint { display: none; }
+  .reg-tab { min-width: 100px; }
+}
 .tx-card-sub-pill {
   background: var(--bg-elev);
   border: 1px solid var(--border);

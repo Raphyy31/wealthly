@@ -5,8 +5,9 @@
 // Modals live in ./settings/modals/XxxModal.jsx.
 // This file owns only: SETTINGS_SECTIONS, hash-sync, SettingsView shell.
 // ============================================================================
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { User, Users, Wallet, Shield, Sparkles, Globe, Database, Wand2 } from 'lucide-react';
+import { gsap } from '../utils/gsapSetup.js';
 import { useTranslation } from 'react-i18next';
 import { MEMBER_PALETTE } from '../constants.js';
 
@@ -130,77 +131,23 @@ export function SettingsView({ members, accounts, accountBalances, saveMember, d
           )}
 
           {activeSection === 'regles' && (
-            <section className="settings-panel settings-regles">
-              <header>
-                <h2>{t('settings.rules.title')} <em>{t('settings.rules.titleAccent')}</em></h2>
-                <p className="settings-panel-intro">
-                  {t('settings.rules.intro')}
-                </p>
-              </header>
-
-              {/* Outils de maintenance — utilitaires de re-passe sur l'historique. */}
-              {(recategorizeUncategorized || recategorizeTransfers) && (
-                <div className="card settings-tools">
-                  <div className="card-header">
-                    <h3><Wand2 size={16}/> Outils de maintenance</h3>
-                    <span className="card-meta">Ré-applique les règles à l'historique en un clic.</span>
-                  </div>
-                  <div className="settings-tools-list">
-                    {recategorizeUncategorized && (
-                      <div className="settings-tool-row">
-                        <div className="settings-tool-text">
-                          <strong>Re-catégoriser les non catégorisées</strong>
-                          <span>Ré-applique les règles aux transactions actuellement en « Non catégorisé ».</span>
-                        </div>
-                        <button className="secondary-btn" type="button" onClick={recategorizeUncategorized}>
-                          Lancer
-                        </button>
-                      </div>
-                    )}
-                    {recategorizeTransfers && (
-                      <div className="settings-tool-row">
-                        <div className="settings-tool-text">
-                          <strong>Rejouer la détection des virements</strong>
-                          <span>Identifie AMEX, DÉPENSES ÉCHELONNÉES, top-ups Revolut/Lydia/Wise pré-v2. Tes overrides manuels sont préservés.</span>
-                        </div>
-                        <button className="secondary-btn" type="button" onClick={recategorizeTransfers}>
-                          Lancer
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Groupe : Catégories */}
-              <div className="settings-group-divider">
-                <span>Tes catégories</span>
-              </div>
-              <LearningToggle showToast={showToast} />
-              <MyCategoriesSection
-                categories={categories}
-                reloadCategories={reloadCategories}
-                onCategoryCreated={onCategoryCreated}
-                onCategoryDeleted={onCategoryDeleted}
-                showToast={showToast}
-              />
-
-              {/* Groupe : Marchands et règles */}
-              <div className="settings-group-divider">
-                <span>Marchands &amp; règles automatiques</span>
-              </div>
-              <PayeesSection categories={categories} showToast={showToast} />
-              <CustomRulesSection categories={categories} />
-              <TransferRulesSection
-                accounts={accounts}
-                transactions={transactions}
-                transferIds={transferIds}
-                updateTags={updateTags}
-                setTransferOverride={setTransferOverride}
-                showToast={showToast}
-              />
-            </section>
+            <RegLesPanel
+              t={t}
+              categories={categories}
+              accounts={accounts}
+              transactions={transactions}
+              transferIds={transferIds}
+              updateTags={updateTags}
+              setTransferOverride={setTransferOverride}
+              reloadCategories={reloadCategories}
+              onCategoryCreated={onCategoryCreated}
+              onCategoryDeleted={onCategoryDeleted}
+              showToast={showToast}
+              recategorizeUncategorized={recategorizeUncategorized}
+              recategorizeTransfers={recategorizeTransfers}
+            />
           )}
+
 
           {activeSection === 'devises' && (
             <DevisesSection
@@ -222,5 +169,141 @@ export function SettingsView({ members, accounts, accountBalances, saveMember, d
 
       {editingMember && <MemberEditor member={editingMember} onSave={(m) => { saveMember(m); setEditingMember(null); }} onCancel={() => setEditingMember(null)}/>}
     </div>
+  );
+}
+
+// ─── RegLesPanel : tab navigation horizontale pour Catégories & règles ───
+// Au lieu d'un long scroll, l'utilisateur clique sur la tab du module qu'il
+// veut voir. Crossfade GSAP entre tabs. Compteurs en chip sur chaque tab.
+function RegLesPanel({
+  t, categories, accounts, transactions, transferIds, updateTags, setTransferOverride,
+  reloadCategories, onCategoryCreated, onCategoryDeleted, showToast,
+  recategorizeUncategorized, recategorizeTransfers,
+}) {
+  const [activeTab, setActiveTab] = useState('rules-cat');
+  const contentRef = useRef(null);
+
+  // Anime le crossfade au changement de tab
+  useEffect(() => {
+    if (!contentRef.current) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    gsap.fromTo(contentRef.current,
+      { opacity: 0, y: 6 },
+      { opacity: 1, y: 0, duration: 0.32, ease: 'power3.out' }
+    );
+  }, [activeTab]);
+
+  const tabs = [
+    { id: 'rules-cat',  label: 'Règles catégorisation', hint: 'Label → catégorie' },
+    { id: 'rules-vir',  label: 'Règles virement',       hint: 'Label → compte cible' },
+    { id: 'categories', label: 'Mes catégories',         hint: 'Créer / supprimer' },
+    { id: 'payees',     label: 'Marchands',              hint: 'Renommer / fusionner' },
+    { id: 'tools',      label: 'Outils',                 hint: 'Ré-applique sur l\'historique' },
+  ];
+
+  return (
+    <section className="settings-panel settings-regles">
+      <header>
+        <h2>{t('settings.rules.title')} <em>{t('settings.rules.titleAccent')}</em></h2>
+        <p className="settings-panel-intro">{t('settings.rules.intro')}</p>
+      </header>
+
+      {/* Tabs horizontales (segmented control) */}
+      <div className="reg-tabs" role="tablist" aria-label="Sections règles & catégories">
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            className={`reg-tab ${activeTab === tab.id ? 'is-active' : ''}`}
+            onClick={() => setActiveTab(tab.id)}
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            title={tab.hint}
+          >
+            <span className="reg-tab-label">{tab.label}</span>
+            <span className="reg-tab-hint">{tab.hint}</span>
+          </button>
+        ))}
+      </div>
+
+      <div ref={contentRef} className="reg-content" role="tabpanel">
+        {activeTab === 'rules-cat' && (
+          <>
+            <div className="reg-explainer">
+              <strong>Catégorisation automatique.</strong> Si le label d'une tx contient le pattern, la catégorie choisie est appliquée. Ex : <code>NETFLIX</code> → Streaming.
+            </div>
+            <CustomRulesSection categories={categories} />
+          </>
+        )}
+
+        {activeTab === 'rules-vir' && (
+          <>
+            <div className="reg-explainer">
+              <strong>Virement interne automatique.</strong> Si le label match, la tx est marquée comme virement vers le compte cible. Le type (Épargne / Dépense secondaire) est déduit du rôle du compte. Ex : <code>LIVRET A</code> → ton Livret A.
+            </div>
+            <TransferRulesSection
+              accounts={accounts}
+              transactions={transactions}
+              transferIds={transferIds}
+              updateTags={updateTags}
+              setTransferOverride={setTransferOverride}
+              showToast={showToast}
+            />
+          </>
+        )}
+
+        {activeTab === 'categories' && (
+          <>
+            <LearningToggle showToast={showToast} />
+            <MyCategoriesSection
+              categories={categories}
+              reloadCategories={reloadCategories}
+              onCategoryCreated={onCategoryCreated}
+              onCategoryDeleted={onCategoryDeleted}
+              showToast={showToast}
+            />
+          </>
+        )}
+
+        {activeTab === 'payees' && (
+          <PayeesSection categories={categories} showToast={showToast} />
+        )}
+
+        {activeTab === 'tools' && (
+          <div className="card settings-tools">
+            <div className="card-header">
+              <h3><Wand2 size={16}/> Outils de maintenance</h3>
+              <span className="card-meta">Ré-applique les règles à l'historique en un clic.</span>
+            </div>
+            <div className="settings-tools-list">
+              {recategorizeUncategorized && (
+                <div className="settings-tool-row">
+                  <div className="settings-tool-text">
+                    <strong>Re-catégoriser les non catégorisées</strong>
+                    <span>Ré-applique les règles aux transactions actuellement en « Non catégorisé ».</span>
+                  </div>
+                  <button className="secondary-btn" type="button" onClick={recategorizeUncategorized}>Lancer</button>
+                </div>
+              )}
+              {recategorizeTransfers && (
+                <div className="settings-tool-row">
+                  <div className="settings-tool-text">
+                    <strong>Rejouer la détection des virements</strong>
+                    <span>Identifie AMEX, DÉPENSES ÉCHELONNÉES, top-ups Revolut/Lydia/Wise pré-v2. Tes overrides manuels sont préservés.</span>
+                  </div>
+                  <button className="secondary-btn" type="button" onClick={recategorizeTransfers}>Lancer</button>
+                </div>
+              )}
+              {!recategorizeUncategorized && !recategorizeTransfers && (
+                <div className="settings-tool-row">
+                  <div className="settings-tool-text">
+                    <em>Aucun outil disponible en mode démo.</em>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }

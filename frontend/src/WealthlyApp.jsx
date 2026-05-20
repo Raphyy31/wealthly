@@ -47,6 +47,7 @@ import { AccountDrawer } from './components/AccountDrawer.jsx';
 import { useTheme, ThemeToggle } from './components/ui/ThemeToggle.jsx';
 import Logo from './components/Logo.jsx';
 import { AddWealthModal } from './components/AddWealthModal.jsx';
+import { MemberEditor } from './views/settings/modals/MemberEditor.jsx';
 import { CreateRuleModal } from './components/CreateRuleModal.jsx';
 import { AiPromptModal } from './components/AiPromptModal.jsx';
 import { detectDuplicates } from './utils/duplicateDetector.js';
@@ -144,6 +145,9 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   // Account drawer + cross-view transaction filter (set when "voir toutes" is
   // clicked from the drawer, consumed by <Transactions> on mount).
   const [drawerAccount, setDrawerAccount] = useState(null);
+  // Member editor accessible depuis la sidebar (+) ou Settings > Foyer.
+  // {} = nouveau membre, objet = edition d'un membre existant, null = ferme.
+  const [editingMember, setEditingMember] = useState(null);
   const [navOpen, setNavOpen] = useState(false);
   const [txInitialAccountFilter, setTxInitialAccountFilter] = useState(null);
   const [theme] = useTheme();
@@ -2341,7 +2345,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
               <button
                 type="button"
                 className="ws-pill ws-pill--add"
-                onClick={() => setView('settings')}
+                onClick={() => setEditingMember({})}
                 title={t('nav.manage_members')}
               >
                 <Plus size={11}/>
@@ -2758,6 +2762,14 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
         <button onClick={() => setView('tax')} className={view === 'tax' ? 'active' : ''}><Calculator size={18}/> <span>{t('nav.tax')}</span></button>
         <button onClick={() => setView('settings')} className={view === 'settings' ? 'active' : ''}><Settings size={18}/> <span>{t('nav.settings')}</span></button>
       </nav>
+
+      {editingMember && (
+        <MemberEditor
+          member={editingMember}
+          onSave={async (m) => { await saveMember(m); setEditingMember(null); }}
+          onCancel={() => setEditingMember(null)}
+        />
+      )}
 
       {drawerAccount && (
         <AccountDrawer
