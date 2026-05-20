@@ -182,6 +182,8 @@ function RegLesPanel({
 }) {
   const [activeTab, setActiveTab] = useState('rules-cat');
   const contentRef = useRef(null);
+  const tabsRef = useRef(null);
+  const indicatorRef = useRef(null);
 
   // Anime le crossfade au changement de tab
   useEffect(() => {
@@ -191,6 +193,25 @@ function RegLesPanel({
       { opacity: 0, y: 6 },
       { opacity: 1, y: 0, duration: 0.32, ease: 'power3.out' }
     );
+  }, [activeTab]);
+
+  // GSAP magic-line — l'indicateur cobalt slide entre les boutons de tab
+  // (sprint GSAP avance 2026-05-20). Mesure le rect du bouton actif et
+  // anime left/width avec spring physics pour un feel naturel.
+  useEffect(() => {
+    if (!tabsRef.current || !indicatorRef.current) return;
+    const activeBtn = tabsRef.current.querySelector('.reg-tab.is-active');
+    if (!activeBtn) return;
+    const containerRect = tabsRef.current.getBoundingClientRect();
+    const btnRect = activeBtn.getBoundingClientRect();
+    const left = btnRect.left - containerRect.left + tabsRef.current.scrollLeft;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    gsap.to(indicatorRef.current, {
+      x: left,
+      width: btnRect.width,
+      duration: reduce ? 0 : 0.42,
+      ease: 'expo.out',
+    });
   }, [activeTab]);
 
   const tabs = [
@@ -240,8 +261,10 @@ function RegLesPanel({
         <p className="settings-panel-intro">{t('settings.rules.intro')}</p>
       </header>
 
-      {/* Tabs horizontales — icone + label, design ATM avec actif coloré */}
-      <div className="reg-tabs" role="tablist" aria-label="Sections règles & catégories">
+      {/* Tabs horizontales — icone + label, design ATM avec actif coloré
+          + indicateur cobalt magic-line qui slide entre tabs via GSAP */}
+      <div className="reg-tabs" role="tablist" aria-label="Sections règles & catégories" ref={tabsRef}>
+        <span className="reg-tab-indicator" ref={indicatorRef} aria-hidden="true"/>
         {tabs.map(tab => {
           const Icon = tab.icon;
           return (

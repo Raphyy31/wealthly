@@ -4029,8 +4029,27 @@ html, body {
   margin-bottom: 16px;
   overflow-x: auto;
   scrollbar-width: none;
+  position: relative;
 }
 .reg-tabs::-webkit-scrollbar { display: none; }
+/* Magic-line indicator GSAP-driven (sprint 2026-05-20) — pill cobalt-soft
+   qui slide en bg derriere le tab actif. position absolute pilote par
+   gsap.to() sur x + width depuis Settings.jsx > RegLesPanel. */
+.reg-tab-indicator {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 0;
+  width: 0;
+  background: var(--bg-elev);
+  border-radius: 6px;
+  box-shadow: 0 1px 3px color-mix(in oklab, var(--ink) 8%, transparent),
+              0 1px 2px color-mix(in oklab, var(--ink) 4%, transparent);
+  pointer-events: none;
+  transform: translateX(0);
+  will-change: transform, width;
+  z-index: 0;
+}
 .reg-tab {
   flex: 1;
   min-width: 0;
@@ -4042,19 +4061,19 @@ html, body {
   cursor: pointer;
   font-family: var(--font-sans);
   display: flex; align-items: center; justify-content: center; gap: 8px;
-  transition: background var(--t-fast), color var(--t-fast), box-shadow var(--t-base);
+  transition: color var(--t-fast);
   white-space: nowrap;
   position: relative;
+  z-index: 1;
 }
 .reg-tab:hover {
-  background: color-mix(in oklab, var(--ink-3) 8%, transparent);
   color: var(--ink-2);
 }
 .reg-tab.is-active {
-  background: var(--bg-elev);
+  /* Background pris en charge par .reg-tab-indicator qui slide GSAP-style */
+  background: transparent;
   color: var(--accent);
-  box-shadow: 0 1px 3px color-mix(in oklab, var(--ink) 8%, transparent),
-              0 1px 2px color-mix(in oklab, var(--ink) 4%, transparent);
+  box-shadow: none;
 }
 .reg-tab-icon { flex-shrink: 0; transition: transform var(--t-base); }
 .reg-tab.is-active .reg-tab-icon { transform: scale(1.05); }

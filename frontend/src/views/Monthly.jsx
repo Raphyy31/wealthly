@@ -10,7 +10,8 @@
 //   - Modal FiftyThirtyTwentyModal (analyse 50/30/20)
 //   - Modal Évolution (chart 6 mois)
 // ============================================================================
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { gsap } from '../utils/gsapSetup.js';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -1256,6 +1257,20 @@ function monthHumanLabel(monthKey) {
 function SankeyCard({ kind, eyebrow, label, subtitle, data, totals, isExpanded, isTeaser, isCompact, onClick, onMaximize, fmt, isNarrow, empty, deltaVs }) {
   const hasData = !empty && data.nodes.length > 0;
 
+  // GSAP crossfade : quand isExpanded toggle, on cache puis re-fade-in
+  // le body. Masque le redraw brutal du Sankey Recharts (pas de morphing
+  // natif). Sprint GSAP avance 2026-05-20.
+  const bodyRef = useRef(null);
+  useEffect(() => {
+    if (!bodyRef.current) return;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    gsap.fromTo(
+      bodyRef.current,
+      { opacity: 0 },
+      { opacity: 1, duration: 0.42, ease: 'power2.out', delay: 0.06 }
+    );
+  }, [isExpanded, isCompact]);
+
   // Hauteur dynamique du Sankey selon le nombre de feuilles. Teaser garde
   // une hauteur compacte pour laisser respirer le layout 50/50.
   const leafCount = data.nodes.filter(n => n.level === 2).length;
@@ -1335,7 +1350,7 @@ function SankeyCard({ kind, eyebrow, label, subtitle, data, totals, isExpanded, 
         )}
       </div>
 
-      <div className="mon-sankey-card-body" style={{ height: sankeyHeight }}>
+      <div className="mon-sankey-card-body" ref={bodyRef} style={{ height: sankeyHeight }}>
         {hasData ? (
           <ResponsiveContainer width="100%" height="100%">
             <Sankey
