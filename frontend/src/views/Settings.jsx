@@ -6,7 +6,7 @@
 // This file owns only: SETTINGS_SECTIONS, hash-sync, SettingsView shell.
 // ============================================================================
 import { useState, useEffect, useRef } from 'react';
-import { User, Users, Wallet, Shield, Sparkles, Globe, Database, Wand2 } from 'lucide-react';
+import { User, Users, Wallet, Shield, Sparkles, Globe, Database, Wand2, ArrowLeftRight, Tag, Store, Settings2 } from 'lucide-react';
 import { gsap } from '../utils/gsapSetup.js';
 import { useTranslation } from 'react-i18next';
 import { MEMBER_PALETTE } from '../constants.js';
@@ -194,12 +194,44 @@ function RegLesPanel({
   }, [activeTab]);
 
   const tabs = [
-    { id: 'rules-cat',  label: 'Règles catégorisation', hint: 'Label → catégorie' },
-    { id: 'rules-vir',  label: 'Règles virement',       hint: 'Label → compte cible' },
-    { id: 'categories', label: 'Mes catégories',         hint: 'Créer / supprimer' },
-    { id: 'payees',     label: 'Marchands',              hint: 'Renommer / fusionner' },
-    { id: 'tools',      label: 'Outils',                 hint: 'Ré-applique sur l\'historique' },
+    {
+      id: 'rules-cat',
+      icon: Wand2,
+      label: 'Catégorisation auto',
+      desc: 'Trie tes transactions sans clic — si un libellé contient un mot-clé, la catégorie est appliquée.',
+      example: '« NETFLIX » → Streaming vidéo',
+    },
+    {
+      id: 'rules-vir',
+      icon: ArrowLeftRight,
+      label: 'Virements internes',
+      desc: 'Évite que tes mouvements entre comptes soient comptés comme des dépenses (ou inversement).',
+      example: '« LIVRET A » → marqué virement vers ton Livret',
+    },
+    {
+      id: 'categories',
+      icon: Tag,
+      label: 'Catégories',
+      desc: 'Les boîtes dans lesquelles tes dépenses sont rangées (Logement, Courses, Restos…). Crée les tiennes ou supprime celles qui te servent pas.',
+      example: '',
+    },
+    {
+      id: 'payees',
+      icon: Store,
+      label: 'Marchands',
+      desc: 'Les enseignes détectées dans tes transactions (Carrefour, Netflix, Uber). Fusionne les doublons, renomme — chaque marchand garde sa catégorie par défaut.',
+      example: '',
+    },
+    {
+      id: 'tools',
+      icon: Settings2,
+      label: 'Outils',
+      desc: 'Ré-applique tes règles à l\'historique en un clic, ou rejoue la détection des virements internes.',
+      example: '',
+    },
   ];
+
+  const activeTabConfig = tabs.find(t => t.id === activeTab) || tabs[0];
 
   return (
     <section className="settings-panel settings-regles">
@@ -208,47 +240,45 @@ function RegLesPanel({
         <p className="settings-panel-intro">{t('settings.rules.intro')}</p>
       </header>
 
-      {/* Tabs horizontales (segmented control) */}
+      {/* Tabs horizontales — icone + label, design ATM avec actif coloré */}
       <div className="reg-tabs" role="tablist" aria-label="Sections règles & catégories">
-        {tabs.map(tab => (
-          <button
-            key={tab.id}
-            className={`reg-tab ${activeTab === tab.id ? 'is-active' : ''}`}
-            onClick={() => setActiveTab(tab.id)}
-            role="tab"
-            aria-selected={activeTab === tab.id}
-            title={tab.hint}
-          >
-            <span className="reg-tab-label">{tab.label}</span>
-            <span className="reg-tab-hint">{tab.hint}</span>
-          </button>
-        ))}
+        {tabs.map(tab => {
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              className={`reg-tab ${activeTab === tab.id ? 'is-active' : ''}`}
+              onClick={() => setActiveTab(tab.id)}
+              role="tab"
+              aria-selected={activeTab === tab.id}
+            >
+              <Icon size={16} className="reg-tab-icon"/>
+              <span className="reg-tab-label">{tab.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Description de la section active — pédagogique, exemple inline */}
+      <div className="reg-section-desc">
+        <p>{activeTabConfig.desc}</p>
+        {activeTabConfig.example && (
+          <p className="reg-section-example">Exemple : <code>{activeTabConfig.example}</code></p>
+        )}
       </div>
 
       <div ref={contentRef} className="reg-content" role="tabpanel">
-        {activeTab === 'rules-cat' && (
-          <>
-            <div className="reg-explainer">
-              <strong>Catégorisation automatique.</strong> Si le label d'une tx contient le pattern, la catégorie choisie est appliquée. Ex : <code>NETFLIX</code> → Streaming.
-            </div>
-            <CustomRulesSection categories={categories} />
-          </>
-        )}
+        {activeTab === 'rules-cat' && <CustomRulesSection categories={categories} />}
 
         {activeTab === 'rules-vir' && (
-          <>
-            <div className="reg-explainer">
-              <strong>Virement interne automatique.</strong> Si le label match, la tx est marquée comme virement vers le compte cible. Le type (Épargne / Dépense secondaire) est déduit du rôle du compte. Ex : <code>LIVRET A</code> → ton Livret A.
-            </div>
-            <TransferRulesSection
-              accounts={accounts}
-              transactions={transactions}
-              transferIds={transferIds}
-              updateTags={updateTags}
-              setTransferOverride={setTransferOverride}
-              showToast={showToast}
-            />
-          </>
+          <TransferRulesSection
+            accounts={accounts}
+            transactions={transactions}
+            transferIds={transferIds}
+            updateTags={updateTags}
+            setTransferOverride={setTransferOverride}
+            showToast={showToast}
+          />
         )}
 
         {activeTab === 'categories' && (
