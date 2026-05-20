@@ -17,6 +17,7 @@ import { dcaApi } from '../api.js';
 import { useQuotes } from '../hooks/useQuotes.js';
 import { Amount } from '../components/ui/Amount.jsx';
 import { EmptyState } from '../components/EmptyState.jsx';
+import { ResponsiveModal } from '../components/ui/ResponsiveModal.jsx';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -266,13 +267,12 @@ function PlanModal({ plan, accounts, members, onSave, onClose }) {
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" style={{ maxWidth: 520 }} onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>{plan?.id ? t('dca.editPlan') : t('dca.newPlanTitle')}</h2>
-          <button className="icon-btn-sm" onClick={onClose}><X size={16}/></button>
-        </div>
-        <div className="modal-body">
+    <ResponsiveModal open={true} onClose={onClose} className="dca-plan-editor-modal">
+      <div className="modal-header">
+        <h2>{plan?.id ? t('dca.editPlan') : t('dca.newPlanTitle')}</h2>
+        <button className="icon-btn-sm" onClick={onClose}><X size={16}/></button>
+      </div>
+      <div className="modal-body">
 
           <label><span>{t('dca.planName')}</span>
             <input value={d.name} onChange={e => set('name', e.target.value)}
@@ -373,14 +373,13 @@ function PlanModal({ plan, accounts, members, onSave, onClose }) {
               rows={2} placeholder={t('dca.notesPh')}/>
           </label>
         </div>
-        <div className="modal-footer">
-          <button className="secondary-btn" onClick={onClose}>{t('actions.cancel')}</button>
-          <button className="primary-btn" onClick={submit} disabled={saving || !d.name || !d.amount}>
-            <Check size={14}/> {saving ? t('actions.saving') : t('actions.save')}
-          </button>
-        </div>
+      <div className="modal-footer">
+        <button className="secondary-btn" onClick={onClose}>{t('actions.cancel')}</button>
+        <button className="primary-btn" onClick={submit} disabled={saving || !d.name || !d.amount}>
+          <Check size={14}/> {saving ? t('actions.saving') : t('actions.save')}
+        </button>
       </div>
-    </div>
+    </ResponsiveModal>
   );
 }
 

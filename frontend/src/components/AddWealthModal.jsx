@@ -19,6 +19,7 @@ import {
   Sparkles, CreditCard, Cloud, Edit3,
 } from 'lucide-react';
 import { CATEGORY_LABELS } from '../types/wealth.js';
+import { ResponsiveModal } from './ui/ResponsiveModal.jsx';
 
 const CATEGORIES = [
   { key: 'liquidites',      label: CATEGORY_LABELS.liquidites,      desc: 'Compte courant, Livret A, LDDS, cash',  icon: Wallet },
@@ -95,9 +96,8 @@ export function AddWealthModal({ onClose, onConnectBank, onPickType }) {
                           <>{CATEGORY_LABELS[category]}</>;
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" style={{ maxWidth: 560 }} onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
+    <ResponsiveModal open={true} onClose={onClose} className="add-wealth-modal">
+      <div className="modal-header">
           {step !== 'category' && (
             <button className="icon-btn" onClick={goCategory} title="Retour">
               <ChevronLeft size={18}/>
@@ -130,9 +130,9 @@ export function AddWealthModal({ onClose, onConnectBank, onPickType }) {
           </div>
         )}
 
-        {step === 'detail' && (
-          <div className="modal-body">
-            <p className="modal-eyebrow">Quelle enveloppe ?</p>
+      {step === 'detail' && (
+        <div className="modal-body">
+          <p className="modal-eyebrow">Quelle enveloppe ?</p>
             <div className="subcat-list">
               {(SUBTYPES_BY_CATEGORY[category] || []).map(s => (
                 <button
@@ -189,7 +189,6 @@ export function AddWealthModal({ onClose, onConnectBank, onPickType }) {
             </div>
           </div>
         )}
-      </div>
-    </div>
+    </ResponsiveModal>
   );
 }
