@@ -653,6 +653,7 @@ export function Monthly({
             totals={refTotals}
             isExpanded={expandedSankey.has('type')}
             isTeaser={!expandedSankey.has('type')}
+            isCompact={sankeyLayoutMode === 'both'}
             onClick={() => toggleSankey('type')}
             fmt={fmt}
             isNarrow={isNarrow}
@@ -667,6 +668,7 @@ export function Monthly({
             totals={realTotals}
             isExpanded={expandedSankey.has('real')}
             isTeaser={!expandedSankey.has('real')}
+            isCompact={sankeyLayoutMode === 'both'}
             onClick={() => toggleSankey('real')}
             fmt={fmt}
             isNarrow={isNarrow}
@@ -887,7 +889,7 @@ const sankeyFmt = new Intl.NumberFormat('fr-FR', {
   maximumFractionDigits: 0, minimumFractionDigits: 0,
 });
 
-function SankeyNode({ x, y, width, height, index, payload, fmt, teaser }) {
+function SankeyNode({ x, y, width, height, index, payload, fmt, teaser, compact }) {
   if (!payload) return null;
   const isLeft   = payload.level === 0;
   const isMiddle = payload.level === 1;
@@ -907,13 +909,17 @@ function SankeyNode({ x, y, width, height, index, payload, fmt, teaser }) {
   // Node bar — cap rx so tall nodes stay rectangular, not pill-shaped.
   const rx = Math.min(5, Math.floor(width / 2));
 
-  // Label positioning
-  const labelX = isLeft ? x - 16 : x + width + 14;
-  const anchor  = isLeft ? 'end' : 'start';
+  // Label positioning. En compact, le niveau 1 (parent) ancre a GAUCHE du
+  // node pour eviter le chevauchement avec les leaves a droite.
+  const labelLeftSide = isLeft || (compact && isMiddle);
+  const labelX = labelLeftSide ? x - 14 : x + width + 12;
+  const anchor  = labelLeftSide ? 'end' : 'start';
   const midY    = y + height / 2;
 
   const hasAmount = typeof payload.amount === 'number' && payload.amount > 0;
-  const hasPct    = isMiddle && typeof payload.pctOfIncome === 'number' && payload.pctOfIncome > 0;
+  // En compact, on droppe le pourcentage (% du revenu) pour reduire le bruit
+  // dans le label deja contraint.
+  const hasPct    = !compact && isMiddle && typeof payload.pctOfIncome === 'number' && payload.pctOfIncome > 0;
   const amtStr    = hasAmount ? sankeyFmt.format(Math.round(payload.amount)) : '';
   const pctStr    = hasPct
     ? ` · ${payload.pctOfIncome >= 10 ? payload.pctOfIncome.toFixed(0) : payload.pctOfIncome.toFixed(1)}%`
@@ -921,11 +927,14 @@ function SankeyNode({ x, y, width, height, index, payload, fmt, teaser }) {
 
   // Always show name + amount on ONE line (avoids height constraints entirely).
   // When the node is tall enough, split into two lines for breathing room.
-  const twoLines   = height >= 28 && hasAmount;
+  const twoLines   = height >= (compact ? 32 : 28) && hasAmount;
   const nameLine   = (payload.icon ? `${payload.icon} ` : '') + (payload.name || '');
   const singleLine = hasAmount ? `${nameLine}  ${amtStr}` : nameLine;
   const nameY      = twoLines ? midY - 8 : midY;
-  const fontSize   = isLeft ? 13 : height < 18 ? 10.5 : 12;
+  // Fonts ~1px plus petites en mode compact pour gagner de la place.
+  const fontSize   = compact
+    ? (isLeft ? 12 : height < 18 ? 10 : 11)
+    : (isLeft ? 13 : height < 18 ? 10.5 : 12);
 
   return (
     <Layer key={`sn-${index}`}>
@@ -1168,7 +1177,7 @@ function monthHumanLabel(monthKey) {
 // SankeyCard — encapsule un Sankey + son header (label, KPI strip).
 // En mode teaser : Sankey dimme et flouté, overlay invitant a cliquer.
 // En mode expanded : tout est visible normalement.
-function SankeyCard({ kind, eyebrow, label, subtitle, data, totals, isExpanded, isTeaser, onClick, fmt, isNarrow, empty, deltaVs }) {
+function SankeyCard({ kind, eyebrow, label, subtitle, data, totals, isExpanded, isTeaser, isCompact, onClick, fmt, isNarrow, empty, deltaVs }) {
   const hasData = !empty && data.nodes.length > 0;
 
   // Hauteur dynamique du Sankey selon le nombre de feuilles. Teaser garde
@@ -1178,11 +1187,13 @@ function SankeyCard({ kind, eyebrow, label, subtitle, data, totals, isExpanded, 
   const teaserHeight = 280;
   const sankeyHeight = isExpanded ? fullHeight : teaserHeight;
 
-  // Marges : reduites en teaser pour que la structure reste lisible meme
-  // sans les labels detailles.
-  const margin = isExpanded
-    ? { top: 24, right: isNarrow ? 130 : 220, bottom: 24, left: isNarrow ? 100 : 160 }
-    : { top: 16, right: 24, bottom: 16, left: 24 };
+  // Marges : reduites en compact (50/50 both expanded) ou teaser pour
+  // economiser l'espace horizontal — la carte ne fait que ~50% de la largeur.
+  const margin = !isExpanded
+    ? { top: 16, right: 24, bottom: 16, left: 24 }
+    : isCompact
+      ? { top: 20, right: isNarrow ? 100 : 130, bottom: 20, left: isNarrow ? 70 : 90 }
+      : { top: 24, right: isNarrow ? 130 : 220, bottom: 24, left: isNarrow ? 100 : 160 };
 
   return (
     <div
@@ -1242,11 +1253,11 @@ function SankeyCard({ kind, eyebrow, label, subtitle, data, totals, isExpanded, 
           <ResponsiveContainer width="100%" height="100%">
             <Sankey
               data={data}
-              nodePadding={isExpanded ? (isNarrow ? 16 : 26) : 10}
-              nodeWidth={isExpanded ? 14 : 8}
+              nodePadding={!isExpanded ? 10 : isCompact ? (isNarrow ? 12 : 18) : (isNarrow ? 16 : 26)}
+              nodeWidth={isExpanded ? (isCompact ? 10 : 14) : 8}
               iterations={64}
               margin={margin}
-              node={<SankeyNode fmt={fmt} teaser={isTeaser}/>}
+              node={<SankeyNode fmt={fmt} teaser={isTeaser} compact={isCompact}/>}
               link={<SankeyLink/>}
             >
               {isExpanded && (
