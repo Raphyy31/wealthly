@@ -844,10 +844,24 @@ export function DCAView({ accounts = [], members = [], dcaPlans = [], onPlansCha
 
   const handleSave = async (data) => {
     try {
-      if (data.id) await dcaApi.update(data.id, data);
-      else await dcaApi.create(data);
-      await reload();
-      notify(data.id ? t('toasts.planUpdated') : t('toasts.planCreated'));
+      if (data.id) {
+        const updated = await dcaApi.update(data.id, data);
+        // Optimistic : remplace dans la liste immediatement
+        if (updated && updated.id) {
+          onPlansChange(dcaPlans.map(p => p.id === updated.id ? updated : p));
+        }
+        notify(t('toasts.planUpdated'));
+      } else {
+        const created = await dcaApi.create(data);
+        // Optimistic : ajoute en bout de liste immediatement (l'user voit
+        // son plan apparaitre sans attendre le GET list)
+        if (created && created.id) {
+          onPlansChange([...dcaPlans, created]);
+        }
+        notify(t('toasts.planCreated'));
+      }
+      // Resync background (safety net, ne bloque pas l'UI)
+      reload().catch(() => {});
     } catch (e) { notify(e.message, false); }
   };
 
@@ -884,11 +898,17 @@ export function DCAView({ accounts = [], members = [], dcaPlans = [], onPlansCha
 
   const handleDelete = async (plan) => {
     if (!confirm(t('confirms.deletePlan', { name: plan.name }))) return;
+    // Optimistic : retire de la liste immediatement
+    onPlansChange(dcaPlans.filter(p => p.id !== plan.id));
     try {
       await dcaApi.remove(plan.id);
-      await reload();
       notify(t('toasts.planDeleted'));
-    } catch (e) { notify(e.message, false); }
+      reload().catch(() => {});
+    } catch (e) {
+      notify(e.message, false);
+      // Rollback : re-fetch pour restaurer si la suppression a echoue
+      reload().catch(() => {});
+    }
   };
 
   // KPIs are computed inside ProjectionHero from the (filtered) plan set.
