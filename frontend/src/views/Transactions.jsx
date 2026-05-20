@@ -544,6 +544,7 @@ export function Transactions({ transactions, accounts, categories, members = [],
               <button className="icon-btn-sm" onClick={() => setShowPanel(false)} aria-label="Fermer"><X size={14}/></button>
             </div>
 
+            {/* 1. Type (segmented) — la ligne la plus visible */}
             <div className="tx-filter-section">
               <div className="tx-filter-label">Type</div>
               <div className="tx-filter-radio-row">
@@ -561,108 +562,100 @@ export function Transactions({ transactions, accounts, categories, members = [],
               </div>
             </div>
 
-            <div className="tx-filter-section">
-              <div className="tx-filter-label">Période</div>
-              <div className="tx-filter-row-2">
-                <input type="date" value={filters.dateFrom} onChange={(e) => setField('dateFrom', e.target.value)} aria-label="Date de début"/>
-                <input type="date" value={filters.dateTo} onChange={(e) => setField('dateTo', e.target.value)} aria-label="Date de fin"/>
-              </div>
-            </div>
-
-            <div className="tx-filter-section">
-              <div className="tx-filter-label">Montant (€, valeur absolue)</div>
-              <div className="tx-filter-row-2">
-                <input type="number" placeholder="min" value={filters.amountMin} onChange={(e) => setField('amountMin', e.target.value)} min="0" step="0.01"/>
-                <input type="number" placeholder="max" value={filters.amountMax} onChange={(e) => setField('amountMax', e.target.value)} min="0" step="0.01"/>
-              </div>
-            </div>
-
-            {members.length > 1 && (
+            {/* 2. Période + Montant cote-a-cote — economise une rangee */}
+            <div className="tx-filter-grid-2col">
               <div className="tx-filter-section">
-                <div className="tx-filter-label">Membre(s)</div>
-                <div className="tx-filter-chips">
-                  {members.map(m => (
-                    <button
-                      key={m.id}
-                      className={`tx-filter-chip ${filters.members.includes(m.id) ? 'active' : ''}`}
-                      onClick={() => toggleInList('members', m.id)}
-                      style={filters.members.includes(m.id) ? { borderColor: m.color, color: m.color } : {}}
-                    >
-                      <span className="member-avatar" style={{ background: m.color }}>{m.name.charAt(0).toUpperCase()}</span>
-                      {m.name}
-                    </button>
-                  ))}
+                <div className="tx-filter-label">Période</div>
+                <div className="tx-filter-row-2">
+                  <input type="date" value={filters.dateFrom} onChange={(e) => setField('dateFrom', e.target.value)} aria-label="Date de début"/>
+                  <input type="date" value={filters.dateTo} onChange={(e) => setField('dateTo', e.target.value)} aria-label="Date de fin"/>
                 </div>
               </div>
-            )}
-
-            {accounts.length > 0 && (
               <div className="tx-filter-section">
-                <div className="tx-filter-label">Comptes</div>
-                <div className="tx-filter-chips">
-                  {accounts.map(a => (
-                    <button
-                      key={a.id}
-                      className={`tx-filter-chip ${filters.accs.includes(a.id) ? 'active' : ''}`}
-                      onClick={() => toggleInList('accs', a.id)}
-                    >{a.name}</button>
-                  ))}
+                <div className="tx-filter-label">Montant (€)</div>
+                <div className="tx-filter-row-2">
+                  <input type="number" placeholder="min" value={filters.amountMin} onChange={(e) => setField('amountMin', e.target.value)} min="0" step="0.01"/>
+                  <input type="number" placeholder="max" value={filters.amountMax} onChange={(e) => setField('amountMax', e.target.value)} min="0" step="0.01"/>
                 </div>
               </div>
-            )}
-
-            <div className="tx-filter-section">
-              <div className="tx-filter-label">Catégories</div>
-              <input
-                className="tx-filter-search-input"
-                placeholder="Filtrer les catégories…"
-                value={catFilterSearch}
-                onChange={e => setCatFilterSearch(e.target.value)}
-              />
-              {transferCatVisible && transferCat && (
-                <>
-                  <div className="tx-filter-sublabel">Virements</div>
-                  <div className="tx-filter-cat-grid">
-                    <label className={`tx-filter-cat ${filters.cats.includes('transfer') ? 'active' : ''}`}>
-                      <input type="checkbox" checked={filters.cats.includes('transfer')} onChange={() => toggleInList('cats', 'transfer')}/>
-                      <span className="tx-filter-cat-icon">{transferCat.icon}</span>
-                      <span className="tx-filter-cat-name">{transferCat.name}</span>
-                      <span className="tx-filter-cat-count">{catCounts['transfer'] || 0}</span>
-                    </label>
-                  </div>
-                </>
-              )}
-              {incomeCats.length > 0 && (
-                <>
-                  <div className="tx-filter-sublabel">Revenus</div>
-                  <div className="tx-filter-cat-grid">
-                    {incomeCats.map(c => (
-                      <label key={c.id} className={`tx-filter-cat ${filters.cats.includes(c.id) ? 'active' : ''}`}>
-                        <input type="checkbox" checked={filters.cats.includes(c.id)} onChange={() => toggleInList('cats', c.id)}/>
-                        <span className="tx-filter-cat-icon">{c.icon}</span>
-                        <span className="tx-filter-cat-name">{c.name}</span>
-                        <span className="tx-filter-cat-count">{catCounts[c.id] || 0}</span>
-                      </label>
-                    ))}
-                  </div>
-                </>
-              )}
-              {expenseCats.length > 0 && (
-                <>
-                  <div className="tx-filter-sublabel">Dépenses</div>
-                  <div className="tx-filter-cat-grid">
-                    {expenseCats.map(c => (
-                      <label key={c.id} className={`tx-filter-cat ${filters.cats.includes(c.id) ? 'active' : ''}`}>
-                        <input type="checkbox" checked={filters.cats.includes(c.id)} onChange={() => toggleInList('cats', c.id)}/>
-                        <span className="tx-filter-cat-icon">{c.icon}</span>
-                        <span className="tx-filter-cat-name">{c.name}</span>
-                        <span className="tx-filter-cat-count">{catCounts[c.id] || 0}</span>
-                      </label>
-                    ))}
-                  </div>
-                </>
-              )}
             </div>
+
+            {/* 3. Catégories — chips horizontaux, type indique par couleur du dot
+                Le filtre Type au-dessus deja exprime revenus/depenses, donc les
+                sous-headers sont redondants. Une seule liste compacte. */}
+            <div className="tx-filter-section">
+              <div className="tx-filter-section-head">
+                <div className="tx-filter-label">Catégories</div>
+                <input
+                  className="tx-filter-search-input"
+                  placeholder="Rechercher…"
+                  value={catFilterSearch}
+                  onChange={e => setCatFilterSearch(e.target.value)}
+                />
+              </div>
+              <div className="tx-filter-cat-chips">
+                {transferCatVisible && transferCat && (
+                  <button
+                    key="transfer"
+                    className={`tx-filter-cat-chip ${filters.cats.includes('transfer') ? 'active' : ''}`}
+                    onClick={() => toggleInList('cats', 'transfer')}
+                  >
+                    <span className="tx-filter-cat-chip-icon">{transferCat.icon}</span>
+                    {transferCat.name}
+                    <span className="tx-filter-cat-chip-count">{catCounts['transfer'] || 0}</span>
+                  </button>
+                )}
+                {[...incomeCats, ...expenseCats].map(c => (
+                  <button
+                    key={c.id}
+                    className={`tx-filter-cat-chip ${filters.cats.includes(c.id) ? 'active' : ''} ${c.type === 'income' ? 'is-income' : ''}`}
+                    onClick={() => toggleInList('cats', c.id)}
+                  >
+                    <span className="tx-filter-cat-chip-icon">{c.icon}</span>
+                    {c.name}
+                    <span className="tx-filter-cat-chip-count">{catCounts[c.id] || 0}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 4. Comptes + Membres — chips compactes */}
+            {(accounts.length > 0 || members.length > 1) && (
+              <div className="tx-filter-grid-2col">
+                {accounts.length > 0 && (
+                  <div className="tx-filter-section">
+                    <div className="tx-filter-label">Comptes</div>
+                    <div className="tx-filter-chips">
+                      {accounts.map(a => (
+                        <button
+                          key={a.id}
+                          className={`tx-filter-chip ${filters.accs.includes(a.id) ? 'active' : ''}`}
+                          onClick={() => toggleInList('accs', a.id)}
+                        >{a.name}</button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {members.length > 1 && (
+                  <div className="tx-filter-section">
+                    <div className="tx-filter-label">Membres</div>
+                    <div className="tx-filter-chips">
+                      {members.map(m => (
+                        <button
+                          key={m.id}
+                          className={`tx-filter-chip ${filters.members.includes(m.id) ? 'active' : ''}`}
+                          onClick={() => toggleInList('members', m.id)}
+                          style={filters.members.includes(m.id) ? { borderColor: m.color, color: m.color } : {}}
+                        >
+                          <span className="member-avatar" style={{ background: m.color }}>{m.name.charAt(0).toUpperCase()}</span>
+                          {m.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {allTags.length > 0 && (
               <div className="tx-filter-section">
