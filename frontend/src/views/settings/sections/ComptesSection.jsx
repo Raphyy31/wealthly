@@ -1,9 +1,9 @@
 // ComptesSection — Settings > Comptes & synchronisation
-// Refonte 2026-05-20 : carte read-only par defaut, accordion editor au clic.
-// Lisibilite x3 quand on a 10+ comptes, edition cachee mais accessible.
-import { useState, useRef, useLayoutEffect } from 'react';
+// Refonte 2026-05-20 : tabs horizontales pour Comptes / Connexions, +
+// carte read-only par defaut avec accordion editor au clic.
+import { useState, useRef, useLayoutEffect, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Wallet, Upload, Edit3, Trash2, ArrowLeftRight, ChevronDown, AlertTriangle } from 'lucide-react';
+import { Wallet, Upload, Edit3, Trash2, ArrowLeftRight, ChevronDown, AlertTriangle, Link2 } from 'lucide-react';
 import { Combobox } from '../../../components/Combobox.jsx';
 import { BusyButton } from '../../../components/ui/BusyButton.jsx';
 import { ACCOUNT_ROLES, ACCOUNT_ROLE_KEYS, suggestAccountRole, SUPPORTED_CURRENCIES, bankColor } from '../../../utils.js';
@@ -28,6 +28,34 @@ export function ComptesSection({ accounts, accountBalances, members, transaction
   const [editingId, setEditingId] = useState(null);
   const [editingNameId, setEditingNameId] = useState(null);
   const [editingNameVal, setEditingNameVal] = useState('');
+  const [activeTab, setActiveTab] = useState('comptes');
+  const tabContentRef = useRef(null);
+
+  // Crossfade GSAP au changement de tab
+  useEffect(() => {
+    if (!tabContentRef.current) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    gsap.fromTo(tabContentRef.current,
+      { opacity: 0, y: 6 },
+      { opacity: 1, y: 0, duration: 0.32, ease: 'power3.out' }
+    );
+  }, [activeTab]);
+
+  const tabs = [
+    {
+      id: 'comptes',
+      icon: Wallet,
+      label: 'Mes comptes',
+      desc: 'Tes comptes connectés ou importés. Renomme, attribue un rôle (courant / épargne / Revolut…), gère les titulaires.',
+    },
+    {
+      id: 'connexions',
+      icon: Link2,
+      label: 'Connexions bancaires',
+      desc: 'Tes banques liées via DSP2/GoCardless. Vérifie l\'état de la synchro, reconnecte ou supprime un accès.',
+    },
+  ];
+  const activeTabConfig = tabs.find(t => t.id === activeTab) || tabs[0];
 
   const commitName = (a) => {
     const trimmed = editingNameVal.trim();
@@ -42,6 +70,31 @@ export function ComptesSection({ accounts, accountBalances, members, transaction
         <p className="settings-panel-intro">{t('settings.accounts.intro')}</p>
       </header>
 
+      {/* Tabs horizontales — meme pattern que Catégories & règles */}
+      <div className="reg-tabs" role="tablist" aria-label="Comptes & synchronisation">
+        {tabs.map(tab => {
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              className={`reg-tab ${activeTab === tab.id ? 'is-active' : ''}`}
+              onClick={() => setActiveTab(tab.id)}
+              role="tab"
+              aria-selected={activeTab === tab.id}
+            >
+              <Icon size={16} className="reg-tab-icon"/>
+              <span className="reg-tab-label">{tab.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="reg-section-desc">
+        <p>{activeTabConfig.desc}</p>
+      </div>
+
+      <div ref={tabContentRef} className="reg-content" role="tabpanel">
+        {activeTab === 'comptes' && (
       <div className="card">
         <div className="card-header">
           <h3><Wallet size={16}/> {t('settings.accounts.bankAccounts')}</h3>
@@ -177,6 +230,12 @@ export function ComptesSection({ accounts, accountBalances, members, transaction
           <strong>Professionnel</strong> — exclu du patrimoine personnel.
         </p>
       </div>
+        )}
+
+        {activeTab === 'connexions' && (
+          <BankConnectionsSection />
+        )}
+      </div>
 
       {mergingId && (
         <MergeModal
@@ -189,8 +248,6 @@ export function ComptesSection({ accounts, accountBalances, members, transaction
           }}
         />
       )}
-
-      <BankConnectionsSection />
     </section>
   );
 }
