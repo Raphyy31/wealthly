@@ -35,7 +35,6 @@ import { Onboarding } from './views/Onboarding.jsx';
 import { Transactions } from './views/Transactions.jsx';
 import { Analysis } from './views/Analysis.jsx';
 import { Monthly } from './views/Monthly.jsx';
-import { SankeyMorphDemo } from './views/SankeyMorphDemo.jsx';
 import { Cashflow } from './views/Cashflow.jsx';
 import { Dashboard } from './views/Dashboard.jsx';
 import { Wealth } from './views/Wealth.jsx';
@@ -2463,11 +2462,6 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             baseCurrency={baseCurrency} rates={rates}
             currentUser={currentUser}
           />
-        )}
-        {view === 'sankey-demo' && (
-          <Suspense fallback={null}>
-            <SankeyMorphDemo/>
-          </Suspense>
         )}
         {['monthly','cashflow'].includes(view) && (
           <div className="monthly-hub">
