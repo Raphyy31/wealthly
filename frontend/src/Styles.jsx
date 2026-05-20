@@ -868,6 +868,23 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
   gap: 12px;
   padding: 16px 18px;
 }
+.wc-card-head-btn {
+  width: 100%;
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.18s;
+}
+.wc-card-head-btn:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--accent) 4%, transparent);
+}
+.wc-card-head-btn:disabled { cursor: default; }
+.wc-card-head-btn:focus-visible {
+  outline: none;
+  background: var(--accent-soft);
+}
 .wc-card-icon {
   width: 36px; height: 36px;
   border-radius: 9px;
@@ -1041,11 +1058,44 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
   border: 1px solid var(--border);
   border-radius: 14px;
   overflow: hidden;
-  transition: border-color 0.22s, box-shadow 0.22s;
+  transition: border-color 0.22s, box-shadow 0.22s, transform 0.22s;
+  text-align: left;
+  width: 100%;
+  font-family: inherit;
+  cursor: pointer;
 }
 .wealth-hero-card:hover {
   border-color: var(--border-strong);
   box-shadow: 0 4px 14px -6px color-mix(in oklab, var(--ink) 10%, transparent);
+}
+.wealth-hero-card:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* Layout intérieur : value à gauche, mini sparkline à droite */
+.wealth-hero-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  margin-bottom: 4px;
+}
+.wealth-hero-value-block { flex: 1; min-width: 0; }
+.wealth-hero-spark {
+  width: 130px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.wealth-hero-spark-hint {
+  font: 500 10px/1 var(--font-mono);
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+  text-align: right;
+  margin-top: 2px;
+}
+@media (max-width: 720px) {
+  .wealth-hero-spark { display: none; }
 }
 .wealth-hero-card::before {
   /* Subtle accent stripe top — different per card */

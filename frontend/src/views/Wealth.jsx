@@ -5,7 +5,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
+  PieChart, Pie, Cell, ResponsiveContainer, Tooltip, AreaChart, Area,
 } from 'recharts';
 import {
   Plus, Wallet, BarChart3, Bitcoin, TrendingUp, TrendingDown, CreditCard, Home, Sparkles, PiggyBank,
@@ -170,6 +170,32 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
   // Patrimoine immo net = valorisation residence - emprunt residence
   const realEstateNetWealth = realEstateValue - mortgageDebt;
 
+  // Series mensuelles pour les sparklines des hero cards
+  const sparkSeries = useMemo(() => {
+    const sorted = [...(wealthHistory || [])].sort((a, b) => (a.month || '').localeCompare(b.month || ''));
+    const last12 = sorted.slice(-12);
+    const fin = last12.map(s => {
+      const liquid = s.liquid_wealth || 0;
+      const assets = s.assets_value || 0;
+      const liab = s.liabilities_value || 0;
+      const re = s.real_estate_value;
+      const f = s.financial_assets_value;
+      const mort = s.mortgage_debt;
+      const otherDebt = s.other_debt != null ? s.other_debt : (mort == null ? 0 : Math.max(0, liab - mort));
+      const finVal = f != null ? f : (liquid + Math.max(0, assets - (re || 0)));
+      return { month: s.month, value: finVal - otherDebt };
+    });
+    const immo = last12.map(s => {
+      const re = s.real_estate_value || 0;
+      const mort = s.mortgage_debt || 0;
+      return { month: s.month, value: re - mort };
+    });
+    return { fin, immo };
+  }, [wealthHistory]);
+
+  // Modal detail categorie (popup quand on clique sur le header d'une category card)
+  const [openCategoryModal, setOpenCategoryModal] = useState(null); // catKey | null
+
   // Asset class allocation for donut chart
   const classAllocation = useMemo(() => {
     const classes = {};
@@ -202,39 +228,45 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
         <button className="primary-btn" onClick={() => (onOpenAddWizard ? onOpenAddWizard() : setShowAddPicker(true))}><Plus size={14}/> {t('actions.add')}</button>
       </div>
 
-      <nav className="wealth-subnav">
-        {WEALTH_SUBVIEWS.map(s => {
-          const Icon = s.icon;
-          const count = s.categories === null
-            ? visibleItems.length
-            : visibleItems.filter(i => s.categories.includes(i.category)).length;
-          return (
-            <button
-              key={s.key}
-              className={`wealth-subnav-btn ${subview === s.key ? 'active' : ''}`}
-              onClick={() => setSubview(s.key)}
-            >
-              <Icon size={14}/>
-              <span>{t(s.labelKey)}</span>
-              {count > 0 && <span className="wealth-subnav-count">{count}</span>}
-            </button>
-          );
-        })}
-      </nav>
 
       {/* HERO 2 cards + grid de categories — placement TOP pour visibilite immediate */}
       {isAll && (
         <section className="wealth-hero">
-          <div className="wealth-hero-card wealth-hero-card--financial">
+          <button
+            type="button"
+            className="wealth-hero-card wealth-hero-card--financial"
+            onClick={() => setOpenCategoryModal('chart-fin')}
+            title="Voir l'évolution complète"
+          >
             <div className="wealth-hero-eyebrow">
               <PiggyBank size={12}/>
               <span>Patrimoine financier</span>
             </div>
-            <div className="wealth-hero-value num">
-              <AnimatedNumber value={financialWealthLocal} format={(v) => fmt(v)}/>
-            </div>
-            <div className="wealth-hero-meta">
-              Liquidités, investissements, cryptos · hors immobilier
+            <div className="wealth-hero-row">
+              <div className="wealth-hero-value-block">
+                <div className="wealth-hero-value num">
+                  <AnimatedNumber value={financialWealthLocal} format={(v) => fmt(v)}/>
+                </div>
+                <div className="wealth-hero-meta">
+                  Liquidités, investissements, cryptos · hors immobilier
+                </div>
+              </div>
+              {sparkSeries.fin.length >= 2 && (
+                <div className="wealth-hero-spark">
+                  <ResponsiveContainer width="100%" height={56}>
+                    <AreaChart data={sparkSeries.fin} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="sparkFinGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.35}/>
+                          <stop offset="100%" stopColor="var(--accent)" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <Area type="monotone" dataKey="value" stroke="var(--accent)" strokeWidth={1.8} fill="url(#sparkFinGrad)" dot={false} isAnimationActive={false}/>
+                    </AreaChart>
+                  </ResponsiveContainer>
+                  <div className="wealth-hero-spark-hint">12 derniers mois ↗</div>
+                </div>
+              )}
             </div>
             <div className="wealth-hero-breakdown">
               <span><span className="wh-dot" style={{ background: 'var(--d2)' }}/> Liquidités <strong className="num">{fmt(liquidWealth)}</strong></span>
@@ -245,17 +277,42 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
                 <span><span className="wh-dot" style={{ background: 'var(--negative)' }}/> Conso/auto <strong className="num">−{fmt(totalLiabilities - mortgageDebt)}</strong></span>
               )}
             </div>
-          </div>
-          <div className="wealth-hero-card wealth-hero-card--realestate">
+          </button>
+          <button
+            type="button"
+            className="wealth-hero-card wealth-hero-card--realestate"
+            onClick={() => setOpenCategoryModal('chart-immo')}
+            title="Voir l'évolution complète"
+          >
             <div className="wealth-hero-eyebrow">
               <Home size={12}/>
               <span>Patrimoine immobilier net</span>
             </div>
-            <div className={`wealth-hero-value num ${realEstateNetWealth < 0 ? 'neg' : ''}`}>
-              <AnimatedNumber value={realEstateNetWealth} format={(v) => fmt(v)}/>
-            </div>
-            <div className="wealth-hero-meta">
-              Valorisation résidence − emprunt résidence
+            <div className="wealth-hero-row">
+              <div className="wealth-hero-value-block">
+                <div className={`wealth-hero-value num ${realEstateNetWealth < 0 ? 'neg' : ''}`}>
+                  <AnimatedNumber value={realEstateNetWealth} format={(v) => fmt(v)}/>
+                </div>
+                <div className="wealth-hero-meta">
+                  Valorisation résidence − emprunt résidence
+                </div>
+              </div>
+              {sparkSeries.immo.length >= 2 && realEstateValue > 0 && (
+                <div className="wealth-hero-spark">
+                  <ResponsiveContainer width="100%" height={56}>
+                    <AreaChart data={sparkSeries.immo} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="sparkImmoGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="var(--d3)" stopOpacity={0.35}/>
+                          <stop offset="100%" stopColor="var(--d3)" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <Area type="monotone" dataKey="value" stroke="var(--d3)" strokeWidth={1.8} fill="url(#sparkImmoGrad)" dot={false} isAnimationActive={false}/>
+                    </AreaChart>
+                  </ResponsiveContainer>
+                  <div className="wealth-hero-spark-hint">12 derniers mois</div>
+                </div>
+              )}
             </div>
             <div className="wealth-hero-breakdown">
               {realEstateValue > 0 && (
@@ -268,7 +325,7 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
                 <span className="wealth-hero-empty">Pas encore de bien immobilier</span>
               )}
             </div>
-          </div>
+          </button>
         </section>
       )}
 
@@ -317,6 +374,7 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
                   onItemClick={handleItemClick}
                   onItemDelete={handleItemDelete}
                   onAdd={handleAdd}
+                  onHeaderClick={(k) => setOpenCategoryModal(k)}
                 />
               );
             })}
@@ -346,57 +404,6 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
           </section>
         );
       })()}
-
-      {/* Patrimoine history with brut / net / financier toggle */}
-      {isAll && wealthHistory.length >= 1 && (
-        <section className="card chart-card">
-          <NetWorthChart snapshots={wealthHistory} fmt={fmt}/>
-        </section>
-      )}
-
-      {/* Private wealth KPI strip — icones + AnimatedNumber pulse */}
-      {isAll && totalAssets > 0 && (
-        <section className="wealth-kpis">
-          <div className="wk-card">
-            <div className="wk-card-head">
-              <span className="wk-card-icon"><PiggyBank size={14}/></span>
-              <span className="wk-label">{t('wealth.netAssets')}</span>
-            </div>
-            <div className="wk-value"><AnimatedNumber value={netWealthAssets} format={(v) => fmt(v)}/></div>
-            <div className="wk-meta">{t('wealth.ofAssets', { amount: fmt(totalAssets) })}</div>
-          </div>
-          {debtRatioWealth !== null && (
-            <div className={`wk-card ${debtRatioWealth > 50 ? 'warn' : ''}`}>
-              <div className="wk-card-head">
-                <span className="wk-card-icon"><TrendingDown size={14}/></span>
-                <span className="wk-label">{t('wealth.debtRatio')}</span>
-              </div>
-              <div className="wk-value">{debtRatioWealth.toFixed(1)}%</div>
-              <div className="wk-meta">{debtRatioWealth < 30 ? t('wealth.low') : debtRatioWealth < 50 ? t('wealth.moderate') : t('wealth.high')}</div>
-            </div>
-          )}
-          {illiquidRatio !== null && (
-            <div className="wk-card">
-              <div className="wk-card-head">
-                <span className="wk-card-icon"><Home size={14}/></span>
-                <span className="wk-label">{t('wealth.realEstateShare')}</span>
-              </div>
-              <div className="wk-value">{illiquidRatio.toFixed(1)}%</div>
-              <div className="wk-meta">{illiquidRatio > 70 ? t('wealth.concentrated') : t('wealth.balanced')}</div>
-            </div>
-          )}
-          {totalMonthlyDebt > 0 && (
-            <div className="wk-card">
-              <div className="wk-card-head">
-                <span className="wk-card-icon"><CreditCard size={14}/></span>
-                <span className="wk-label">{t('wealth.totalMonthly')}</span>
-              </div>
-              <div className="wk-value"><AnimatedNumber value={totalMonthlyDebt} format={(v) => fmt(v)}/></div>
-              <div className="wk-meta">{t('wealth.perMonthAllLoans')}</div>
-            </div>
-          )}
-        </section>
-      )}
 
       {/* Plafonds régulés — only on 'all', renders nothing if no PEA/Livret A/LDDS detected */}
       {isAll && (
@@ -513,6 +520,40 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
         );
       })()}
 
+      {openCategoryModal && (
+        <CategoryDetailModal
+          categoryKey={openCategoryModal}
+          items={openCategoryModal.startsWith('chart-') ? [] : visibleItems.filter(i => i.category === openCategoryModal)}
+          wealthHistory={wealthHistory}
+          sparkSeries={sparkSeries}
+          financialWealthLocal={financialWealthLocal}
+          realEstateNetWealth={realEstateNetWealth}
+          fmt={fmt}
+          onClose={() => setOpenCategoryModal(null)}
+          onItemClick={(it) => {
+            setOpenCategoryModal(null);
+            // Reuse the same item click logic via setTimeout pour laisser le modal se fermer
+            setTimeout(() => {
+              if (it.sourceTable === 'liability') {
+                const l = liabilities.find(x => x.id === it.sourceId);
+                if (l) { setViewingLia(l); return; }
+              }
+              if (it.sourceTable === 'asset') {
+                const a = assets.find(x => x.id === it.sourceId);
+                if (a) {
+                  if (it.category === 'immobilier')      { setViewingRE(a); return; }
+                  if (it.category === 'liquidites')      { setViewingLiq({ ...a, _item: it, isAccount: false }); return; }
+                  if (it.category === 'investissements') { setViewingInv(a); return; }
+                  if (it.category === 'cryptos')         { setViewingCrypto(a); return; }
+                  if (it.category === 'autres')          { setViewingOther(a); return; }
+                }
+              }
+              if (it.sourceTable === 'account') { setViewingLiq({ ...it, isAccount: true }); return; }
+              setDrawerItem(it);
+            }, 50);
+          }}
+        />
+      )}
       {editingAsset && <AssetEditor asset={editingAsset} members={members} liabilities={visibleLiabilities} onSave={async (a) => { const saved = await saveAsset(a); setEditingAsset(null); return saved; }} onCancel={() => setEditingAsset(null)}/>}
       {editingLia && <LiabilityEditor liability={editingLia} members={members} assets={assets} onSave={(l) => { saveLiability(l); setEditingLia(null); }} onCancel={() => setEditingLia(null)}/>}
       {viewingLia && (
@@ -702,6 +743,132 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
           }}
         />
       )}
+    </div>
+  );
+}
+
+// ─── CategoryDetailModal ──────────────────────────────────────────────
+// Popup quand on clique sur le header d'une category card (Liquidités,
+// Investissements...) OU sur un hero card (Financier / Immo).
+// Affiche : titre + total + chart 12 mois + liste complete des items.
+import { X as CloseIcon, Wallet as WalletIcon, TrendingUp as TUpIcon, Home as HomeIcon, Bitcoin as BitcoinIcon, Sparkles as SparklesIcon, CreditCard as CCIcon, LineChart as LCIcon } from 'lucide-react';
+
+const MODAL_CATEGORY_META = {
+  liquidites:      { Icon: WalletIcon, color: 'var(--d2)',     title: 'Liquidités' },
+  investissements: { Icon: TUpIcon,    color: 'var(--accent)', title: 'Investissements' },
+  immobilier:      { Icon: HomeIcon,   color: 'var(--d3)',     title: 'Immobilier' },
+  cryptos:         { Icon: BitcoinIcon,color: 'var(--d7)',     title: 'Cryptos' },
+  autres:          { Icon: SparklesIcon,color: 'var(--d4)',    title: 'Autres' },
+  emprunts:        { Icon: CCIcon,     color: 'var(--negative)', title: 'Emprunts' },
+  'chart-fin':     { Icon: LCIcon,     color: 'var(--accent)', title: 'Patrimoine financier — Évolution' },
+  'chart-immo':    { Icon: LCIcon,     color: 'var(--d3)',     title: 'Patrimoine immobilier net — Évolution' },
+};
+
+function CategoryDetailModal({ categoryKey, items, wealthHistory, sparkSeries, financialWealthLocal, realEstateNetWealth, fmt, onClose, onItemClick }) {
+  const meta = MODAL_CATEGORY_META[categoryKey] || MODAL_CATEGORY_META.autres;
+  const Icon = meta.Icon;
+  const isChartFin = categoryKey === 'chart-fin';
+  const isChartImmo = categoryKey === 'chart-immo';
+  const isChartMode = isChartFin || isChartImmo;
+
+  const total = isChartFin ? financialWealthLocal
+    : isChartImmo ? realEstateNetWealth
+    : items.reduce((s, i) => s + Math.abs(parseFloat(i.value) || 0), 0);
+
+  // ESC to close
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  const chartData = isChartFin ? sparkSeries.fin : isChartImmo ? sparkSeries.immo : [];
+
+  return (
+    <div className="cdm-overlay" onClick={onClose}>
+      <div className="cdm-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={meta.title}>
+        <header className="cdm-head">
+          <div className="cdm-head-id">
+            <div className="cdm-icon" style={{ background: `color-mix(in oklab, ${meta.color} 14%, transparent)`, color: meta.color }}>
+              <Icon size={20}/>
+            </div>
+            <div>
+              <div className="cdm-title">{meta.title}</div>
+              <div className="cdm-meta">
+                {isChartMode ? '12 derniers mois' : `${items.length} ${categoryKey === 'emprunts' ? (items.length > 1 ? 'prêts' : 'prêt') : items.length > 1 ? 'actifs' : 'actif'}`}
+              </div>
+            </div>
+          </div>
+          <div className="cdm-head-right">
+            <div className={`cdm-total num ${categoryKey === 'emprunts' ? 'neg' : ''}`}>
+              {categoryKey === 'emprunts' && total > 0 ? '−' : ''}{fmt(Math.abs(total))}
+            </div>
+            <button className="cdm-close" onClick={onClose} aria-label="Fermer">
+              <CloseIcon size={18}/>
+            </button>
+          </div>
+        </header>
+
+        {/* Chart big si mode chart-fin/chart-immo OU si on a au moins 2 points wealth history pour cette categorie */}
+        {isChartMode && chartData.length >= 2 && (
+          <div className="cdm-chart">
+            <ResponsiveContainer width="100%" height={240}>
+              <AreaChart data={chartData} margin={{ top: 10, right: 24, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id={`cdmGrad-${categoryKey}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={meta.color} stopOpacity={0.36}/>
+                    <stop offset="100%" stopColor={meta.color} stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <Area type="monotone" dataKey="value" stroke={meta.color} strokeWidth={2} fill={`url(#cdmGrad-${categoryKey})`} dot={false}/>
+                <Tooltip formatter={(v) => fmt(v)} contentStyle={{ background: 'var(--bg-elev)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}/>
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+
+        {!isChartMode && (
+          <div className="cdm-body">
+            {items.length === 0 ? (
+              <div className="cdm-empty">
+                <em>Aucun élément dans cette catégorie.</em>
+              </div>
+            ) : (
+              <ul className="cdm-items">
+                {items.sort((a, b) => Math.abs(b.value || 0) - Math.abs(a.value || 0)).map(item => (
+                  <li
+                    key={item.id}
+                    className="cdm-item"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => onItemClick(item)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onItemClick(item); } }}
+                  >
+                    <div className="cdm-item-info">
+                      <div className="cdm-item-name">{item.name}</div>
+                      <div className="cdm-item-meta">
+                        {item.meta?.bank && <span>{item.meta.bank}</span>}
+                        <span className={`badge badge-${item.syncMode}`}>
+                          {item.syncMode === 'synced' ? 'Sync' : 'Manuel'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="cdm-item-value-wrap">
+                      <div className="cdm-item-value num">{fmt(item.value)}</div>
+                      {item.plLatente != null && categoryKey !== 'immobilier' && Math.abs(item.plLatente) > 0.5 && (
+                        <div className={`cdm-item-delta num ${item.plLatente >= 0 ? 'up' : 'down'}`}>
+                          {item.plLatente >= 0 ? '↑ +' : '↓ '}{fmt(Math.abs(item.plLatente))}
+                          {item.plLatentePct != null && ` · ${item.plLatente >= 0 ? '+' : ''}${item.plLatentePct.toFixed(1)}%`}
+                        </div>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

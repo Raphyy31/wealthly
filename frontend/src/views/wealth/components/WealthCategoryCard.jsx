@@ -19,7 +19,7 @@ const CATEGORY_VISUAL = {
 
 const TOP_N_BY_DEFAULT = 3;
 
-export function WealthCategoryCard({ category, items, total, totalWealth, fmt, onItemClick, onItemDelete, onAdd }) {
+export function WealthCategoryCard({ category, items, total, totalWealth, fmt, onItemClick, onItemDelete, onAdd, onHeaderClick }) {
   const visual = CATEGORY_VISUAL[category] || CATEGORY_VISUAL.autres;
   const Icon = visual.Icon;
   const [expanded, setExpanded] = useState(false);
@@ -50,7 +50,13 @@ export function WealthCategoryCard({ category, items, total, totalWealth, fmt, o
 
   return (
     <div className={`wc-card ${isEmpty ? 'is-empty' : ''}`}>
-      <div className="wc-card-head">
+      <button
+        type="button"
+        className="wc-card-head wc-card-head-btn"
+        onClick={() => !isEmpty && onHeaderClick && onHeaderClick(category)}
+        disabled={isEmpty}
+        title={isEmpty ? '' : `Voir le détail ${visual.label}`}
+      >
         <div className="wc-card-icon" style={{ background: visual.tint, color: visual.color }}>
           <Icon size={18}/>
         </div>
@@ -66,7 +72,7 @@ export function WealthCategoryCard({ category, items, total, totalWealth, fmt, o
             {category === 'emprunts' && total > 0 ? '−' : ''}{fmt(Math.abs(total))}
           </div>
         </div>
-      </div>
+      </button>
 
       <div ref={bodyRef} className="wc-card-body" style={{ height: 0, overflow: 'hidden' }}>
         <div ref={contentRef}>
