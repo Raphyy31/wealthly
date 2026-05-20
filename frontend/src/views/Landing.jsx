@@ -6,7 +6,7 @@
 // backdrop-blur nav au scroll, micro-interactions (border + bg, pas translateY).
 // Texte minimal style fintech (Finary/Lydia/Qonto).
 // ============================================================================
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   motion, useInView, useMotionValue, useReducedMotion, animate as fmAnimate,
   useScroll, useTransform, useSpring,
@@ -16,13 +16,70 @@ import Logo from '../components/Logo.jsx';
 import { IphoneScrollSection } from '../components/IphoneScrollSection.jsx';
 import { BanksMarquee } from '../components/BanksMarquee.jsx';
 import { MagneticCursor } from '../components/MagneticCursor.jsx';
-import { gsap, ScrollTrigger, mm, DURATIONS, EASES } from '../utils/gsapSetup.js';
+import { gsap, ScrollTrigger, SplitText, mm, DURATIONS, EASES } from '../utils/gsapSetup.js';
 
 // ─── Premium ease ─────────────────────────────────────────────────────────
 const ease = [0.22, 1, 0.36, 1];
 const easeOut = [0.16, 1, 0.3, 1];
 
 // ─── Digit roll — odometer/airport-board feel ─────────────────────────────
+// SplitTextHero — titre hero anime mot par mot via GSAP SplitText.
+// Premier mot 'Votre patrimoine,' en Geist 500, deuxieme ligne 'piloté
+// avec rigueur.' en Newsreader italic. Stagger 60ms, ease expo.out.
+function SplitTextHero() {
+  const rootRef = useRef(null);
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const line1 = root.querySelector('.sth-line-1');
+    const line2 = root.querySelector('.sth-line-2');
+    if (!line1 || !line2) return;
+
+    if (reduced) {
+      // Snap, pas d'anim
+      gsap.set([line1, line2], { opacity: 1 });
+      return;
+    }
+
+    // Split chaque ligne en mots
+    const split1 = SplitText.create(line1, { type: 'words', wordsClass: 'sth-word' });
+    const split2 = SplitText.create(line2, { type: 'words', wordsClass: 'sth-word' });
+
+    gsap.set(root, { opacity: 1 });
+
+    const tl = gsap.timeline();
+    tl.from(split1.words, {
+      opacity: 0,
+      y: 18,
+      duration: 0.65,
+      ease: 'expo.out',
+      stagger: 0.06,
+    })
+    .from(split2.words, {
+      opacity: 0,
+      y: 18,
+      duration: 0.7,
+      ease: 'expo.out',
+      stagger: 0.05,
+    }, '-=0.35');
+
+    return () => {
+      tl.kill();
+      split1.revert();
+      split2.revert();
+    };
+  }, []);
+
+  return (
+    <span ref={rootRef} style={{ opacity: 0 }}>
+      <span className="sth-line-1" style={{ display: 'inline-block' }}>Votre patrimoine,</span>
+      <br/>
+      <em className="sth-line-2" style={{ display: 'inline-block' }}>piloté avec rigueur.</em>
+    </span>
+  );
+}
+
 function RollingDigit({ digit, delay = 0, duration = 1.2 }) {
   const reduced = useReducedMotion();
   if (reduced) return <span>{digit}</span>;
@@ -322,23 +379,7 @@ export default function Landing({ onSignIn, onSignUp, onTryDemo }) {
           <div className="lc-masthead">
             <div>
               <h1 className="lc-title">
-                <motion.span
-                  style={{ display: 'inline-block' }}
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, ease }}
-                >
-                  Votre patrimoine,
-                </motion.span>
-                <br/>
-                <motion.em
-                  style={{ display: 'inline-block' }}
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.35, ease }}
-                >
-                  piloté avec rigueur.
-                </motion.em>
+                <SplitTextHero/>
               </h1>
             </div>
             <motion.div
