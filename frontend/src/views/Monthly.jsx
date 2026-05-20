@@ -22,7 +22,7 @@ import {
   ChevronDown, ChevronRight, X, BarChart3, Calendar,
   ChevronLeft, Coins, Sparkles,
 } from 'lucide-react';
-import { formatCurrency, formatDate, monthKey } from '../utils.js';
+import { formatCurrency, formatDate, monthKey, getTransferType } from '../utils.js';
 import { useIsNarrow } from '../hooks/useIsNarrow.js';
 import { RefMonthEditor } from '../components/RefMonthEditor.jsx';
 import { FiftyThirtyTwentyModal } from '../components/FiftyThirtyTwentyModal.jsx';
@@ -135,6 +135,27 @@ export function Monthly({
       });
   }, [transactions, accounts, memberShare, transferIds, selectedMonth]);
 
+  // Virements internes typés 'savings' du mois sélectionné. On les sort du
+  // bucket "neutralisé" et on les compte comme epargne (cas Livret A pas
+  // synchro : l'utilisateur veut que le 1000 EUR aille en epargne et pas
+  // disparaisse silencieusement).
+  const monthSavingsTransfers = useMemo(() => {
+    const monthIds = new Set(transactions.filter(t => monthKey(t.date) === selectedMonth).map(t => t.id));
+    return transactions
+      .filter(t => transferIds.has(t.id) && monthIds.has(t.id))
+      .filter(t => getTransferType(t, accounts) === 'savings')
+      .map(t => {
+        const acc = accounts.find(a => a.id === t.accountId);
+        const share = acc ? memberShare(acc) : 1;
+        return { ...t, sharedAmount: (t.amount || 0) * share };
+      });
+  }, [transactions, accounts, memberShare, transferIds, selectedMonth]);
+
+  // Total savings provenant des virements typés (outflows depuis le compte source).
+  const savingsFromTransfers = useMemo(() => {
+    return monthSavingsTransfers.reduce((s, t) => s + Math.max(0, -t.sharedAmount), 0);
+  }, [monthSavingsTransfers]);
+
   // Per (kind, categoryId) totals for the selected real month.
   // kind is derived from the category's type field, NOT the sign of the amount.
   // This prevents refunds (positive amounts on expense categories) from appearing under "Entrées".
@@ -160,9 +181,11 @@ export function Monthly({
     for (const v of realByCat.values()) {
       t[v.kind] = (t[v.kind] || 0) + v.total;
     }
+    // Inclut les virements typés 'savings' dans l'épargne totale (cf monthSavingsTransfers).
+    t.saving += savingsFromTransfers;
     t.balance = t.income - t.expense - t.saving;
     return t;
-  }, [realByCat]);
+  }, [realByCat, savingsFromTransfers]);
 
   // KPI strip
   const isCurrentMonth = selectedMonth === currentMonth;
@@ -394,9 +417,49 @@ export function Monthly({
       });
     }
 
+    // Branche Épargne (virements internes typés 'savings'). Ajoute un node
+    // de niveau 1 + 2 si savingsFromTransfers > 0, alimente proportionnellement
+    // depuis chaque source de revenu.
+    if (savingsFromTransfers > 0.5 && totalIncome > 0) {
+      const savingsNodeIdx = nodes.length;
+      nodes.push({
+        name: 'Épargne',
+        icon: '💰',
+        level: 1,
+        kind: 'saving',
+        color: 'var(--accent)',
+        amount: savingsFromTransfers,
+        pctOfIncome: (savingsFromTransfers / totalIncome) * 100,
+      });
+      // Sous-node (level 2) : "Virement Livret", lien parent -> sous-node
+      const savingsLeafIdx = nodes.length;
+      nodes.push({
+        name: 'Virement Livret',
+        icon: '↔',
+        level: 2,
+        kind: 'saving',
+        color: 'var(--accent)',
+        amount: savingsFromTransfers,
+      });
+      links.push({
+        source: savingsNodeIdx,
+        target: savingsLeafIdx,
+        value: savingsFromTransfers,
+        color: 'var(--accent)',
+      });
+      // Income -> savings, proportionnel
+      [...incomeAgg.entries()].forEach(([incKey, inc]) => {
+        const incShare = inc.amount / totalIncome;
+        const val = savingsFromTransfers * incShare;
+        if (val > 0.5) {
+          links.push({ source: incomeNodeIdx[incKey], target: savingsNodeIdx, value: val, color: 'var(--accent)' });
+        }
+      });
+    }
+
     return { nodes, links };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [monthTx, categories]);
+  }, [monthTx, categories, savingsFromTransfers]);
 
   // UI state — quelles cartes Sankey sont expanded ? Set ('type' et/ou 'real').
   // Vide = 50/50 teaser. Une seule = 60/40. Les deux = 50/50 expanded.

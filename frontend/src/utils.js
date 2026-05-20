@@ -88,6 +88,46 @@ export const accountIncludeInNetWorth = (role) => (ACCOUNT_ROLES[role] || ACCOUN
 export const accountCountsAsIncome = (role) => (ACCOUNT_ROLES[role] || ACCOUNT_ROLES.principal).countsAsIncome;
 export const accountCountsAsExpense = (role) => (ACCOUNT_ROLES[role] || ACCOUNT_ROLES.principal).countsAsExpense;
 
+// ─── Virements internes typés ───────────────────────────────────────
+// Une transaction marquee comme virement interne peut etre de 2 types :
+//
+//   "savings"   = vers un compte d'epargne (Livret A, LDDS, PEA...).
+//                 Compte comme epargne (ajoute a realTotals.saving), pas
+//                 comme depense. Utile quand le compte cible n'est pas
+//                 synchro -> l'utilisateur veut que le 1000 EUR aille en
+//                 epargne plutot que d'etre simplement neutralise.
+//
+//   "secondary" = vers un compte de depenses secondaires (Revolut, N26).
+//                 Neutralise pour le cashflow (ni depense, ni epargne).
+//                 Les vraies depenses seront tracees sur le compte cible.
+//
+// Stocke via un tag sur la tx au format "transfer-dest:<account_id>".
+// Le type est derive du role du compte cible.
+const TRANSFER_DEST_TAG_PREFIX = 'transfer-dest:';
+
+export const getTransferDestAccountId = (tx) => {
+  const tags = tx?.tags || [];
+  const tag = tags.find(t => typeof t === 'string' && t.startsWith(TRANSFER_DEST_TAG_PREFIX));
+  return tag ? tag.slice(TRANSFER_DEST_TAG_PREFIX.length) : null;
+};
+
+export const buildTransferDestTag = (accountId) => `${TRANSFER_DEST_TAG_PREFIX}${accountId}`;
+
+// Determine le type d'un virement interne :
+//   - 'savings'   si destination est un compte de role 'epargne' (ou 'investissement')
+//   - 'secondary' si destination est un compte de role 'depenses' (Revolut...)
+//   - null        sinon (destination inconnue, role principal, etc.)
+export const getTransferType = (tx, accounts) => {
+  const destId = getTransferDestAccountId(tx);
+  if (!destId) return null;
+  const dest = (accounts || []).find(a => a.id === destId);
+  if (!dest) return null;
+  const role = dest.role || 'principal';
+  if (role === 'epargne' || role === 'investissement') return 'savings';
+  if (role === 'depenses') return 'secondary';
+  return null;
+};
+
 // Heuristic role suggestion from transaction patterns. Returns
 // { role, confidence } where confidence is 'high' | 'medium' | 'low'. Used
 // in the Settings UI to nudge the user when the freshly-imported default

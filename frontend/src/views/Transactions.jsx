@@ -5,10 +5,12 @@
 // (with active-filter count badge) + reset; expanded panel adds multi-select
 // catégories / comptes / membres, date range, amount range, and tx type.
 // ============================================================================
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { Search, ArrowUpDown, Repeat, Trash2, Filter, X, RotateCcw, Sparkles, Plus, Download } from 'lucide-react';
-import { formatDate } from '../utils.js';
+import { Search, ArrowUpDown, Repeat, Trash2, Filter, X, RotateCcw, Sparkles, Plus, Download, ArrowLeftRight, PiggyBank, CreditCard } from 'lucide-react';
+import { formatDate, getTransferType, getTransferDestAccountId, buildTransferDestTag, ACCOUNT_ROLES } from '../utils.js';
+import { gsap } from '../utils/gsapSetup.js';
 
 const EMPTY_FILTERS = {
   cats: [],          // string[] — empty means "all"
@@ -238,6 +240,8 @@ export function Transactions({ transactions, accounts, categories, members = [],
   const [sortKey, setSortKey] = useState('date');
   const [sortDir, setSortDir] = useState('desc');
   const [editingTx, setEditingTx] = useState(null);
+  // Popover "marquer comme virement interne" : { txId, anchorRect } | null
+  const [transferPickerTx, setTransferPickerTx] = useState(null);
   const [editingSubcat, setEditingSubcat] = useState(null);  // tx.id whose Détail picker is open
   const panelRef = useRef(null);
 
@@ -1002,15 +1006,29 @@ export function Transactions({ transactions, accounts, categories, members = [],
                             )}
                           </div>
                           <div className="tx-card-col tx-card-col-cat">
-                            {isTransfer ? (
-                              <button
-                                className="tx-card-cat-pill transfer"
-                                onClick={() => setTransferOverride && setTransferOverride(tx.id, false)}
-                                title="Détecté transfert — clic pour annuler"
-                              >
-                                ↔ Virement interne
-                              </button>
-                            ) : (
+                            {isTransfer ? (() => {
+                              const txfType = getTransferType(tx, accounts);
+                              const destId = getTransferDestAccountId(tx);
+                              const destAcc = destId ? accounts.find(a => a.id === destId) : null;
+                              const label = txfType === 'savings'
+                                ? '↔ → Épargne'
+                                : txfType === 'secondary'
+                                  ? '↔ → Dépense secondaire'
+                                  : '↔ Virement interne';
+                              const cls = txfType === 'savings' ? 'transfer savings' : txfType === 'secondary' ? 'transfer secondary' : 'transfer';
+                              return (
+                                <button
+                                  className={`tx-card-cat-pill ${cls}`}
+                                  onClick={(e) => {
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    setTransferPickerTx({ txId: tx.id, anchorRect: rect });
+                                  }}
+                                  title={destAcc ? `Vers ${destAcc.name || destAcc.bank} — clic pour modifier` : 'Clic pour préciser ou annuler'}
+                                >
+                                  {label}
+                                </button>
+                              );
+                            })() : (
                               <button
                                 className="tx-card-cat-pill"
                                 style={{
@@ -1074,9 +1092,12 @@ export function Transactions({ transactions, accounts, categories, members = [],
                             {!isTransfer && setTransferOverride && (
                               <button
                                 className="tx-card-action transfer-toggle"
-                                onClick={() => setTransferOverride(tx.id, true)}
-                                title="Marquer comme transfert interne"
-                              >↔</button>
+                                onClick={(e) => {
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  setTransferPickerTx({ txId: tx.id, anchorRect: rect });
+                                }}
+                                title="Marquer comme virement interne…"
+                              ><ArrowLeftRight size={12}/></button>
                             )}
                             <button
                               className="tx-card-action delete"
@@ -1102,6 +1123,153 @@ export function Transactions({ transactions, accounts, categories, members = [],
           </div>
         );
       })()}
+
+      {transferPickerTx && (
+        <TransferDestPopover
+          tx={transactions.find(t => t.id === transferPickerTx.txId)}
+          anchorRect={transferPickerTx.anchorRect}
+          accounts={accounts}
+          onClose={() => setTransferPickerTx(null)}
+          onMark={async (destAccountId, isTransfer) => {
+            const tx = transactions.find(t => t.id === transferPickerTx.txId);
+            if (!tx) { setTransferPickerTx(null); return; }
+            const currentTags = (tx.tags || []).filter(t => !(typeof t === 'string' && t.startsWith('transfer-dest:')));
+            if (isTransfer) {
+              if (destAccountId) currentTags.push(buildTransferDestTag(destAccountId));
+              if (updateTags) await updateTags(tx.id, currentTags);
+              if (setTransferOverride) await setTransferOverride(tx.id, true);
+            } else {
+              if (updateTags) await updateTags(tx.id, currentTags);
+              if (setTransferOverride) await setTransferOverride(tx.id, false);
+            }
+            setTransferPickerTx(null);
+          }}
+        />
+      )}
     </div>
   );
+}
+
+// ─── TransferDestPopover ─────────────────────────────────────────────
+// Popover positionne pres du bouton ↔ d'une transaction. Liste les autres
+// comptes (sauf celui de la tx), groupes par role pour clarifier. Click =
+// marque la tx comme virement avec destination, type derive du role :
+//   - epargne / investissement → 'savings' (compte en epargne)
+//   - depenses → 'secondary' (neutralise, vraies depenses sur le cible)
+//   - principal → marquage 'sans destination' (legacy)
+// Animation GSAP : scale + opacity in 220ms.
+function TransferDestPopover({ tx, anchorRect, accounts, onClose, onMark }) {
+  const ref = useRef(null);
+  const overlayRef = useRef(null);
+
+  useLayoutEffect(() => {
+    if (!ref.current || !overlayRef.current) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      gsap.set(ref.current, { opacity: 1, scale: 1 });
+      return;
+    }
+    gsap.fromTo(overlayRef.current, { opacity: 0 }, { opacity: 1, duration: 0.18, ease: 'power2.out' });
+    gsap.fromTo(ref.current,
+      { opacity: 0, scale: 0.94, y: -6 },
+      { opacity: 1, scale: 1, y: 0, duration: 0.22, ease: 'power3.out' }
+    );
+  }, []);
+
+  // ESC pour fermer
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  if (!tx) return null;
+
+  // Position : sous le bouton, ajuste si overflow droite
+  const popWidth = 320;
+  const top = (anchorRect?.bottom || 0) + 8 + window.scrollY;
+  let left = (anchorRect?.left || 0) + window.scrollX;
+  if (left + popWidth > window.innerWidth - 16) {
+    left = Math.max(16, window.innerWidth - popWidth - 16);
+  }
+
+  // Filtre les comptes : pas celui de la tx + ordre par role
+  const eligible = (accounts || []).filter(a => a.id !== tx.accountId);
+  const grouped = {
+    savings: eligible.filter(a => a.role === 'epargne' || a.role === 'investissement'),
+    secondary: eligible.filter(a => a.role === 'depenses'),
+    principal: eligible.filter(a => !a.role || a.role === 'principal'),
+    other: eligible.filter(a => a.role && !['epargne','investissement','depenses','principal'].includes(a.role)),
+  };
+
+  const renderAccount = (acc, hint) => (
+    <button
+      key={acc.id}
+      className="tdp-acc"
+      onClick={() => onMark(acc.id, true)}
+    >
+      <span className="tdp-acc-name">
+        <span className="tdp-acc-dot" style={{ background: acc.role === 'epargne' ? 'var(--accent)' : acc.role === 'depenses' ? 'var(--warning)' : 'var(--ink-3)' }}/>
+        {acc.name || acc.bank || '—'}
+      </span>
+      <span className="tdp-acc-hint">{hint}</span>
+    </button>
+  );
+
+  const popover = (
+    <>
+      <div ref={overlayRef} className="tdp-overlay" onClick={onClose}/>
+      <div
+        ref={ref}
+        className="tdp-popover"
+        style={{ position: 'absolute', top, left, width: popWidth, opacity: 0 }}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-label="Choisir le compte cible du virement interne"
+      >
+        <div className="tdp-head">
+          <div className="tdp-title">Vers quel compte ?</div>
+          <div className="tdp-sub">Le type de virement est déduit du rôle du compte cible.</div>
+        </div>
+
+        {grouped.savings.length > 0 && (
+          <div className="tdp-group">
+            <div className="tdp-group-title"><PiggyBank size={11}/> → ÉPARGNE</div>
+            {grouped.savings.map(a => renderAccount(a, 'Comptera en épargne'))}
+          </div>
+        )}
+
+        {grouped.secondary.length > 0 && (
+          <div className="tdp-group">
+            <div className="tdp-group-title"><CreditCard size={11}/> → DÉPENSE SECONDAIRE</div>
+            {grouped.secondary.map(a => renderAccount(a, 'Neutralisé (dépenses sur le compte cible)'))}
+          </div>
+        )}
+
+        {grouped.principal.length > 0 && (
+          <div className="tdp-group">
+            <div className="tdp-group-title">→ AUTRE COMPTE PRINCIPAL</div>
+            {grouped.principal.map(a => renderAccount(a, 'Neutralisé (mais pas un cas type)'))}
+          </div>
+        )}
+
+        {grouped.other.length > 0 && (
+          <div className="tdp-group">
+            <div className="tdp-group-title">→ AUTRES</div>
+            {grouped.other.map(a => renderAccount(a, ''))}
+          </div>
+        )}
+
+        <div className="tdp-foot">
+          <button className="tdp-foot-btn" onClick={() => onMark(null, true)}>
+            Virement sans destination précise
+          </button>
+          <button className="tdp-foot-btn danger" onClick={() => onMark(null, false)}>
+            Pas un virement
+          </button>
+        </div>
+      </div>
+    </>
+  );
+
+  return createPortal(popover, document.body);
 }
