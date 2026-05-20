@@ -11,6 +11,7 @@
 //   - Modal Évolution (chart 6 mois)
 // ============================================================================
 import React, { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import {
   ComposedChart, Bar, Line, ResponsiveContainer,
@@ -1395,7 +1396,7 @@ function SankeyFullscreenModal({ kind, data, totals, label, eyebrow, fmt, onClos
   const leafCount = data.nodes.filter(n => n.level === 2).length;
   const sankeyHeight = Math.max(560, leafCount * 38 + 120);
 
-  return (
+  const content = (
     <div className="sankey-fullscreen-overlay" onClick={onClose}>
       <div className="sankey-fullscreen-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={`${label} — plein écran`}>
         <header className="sankey-fullscreen-head">
@@ -1449,6 +1450,10 @@ function SankeyFullscreenModal({ kind, data, totals, label, eyebrow, fmt, onClos
       </div>
     </div>
   );
+
+  // Portal au body pour bypasser tout parent avec transform/filter qui
+  // casserait position: fixed.
+  return createPortal(content, document.body);
 }
 
 function SankeyLink({ sourceX, targetX, sourceY, targetY, sourceControlX, targetControlX, linkWidth, payload, index }) {
