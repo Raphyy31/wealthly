@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { X, Check, ChevronLeft, ChevronRight, Home, CreditCard, Loader2 } from 'lucide-react';
 import { Combobox } from '../../../components/Combobox.jsx';
 import * as api from '../../../api.js';
+import { ResponsiveModal } from '../../../components/ui/ResponsiveModal.jsx';
 
 const RE_SUBTYPES = [
   { key: 'rp',         label: 'Résidence principale' },
@@ -92,8 +93,7 @@ export function RealEstateEditor({ asset, members, liabilities, onSave, onCancel
   })();
 
   return (
-    <div className="modal-backdrop" onClick={onCancel}>
-      <div className="modal modal--wizard" onClick={(e) => e.stopPropagation()}>
+    <ResponsiveModal open={true} onClose={onCancel}> e.stopPropagation()}>
         <div className="modal-header">
           <h2>{asset.id ? 'Modifier mon immobilier' : 'Ajouter mon immobilier'}</h2>
           <button className="icon-btn-sm" onClick={onCancel}><X size={16}/></button>
@@ -267,7 +267,6 @@ export function RealEstateEditor({ asset, members, liabilities, onSave, onCancel
             </button>
           )}
         </div>
-      </div>
-    </div>
+      </ResponsiveModal>
   );
 }

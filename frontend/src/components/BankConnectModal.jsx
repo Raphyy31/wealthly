@@ -10,6 +10,7 @@
 import { useState } from 'react';
 import { Plus, X, ChevronRight } from 'lucide-react';
 import * as api from '../api.js';
+import { ResponsiveModal } from './ui/ResponsiveModal.jsx';
 
 const COUNTRIES = [
   { code: 'FR', name: '🇫🇷 France' },
@@ -68,8 +69,7 @@ export function BankConnectModal({ onClose }) {
   );
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" style={{ maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
+    <ResponsiveModal open={true} onClose={onClose}> e.stopPropagation()}>
         <div className="modal-header">
           <h2>🏦 Connecter ma banque</h2>
           <button className="icon-btn-sm" onClick={onClose}><X size={16}/></button>
@@ -138,7 +138,6 @@ export function BankConnectModal({ onClose }) {
             </div>
           </div>
         )}
-      </div>
-    </div>
+      </ResponsiveModal>
   );
 }

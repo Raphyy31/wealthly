@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Check, X, Sparkles, ArrowLeftRight } from 'lucide-react';
 import { CategoryDropdown } from './CategoryDropdown.jsx';
+import { ResponsiveModal } from './ui/ResponsiveModal.jsx';
 
 // Modal that lets the user create (and edit) a categorization rule.
 // Pre-fills with the auto-extracted merchant keyword, but the user is free
@@ -69,8 +70,7 @@ export function CreateRuleModal({ open, suggested = '', categories = [], initial
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" style={{ maxWidth: 520 }} onClick={e => e.stopPropagation()}>
+    <ResponsiveModal open={true} onClose={onClose}>
         <CreateRuleStyles/>
         <div className="modal-header">
           <h2 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -168,8 +168,7 @@ export function CreateRuleModal({ open, suggested = '', categories = [], initial
             <Check size={14}/> {submitting ? '…' : (mode === 'transfer' ? 'Marquer comme virement' : 'Créer la règle')}
           </button>
         </div>
-      </div>
-    </div>
+      </ResponsiveModal>
   );
 }
 

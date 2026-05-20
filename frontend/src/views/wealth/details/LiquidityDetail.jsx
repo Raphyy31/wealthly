@@ -10,6 +10,7 @@ import { ChevronLeft, X, Edit3, BarChart3 } from 'lucide-react';
 import { formatCurrency, formatDate } from '../../../utils.js';
 import { ownersList, splitTitle, DV3_TOOLTIP } from '../utils.js';
 import { DetailV3Styles } from '../styles.jsx';
+import { ResponsiveModal } from '../../../components/ui/ResponsiveModal.jsx';
 
 export function LiquidityDetail({ item, accounts = [], accountBalances = {}, transactions = [], members = [], fmt, onEdit, onClose }) {
   const isAccount = !!item.isAccount;
@@ -103,8 +104,7 @@ export function LiquidityDetail({ item, accounts = [], accountBalances = {}, tra
     : 'Compte courant';
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal dv3-page" onClick={e => e.stopPropagation()}>
+    <ResponsiveModal open={true} onClose={onClose}> e.stopPropagation()}>
         <DetailV3Styles/>
 
         <div className="dv3-head">
@@ -271,7 +271,6 @@ export function LiquidityDetail({ item, accounts = [], accountBalances = {}, tra
             <Edit3 size={14}/> Modifier
           </button>
         </div>
-      </div>
-    </div>
+      </ResponsiveModal>
   );
 }

@@ -1,6 +1,7 @@
 // Source: Settings.jsx lines 776-901 — TotpSetupModal
 import { useState, useEffect } from 'react';
 import * as api from '../../../api.js';
+import { ResponsiveModal } from '../../../components/ui/ResponsiveModal.jsx';
 
 export function TotpSetupModal({ onClose }) {
   const [step, setStep] = useState('loading');  // loading → scan → verify → done
@@ -51,8 +52,7 @@ export function TotpSetupModal({ onClose }) {
     : '';
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 480 }}>
+    <ResponsiveModal open={true} onClose={onClose}> e.stopPropagation()} style={{ maxWidth: 480 }}>
         <div className="modal-header">
           <h3>Activer l'authentification à 2 facteurs</h3>
           <button className="modal-close" onClick={onClose}>×</button>
@@ -124,7 +124,6 @@ export function TotpSetupModal({ onClose }) {
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </ResponsiveModal>
   );
 }

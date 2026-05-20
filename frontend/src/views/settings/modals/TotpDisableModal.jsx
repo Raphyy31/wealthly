@@ -1,6 +1,7 @@
 // Source: Settings.jsx lines 903-960 — TotpDisableModal
 import { useState } from 'react';
 import * as api from '../../../api.js';
+import { ResponsiveModal } from '../../../components/ui/ResponsiveModal.jsx';
 
 export function TotpDisableModal({ onClose }) {
   const [password, setPassword] = useState('');
@@ -24,8 +25,7 @@ export function TotpDisableModal({ onClose }) {
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 440 }}>
+    <ResponsiveModal open={true} onClose={onClose}> e.stopPropagation()} style={{ maxWidth: 440 }}>
         <div className="modal-header">
           <h3>Désactiver la 2FA</h3>
           <button className="modal-close" onClick={onClose}>×</button>
@@ -56,7 +56,6 @@ export function TotpDisableModal({ onClose }) {
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </ResponsiveModal>
   );
 }

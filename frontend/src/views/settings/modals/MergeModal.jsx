@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { Combobox } from '../../../components/Combobox.jsx';
+import { ResponsiveModal } from '../../../components/ui/ResponsiveModal.jsx';
 
 export function MergeModal({ accounts, sourceId, onConfirm, onClose }) {
   const source = accounts.find(a => a.id === sourceId);
@@ -25,8 +26,7 @@ export function MergeModal({ accounts, sourceId, onConfirm, onClose }) {
   };
 
   return (
-    <div className="modal-backdrop" onClick={loading ? undefined : onClose}>
-      <div className="modal" style={{ maxWidth: 480 }} onClick={e => e.stopPropagation()}>
+    <ResponsiveModal open={true} onClose={loading ? undefined : onClose}>
         <div className="modal-header">
           <h3>Fusionner deux comptes</h3>
           <button className="icon-btn" onClick={onClose} disabled={loading}><X size={16}/></button>
@@ -88,7 +88,6 @@ export function MergeModal({ accounts, sourceId, onConfirm, onClose }) {
             </div>
           </>
         )}
-      </div>
-    </div>
+      </ResponsiveModal>
   );
 }

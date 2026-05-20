@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Copy, Check, X, Sparkles, ChevronRight, ChevronLeft } from 'lucide-react';
+import { ResponsiveModal } from './ui/ResponsiveModal.jsx';
 
 // "Catégorisation externe via prompt IA" — modal en 2 étapes :
 // 1. Génère un prompt à copier (transactions non catégorisées + catégories valides)
@@ -259,8 +260,7 @@ Vérifie avant d'envoyer : ta réponse commence-t-elle par \`{\` et finit-elle p
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" style={{ maxWidth: 720 }} onClick={e => e.stopPropagation()}>
+    <ResponsiveModal open={true} onClose={onClose}>
         <AiPromptStyles/>
         <div className="modal-header">
           <h2 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -330,8 +330,7 @@ Vérifie avant d'envoyer : ta réponse commence-t-elle par \`{\` et finit-elle p
             </>
           )}
         </div>
-      </div>
-    </div>
+      </ResponsiveModal>
   );
 }
 

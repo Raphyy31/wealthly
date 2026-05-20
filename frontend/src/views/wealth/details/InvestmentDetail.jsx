@@ -12,6 +12,7 @@ import { InvestmentDetailStyles } from '../styles.jsx';
 import { LivePricesFooter } from '../components/LivePricesFooter.jsx';
 import { EditableNumCell } from '../components/EditableNumCell.jsx';
 import { useLiveQuotes, relTimeFromTs } from '../../../utils/marketPrices.js';
+import { ResponsiveModal } from '../../../components/ui/ResponsiveModal.jsx';
 
 export function InvestmentDetail({ asset, assets = [], members = [], fmt, onEdit, onClose, onSyncPositions, onImportCSV, onUpdatePosition }) {
   const positions = useMemo(
@@ -117,8 +118,7 @@ export function InvestmentDetail({ asset, assets = [], members = [], fmt, onEdit
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal inv-v3-page" onClick={e => e.stopPropagation()}>
+    <ResponsiveModal open={true} onClose={onClose}> e.stopPropagation()}>
         <InvestmentDetailStyles/>
 
         {/* Header */}
@@ -322,7 +322,6 @@ export function InvestmentDetail({ asset, assets = [], members = [], fmt, onEdit
             <Edit3 size={14}/> Modifier
           </button>
         </div>
-      </div>
-    </div>
+      </ResponsiveModal>
   );
 }

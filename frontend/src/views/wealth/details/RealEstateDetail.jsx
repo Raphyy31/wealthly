@@ -5,6 +5,7 @@
 import { ChevronLeft, Home, Users, Edit3, X } from 'lucide-react';
 import { ownersList } from '../utils.js';
 import { RealEstatePatchStyles } from '../styles.jsx';
+import { ResponsiveModal } from '../../../components/ui/ResponsiveModal.jsx';
 
 export function RealEstateDetail({ asset, liabilities = [], members = [], memberShare, fmt, onEdit, onClose }) {
   const subtypeLabel = {
@@ -48,8 +49,7 @@ export function RealEstateDetail({ asset, liabilities = [], members = [], member
   const owners = ownersList(asset.memberIds, members);
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal loan-finary-page re-finary-page" onClick={e => e.stopPropagation()}>
+    <ResponsiveModal open={true} onClose={onClose}> e.stopPropagation()}>
         <div className="loan-finary-head">
           <button className="drawer-back" onClick={onClose}>
             <ChevronLeft size={14}/> Patrimoine · Immobilier
@@ -185,7 +185,6 @@ export function RealEstateDetail({ asset, liabilities = [], members = [], member
           </div>
         </div>
         <RealEstatePatchStyles/>
-      </div>
-    </div>
+      </ResponsiveModal>
   );
 }

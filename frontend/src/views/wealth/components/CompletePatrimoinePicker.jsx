@@ -5,6 +5,7 @@
 import { useState } from 'react';
 import { X, CreditCard } from 'lucide-react';
 import { ASSET_TYPES } from '../../../constants.js';
+import { ResponsiveModal } from '../../../components/ui/ResponsiveModal.jsx';
 
 export function CompletePatrimoinePicker({ onClose, onPickAsset, onPickLiability }) {
   const [filter, setFilter] = useState('');
@@ -14,8 +15,7 @@ export function CompletePatrimoinePicker({ onClose, onPickAsset, onPickLiability
   ];
   const filtered = items.filter(i => i.name.toLowerCase().includes(filter.toLowerCase()) || i.description.toLowerCase().includes(filter.toLowerCase()));
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal modal--wizard" onClick={(e) => e.stopPropagation()}>
+    <ResponsiveModal open={true} onClose={onClose}> e.stopPropagation()}>
         <div className="modal-header">
           <h2>Compléter mon patrimoine</h2>
           <button className="icon-btn-sm" onClick={onClose}><X size={16}/></button>
@@ -42,7 +42,6 @@ export function CompletePatrimoinePicker({ onClose, onPickAsset, onPickLiability
             {filtered.length === 0 && <p style={{ color: 'var(--text-tertiary)', textAlign: 'center', padding: 24 }}>Aucun résultat.</p>}
           </div>
         </div>
-      </div>
-    </div>
+      </ResponsiveModal>
   );
 }

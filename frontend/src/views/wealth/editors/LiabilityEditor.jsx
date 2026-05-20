@@ -7,6 +7,7 @@ import { X, Check, ChevronLeft, ChevronRight, Lightbulb, Loader2 } from 'lucide-
 import { LIABILITY_TYPES } from '../../../constants.js';
 import { ChipSelect } from '../../../components/ChipSelect.jsx';
 import { Combobox } from '../../../components/Combobox.jsx';
+import { ResponsiveModal } from '../../../components/ui/ResponsiveModal.jsx';
 
 const LIABILITY_STEPS = [
   { key: 'main',     label: 'Infos principales' },
@@ -51,8 +52,7 @@ export function LiabilityEditor({ liability, members, assets = [], onSave, onCan
   };
 
   return (
-    <div className="modal-backdrop" onClick={onCancel}>
-      <div className="modal modal--wizard" onClick={(e) => e.stopPropagation()}>
+    <ResponsiveModal open={true} onClose={onCancel}> e.stopPropagation()}>
         <div className="modal-header">
           <h2>{liability.id ? 'Modifier l\'emprunt' : 'Ajouter un emprunt'}</h2>
           <button className="icon-btn-sm" onClick={onCancel}><X size={16}/></button>
@@ -208,7 +208,6 @@ export function LiabilityEditor({ liability, members, assets = [], onSave, onCan
             </button>
           )}
         </div>
-      </div>
-    </div>
+      </ResponsiveModal>
   );
 }

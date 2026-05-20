@@ -347,6 +347,51 @@ export default function Landing({ onSignIn, onSignUp, onTryDemo }) {
             scrollTrigger: { trigger: parent, start: 'top 80%', toggleActions: 'play none none reverse' },
           });
         });
+        // ── Masthead parallax fade-out (sprint GSAP avance 2026-05-20) ─
+        // Le titre et le deck s'estompent + remontent legerement quand
+        // l'user scrolle au-dela du fold. Effet 'depth' classe sans
+        // etre fatigant. Pattern Stripe / Linear / Vercel landing.
+        const masthead = document.querySelector('.lc-masthead');
+        if (masthead) {
+          gsap.to(masthead, {
+            opacity: 0.15,
+            y: -60,
+            scale: 0.94,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: masthead,
+              start: 'top top',
+              end: 'bottom 20%',
+              scrub: 0.6, // smooth interpolation entre scroll positions
+            },
+          });
+        }
+        // ── CTA row : leger float-up au scroll initial (max 30vh) ─────
+        const ctaRow = document.querySelector('.lc-cta-row');
+        if (ctaRow) {
+          gsap.to(ctaRow, {
+            y: -24,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: ctaRow,
+              start: 'top 80%',
+              end: 'top 20%',
+              scrub: 0.4,
+            },
+          });
+        }
+        // ── Section titles reveal — eyebrow d'abord, titre apres ─────
+        // Sur lc-why / lc-pricing / lc-faq : separe l'animation de
+        // l'eyebrow du contenu pour un rythme plus pro.
+        document.querySelectorAll('.lc-why-eyebrow, .lc-pricing-eyebrow, .lc-faq-eyebrow').forEach(eyebrow => {
+          gsap.from(eyebrow, {
+            opacity: 0,
+            y: 14,
+            duration: 0.5,
+            ease: 'expo.out',
+            scrollTrigger: { trigger: eyebrow, start: 'top 88%', toggleActions: 'play none none reverse' },
+          });
+        });
       });
     });
     return () => ctx.revert();

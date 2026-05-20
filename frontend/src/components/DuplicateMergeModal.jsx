@@ -7,6 +7,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { SUBTYPE_LABELS } from '../types/wealth.js';
+import { ResponsiveModal } from './ui/ResponsiveModal.jsx';
 
 export function DuplicateMergeModal({ pairs, fmt, onMerge, onSkip, onClose }) {
   const [idx, setIdx] = useState(0);
@@ -19,8 +20,7 @@ export function DuplicateMergeModal({ pairs, fmt, onMerge, onSkip, onClose }) {
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" style={{ maxWidth: 640 }} onClick={e => e.stopPropagation()}>
+    <ResponsiveModal open={true} onClose={onClose}>
         <div className="modal-header">
           <h2 style={{ flex: 1, margin: 0, fontSize: 15, fontWeight: 600 }}>
             Doublon <em>{idx + 1} / {pairs.length}</em>
@@ -70,7 +70,6 @@ export function DuplicateMergeModal({ pairs, fmt, onMerge, onSkip, onClose }) {
             <button className="secondary-btn" onClick={next}>Passer</button>
           </div>
         </div>
-      </div>
-    </div>
+      </ResponsiveModal>
   );
 }

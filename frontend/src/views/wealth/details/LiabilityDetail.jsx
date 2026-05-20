@@ -9,6 +9,7 @@ import {
 import { ChevronLeft, ChevronRight, Edit3, Home, Users, BarChart3 } from 'lucide-react';
 import { formatCurrency, formatDate, buildAmortization } from '../../../utils.js';
 import { LiabilityPatchStyles } from '../styles.jsx';
+import { ResponsiveModal } from '../../../components/ui/ResponsiveModal.jsx';
 
 export function LiabilityDetail({ liability, assets, members, memberShare, fmt, onEdit, onClose, onOpenLinkedAsset }) {
   const l = liability;
@@ -55,8 +56,7 @@ export function LiabilityDetail({ liability, assets, members, memberShare, fmt, 
   const endDate = schedule.length > 0 ? schedule[schedule.length - 1].date : null;
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal modal--detail loan-finary" onClick={(e) => e.stopPropagation()}>
+    <ResponsiveModal open={true} onClose={onClose}> e.stopPropagation()}>
         {/* Top bar — back arrow + name + actions */}
         <header className="loan-finary-topbar">
           <button className="loan-finary-back" onClick={onClose} aria-label="Fermer">
@@ -367,7 +367,6 @@ export function LiabilityDetail({ liability, assets, members, memberShare, fmt, 
           )}
         </div>
         <LiabilityPatchStyles/>
-      </div>
-    </div>
+      </ResponsiveModal>
   );
 }

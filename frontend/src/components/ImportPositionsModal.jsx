@@ -14,6 +14,7 @@
 import { useState, useMemo } from 'react';
 import { X, Upload, CheckCircle2, AlertCircle } from 'lucide-react';
 import {
+import { ResponsiveModal } from './ui/ResponsiveModal.jsx';
   parsePositionsFile,
   applyPositionsMapping,
   isMappingComplete,
@@ -80,8 +81,7 @@ export function ImportPositionsModal({ parentAsset, fmt, onConfirm, onClose }) {
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal import-positions-v3" onClick={e => e.stopPropagation()}>
+    <ResponsiveModal open={true} onClose={onClose}> e.stopPropagation()}>
         <ImportPositionsStyles/>
 
         <div className="ipv3-head">
@@ -271,8 +271,7 @@ export function ImportPositionsModal({ parentAsset, fmt, onConfirm, onClose }) {
             <button className="ds-btn primary" onClick={onClose}>Fermer</button>
           </div>
         )}
-      </div>
-    </div>
+      </ResponsiveModal>
   );
 }
 

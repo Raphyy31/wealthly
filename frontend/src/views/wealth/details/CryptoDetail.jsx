@@ -9,6 +9,7 @@ import { ownersList, formatCryptoQty, cryptoColor } from '../utils.js';
 import { DetailV3Styles } from '../styles.jsx';
 import { LivePricesFooter } from '../components/LivePricesFooter.jsx';
 import { useLiveQuotes, cryptoToYahoo, relTimeFromTs } from '../../../utils/marketPrices.js';
+import { ResponsiveModal } from '../../../components/ui/ResponsiveModal.jsx';
 
 export function CryptoDetail({ asset, members = [], fmt, onEdit, onClose, onSync }) {
   const quantity = parseFloat(asset.quantity) || 0;
@@ -55,8 +56,7 @@ export function CryptoDetail({ asset, members = [], fmt, onEdit, onClose, onSync
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal dv3-page" onClick={e => e.stopPropagation()}>
+    <ResponsiveModal open={true} onClose={onClose}> e.stopPropagation()}>
         <DetailV3Styles/>
 
         <div className="dv3-head">
@@ -171,7 +171,6 @@ export function CryptoDetail({ asset, members = [], fmt, onEdit, onClose, onSync
             </button>
           </div>
         </div>
-      </div>
-    </div>
+      </ResponsiveModal>
   );
 }

@@ -1,6 +1,7 @@
 // Source: Settings.jsx lines 1748-1824 — CategoryCreateModal
 import { useState } from 'react';
 import { X, Check } from 'lucide-react';
+import { ResponsiveModal } from '../../../components/ui/ResponsiveModal.jsx';
 
 const CATEGORY_PALETTE = [
   '#2540D9', '#136D3E', '#B0392B', '#8E641A',
@@ -21,8 +22,7 @@ export function CategoryCreateModal({ parent, parentName, forcedType, onSave, on
   const canSave = draft.name.trim().length >= 2;
 
   return (
-    <div className="modal-backdrop" onClick={onCancel}>
-      <div className="modal" style={{ maxWidth: 480 }} onClick={e => e.stopPropagation()}>
+    <ResponsiveModal open={true} onClose={onCancel}>
         <div className="modal-header">
           <h2>{parent ? <>Nouveau <em>détail</em></> : <>Nouvelle <em>catégorie</em></>}</h2>
           <button className="icon-btn" onClick={onCancel}><X size={18}/></button>
@@ -82,7 +82,6 @@ export function CategoryCreateModal({ parent, parentName, forcedType, onSave, on
             <Check size={14}/> Créer
           </button>
         </div>
-      </div>
-    </div>
+      </ResponsiveModal>
   );
 }

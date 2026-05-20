@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import * as api from '../../../api.js';
+import { ResponsiveModal } from '../../../components/ui/ResponsiveModal.jsx';
 
 export function ChangePasswordModal({ onClose }) {
   const { t } = useTranslation();
@@ -33,8 +34,7 @@ export function ChangePasswordModal({ onClose }) {
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" style={{ maxWidth: 460 }} onClick={e => e.stopPropagation()}>
+    <ResponsiveModal open={true} onClose={onClose}>
         <div className="modal-header">
           <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600 }}>
             {t('settings.security.changeTitle')} <em style={{ fontFamily: "'Newsreader', serif", fontStyle: 'italic', fontWeight: 400 }}>{t('settings.security.changeTitleAccent')}</em>
@@ -75,7 +75,6 @@ export function ChangePasswordModal({ onClose }) {
             </div>
           </div>
         )}
-      </div>
-    </div>
+      </ResponsiveModal>
   );
 }

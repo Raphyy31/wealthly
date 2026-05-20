@@ -6,6 +6,7 @@ import { ChevronLeft, X, Edit3, Sparkles } from 'lucide-react';
 import { formatDate } from '../../../utils.js';
 import { ownersList } from '../utils.js';
 import { DetailV3Styles } from '../styles.jsx';
+import { ResponsiveModal } from '../../../components/ui/ResponsiveModal.jsx';
 
 export function OtherAssetDetail({ asset, members = [], fmt, onEdit, onClose }) {
   const currentValue = parseFloat(asset.currentValue) || 0;
@@ -24,8 +25,7 @@ export function OtherAssetDetail({ asset, members = [], fmt, onEdit, onClose }) 
     : null;
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal dv3-page dv3-page-narrow" onClick={e => e.stopPropagation()}>
+    <ResponsiveModal open={true} onClose={onClose}> e.stopPropagation()}>
         <DetailV3Styles/>
 
         <div className="dv3-head">
@@ -139,7 +139,6 @@ export function OtherAssetDetail({ asset, members = [], fmt, onEdit, onClose }) 
             <Edit3 size={14}/> Modifier
           </button>
         </div>
-      </div>
-    </div>
+      </ResponsiveModal>
   );
 }

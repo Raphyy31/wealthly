@@ -7,6 +7,7 @@ import { X, Check, Loader2 } from 'lucide-react';
 import { ASSET_TYPES } from '../../../constants.js';
 import { ChipSelect } from '../../../components/ChipSelect.jsx';
 import { Combobox } from '../../../components/Combobox.jsx';
+import { ResponsiveModal } from '../../../components/ui/ResponsiveModal.jsx';
 
 export function SimpleAssetEditor({ asset, members, onSave, onCancel }) {
   const [draft, setDraft] = useState(asset);
@@ -25,8 +26,7 @@ export function SimpleAssetEditor({ asset, members, onSave, onCancel }) {
   };
   const type = ASSET_TYPES.find(t => t.id === draft.type);
   return (
-    <div className="modal-backdrop" onClick={onCancel}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+    <ResponsiveModal open={true} onClose={onCancel}> e.stopPropagation()}>
         <div className="modal-header">
           <h2>{asset.id ? 'Modifier' : 'Nouvel actif'}</h2>
           <button className="icon-btn-sm" onClick={onCancel}><X size={16}/></button>
@@ -135,7 +135,6 @@ export function SimpleAssetEditor({ asset, members, onSave, onCancel }) {
             {saving ? <><Loader2 size={14} className="spin"/> Enregistrement…</> : <><Check size={14}/> Enregistrer</>}
           </button>
         </div>
-      </div>
-    </div>
+      </ResponsiveModal>
   );
 }
