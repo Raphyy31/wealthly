@@ -14,13 +14,13 @@
 import { useState, useMemo } from 'react';
 import { X, Upload, CheckCircle2, AlertCircle } from 'lucide-react';
 import {
-import { ResponsiveModal } from './ui/ResponsiveModal.jsx';
   parsePositionsFile,
   applyPositionsMapping,
   isMappingComplete,
   saveLearnedMapping,
   POSITION_FIELDS,
 } from '../utils/positionsImport.js';
+import { ResponsiveModal } from './ui/ResponsiveModal.jsx';
 
 export function ImportPositionsModal({ parentAsset, fmt, onConfirm, onClose }) {
   const [step, setStep] = useState('upload');     // upload → mapping → preview → done
