@@ -3424,6 +3424,245 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 /* ─── Category filter search input ─── */
 .tx-filter-search-input { width: 100%; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); font-family: inherit; font-size: 13px; color: var(--ink); outline: none; margin-bottom: 8px; }
 .tx-filter-search-input:focus { border-color: var(--accent); }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   MOBILE OVERHAUL — Sprint 2026-05-20
+   ═══════════════════════════════════════════════════════════════════════
+   Refonte mobile globale : touch targets 44px, font-size 16px sur inputs
+   (anti-zoom iOS), modals en bottom-sheet, tables scrollables, KPI grids
+   qui se cassent proprement, paddings réduits, hover supprimé.
+   User feedback explicite : "tout est dégeu dans mobile".
+
+   Strategy: target des classes globales déjà utilisées partout (.btn,
+   .icon-btn, input, .modal, .kpi-grid, .stat-strip, ...) plutôt que
+   d'aller patcher chaque vue. Maximum impact / minimum surface.
+   ───────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 767px) {
+  /* ─ Inputs : 16px minimum pour eviter le zoom iOS auto sur focus.
+     C'est la principale UX-killer mobile. */
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+    padding: 11px 14px;
+    border-radius: 8px;
+  }
+  /* Filtres / chips / petites recherches : on garde 14px (acceptable, pas
+     un input qui prend le focus principal) — mais on bump leur padding. */
+  .tx-filter-search-input,
+  .tx-month-chip,
+  .tx-active-chip {
+    font-size: 13.5px;
+    padding: 6px 12px;
+  }
+
+  /* ─ Field rows : casser le 2-col forcé sur mobile (zones de saisie
+     écrasées sur 160px de large = illisibles) */
+  .field-row { grid-template-columns: 1fr; gap: 10px; }
+
+  /* ─ Boutons : 44px touch target minimum partout */
+  button:not(.bottom-nav button):not(.sankey-fullscreen-close):not(.icon-only-mini):not(.tx-month-chip):not(.tx-active-chip):not(.wealth-alloc-mini-chip):not(.reg-tabs button):not(.mon-sankey-card-maximize),
+  .btn,
+  .primary-btn,
+  .secondary-btn,
+  .ghost-btn {
+    min-height: 44px;
+  }
+  .icon-btn,
+  .icon-button {
+    width: 44px !important;
+    height: 44px !important;
+  }
+  /* Boutons "compact" dans des barres serrees : on assouplit a 40px */
+  .hub-tabs button,
+  .reg-tabs button {
+    min-height: 40px;
+    padding: 9px 14px;
+    font-size: 13px;
+  }
+
+  /* ─ Suppression de TOUS les hover translate / scale sur mobile
+     (sticky-hover = on garde l'effet apres tap = pollution visuelle) */
+  *:hover { transform: none !important; }
+
+  /* ─ Modals : bottom-sheet pattern.
+     Au lieu d'une modale centrale qui ecrase tout le contenu et laisse
+     50px de marge en haut, on les colle en bas et on les fait full-width
+     avec un rounded top — pattern iOS / Material. */
+  .modal-backdrop,
+  .drawer-backdrop {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+  .modal,
+  .modal-content,
+  .modal-shell {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 92vh !important;
+    border-radius: 18px 18px 0 0 !important;
+    margin: 0 !important;
+    animation: modalSheetIn 0.28s cubic-bezier(0.32, 0.72, 0, 1) !important;
+  }
+  @keyframes modalSheetIn {
+    from { transform: translateY(100%); opacity: 0.6; }
+    to   { transform: translateY(0); opacity: 1; }
+  }
+  /* Modal header / footer paddings condensés */
+  .modal-header,
+  .modal-head { padding: 16px 18px !important; }
+  .modal-body { padding: 16px 18px !important; }
+  .modal-footer,
+  .modal-actions {
+    padding: 14px 18px calc(14px + env(safe-area-inset-bottom, 0px)) !important;
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+  .modal-footer button,
+  .modal-actions button { width: 100%; }
+  /* Drag-handle visuel en haut des bottom-sheets (peut etre styled par JS plus tard) */
+  .modal::before,
+  .modal-content::before {
+    content: '';
+    display: block;
+    width: 36px;
+    height: 4px;
+    background: var(--border-strong);
+    border-radius: 2px;
+    margin: 8px auto 4px;
+  }
+
+  /* ─ Drawer right-side → bottom-sheet aussi (cohérence) */
+  .drawer {
+    width: 100% !important;
+    max-width: 100% !important;
+    top: auto !important;
+    height: 92vh !important;
+    border-radius: 18px 18px 0 0 !important;
+    border-left: none !important;
+    animation: drawerSheetIn 0.28s cubic-bezier(0.32, 0.72, 0, 1) !important;
+  }
+  @keyframes drawerSheetIn {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+
+  /* ─ Page header : titre h1 32px → 22px, paddings serres */
+  .page-header { margin-bottom: 18px; gap: 10px; }
+  .page-header h1, .page-title { font-size: 22px !important; line-height: 1.1; }
+  .subview-header { padding: 0 !important; }
+  .subview-header h1 { font-size: 22px !important; }
+
+  /* ─ KPI grids ubiquistes : forcer 2 colonnes max sous 480px */
+  .kpi-grid,
+  .stat-strip,
+  .ds-kpi-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+  }
+  /* Cards KPI individuelles : padding reduit */
+  .kpi-card, .ds-card--kpi, .ds-card { padding: 14px 14px !important; }
+  .kpi-value { font-size: 20px !important; }
+
+  /* ─ Tables : wrapper scroll horizontal partout */
+  .table-wrap,
+  .ds-table-wrap,
+  .data-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 -14px;
+    padding: 0 14px;
+  }
+  .ds-table, table { font-size: 12.5px; }
+  .ds-table th, .ds-table td,
+  table th, table td { padding: 10px 10px !important; white-space: nowrap; }
+
+  /* ─ Sidebar workspace pills (member switcher) : scrollable horizontal */
+  .sidebar-members-pills,
+  .member-pills-row {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+  }
+  .sidebar-members-pills::-webkit-scrollbar,
+  .member-pills-row::-webkit-scrollbar { display: none; }
+
+  /* ─ Wealth hero (2 cards) déjà en col à 900px — on bumpe le padding */
+  .wealth-hero { gap: 10px; }
+  .wealth-hero-card { padding: 14px 16px !important; }
+  .wealth-hero-card .wealth-hero-value { font-size: 24px !important; }
+
+  /* ─ Monthly Sankey : on garde le duo en col, on planque les KPIs des
+     teaser cards (elles s'ouvrent au tap → mieux d'avoir tap directement
+     vers le Sankey). On laisse le bouton maximize tres visible. */
+  .mon-sankey-card-kpis { gap: 6px; }
+  .mon-sankey-card-kpi-val { font-size: 13px !important; }
+  .mon-sankey-card-kpi-label { font-size: 10.5px !important; }
+  .mon-sankey-card-head { padding: 12px 14px !important; gap: 8px; }
+  .mon-sankey-card-titles h3 { font-size: 15px !important; }
+  .mon-sankey-card-subtitle { font-size: 11.5px !important; }
+  .mon-sankey-stats { flex-wrap: wrap; gap: 8px; padding: 8px 14px !important; }
+
+  /* ─ Wealth category cards : items denses, font legible */
+  .wc-card-head { padding: 14px 14px !important; gap: 10px; }
+  .wc-card-name { font-size: 14px !important; }
+  .wc-card-meta { font-size: 11px !important; }
+  .wc-card-total { font-size: 17px !important; }
+  .wc-card-item { padding: 12px 14px !important; }
+  .wc-card-item-name { font-size: 13.5px !important; }
+
+  /* ─ Wealth alloc mini : chips wrap, pas de scroll horizontal */
+  .wealth-alloc-mini { padding: 12px 14px !important; gap: 12px; }
+  .wealth-alloc-mini-legend { gap: 6px; }
+
+  /* ─ Settings tabs : reg-tabs scrollable horizontal (deja en place dans
+     index.css), on bumpe juste l'aire de tap */
+  .reg-tabs button { padding: 10px 14px !important; font-size: 13px !important; }
+
+  /* ─ DCA cards : padding plus serre */
+  .dca-card,
+  .dca-plan-card { padding: 16px 16px !important; }
+
+  /* ─ Transactions row : reduire la densite */
+  .tx-row,
+  .transaction-row { padding: 11px 14px !important; gap: 10px !important; }
+
+  /* ─ Toast : full-width en bas (lieu de centre-haut etroit) */
+  .toast-container {
+    bottom: calc(70px + env(safe-area-inset-bottom, 0px)) !important;
+    left: 12px !important;
+    right: 12px !important;
+    top: auto !important;
+  }
+  .toast { width: 100% !important; max-width: 100% !important; }
+
+  /* ─ Banner backend status : prend toute la largeur sous le header */
+  .backend-status-banner {
+    left: 12px !important;
+    right: 12px !important;
+    max-width: none !important;
+    transform: none !important;
+    animation: backendStatusInMobile 0.32s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+  @keyframes backendStatusInMobile {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ─ Page content : ajouter de la safe-area pour le notch */
+  .content { padding-top: calc(8px + env(safe-area-inset-top, 0px)); }
+}
+
+/* Petit ecran (≤380px : iPhone SE / Mini) : encore plus tight */
+@media (max-width: 380px) {
+  .kpi-grid, .stat-strip { grid-template-columns: 1fr !important; }
+  .page-header h1, .page-title { font-size: 20px !important; }
+  .modal-header h2, .modal-head h2 { font-size: 16px !important; }
+  .wc-card-total { font-size: 16px !important; }
+  .wealth-hero-card .wealth-hero-value { font-size: 22px !important; }
+}
 `;
   return <style>{css}</style>;
 }
