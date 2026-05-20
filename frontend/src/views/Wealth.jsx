@@ -21,6 +21,7 @@ import * as api from '../api.js';
 // Sub-components — extracted from Wealth.jsx during découpe
 import { CompletePatrimoinePicker } from './wealth/components/CompletePatrimoinePicker.jsx';
 import { WealthItemRow } from './wealth/components/WealthItemRow.jsx';
+import { WealthCategoryCard } from './wealth/components/WealthCategoryCard.jsx';
 import { AssetEditor } from './wealth/editors/AssetEditor.jsx';
 import { LiabilityEditor } from './wealth/editors/LiabilityEditor.jsx';
 import { LiabilityDetail } from './wealth/details/LiabilityDetail.jsx';
@@ -401,59 +402,95 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
         </section>
       )}
 
-      {/* Unified WealthItem list (v6) — accounts + assets + liabilities */}
-      <section className="card">
-        <div className="card-header">
-          <h3><Wallet size={16}/> {isAll ? 'Patrimoine' : currentSub.label}</h3>
-          {/* The header CTA is canonical (subview-header, top of page). No duplicate here. */}
-        </div>
+      {/* Unified WealthItem display :
+          - isAll = grid de cartes par categorie (top 3 + expand)
+          - filtre actif = single liste detaillee (WealthItemRow) */}
+      {(() => {
+        const handleItemClick = (it) => {
+          if (it.sourceTable === 'liability') {
+            const l = liabilities.find(x => x.id === it.sourceId);
+            if (l) { setViewingLia(l); return; }
+          }
+          if (it.sourceTable === 'asset') {
+            const a = assets.find(x => x.id === it.sourceId);
+            if (a) {
+              if (it.category === 'immobilier')      { setViewingRE(a); return; }
+              if (it.category === 'liquidites')      { setViewingLiq({ ...a, _item: it, isAccount: false }); return; }
+              if (it.category === 'investissements') { setViewingInv(a); return; }
+              if (it.category === 'cryptos')         { setViewingCrypto(a); return; }
+              if (it.category === 'autres')          { setViewingOther(a); return; }
+            }
+          }
+          if (it.sourceTable === 'account') {
+            setViewingLiq({ ...it, isAccount: true });
+            return;
+          }
+          setDrawerItem(it);
+        };
+        const handleItemDelete = (it) => {
+          if (it.sourceTable === 'asset')     deleteAsset(it.sourceId);
+          if (it.sourceTable === 'liability') deleteLiability(it.sourceId);
+        };
+        const handleAdd = () => (onOpenAddWizard ? onOpenAddWizard() : setShowAddPicker(true));
 
-        {filteredItems.length === 0 ? (
-          <div className="wealth-empty-state">
-            <p style={{ fontFamily: 'Newsreader,Georgia,serif', fontStyle: 'italic', color: 'var(--ink-2)', fontSize: 15, lineHeight: 1.5 }}>
-              {t('wealth.emptyCategory', { category: t(currentSub.labelKey).toLowerCase() })}
-            </p>
-            <button className="primary-btn" onClick={() => (onOpenAddWizard ? onOpenAddWizard() : setShowAddPicker(true))}>
-              <Plus size={14}/> Ajouter
-            </button>
-          </div>
-        ) : (
-          <div className="wealth-items-list">
-            {filteredItems.map(item => (
-              <WealthItemRow
-                key={item.id}
-                item={item}
-                fmt={fmt}
-                onDelete={(it) => {
-                  if (it.sourceTable === 'asset')     deleteAsset(it.sourceId);
-                  if (it.sourceTable === 'liability') deleteLiability(it.sourceId);
-                }}
-                onClick={(it) => {
-                  if (it.sourceTable === 'liability') {
-                    const l = liabilities.find(x => x.id === it.sourceId);
-                    if (l) { setViewingLia(l); return; }
-                  }
-                  if (it.sourceTable === 'asset') {
-                    const a = assets.find(x => x.id === it.sourceId);
-                    if (a) {
-                      if (it.category === 'immobilier')      { setViewingRE(a); return; }
-                      if (it.category === 'liquidites')      { setViewingLiq({ ...a, _item: it, isAccount: false }); return; }
-                      if (it.category === 'investissements') { setViewingInv(a); return; }
-                      if (it.category === 'cryptos')         { setViewingCrypto(a); return; }
-                      if (it.category === 'autres')          { setViewingOther(a); return; }
-                    }
-                  }
-                  if (it.sourceTable === 'account') {
-                    setViewingLiq({ ...it, isAccount: true });
-                    return;
-                  }
-                  setDrawerItem(it);
-                }}
-              />
-            ))}
-          </div>
-        )}
-      </section>
+        if (isAll) {
+          // Grid de cards par categorie (toutes les 6 categories rendues,
+          // meme vides — encourage l'ajout via CTA Plus integre)
+          const CATEGORIES_ORDER = ['liquidites', 'investissements', 'immobilier', 'cryptos', 'autres', 'emprunts'];
+          return (
+            <div className="wealth-cards-grid">
+              {CATEGORIES_ORDER.map(catKey => {
+                const items = visibleItems.filter(i => i.category === catKey);
+                const total = items.reduce((s, i) => s + Math.abs(parseFloat(i.value) || 0), 0);
+                return (
+                  <WealthCategoryCard
+                    key={catKey}
+                    category={catKey}
+                    items={items}
+                    total={total}
+                    totalWealth={totalAssets + totalLiabilities}
+                    fmt={fmt}
+                    onItemClick={handleItemClick}
+                    onItemDelete={handleItemDelete}
+                    onAdd={handleAdd}
+                  />
+                );
+              })}
+            </div>
+          );
+        }
+
+        // Filtre actif : single liste detaillee (le WealthItemRow refondu)
+        return (
+          <section className="card">
+            <div className="card-header">
+              <h3><Wallet size={16}/> {t(currentSub.labelKey)}</h3>
+            </div>
+            {filteredItems.length === 0 ? (
+              <div className="wealth-empty-state">
+                <p style={{ fontFamily: 'Newsreader,Georgia,serif', fontStyle: 'italic', color: 'var(--ink-2)', fontSize: 15, lineHeight: 1.5 }}>
+                  {t('wealth.emptyCategory', { category: t(currentSub.labelKey).toLowerCase() })}
+                </p>
+                <button className="primary-btn" onClick={handleAdd}>
+                  <Plus size={14}/> Ajouter
+                </button>
+              </div>
+            ) : (
+              <div className="wealth-items-list">
+                {filteredItems.map(item => (
+                  <WealthItemRow
+                    key={item.id}
+                    item={item}
+                    fmt={fmt}
+                    onDelete={handleItemDelete}
+                    onClick={handleItemClick}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+        );
+      })()}
 
       {editingAsset && <AssetEditor asset={editingAsset} members={members} liabilities={visibleLiabilities} onSave={async (a) => { const saved = await saveAsset(a); setEditingAsset(null); return saved; }} onCancel={() => setEditingAsset(null)}/>}
       {editingLia && <LiabilityEditor liability={editingLia} members={members} assets={assets} onSave={(l) => { saveLiability(l); setEditingLia(null); }} onCancel={() => setEditingLia(null)}/>}

@@ -840,6 +840,191 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 
 /* WEALTH */
 .wealth-view { display: flex; flex-direction: column; gap: 20px; }
+/* Grid de cartes par categorie — pattern principal de Patrimoine isAll */
+.wealth-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+@media (max-width: 900px) {
+  .wealth-cards-grid { grid-template-columns: 1fr; }
+}
+.wc-card {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color 0.22s, box-shadow 0.22s;
+}
+.wc-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: 0 2px 10px -4px color-mix(in oklab, var(--ink) 10%, transparent);
+}
+.wc-card.is-empty { opacity: 0.7; }
+
+.wc-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px;
+}
+.wc-card-icon {
+  width: 36px; height: 36px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.wc-card-titles { flex: 1; min-width: 0; }
+.wc-card-name {
+  font: 600 14.5px/1.2 var(--font-sans);
+  color: var(--ink);
+}
+.wc-card-meta {
+  font: 400 11.5px/1.3 var(--font-sans);
+  color: var(--ink-3);
+  margin-top: 3px;
+}
+.wc-card-total-wrap {
+  text-align: right;
+  flex-shrink: 0;
+}
+.wc-card-total {
+  font: 600 18px/1.1 var(--font-sans);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.wc-card-total.neg { color: var(--negative); }
+
+.wc-card-body { will-change: height; }
+
+.wc-card-empty-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 18px 16px;
+  padding: 8px 14px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px dashed var(--accent);
+  border-radius: 8px;
+  font: 500 12.5px/1 var(--font-sans);
+  cursor: pointer;
+  transition: background 0.18s;
+}
+.wc-card-empty-cta:hover {
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
+}
+
+.wc-card-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--border);
+}
+.wc-card-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.18s;
+}
+.wc-card-item:last-child { border-bottom: none; }
+.wc-card-item[role="button"] {
+  cursor: pointer;
+}
+.wc-card-item[role="button"]:hover {
+  background: color-mix(in oklab, var(--accent) 4%, transparent);
+}
+.wc-card-item[role="button"]:focus-visible {
+  outline: none;
+  background: var(--accent-soft);
+}
+
+.wc-card-item-info { flex: 1; min-width: 0; }
+.wc-card-item-name {
+  font: 500 13px/1.2 var(--font-sans);
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wc-card-item-meta {
+  font: 400 10.5px/1.3 var(--font-sans);
+  color: var(--ink-3);
+  margin-top: 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.wc-card-item-meta .badge {
+  padding: 1px 5px;
+  font-size: 9.5px;
+}
+.wc-card-item-value-wrap {
+  text-align: right;
+  flex-shrink: 0;
+}
+.wc-card-item-value {
+  font: 600 14px/1.1 var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+.wc-card-item-delta {
+  font: 500 10.5px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+.wc-card-item-delta.up { color: var(--positive); }
+.wc-card-item-delta.down { color: var(--negative); }
+
+.wc-card-item-del {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px; height: 24px;
+  border-radius: 5px;
+  border: none;
+  background: transparent;
+  color: var(--negative);
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.15s, background 0.15s;
+}
+.wc-card-item-del:hover {
+  background: color-mix(in srgb, var(--negative) 12%, transparent);
+  opacity: 1;
+}
+.wc-card-item:hover .wc-card-item-del { display: flex; }
+
+.wc-card-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 10px 18px;
+  background: var(--bg-sunk);
+  border: none;
+  border-top: 1px solid var(--border);
+  color: var(--accent);
+  font: 500 11.5px/1 var(--font-sans);
+  cursor: pointer;
+  transition: background 0.18s;
+}
+.wc-card-toggle:hover {
+  background: var(--accent-soft);
+}
+.wc-card-toggle-chev {
+  transition: transform 0.22s;
+}
+.wc-card-toggle-chev.is-up { transform: rotate(180deg); }
+
 /* HERO Patrimoine : 2 cards principales (Financier | Immo Net) */
 .wealth-hero {
   display: grid;
