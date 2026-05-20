@@ -1327,15 +1327,38 @@ html, body {
   font: 450 13.5px/1.2 var(--font-sans);
   cursor: pointer;
   text-align: left;
-  transition: background var(--t-fast), color var(--t-fast);
+  transition: color 0.22s cubic-bezier(0.4, 0, 0.2, 1);
   width: 100%;
   font-weight: 450;
   position: relative;
+  overflow: hidden;
+  isolation: isolate;
 }
-.ws-nav button svg { color: var(--ink-3); flex-shrink: 0; transition: color var(--t-fast); }
+/* Slide-in background : tire un fond depuis la gauche au hover, plus
+   premium qu'un simple change de background couleur. */
+.ws-nav button::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--bg-hover);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: -1;
+  border-radius: inherit;
+}
+.ws-nav button:hover::after { transform: scaleX(1); }
+.ws-nav button svg {
+  color: var(--ink-3);
+  flex-shrink: 0;
+  transition: color 0.22s cubic-bezier(0.4, 0, 0.2, 1), transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+}
 .ws-nav button > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ws-nav button:hover { background: var(--bg-hover); color: var(--ink); }
-.ws-nav button:hover svg { color: var(--ink-2); }
+.ws-nav button:hover { color: var(--ink); }
+.ws-nav button:hover svg {
+  color: var(--accent);
+  transform: scale(1.08);
+}
 .ws-nav button.on {
   background: var(--bg-sunk);
   color: var(--ink);
@@ -1343,6 +1366,9 @@ html, body {
   padding-left: 14px;
 }
 .ws-nav button.on svg { color: var(--accent); }
+/* Active item : pas de slide-in (deja un etat distinct), pas de pulse icone */
+.ws-nav button.on::after { display: none; }
+.ws-nav button.on:hover svg { transform: none; }
 
 /* Magic line : trait cobalt unique qui glisse vers l'item actif (GSAP) */
 .ws-nav { position: relative; }
@@ -3426,6 +3452,50 @@ html, body {
   color: var(--ink-2);
 }
 .tr-apply-banner strong { color: var(--accent); }
+
+/* ── Settings > Categories : structure & outils ─────────────────── */
+.settings-regles { display: flex; flex-direction: column; gap: 12px; }
+
+.settings-tools .settings-tools-list {
+  padding: 4px 0;
+}
+.settings-tool-row {
+  display: flex; align-items: center; gap: 14px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+}
+.settings-tool-row:first-child { border-top: none; }
+.settings-tool-text {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.settings-tool-text strong {
+  font: 600 13.5px/1.2 var(--font-sans);
+  color: var(--ink);
+}
+.settings-tool-text span {
+  font: 400 12px/1.4 var(--font-sans);
+  color: var(--ink-3);
+}
+
+/* Sectionneur entre groupes de sous-panneaux (Catégories / Marchands) */
+.settings-group-divider {
+  display: flex; align-items: center; gap: 12px;
+  margin: 18px 4px 4px;
+}
+.settings-group-divider span {
+  font: 600 11px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.settings-group-divider::before,
+.settings-group-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
 .tx-card-sub-pill {
   background: var(--bg-elev);
   border: 1px solid var(--border);

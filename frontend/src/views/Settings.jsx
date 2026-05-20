@@ -6,7 +6,7 @@
 // This file owns only: SETTINGS_SECTIONS, hash-sync, SettingsView shell.
 // ============================================================================
 import { useState, useEffect } from 'react';
-import { User, Users, Wallet, Shield, Sparkles, Globe, Database } from 'lucide-react';
+import { User, Users, Wallet, Shield, Sparkles, Globe, Database, Wand2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { MEMBER_PALETTE } from '../constants.js';
 
@@ -130,36 +130,52 @@ export function SettingsView({ members, accounts, accountBalances, saveMember, d
           )}
 
           {activeSection === 'regles' && (
-            <section className="settings-panel">
+            <section className="settings-panel settings-regles">
               <header>
                 <h2>{t('settings.rules.title')} <em>{t('settings.rules.titleAccent')}</em></h2>
                 <p className="settings-panel-intro">
                   {t('settings.rules.intro')}
                 </p>
               </header>
-              {recategorizeUncategorized && (
-                <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                  <button className="ds-btn" type="button" onClick={recategorizeUncategorized}>
-                    Re-catégoriser les transactions non catégorisées
-                  </button>
-                  <span style={{ color: 'var(--ink-2)', fontSize: 12 }}>
-                    Ré-applique les règles aux transactions actuellement en « Non catégorisé ».
-                  </span>
+
+              {/* Outils de maintenance — utilitaires de re-passe sur l'historique. */}
+              {(recategorizeUncategorized || recategorizeTransfers) && (
+                <div className="card settings-tools">
+                  <div className="card-header">
+                    <h3><Wand2 size={16}/> Outils de maintenance</h3>
+                    <span className="card-meta">Ré-applique les règles à l'historique en un clic.</span>
+                  </div>
+                  <div className="settings-tools-list">
+                    {recategorizeUncategorized && (
+                      <div className="settings-tool-row">
+                        <div className="settings-tool-text">
+                          <strong>Re-catégoriser les non catégorisées</strong>
+                          <span>Ré-applique les règles aux transactions actuellement en « Non catégorisé ».</span>
+                        </div>
+                        <button className="secondary-btn" type="button" onClick={recategorizeUncategorized}>
+                          Lancer
+                        </button>
+                      </div>
+                    )}
+                    {recategorizeTransfers && (
+                      <div className="settings-tool-row">
+                        <div className="settings-tool-text">
+                          <strong>Rejouer la détection des virements</strong>
+                          <span>Identifie AMEX, DÉPENSES ÉCHELONNÉES, top-ups Revolut/Lydia/Wise pré-v2. Tes overrides manuels sont préservés.</span>
+                        </div>
+                        <button className="secondary-btn" type="button" onClick={recategorizeTransfers}>
+                          Lancer
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
-              {recategorizeTransfers && (
-                <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                  <button className="ds-btn" type="button" onClick={recategorizeTransfers}>
-                    Rejouer la détection des virements internes
-                  </button>
-                  <span style={{ color: 'var(--ink-2)', fontSize: 12, maxWidth: 520 }}>
-                    Identifie les prélèvements mensuels de carte de crédit (AMEX),
-                    les paires DÉPENSE ÉCHELONNÉE et les top-ups Revolut/Lydia/Wise
-                    importés avant le moteur de catégorisation v2. Tes overrides
-                    manuels ne sont jamais touchés.
-                  </span>
-                </div>
-              )}
+
+              {/* Groupe : Catégories */}
+              <div className="settings-group-divider">
+                <span>Tes catégories</span>
+              </div>
               <LearningToggle showToast={showToast} />
               <MyCategoriesSection
                 categories={categories}
@@ -168,6 +184,11 @@ export function SettingsView({ members, accounts, accountBalances, saveMember, d
                 onCategoryDeleted={onCategoryDeleted}
                 showToast={showToast}
               />
+
+              {/* Groupe : Marchands et règles */}
+              <div className="settings-group-divider">
+                <span>Marchands &amp; règles automatiques</span>
+              </div>
               <PayeesSection categories={categories} showToast={showToast} />
               <CustomRulesSection categories={categories} />
               <TransferRulesSection
