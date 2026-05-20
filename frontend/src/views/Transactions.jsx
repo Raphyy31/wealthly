@@ -220,7 +220,7 @@ function CatPicker({ categories, currentId, onSelect, onClose }) {
   );
 }
 
-export function Transactions({ transactions, accounts, categories, members = [], recurringIds, toggleRecurring, transferIds = new Set(), setTransferOverride, updateCategory, updateTags, deleteTransaction, fmt, initialAccountFilter, onConsumeInitialFilter, onOpenAiPrompt }) {
+export function Transactions({ transactions, accounts, categories, members = [], recurringIds, toggleRecurring, transferIds = new Set(), setTransferOverride, updateCategory, updateTags, deleteTransaction, createTransaction, fmt, initialAccountFilter, onConsumeInitialFilter, onOpenAiPrompt }) {
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
   // Seed the account filter on mount if the parent passed one (e.g. coming
@@ -981,11 +981,23 @@ export function Transactions({ transactions, accounts, categories, members = [],
                             <span aria-hidden="true">{isTransfer ? '↔' : (display?.icon || '❓')}</span>
                           </button>
                           {editingTx === tx.id && (
-                            <div className="tx-card-picker">
+                            <div className="tx-card-picker" ref={(el) => { if (el) el.dataset.txid = tx.id; }}>
                               <CatPicker
                                 categories={categories}
                                 currentId={tx.categoryId}
-                                onSelect={(catId) => { updateCategory(tx.id, catId); }}
+                                onSelect={(catId) => {
+                                  // Interception : si l'utilisateur choisit
+                                  // "Virement interne", on ouvre la popover
+                                  // de destination au lieu d'appliquer direct.
+                                  if (catId === 'transfer') {
+                                    const pickerEl = document.querySelector(`.tx-card-picker[data-txid="${tx.id}"]`);
+                                    const rect = pickerEl?.getBoundingClientRect();
+                                    setEditingTx(null);
+                                    setTransferPickerTx({ txId: tx.id, anchorRect: rect || { bottom: 0, left: 0 } });
+                                  } else {
+                                    updateCategory(tx.id, catId);
+                                  }
+                                }}
                                 onClose={() => setEditingTx(null)}
                               />
                             </div>
@@ -1145,8 +1157,9 @@ export function Transactions({ transactions, accounts, categories, members = [],
           tx={transactions.find(t => t.id === transferPickerTx.txId)}
           anchorRect={transferPickerTx.anchorRect}
           accounts={accounts}
+          fmt={fmt}
           onClose={() => setTransferPickerTx(null)}
-          onMark={async (destAccountId, isTransfer) => {
+          onMark={async (destAccountId, isTransfer, opts = {}) => {
             const tx = transactions.find(t => t.id === transferPickerTx.txId);
             if (!tx) { setTransferPickerTx(null); return; }
             const currentTags = (tx.tags || []).filter(t => !(typeof t === 'string' && t.startsWith('transfer-dest:')));
@@ -1154,6 +1167,19 @@ export function Transactions({ transactions, accounts, categories, members = [],
               if (destAccountId) currentTags.push(buildTransferDestTag(destAccountId));
               if (updateTags) await updateTags(tx.id, currentTags);
               if (setTransferOverride) await setTransferOverride(tx.id, true);
+              // Si le compte cible est manuel et l'utilisateur a accepte,
+              // creer la tx miroir : montant oppose, meme date, label clair.
+              if (opts.createMirror && destAccountId && createTransaction) {
+                const destAcc = accounts.find(a => a.id === destAccountId);
+                await createTransaction({
+                  accountId: destAccountId,
+                  amount: -(tx.amount || 0),
+                  date: tx.date,
+                  label: `Virement reçu — ${tx.label || 'sans libellé'}`,
+                  isTransferOverride: true,
+                  tags: [buildTransferDestTag(tx.accountId)],
+                });
+              }
             } else {
               if (updateTags) await updateTags(tx.id, currentTags);
               if (setTransferOverride) await setTransferOverride(tx.id, false);
@@ -1184,9 +1210,11 @@ export function Transactions({ transactions, accounts, categories, members = [],
 //   - depenses → 'secondary' (neutralise, vraies depenses sur le cible)
 //   - principal → marquage 'sans destination' (legacy)
 // Animation GSAP : scale + opacity in 220ms.
-function TransferDestPopover({ tx, anchorRect, accounts, onClose, onMark, onChooseCategory }) {
+function TransferDestPopover({ tx, anchorRect, accounts, fmt, onClose, onMark, onChooseCategory }) {
   const ref = useRef(null);
   const overlayRef = useRef(null);
+  // Step 2 : confirmation tx miroir pour compte manuel
+  const [mirrorStep, setMirrorStep] = useState(null); // { destAccountId, destAcc }
 
   useLayoutEffect(() => {
     if (!ref.current || !overlayRef.current) return;
@@ -1227,19 +1255,84 @@ function TransferDestPopover({ tx, anchorRect, accounts, onClose, onMark, onChoo
     other: eligible.filter(a => a.role && !['epargne','investissement','depenses','principal'].includes(a.role)),
   };
 
+  const isManualAccount = (acc) => acc?.source !== 'gocardless' && !acc?.externalId;
+
   const renderAccount = (acc, hint) => (
     <button
       key={acc.id}
       className="tdp-acc"
-      onClick={() => onMark(acc.id, true)}
+      onClick={() => {
+        // Si compte manuel : etape de confirmation tx miroir
+        if (isManualAccount(acc)) {
+          setMirrorStep({ destAccountId: acc.id, destAcc: acc });
+        } else {
+          onMark(acc.id, true);
+        }
+      }}
     >
       <span className="tdp-acc-name">
         <span className="tdp-acc-dot" style={{ background: acc.role === 'epargne' ? 'var(--accent)' : acc.role === 'depenses' ? 'var(--warning)' : 'var(--ink-3)' }}/>
         {acc.name || acc.bank || '—'}
+        {isManualAccount(acc) && <span className="tdp-acc-manual">manuel</span>}
       </span>
       <span className="tdp-acc-hint">{hint}</span>
     </button>
   );
+
+  // Step 2 : confirmation tx miroir pour compte manuel.
+  if (mirrorStep) {
+    const mirrorAmount = -(tx.amount || 0);
+    const mirrorPositive = mirrorAmount >= 0;
+    const fmtFn = fmt || ((v) => `${v.toFixed(2)} €`);
+    const popover2 = (
+      <>
+        <div ref={overlayRef} className="tdp-overlay" onClick={onClose}/>
+        <div
+          ref={ref}
+          className="tdp-popover"
+          style={{ position: 'absolute', top, left, width: popWidth, opacity: 0 }}
+          onClick={(e) => e.stopPropagation()}
+          role="dialog"
+          aria-label="Confirmation transaction miroir"
+        >
+          <div className="tdp-head">
+            <div className="tdp-title">Compte manuel détecté</div>
+            <div className="tdp-sub">
+              <strong>{mirrorStep.destAcc.name || mirrorStep.destAcc.bank}</strong> n'est pas synchronisé.
+              Tu peux créer la transaction miroir maintenant pour garder ton solde à jour.
+            </div>
+          </div>
+
+          <div className="tdp-mirror-preview">
+            <div className="tdp-mirror-row">
+              <span className="tdp-mirror-label">À créer sur {mirrorStep.destAcc.name || mirrorStep.destAcc.bank}</span>
+              <span className={`tdp-mirror-amt num ${mirrorPositive ? 'pos' : 'neg'}`}>
+                {mirrorPositive ? '+' : ''}{fmtFn(mirrorAmount)}
+              </span>
+            </div>
+            <div className="tdp-mirror-row">
+              <span className="tdp-mirror-label">Date</span>
+              <span className="tdp-mirror-meta">{tx.date}</span>
+            </div>
+            <div className="tdp-mirror-row">
+              <span className="tdp-mirror-label">Libellé</span>
+              <span className="tdp-mirror-meta">Virement reçu — {tx.label || 'sans libellé'}</span>
+            </div>
+          </div>
+
+          <div className="tdp-foot">
+            <button className="tdp-foot-btn" onClick={() => onMark(mirrorStep.destAccountId, true, { createMirror: false })}>
+              Sans tx miroir
+            </button>
+            <button className="tdp-foot-btn primary" onClick={() => onMark(mirrorStep.destAccountId, true, { createMirror: true })}>
+              Créer la tx miroir
+            </button>
+          </div>
+        </div>
+      </>
+    );
+    return createPortal(popover2, document.body);
+  }
 
   const popover = (
     <>

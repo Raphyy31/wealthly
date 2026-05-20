@@ -1445,6 +1445,37 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     } catch (err) { showToast(t('toasts.genericError', { message: err.message }), 'error'); }
   };
 
+  // Cree une transaction manuelle (utilise pour les tx miroir de virements
+  // internes vers un compte non synchro). Renvoie la tx creee (ou null si erreur).
+  const createTransaction = async ({ accountId, amount, date, label, isTransferOverride = false, tags = [] }) => {
+    try {
+      const payload = {
+        account_id: accountId,
+        amount: amount,
+        date,
+        label,
+        is_transfer_override: isTransferOverride,
+        tags,
+      };
+      const created = await api.transactions.create(payload);
+      // Le backend renvoie le shape API ; on push direct dans state (best effort).
+      setTransactions(prev => [...prev, {
+        id: created.id,
+        accountId: created.account_id || accountId,
+        amount: created.amount ?? amount,
+        date: created.date || date,
+        label: created.label || label,
+        categoryId: created.category_slug || null,
+        isTransferOverride: created.is_transfer_override ?? isTransferOverride,
+        tags: created.tags || tags,
+      }]);
+      return created;
+    } catch (err) {
+      showToast(t('toasts.genericError', { message: err.message }), 'error');
+      return null;
+    }
+  };
+
   const createAccount = async (fields) => {
     try {
       const created = await api.accounts.create(accountToApi(fields));
@@ -2524,7 +2555,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             members={members}
             recurringIds={recurringIds} toggleRecurring={toggleRecurring}
             transferIds={transferIds} setTransferOverride={setTransferOverride}
-            updateCategory={updateTransactionCategory} updateTags={updateTransactionTags} deleteTransaction={deleteTransaction} fmt={fmt}
+            updateCategory={updateTransactionCategory} updateTags={updateTransactionTags} deleteTransaction={deleteTransaction} createTransaction={createTransaction} fmt={fmt}
             initialAccountFilter={txInitialAccountFilter}
             onConsumeInitialFilter={() => setTxInitialAccountFilter(null)}
             onOpenAiPrompt={() => setShowAiPromptModal(true)}
