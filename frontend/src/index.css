@@ -3703,6 +3703,62 @@ html, body {
   .cdm-head { padding: 16px 18px; }
 }
 
+/* ── Initial sync banner ─────────────────────────────────────────────
+   Rassure l'user que ses donnees ne sont pas perdues pendant le cold
+   start Railway (15-30s en navigation privee / hard refresh). */
+.init-sync-banner {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9998;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  background: var(--bg-elev);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  box-shadow: 0 8px 24px -8px color-mix(in oklab, var(--accent) 32%, transparent),
+              0 2px 8px -2px color-mix(in oklab, var(--ink) 12%, transparent);
+  animation: initSyncIn 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+  max-width: calc(100vw - 24px);
+}
+@keyframes initSyncIn {
+  from { opacity: 0; transform: translate(-50%, -8px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+.init-sync-spinner {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--accent-soft);
+  border-top-color: var(--accent);
+  animation: initSyncSpin 0.9s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes initSyncSpin {
+  to { transform: rotate(360deg); }
+}
+.init-sync-text {
+  font: 600 12.5px/1.2 var(--font-sans);
+  color: var(--accent);
+}
+.init-sync-meta {
+  font: 400 11px/1.2 var(--font-sans);
+  color: var(--ink-3);
+  padding-left: 8px;
+  border-left: 1px solid var(--border);
+}
+@media (max-width: 640px) {
+  .init-sync-banner { padding: 8px 14px; gap: 8px; top: 8px; }
+  .init-sync-text { font-size: 11.5px; }
+  .init-sync-meta { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .init-sync-spinner { animation: none; border-top-color: var(--accent-soft); }
+}
+
 /* ── Top progress bar (mutation tracker) ─────────────────────────────
    Apparait en haut quand au moins 1 POST/PUT/DELETE est en cours. Style
    indeterminé (la barre cobalt swipe de gauche a droite en boucle).

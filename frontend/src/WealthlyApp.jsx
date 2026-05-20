@@ -154,6 +154,12 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     const unsub = api.subscribeMutations(count => setMutationsInFlight(count));
     return unsub;
   }, []);
+  // Initial sync indicator — true tant que le 1er reloadAll() n'a pas fini.
+  // Sans ca, en navigation privee ou apres Ctrl+Shift+R, l'user voit un app
+  // vide pendant 15-30s (Railway cold start) et croit que ses donnees sont
+  // perdues. Banner explicite + spinner pour communiquer 'sync en cours'.
+  const [initialSyncing, setInitialSyncing] = useState(true);
+  const initialSyncDoneRef = useRef(false);
   const [navOpen, setNavOpen] = useState(false);
   const [txInitialAccountFilter, setTxInitialAccountFilter] = useState(null);
   const [theme] = useTheme();
@@ -569,8 +575,11 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
         await reloadAll();
         setOnboarded(true);
         setLoading(false);
+        setInitialSyncing(false);
+        initialSyncDoneRef.current = true;
       } else {
         // Restore cache immediately (milliseconds — no network).
+        let hasCache = false;
         try {
           const raw = localStorage.getItem(STORAGE_KEYS.DATA_CACHE);
           if (raw) {
@@ -585,11 +594,15 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             if (c.goals) setGoals(c.goals);
             if (c.fixedCharges) setFixedCharges(c.fixedCharges);
             if (c.customRules) setCustomRules(c.customRules);
+            hasCache = true;
           }
         } catch {}
 
         // Show the app NOW — don't gate on Railway cold-start (15-30s).
-        // Empty states are fine; data fills in once the backend wakes up.
+        // Le banner 'Récupération...' (controle par initialSyncing) rassure
+        // l'user que ses donnees ne sont PAS perdues, juste en cours de
+        // fetch. Crucial en navigation privee (pas de cache) ou apres
+        // hard-refresh.
         setLoading(false);
 
         // Refresh from API in the background.
@@ -607,7 +620,10 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             // Note : la synchro bancaire GoCardless se déclenche manuellement
             // depuis Settings ou via le bouton Synchroniser du Dashboard.
           } catch {}
-        }).catch(() => {});
+        }).catch(() => {}).finally(() => {
+          setInitialSyncing(false);
+          initialSyncDoneRef.current = true;
+        });
       }
       setLoading(false);
 
@@ -2203,11 +2219,22 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     <HideAmountsContext.Provider value={hideAmounts}>
     <div className={`app theme-${theme}`}>
       <Styles theme={theme}/>
-      {/* Top progress bar : indique a l'user que ca mute (POST/PUT/DELETE).
-          Apparait en haut sur toute la largeur en cobalt anime. */}
-      <div className={`top-progress-bar ${mutationsInFlight > 0 ? 'is-active' : ''}`} aria-hidden="true">
+      {/* Top progress bar : indique a l'user que ca mute (POST/PUT/DELETE)
+          ou que l'init sync est en cours. */}
+      <div className={`top-progress-bar ${mutationsInFlight > 0 || initialSyncing ? 'is-active' : ''}`} aria-hidden="true">
         <div className="top-progress-fill"/>
       </div>
+      {/* Initial sync banner — rassure l'user que ses donnees ne sont PAS
+          perdues, juste en cours de fetch depuis Supabase. Apparait au boot
+          tant que le premier reloadAll() n'a pas resolu (Railway cold start
+          15-30s en navigation privee). */}
+      {initialSyncing && (
+        <div className="init-sync-banner" role="status" aria-live="polite">
+          <span className="init-sync-spinner" aria-hidden="true"/>
+          <span className="init-sync-text">Récupération de tes données depuis Supabase…</span>
+          <span className="init-sync-meta">Ne ferme pas l'onglet, tout va apparaître</span>
+        </div>
+      )}
       {toast && <Toast message={toast.message} type={toast.type}/>}
       {requires2FA && (
         <Mandatory2FAOverlay
