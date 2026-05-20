@@ -19,7 +19,7 @@ import {
   categorize, detectRecurring, extractMerchantFromLabel,
   accountIncludeInNetWorth, accountCountsAsIncome, accountCountsAsExpense,
   detectInternalTransfers, convertCurrency, ACCOUNT_ROLES, bankColor,
-  fmtAmount, loadTransferRules, matchTransferRule, buildTransferDestTag,
+  fmtAmount, matchTransferRule, buildTransferDestTag,
 } from './utils.js';
 import { useRates } from './hooks/useRates.js';
 import { useBaseCurrency } from './hooks/useBaseCurrency.js';
@@ -822,14 +822,28 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     return { transferIds: ids, transferPairs: pairs };
   }, [visibleTransactions]);
 
-  // Auto-application des regles de virement (Phase C). Walk les tx au mount
-  // et apres chaque sync : si une tx match une regle ET n'a pas encore d'override,
-  // on applique le tag transfer-dest + override=true. Ref pour eviter de
-  // ré-appliquer en boucle.
+  // Auto-application des regles de virement (Phase C). Les regles sont
+  // persistees backend (table categorisation_rules, rule_type='transfer').
+  // Walk les tx apres chaque change : si une tx match ET n'a pas encore
+  // d'override, on applique le tag transfer-dest + override=true.
+  const transferRulesRef = useRef([]);
   const rulesAppliedRef = useRef(new Set());
   useEffect(() => {
-    const rules = loadTransferRules();
-    if (rules.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await api.rules.list();
+        if (cancelled) return;
+        transferRulesRef.current = (Array.isArray(list) ? list : [])
+          .filter(r => r.rule_type === 'transfer' && r.transfer_dest_account_id)
+          .map(r => ({ id: r.id, pattern: r.pattern, transferDestAccountId: r.transfer_dest_account_id }));
+      } catch { /* tolere : pas connecte, demo, etc. */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+  useEffect(() => {
+    const rules = transferRulesRef.current;
+    if (!rules || rules.length === 0) return;
     const toApply = [];
     for (const tx of visibleTransactions) {
       if (rulesAppliedRef.current.has(tx.id)) continue;
@@ -840,9 +854,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       if (match) toApply.push({ tx, destAccountId: match.destAccountId });
     }
     if (toApply.length === 0) return;
-    // Mark as processed to avoid loop
     toApply.forEach(({ tx }) => rulesAppliedRef.current.add(tx.id));
-    // Apply async (best effort, no toast spam)
     (async () => {
       for (const { tx, destAccountId } of toApply) {
         const currentTags = (tx.tags || []).filter(t => !(typeof t === 'string' && t.startsWith('transfer-dest:')));
@@ -850,7 +862,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
         try {
           await api.transactions.update(tx.id, { is_transfer_override: true, tags: currentTags });
           setTransactions(prev => prev.map(t => t.id === tx.id ? { ...t, isTransferOverride: true, tags: currentTags } : t));
-        } catch { /* tolerated, sera retried au prochain reload */ }
+        } catch { /* tolerated */ }
       }
     })();
   }, [visibleTransactions]);

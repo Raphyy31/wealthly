@@ -403,6 +403,7 @@ class RuleCreate(BaseModel):
     rule_type: str = "category"      # category | transfer
     payee_id: Optional[str] = None
     priority: int = 100
+    transfer_dest_account_id: Optional[str] = None  # cible du virement (rule_type=transfer)
 
 
 class RuleOut(BaseModel):
@@ -414,6 +415,7 @@ class RuleOut(BaseModel):
     rule_type: str = "category"
     payee_id: Optional[str] = None
     priority: int = 100
+    transfer_dest_account_id: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 

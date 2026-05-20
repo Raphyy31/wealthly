@@ -429,6 +429,10 @@ class CategorisationRule(Base):
     # (flag comme virement interne). Permet de gérer les top-ups vers cartes
     # secondaires non connectées (Revolut**, Lydia, etc.).
     rule_type = Column(String, default="category", nullable=False)  # category | transfer
+    # Pour rule_type='transfer' : compte cible du virement. Le type
+    # (savings / secondary) est dérivé du role du compte au runtime côté
+    # frontend. Nullable (legacy / sans destination explicite).
+    transfer_dest_account_id = Column(String, nullable=True)
     # Si la règle est attachée à un payee canonique, on persiste la FK.
     # Utile pour l'apprentissage : une règle apprise cible un payee, pas
     # juste un pattern regex flou.
