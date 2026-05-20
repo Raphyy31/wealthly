@@ -8,10 +8,11 @@
 import { useState, useMemo, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { Search, ArrowUpDown, Repeat, Trash2, Filter, X, RotateCcw, Sparkles, Plus, Download, ArrowLeftRight, PiggyBank, CreditCard } from 'lucide-react';
+import { Search, ArrowUpDown, Repeat, Trash2, Filter, X, RotateCcw, Sparkles, Plus, Download, ArrowLeftRight, PiggyBank, CreditCard, Inbox, FilterX } from 'lucide-react';
 import { formatDate, getTransferType, getTransferDestAccountId, buildTransferDestTag, ACCOUNT_ROLES } from '../utils.js';
 import { gsap } from '../utils/gsapSetup.js';
 import { AnimatedNumber } from '../components/AnimatedNumber.jsx';
+import { EmptyState } from '../components/EmptyState.jsx';
 
 const EMPTY_FILTERS = {
   cats: [],          // string[] — empty means "all"
@@ -836,12 +837,28 @@ export function Transactions({ transactions, accounts, categories, members = [],
       {(() => {
         const visible = filtered.slice(0, 200);
         if (visible.length === 0) {
+          // Deux cas distincts : (1) le foyer n'a aucune transaction du tout,
+          // (2) les filtres actifs ne renvoient rien. Le CTA change selon le cas.
+          const isReallyEmpty = transactions.length === 0;
+          if (isReallyEmpty) {
+            return (
+              <EmptyState
+                icon={Inbox}
+                title={<>Aucune <em>transaction.</em></>}
+                description="Importe un relevé bancaire (CSV) ou connecte une banque via Open Banking pour voir tes mouvements ici."
+                cta={{ label: 'Importer un CSV', icon: Download, onClick: () => { window.location.hash = '#/settings'; } }}
+              />
+            );
+          }
           return (
-            <div className="tx-feed-empty">
-              <Search size={28} className="tx-feed-empty-ico"/>
-              <p className="tx-feed-empty-lead">Aucune transaction ne correspond à vos filtres.</p>
-              <p className="tx-feed-empty-hint">Essayez d'élargir la période ou de retirer un filtre.</p>
-            </div>
+            <EmptyState
+              icon={FilterX}
+              tone="warning"
+              compact
+              title={<>Rien <em>à afficher.</em></>}
+              description="Aucune transaction ne correspond à tes filtres actuels."
+              cta={{ label: 'Réinitialiser les filtres', icon: RotateCcw, onClick: resetFilters }}
+            />
           );
         }
         // Group by day while respecting current sort order. When sorted by

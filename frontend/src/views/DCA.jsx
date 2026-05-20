@@ -16,6 +16,7 @@ import {
 import { dcaApi } from '../api.js';
 import { useQuotes } from '../hooks/useQuotes.js';
 import { Amount } from '../components/ui/Amount.jsx';
+import { EmptyState } from '../components/EmptyState.jsx';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -949,13 +950,12 @@ export function DCAView({ accounts = [], members = [], dcaPlans = [], onPlansCha
           <span className="card-meta">{t('dca.plans', { count: activePlans.length })}</span>
         </div>
         {activePlans.length === 0 ? (
-          <div className="empty-mini">
-            <TrendingUp size={24}/>
-            <p>{t('dca.noPlan')}</p>
-            <button className="primary-btn" style={{ marginTop: 8 }} onClick={() => setModal('new')}>
-              <Plus size={14}/> {t('dca.createPlan')}
-            </button>
-          </div>
+          <EmptyState
+            icon={TrendingUp}
+            title={<>Investis <em>régulièrement.</em></>}
+            description="Le DCA (Dollar Cost Averaging) lisse les variations du marché. Crée ton premier plan : ETF Monde, livret A, crypto… Wealthly suit tout."
+            cta={{ label: 'Créer un plan DCA', icon: Plus, onClick: () => setModal('new') }}
+          />
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {activePlans.map(p => (
