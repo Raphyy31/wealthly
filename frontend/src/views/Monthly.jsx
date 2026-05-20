@@ -418,6 +418,86 @@ export function Monthly({
     return 'none';
   })();
 
+  // Parent-grouped sections : une ligne par categorie parente (Logement,
+  // Enfants...), avec sums roll-ups des enfants. Sous-cats visibles a l'expand.
+  const parentGroupedSections = useMemo(() => {
+    const sections = [
+      { kind: 'income',  title: 'Entrées',  parents: new Map() },
+      { kind: 'expense', title: 'Dépenses', parents: new Map() },
+      { kind: 'saving',  title: 'Épargne',  parents: new Map() },
+    ];
+    const getSection = (k) => sections.find(s => s.kind === k);
+
+    const ensureGroup = (section, parentCat, parentId) => {
+      if (!section.parents.has(parentId)) {
+        section.parents.set(parentId, {
+          parent_id: parentId,
+          parent_cat: parentCat,
+          ref_total: 0,
+          real_total: 0,
+          children: new Map(), // childCatId -> { cat, ref_total, real_total }
+        });
+      }
+      return section.parents.get(parentId);
+    };
+
+    const ensureChild = (group, cat) => {
+      const childId = cat.id || cat.slug;
+      if (!group.children.has(childId)) {
+        group.children.set(childId, { cat, child_id: childId, ref_total: 0, real_total: 0 });
+      }
+      return group.children.get(childId);
+    };
+
+    // Walk refByCat (Mois type)
+    for (const val of refByCat.values()) {
+      const section = getSection(val.kind);
+      if (!section) continue;
+      const cat = catFor(val.category_id);
+      const isChild = !!cat?.parent;
+      const parentCat = isChild ? catFor(cat.parent) : cat;
+      const parentId = parentCat?.id || parentCat?.slug || val.category_id || 'uncategorized';
+
+      const group = ensureGroup(section, parentCat, parentId);
+      group.ref_total += val.total;
+      if (isChild && cat) {
+        ensureChild(group, cat).ref_total += val.total;
+      }
+    }
+
+    // Walk realByCat (Mois en cours)
+    for (const val of realByCat.values()) {
+      const section = getSection(val.kind);
+      if (!section) continue;
+      const cat = catFor(val.category_id);
+      const isChild = !!cat?.parent;
+      const parentCat = isChild ? catFor(cat.parent) : cat;
+      const parentId = parentCat?.id || parentCat?.slug || val.category_id || 'uncategorized';
+      const realAmount = Math.max(0, val.total); // clamp refunds
+
+      const group = ensureGroup(section, parentCat, parentId);
+      group.real_total += realAmount;
+      if (isChild && cat) {
+        ensureChild(group, cat).real_total += realAmount;
+      }
+    }
+
+    return sections
+      .map(s => ({
+        kind: s.kind,
+        title: s.title,
+        parents: [...s.parents.values()]
+          .map(p => ({
+            ...p,
+            children: [...p.children.values()].sort((a, b) => (b.ref_total + b.real_total) - (a.ref_total + a.real_total)),
+            is_unexpected: p.ref_total === 0 && p.real_total > 0,
+          }))
+          .sort((a, b) => (b.ref_total + b.real_total) - (a.ref_total + a.real_total)),
+      }))
+      .filter(s => s.parents.length > 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refByCat, realByCat, categories]);
+
   // Comparison table — sections: income / expense / saving.
   const tableSections = useMemo(() => {
     const sections = [
@@ -601,7 +681,7 @@ export function Monthly({
            Clic = deplie les transactions du mois pour cette categorie. */}
       {!isChildScope && hasRefMonth && (
         <MonthlyCompareTable
-          tableSections={tableSections}
+          sections={parentGroupedSections}
           monthTx={monthTx}
           fmt={fmt}
           catFor={catFor}
@@ -894,8 +974,8 @@ function SankeyNode({ x, y, width, height, index, payload, fmt, teaser }) {
 // Une ligne par categorie (parente), tri par ref desc puis real desc.
 // Clic = deplie les transactions du mois pour cette categorie.
 // ──────────────────────────────────────────────────────────────────────
-function MonthlyCompareTable({ tableSections, monthTx, fmt, catFor, expandedRows, toggleRow, selectedMonthLabel }) {
-  // Groupe les tx du mois par categoryId une fois (pour O(1) au deplie).
+function MonthlyCompareTable({ sections, monthTx, fmt, catFor, expandedRows, toggleRow, selectedMonthLabel }) {
+  // Groupe les tx du mois par categoryId une fois (O(1) au deplie).
   const txByCategoryId = useMemo(() => {
     const m = new Map();
     for (const t of monthTx) {
@@ -903,61 +983,67 @@ function MonthlyCompareTable({ tableSections, monthTx, fmt, catFor, expandedRows
       if (!m.has(cid)) m.set(cid, []);
       m.get(cid).push(t);
     }
-    // Tri intra-cat : date desc
     for (const arr of m.values()) {
       arr.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
     }
     return m;
   }, [monthTx]);
 
-  // Recupere les tx d'une categorie + ses enfants (utile pour categorie parente
-  // qui regroupe plusieurs sub-cats dans le mois reel).
-  const txForCategory = (catId) => {
+  // Recupere les tx d'une categorie parente : direct + enfants.
+  const txForParent = (parentId) => {
     const acc = [];
-    // Direct hits
-    if (txByCategoryId.has(catId)) acc.push(...txByCategoryId.get(catId));
-    // Children that roll up : cherche les categories dont parent === catId
+    if (txByCategoryId.has(parentId)) acc.push(...txByCategoryId.get(parentId));
     for (const [otherCid, txs] of txByCategoryId.entries()) {
       const cat = catFor(otherCid);
-      if (cat?.parent === catId) acc.push(...txs);
+      if (cat?.parent === parentId) acc.push(...txs);
     }
     return acc.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
   };
 
-  // Filtre les sections non-vides
-  const visibleSections = tableSections.filter(s => s.items.length > 0);
-  if (visibleSections.length === 0) return null;
+  if (sections.length === 0) return null;
 
   return (
     <section className="card mon-compare">
       <div className="mon-compare-head">
         <div>
           <h3>Comparaison par catégorie</h3>
-          <p className="mon-compare-sub">Mois type → {selectedMonthLabel}. Clique sur une ligne pour voir les transactions.</p>
+          <p className="mon-compare-sub">Clique sur une catégorie pour voir le détail des sous-catégories et transactions.</p>
         </div>
       </div>
 
-      {visibleSections.map(section => (
+      {/* Column headers — clarifie quelle colonne est Mois type vs reel */}
+      <div className="mon-compare-cols">
+        <span className="mon-compare-cols-cat">Catégorie</span>
+        <span className="mon-compare-cols-amounts">
+          <span className="mon-compare-cols-ref">Mois type</span>
+          <span className="mon-compare-cols-arrow">→</span>
+          <span className="mon-compare-cols-real">{selectedMonthLabel}</span>
+        </span>
+        <span className="mon-compare-cols-delta">Écart</span>
+      </div>
+
+      {sections.map(section => (
         <div key={section.kind} className={`mon-compare-section mon-compare-section--${section.kind}`}>
           <div className="mon-compare-section-head">
             <span className="mon-compare-section-title">{section.title}</span>
-            <span className="mon-compare-section-count">{section.items.length} {section.items.length > 1 ? 'catégories' : 'catégorie'}</span>
+            <span className="mon-compare-section-count">{section.parents.length} {section.parents.length > 1 ? 'catégories' : 'catégorie'}</span>
           </div>
 
           <ul className="mon-compare-rows">
-            {section.items.map(item => {
-              const cat = catFor(item.category_id);
-              const isExpanded = expandedRows.has(item.key);
-              const delta = item.real_total - item.ref_total;
+            {section.parents.map(group => {
+              const cat = group.parent_cat;
+              const rowKey = `${section.kind}::${group.parent_id}`;
+              const isExpanded = expandedRows.has(rowKey);
+              const delta = group.real_total - group.ref_total;
               const hasDelta = Math.abs(delta) > 0.5;
               const isOver = section.kind === 'expense' ? delta > 0 : delta < 0;
-              const txs = isExpanded ? txForCategory(item.category_id) : [];
+              const txs = isExpanded ? txForParent(group.parent_id) : [];
 
               return (
-                <li key={item.key} className={`mon-compare-row ${isExpanded ? 'is-expanded' : ''}`}>
+                <li key={rowKey} className={`mon-compare-row ${isExpanded ? 'is-expanded' : ''}`}>
                   <button
                     className="mon-compare-row-head"
-                    onClick={() => toggleRow(item.key)}
+                    onClick={() => toggleRow(rowKey)}
                     aria-expanded={isExpanded}
                   >
                     <span className="mon-compare-row-chevron" aria-hidden="true">
@@ -967,17 +1053,22 @@ function MonthlyCompareTable({ tableSections, monthTx, fmt, catFor, expandedRows
                       <span className="mon-compare-row-icon" style={{ background: cat?.color || 'var(--ink-3)' }}>
                         {cat?.icon || '•'}
                       </span>
-                      <span className="mon-compare-row-name">{item.cat_name}</span>
-                      {item.is_unexpected && <span className="mon-compare-badge">Nouveau</span>}
+                      <span className="mon-compare-row-name">{cat?.name || group.parent_id}</span>
+                      {group.children.length > 0 && (
+                        <span className="mon-compare-row-childcount" title={`${group.children.length} sous-catégorie(s)`}>
+                          {group.children.length}
+                        </span>
+                      )}
+                      {group.is_unexpected && <span className="mon-compare-badge">Nouveau</span>}
                     </span>
 
                     <span className="mon-compare-row-amounts">
                       <span className="mon-compare-row-ref num" title="Mois type">
-                        {item.ref_total > 0 ? fmt(item.ref_total) : '—'}
+                        {group.ref_total > 0 ? fmt(group.ref_total) : '—'}
                       </span>
                       <span className="mon-compare-row-arrow" aria-hidden="true">→</span>
                       <span className="mon-compare-row-real num" title={selectedMonthLabel}>
-                        {item.real_total > 0 ? fmt(item.real_total) : '—'}
+                        {group.real_total > 0 ? fmt(group.real_total) : '—'}
                       </span>
                     </span>
 
@@ -990,23 +1081,66 @@ function MonthlyCompareTable({ tableSections, monthTx, fmt, catFor, expandedRows
 
                   {isExpanded && (
                     <div className="mon-compare-row-body">
+                      {/* Breakdown sous-categories */}
+                      {group.children.length > 0 && (
+                        <div className="mon-compare-children">
+                          <div className="mon-compare-children-title">Sous-catégories</div>
+                          <ul className="mon-compare-children-list">
+                            {group.children.map(child => {
+                              const cdelta = child.real_total - child.ref_total;
+                              const chasDelta = Math.abs(cdelta) > 0.5;
+                              const cIsOver = section.kind === 'expense' ? cdelta > 0 : cdelta < 0;
+                              return (
+                                <li key={child.child_id} className="mon-compare-child">
+                                  <span className="mon-compare-child-name">
+                                    <span className="mon-compare-child-icon">{child.cat?.icon || '•'}</span>
+                                    {child.cat?.name || child.child_id}
+                                  </span>
+                                  <span className="mon-compare-child-amounts">
+                                    <span className="mon-compare-row-ref num">{child.ref_total > 0 ? fmt(child.ref_total) : '—'}</span>
+                                    <span className="mon-compare-row-arrow">→</span>
+                                    <span className="mon-compare-row-real num">{child.real_total > 0 ? fmt(child.real_total) : '—'}</span>
+                                  </span>
+                                  <span className={`mon-compare-child-delta num ${chasDelta ? (cIsOver ? 'neg' : 'pos') : 'zero'}`}>
+                                    {chasDelta ? (
+                                      <>{cdelta > 0 ? '+' : ''}{fmt(cdelta)}</>
+                                    ) : '±0'}
+                                  </span>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Transactions du mois */}
+                      <div className="mon-compare-tx-title">Transactions ({txs.length})</div>
                       {txs.length === 0 ? (
                         <div className="mon-compare-row-empty">
                           <em>Aucune transaction sur ce mois.</em>
                         </div>
                       ) : (
                         <ul className="mon-compare-tx-list">
-                          {txs.map(t => (
-                            <li key={t.id} className="mon-compare-tx">
-                              <span className="mon-compare-tx-date">
-                                {(t.date || '').slice(8, 10)}/{(t.date || '').slice(5, 7)}
-                              </span>
-                              <span className="mon-compare-tx-label" title={t.label}>{t.label || t.merchant || '—'}</span>
-                              <span className={`mon-compare-tx-amount num ${(t.amount || 0) >= 0 ? 'pos' : 'neg'}`}>
-                                {fmt(Math.abs(t.amount || 0))}
-                              </span>
-                            </li>
-                          ))}
+                          {txs.map(t => {
+                            const txCat = catFor(t.categoryId);
+                            const isSubCat = txCat?.parent === group.parent_id;
+                            return (
+                              <li key={t.id} className="mon-compare-tx">
+                                <span className="mon-compare-tx-date">
+                                  {(t.date || '').slice(8, 10)}/{(t.date || '').slice(5, 7)}
+                                </span>
+                                <span className="mon-compare-tx-label" title={t.label}>{t.label || t.merchant || '—'}</span>
+                                {isSubCat && txCat && (
+                                  <span className="mon-compare-tx-subtag" title={txCat.name}>
+                                    {txCat.icon} {txCat.name}
+                                  </span>
+                                )}
+                                <span className={`mon-compare-tx-amount num ${(t.amount || 0) >= 0 ? 'pos' : 'neg'}`}>
+                                  {fmt(Math.abs(t.amount || 0))}
+                                </span>
+                              </li>
+                            );
+                          })}
                         </ul>
                       )}
                     </div>
