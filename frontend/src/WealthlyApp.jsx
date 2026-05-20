@@ -70,8 +70,18 @@ const TaxSimulator = lazy(() => import('./TaxSimulator.jsx'));
 export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
+  // Tri-state : null = inconnu (attend backend), true = membres existent,
+  // false = household vide (afficher Onboarding). On ne trust localStorage
+  // QUE si la valeur est explicitement '1' (deja onboarde sur ce device).
+  // Sur nouveau device localStorage vide -> null -> on attend l'API avant
+  // d'afficher l'Onboarding (sinon flash qui ferait recreer un user).
   const [onboarded, setOnboarded] = useState(() => {
-    try { return localStorage.getItem(STORAGE_KEYS.ONBOARDED) === '1'; } catch { return false; }
+    try {
+      const v = localStorage.getItem(STORAGE_KEYS.ONBOARDED);
+      if (v === '1') return true;
+      // '0' ou null -> on attend la verification backend
+      return null;
+    } catch { return null; }
   });
   // URL hash routing: #/<view>?m=<memberId>. Lets refresh / back-forward /
   // bookmark / share links restore the exact view + active member.
@@ -2135,6 +2145,19 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     );
   }
 
+  // null = encore en cours de check backend ; on n'affiche PAS l'Onboarding
+  // tant qu'on ne sait pas (evite le flash qui ferait recreer un user sur
+  // nouveau device alors que le household a deja des membres).
+  if (onboarded === null) {
+    return (
+      <div className="app theme-light">
+        <Styles theme={theme}/>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', color: 'var(--ink-3)' }}>
+          <span className="sr-only">Chargement…</span>
+        </div>
+      </div>
+    );
+  }
   if (!onboarded) {
     return (
       <>
