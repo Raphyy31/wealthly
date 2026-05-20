@@ -220,17 +220,19 @@ export function Monthly({
     const nodes = [];
     const links = [];
 
-    // Level 1 — income nodes
-    const incomeNodeIdx = {};
-    incomeLines.forEach(l => {
-      incomeNodeIdx[l.id] = nodes.length;
-      nodes.push({
-        name: l.label || 'Entrée',
-        level: 0,
-        kind: 'income',
-        amount: parseFloat(l.amount) || 0,
-        color: 'var(--positive)',
-      });
+    // Level 1 — UN SEUL node 'Entrées' qui agrege tous les revenus.
+    // Avant : 1 node par income line -> X2 lignes vers chaque categorie,
+    // graph illisible. Maintenant : tout converge en amont.
+    const totalIncomeAggregated = incomeLines.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0);
+    const incomeNodeSingleIdx = nodes.length;
+    nodes.push({
+      name: incomeLines.length > 1 ? 'Entrées' : (incomeLines[0]?.label || 'Salaire'),
+      level: 0,
+      kind: 'income',
+      amount: totalIncomeAggregated,
+      color: 'var(--positive)',
+      // breakdown : composition listee dans le tooltip si plusieurs sources
+      breakdown: incomeLines.length > 1 ? incomeLines.map(l => ({ label: l.label || 'Entrée', amount: parseFloat(l.amount) || 0 })) : null,
     });
 
     // Level 2 — top-level parent categories (one node per unique top-level)
@@ -292,24 +294,19 @@ export function Monthly({
       });
     });
 
-    // Income → top-level links (proportional split based on income share)
-    const totalIncome = incomeLines.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0);
+    // Income unique → top-level links (un lien par categorie depuis le
+    // single income node, ce qui rend le Sankey lisible).
     const totalSpend = spendLines.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0);
-    if (totalIncome > 0 && totalSpend > 0) {
-      incomeLines.forEach(inc => {
-        const incVal = parseFloat(inc.amount) || 0;
-        const incShare = incVal / totalIncome;
-        Object.entries(topTotals).forEach(([topId, topTotal]) => {
-          const val = topTotal * incShare;
-          if (val > 0.5) {
-            links.push({
-              source: incomeNodeIdx[inc.id],
-              target: topNodeIdx[topId],
-              value: val,
-              color: nodes[topNodeIdx[topId]].color,
-            });
-          }
-        });
+    if (totalIncomeAggregated > 0 && totalSpend > 0) {
+      Object.entries(topTotals).forEach(([topId, topTotal]) => {
+        if (topTotal > 0.5) {
+          links.push({
+            source: incomeNodeSingleIdx,
+            target: topNodeIdx[topId],
+            value: topTotal,
+            color: nodes[topNodeIdx[topId]].color,
+          });
+        }
       });
     }
 
@@ -342,7 +339,8 @@ export function Monthly({
     const nodes = [];
     const links = [];
 
-    // Level 1 — income aggregated by income category (not per-tx)
+    // Level 1 — UN SEUL node 'Entrées' qui agrege Salaire + Autres revenus.
+    // Sinon 2+ income sources -> double les lignes vers chaque categorie.
     const incomeAgg = new Map();
     incomeTx.forEach(t => {
       const cat = catFor(t.categoryId);
@@ -350,10 +348,17 @@ export function Monthly({
       if (!incomeAgg.has(key)) incomeAgg.set(key, { name: cat?.name || 'Entrée', amount: 0, icon: cat?.icon });
       incomeAgg.get(key).amount += t.sharedAmount;
     });
-    const incomeNodeIdx = {};
-    [...incomeAgg.entries()].forEach(([key, v]) => {
-      incomeNodeIdx[key] = nodes.length;
-      nodes.push({ name: v.name, icon: v.icon, level: 0, kind: 'income', amount: v.amount, color: 'var(--positive)' });
+    const incomeBreakdown = [...incomeAgg.values()];
+    const incomeAggregatedTotal = incomeBreakdown.reduce((s, v) => s + v.amount, 0);
+    const incomeNodeSingleIdx = nodes.length;
+    nodes.push({
+      name: incomeBreakdown.length > 1 ? 'Entrées' : (incomeBreakdown[0]?.name || 'Salaire'),
+      icon: incomeBreakdown.length > 1 ? '💰' : incomeBreakdown[0]?.icon,
+      level: 0,
+      kind: 'income',
+      amount: incomeAggregatedTotal,
+      color: 'var(--positive)',
+      breakdown: incomeBreakdown.length > 1 ? incomeBreakdown.map(v => ({ label: v.name, amount: v.amount })) : null,
     });
 
     // Level 2 — top-level parent cats with aggregated totals
@@ -371,7 +376,7 @@ export function Monthly({
       const amt = Math.max(0, -t.sharedAmount); // expense magnitude
       topTotals[topId] += amt;
     });
-    const totalIncomeForPct = [...incomeAgg.values()].reduce((s, v) => s + v.amount, 0);
+    const totalIncomeForPct = incomeAggregatedTotal;
     Object.entries(topTotals).forEach(([topId, total]) => {
       const node = nodes[topNodeIdx[topId]];
       node.amount = total;
@@ -403,18 +408,15 @@ export function Monthly({
       links.push({ source: topNodeIdx[leaf.topId], target: idx, value: leaf.amount, color: leaf.color });
     });
 
-    // Income → top-level links (proportional)
+    // Income unique → top-level links (un seul lien par categorie depuis le
+    // node 'Entrées' agrege).
     const totalIncome = totalIncomeForPct;
     const totalSpend = Object.values(topTotals).reduce((s, v) => s + v, 0);
     if (totalIncome > 0 && totalSpend > 0) {
-      [...incomeAgg.entries()].forEach(([incKey, inc]) => {
-        const incShare = inc.amount / totalIncome;
-        Object.entries(topTotals).forEach(([topId, topTotal]) => {
-          const val = topTotal * incShare;
-          if (val > 0.5) {
-            links.push({ source: incomeNodeIdx[incKey], target: topNodeIdx[topId], value: val, color: nodes[topNodeIdx[topId]].color });
-          }
-        });
+      Object.entries(topTotals).forEach(([topId, topTotal]) => {
+        if (topTotal > 0.5) {
+          links.push({ source: incomeNodeSingleIdx, target: topNodeIdx[topId], value: topTotal, color: nodes[topNodeIdx[topId]].color });
+        }
       });
     }
 
@@ -448,14 +450,8 @@ export function Monthly({
         value: savingsFromTransfers,
         color: 'var(--accent)',
       });
-      // Income -> savings, proportionnel
-      [...incomeAgg.entries()].forEach(([incKey, inc]) => {
-        const incShare = inc.amount / totalIncome;
-        const val = savingsFromTransfers * incShare;
-        if (val > 0.5) {
-          links.push({ source: incomeNodeIdx[incKey], target: savingsNodeIdx, value: val, color: 'var(--accent)' });
-        }
-      });
+      // Income unique → savings
+      links.push({ source: incomeNodeSingleIdx, target: savingsNodeIdx, value: savingsFromTransfers, color: 'var(--accent)' });
     }
 
     return { nodes, links };
