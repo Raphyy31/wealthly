@@ -160,6 +160,14 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   // perdues. Banner explicite + spinner pour communiquer 'sync en cours'.
   const [initialSyncing, setInitialSyncing] = useState(true);
   const initialSyncDoneRef = useRef(false);
+  // Backend health — banner "le serveur ne repond pas" + retry auto quand
+  // Railway tombe (incident infra, cold start raté, crash). On garde les
+  // donnees affichees en read-only pendant ce temps au lieu d'ecran vide.
+  const [backendStatus, setBackendStatus] = useState({ status: 'online', offlineSince: null, retryAttempt: 0 });
+  useEffect(() => {
+    const unsub = api.subscribeBackendStatus(s => setBackendStatus(s));
+    return unsub;
+  }, []);
   const [navOpen, setNavOpen] = useState(false);
   const [txInitialAccountFilter, setTxInitialAccountFilter] = useState(null);
   const [theme] = useTheme();
@@ -2233,6 +2241,34 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
           <span className="init-sync-spinner" aria-hidden="true"/>
           <span className="init-sync-text">Récupération de tes données depuis Supabase…</span>
           <span className="init-sync-meta">Ne ferme pas l'onglet, tout va apparaître</span>
+        </div>
+      )}
+      {/* Backend offline banner — Railway tombe, cold start trop long, etc.
+          Apparait des qu'un fetch echoue cote reseau ou renvoie un 5xx. Les
+          donnees deja chargees restent visibles (pas d'ecran vide). Retry
+          exponentiel auto via api.subscribeBackendStatus. */}
+      {!initialSyncing && backendStatus.status === 'offline' && (
+        <div className="backend-status-banner backend-status-offline" role="alert" aria-live="assertive">
+          <span className="backend-status-dot" aria-hidden="true"/>
+          <div className="backend-status-body">
+            <span className="backend-status-title">Le serveur ne répond pas</span>
+            <span className="backend-status-meta">
+              On retente automatiquement… Tes données restent affichées.
+            </span>
+          </div>
+          <button
+            type="button"
+            className="backend-status-retry"
+            onClick={() => api.retryBackendNow()}
+          >
+            Réessayer
+          </button>
+        </div>
+      )}
+      {backendStatus.status === 'restored' && (
+        <div className="backend-status-banner backend-status-restored" role="status" aria-live="polite">
+          <span className="backend-status-check" aria-hidden="true">✓</span>
+          <span className="backend-status-title">Connexion rétablie</span>
         </div>
       )}
       {toast && <Toast message={toast.message} type={toast.type}/>}

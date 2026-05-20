@@ -32,6 +32,99 @@ const startMutation = () => { __mutationCount++; notifyMutations(); };
 const endMutation = () => { __mutationCount = Math.max(0, __mutationCount - 1); notifyMutations(); };
 
 // ============================================================================
+// BACKEND HEALTH TRACKER
+// ============================================================================
+// État global de connectivité au backend, alimenté par les fetchs et un
+// polling automatique en cas de panne. Sert à afficher un banner papier-chaud
+// "Le serveur ne répond pas — on retente automatiquement…" quand Railway
+// est down ou en cold start.
+//
+// États possibles :
+//  - 'online'    : tout fonctionne (état initial optimiste)
+//  - 'offline'   : un fetch a échoué côté réseau (TypeError / 5xx persistant)
+//  - 'restored'  : on vient de repasser online (flash 3s puis retour à online)
+//
+// Le hook `useBackendStatus` (dans hooks/useBackendStatus.js) consomme ça.
+let __backendStatus = 'online';
+let __backendOfflineSince = null; // timestamp ms quand on est passé offline
+let __backendRetryTimer = null;
+let __backendRetryAttempt = 0;
+const __backendListeners = new Set();
+const notifyBackend = () => {
+  const snapshot = {
+    status: __backendStatus,
+    offlineSince: __backendOfflineSince,
+    retryAttempt: __backendRetryAttempt,
+  };
+  __backendListeners.forEach(fn => { try { fn(snapshot); } catch {} });
+};
+export const subscribeBackendStatus = (fn) => {
+  __backendListeners.add(fn);
+  fn({ status: __backendStatus, offlineSince: __backendOfflineSince, retryAttempt: __backendRetryAttempt });
+  return () => __backendListeners.delete(fn);
+};
+
+// Retry exponentiel : 2s → 5s → 10s → 20s → 30s (capped)
+const RETRY_DELAYS = [2000, 5000, 10000, 20000, 30000];
+const scheduleBackendPing = () => {
+  if (__backendRetryTimer) clearTimeout(__backendRetryTimer);
+  const delay = RETRY_DELAYS[Math.min(__backendRetryAttempt, RETRY_DELAYS.length - 1)];
+  __backendRetryTimer = setTimeout(async () => {
+    __backendRetryTimer = null;
+    try {
+      const res = await fetch(`${API_BASE}/auth/me`, { credentials: 'include' });
+      // 401 = serveur up mais session expirée → on est online quand même
+      if (res.ok || res.status === 401) {
+        markBackendOnline();
+      } else {
+        __backendRetryAttempt++;
+        scheduleBackendPing();
+      }
+    } catch {
+      __backendRetryAttempt++;
+      scheduleBackendPing();
+    }
+  }, delay);
+};
+
+const markBackendOffline = () => {
+  if (__backendStatus === 'offline') return;
+  __backendStatus = 'offline';
+  __backendOfflineSince = Date.now();
+  __backendRetryAttempt = 0;
+  notifyBackend();
+  scheduleBackendPing();
+};
+
+const markBackendOnline = () => {
+  if (__backendStatus === 'online') return;
+  const wasOffline = __backendStatus === 'offline';
+  if (__backendRetryTimer) { clearTimeout(__backendRetryTimer); __backendRetryTimer = null; }
+  __backendRetryAttempt = 0;
+  if (wasOffline) {
+    // Flash "rétabli" puis on revient à online silencieux
+    __backendStatus = 'restored';
+    notifyBackend();
+    setTimeout(() => {
+      __backendStatus = 'online';
+      __backendOfflineSince = null;
+      notifyBackend();
+    }, 2800);
+  } else {
+    __backendStatus = 'online';
+    __backendOfflineSince = null;
+    notifyBackend();
+  }
+};
+
+// Retry manuel déclenché par le banner ("Réessayer maintenant")
+export const retryBackendNow = () => {
+  if (__backendRetryTimer) { clearTimeout(__backendRetryTimer); __backendRetryTimer = null; }
+  __backendRetryAttempt = 0;
+  scheduleBackendPing();
+};
+
+// ============================================================================
 // CORE FETCH WRAPPER
 // ============================================================================
 async function request(method, path, body = null) {
@@ -58,7 +151,17 @@ async function request(method, path, body = null) {
     response = await fetch(`${API_BASE}${path}`, opts);
   } catch (err) {
     if (isMutation) endMutation();
+    markBackendOffline();
     throw new Error('Impossible de joindre le serveur. Vérifie que le backend tourne.');
+  }
+
+  // 5xx persistants = backend en vrac (Railway cold start, crash, etc.)
+  // On marque offline pour déclencher le banner + retry polling.
+  if (response.status >= 500) {
+    markBackendOffline();
+  } else {
+    // Toute autre réponse (2xx, 3xx, 4xx) prouve que le serveur répond
+    markBackendOnline();
   }
 
   if (response.status === 401) {

@@ -3873,6 +3873,113 @@ html, body {
   .init-sync-spinner { animation: none; border-top-color: var(--accent-soft); }
 }
 
+/* ── Backend status banner ────────────────────────────────────────────
+   Apparait quand le backend (Railway) ne repond plus ou renvoie 5xx
+   persistant. Les donnees deja chargees restent visibles ; on
+   communique juste que les modifs ne seront pas sauvegardees. Retry
+   exponentiel automatique + bouton "Réessayer". Couleurs : warning
+   ocre (papier-chaud) pour offline, sage pour restored. */
+.backend-status-banner {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9997;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: var(--bg-elev);
+  white-space: nowrap;
+  max-width: calc(100vw - 24px);
+  animation: backendStatusIn 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 8px 24px -8px color-mix(in oklab, var(--ink) 18%, transparent),
+              0 2px 8px -2px color-mix(in oklab, var(--ink) 10%, transparent);
+}
+@keyframes backendStatusIn {
+  from { opacity: 0; transform: translate(-50%, -8px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+.backend-status-offline {
+  border: 1px solid var(--warning);
+  box-shadow: 0 8px 24px -8px color-mix(in oklab, var(--warning) 28%, transparent),
+              0 2px 8px -2px color-mix(in oklab, var(--ink) 10%, transparent);
+}
+.backend-status-restored {
+  border: 1px solid var(--positive);
+}
+.backend-status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--warning);
+  flex-shrink: 0;
+  animation: backendDotPulse 1.4s ease-in-out infinite;
+  box-shadow: 0 0 0 0 color-mix(in oklab, var(--warning) 50%, transparent);
+}
+@keyframes backendDotPulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--warning) 55%, transparent); }
+  50%      { box-shadow: 0 0 0 6px color-mix(in oklab, var(--warning) 0%, transparent); }
+}
+.backend-status-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--positive);
+  color: var(--bg);
+  font: 700 11px/1 var(--font-sans);
+  flex-shrink: 0;
+}
+.backend-status-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.backend-status-title {
+  font: 600 12.5px/1.25 var(--font-sans);
+  color: var(--ink);
+}
+.backend-status-offline .backend-status-title { color: var(--warning); }
+.backend-status-restored .backend-status-title { color: var(--positive); }
+.backend-status-meta {
+  font: 400 11px/1.25 var(--font-sans);
+  color: var(--ink-3);
+}
+.backend-status-retry {
+  margin-left: 4px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--warning);
+  background: transparent;
+  color: var(--warning);
+  font: 600 11.5px/1 var(--font-sans);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.backend-status-retry:hover {
+  background: var(--warning);
+  color: var(--bg);
+}
+@media (max-width: 640px) {
+  .backend-status-banner {
+    padding: 8px 14px;
+    gap: 8px;
+    top: 8px;
+    white-space: normal;
+    max-width: calc(100vw - 16px);
+  }
+  .backend-status-title { font-size: 12px; }
+  .backend-status-meta { display: none; }
+  .backend-status-retry { padding: 4px 10px; font-size: 11px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .backend-status-dot { animation: none; }
+}
+
 /* ── Top progress bar (mutation tracker) ─────────────────────────────
    Apparait en haut quand au moins 1 POST/PUT/DELETE est en cours. Style
    indeterminé (la barre cobalt swipe de gauche a droite en boucle).
