@@ -19,6 +19,7 @@ import { DonneesSection }       from './settings/sections/DonneesSection.jsx';
 import { MyCategoriesSection }  from './settings/sections/MyCategoriesSection.jsx';
 import { PayeesSection }        from './settings/sections/PayeesSection.jsx';
 import { CustomRulesSection }   from './settings/sections/CustomRulesSection.jsx';
+import { TransferRulesSection } from './settings/sections/TransferRulesSection.jsx';
 import { LearningToggle }       from './settings/sections/LearningToggle.jsx';
 import { MemberEditor }         from './settings/modals/MemberEditor.jsx';
 
@@ -42,7 +43,7 @@ function readHashSection() {
   return null;
 }
 
-export function SettingsView({ members, accounts, accountBalances, saveMember, deleteMember, deleteAccount, updateAccount, mergeAccounts, transactions = [], exportData, importData, resetAllData, categories = [], reloadCategories, onCategoryCreated, onCategoryDeleted, showToast, fmt, baseCurrency = 'EUR', setBaseCurrency, rates, ratesDate, currentUser, onImport, recategorizeUncategorized, recategorizeTransfers }) {
+export function SettingsView({ members, accounts, accountBalances, saveMember, deleteMember, deleteAccount, updateAccount, mergeAccounts, transactions = [], transferIds, updateTags, setTransferOverride, exportData, importData, resetAllData, categories = [], reloadCategories, onCategoryCreated, onCategoryDeleted, showToast, fmt, baseCurrency = 'EUR', setBaseCurrency, rates, ratesDate, currentUser, onImport, recategorizeUncategorized, recategorizeTransfers }) {
   const { t } = useTranslation();
   const [editingMember, setEditingMember] = useState(null);
   const [activeSection, setActiveSection] = useState(() => readHashSection() || 'profil');
@@ -169,6 +170,14 @@ export function SettingsView({ members, accounts, accountBalances, saveMember, d
               />
               <PayeesSection categories={categories} showToast={showToast} />
               <CustomRulesSection categories={categories} />
+              <TransferRulesSection
+                accounts={accounts}
+                transactions={transactions}
+                transferIds={transferIds}
+                updateTags={updateTags}
+                setTransferOverride={setTransferOverride}
+                showToast={showToast}
+              />
             </section>
           )}
 

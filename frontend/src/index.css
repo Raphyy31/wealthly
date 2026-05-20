@@ -3332,6 +3332,100 @@ html, body {
   max-width: 200px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+
+/* ── TransferRulesSection : Settings > Categories > Regles virement ─── */
+.transfer-rules-section { margin-top: 16px; }
+.tr-form {
+  padding: 14px 20px 0;
+}
+.tr-form-row {
+  display: flex; align-items: center; gap: 8px;
+  flex-wrap: wrap;
+}
+.tr-input {
+  flex: 1;
+  min-width: 180px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elev);
+  color: var(--ink);
+  font: 500 13px/1 var(--font-mono);
+  letter-spacing: 0.01em;
+  transition: border-color var(--t-fast), box-shadow var(--t-fast);
+}
+.tr-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.tr-arrow { color: var(--ink-3); flex-shrink: 0; }
+.tr-add-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  white-space: nowrap;
+}
+.tr-add-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.tr-empty {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 10px;
+  padding: 28px 20px;
+  color: var(--ink-3);
+  font-style: italic;
+  text-align: center;
+}
+.tr-empty p { max-width: 380px; margin: 0; font: 400 13px/1.5 var(--font-sans); }
+
+.tr-list {
+  list-style: none; margin: 14px 0 0; padding: 0;
+  border-top: 1px solid var(--border);
+}
+.tr-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.tr-pattern {
+  font: 500 12.5px/1 var(--font-mono);
+  color: var(--ink-2);
+  background: var(--bg-sunk);
+  padding: 4px 8px;
+  border-radius: 4px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 220px;
+}
+.tr-sep { color: var(--ink-3); display: inline-flex; }
+.tr-dest {
+  flex: 1;
+  display: inline-flex; align-items: center; gap: 8px;
+  font: 500 12.5px/1.2 var(--font-sans);
+  color: var(--ink-2);
+  padding: 4px 10px;
+  border-radius: 4px;
+  background: color-mix(in oklab, var(--ink-3) 12%, transparent);
+  min-width: 0;
+}
+.tr-dest.savings { color: var(--accent); background: var(--accent-soft); }
+.tr-dest.secondary { color: var(--warning); background: color-mix(in oklab, var(--warning) 14%, transparent); }
+.tr-dest-role {
+  font: 500 10px/1 var(--font-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.7;
+  margin-left: auto;
+  padding-left: 6px;
+}
+
+.tr-apply-banner {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+  padding: 12px 20px;
+  background: var(--accent-soft);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  font: 400 13px/1.4 var(--font-sans);
+  color: var(--ink-2);
+}
+.tr-apply-banner strong { color: var(--accent); }
 .tx-card-sub-pill {
   background: var(--bg-elev);
   border: 1px solid var(--border);

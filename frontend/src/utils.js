@@ -113,6 +113,41 @@ export const getTransferDestAccountId = (tx) => {
 
 export const buildTransferDestTag = (accountId) => `${TRANSFER_DEST_TAG_PREFIX}${accountId}`;
 
+// ─── Regles de marquage automatique de virement ────────────────────
+// Format : { id, pattern, destAccountId, createdAt }
+// Stockees en localStorage (MVP, pas de schema backend).
+// Pattern = substring case-insensitive du label de la tx.
+
+const TRANSFER_RULES_KEY = 'wealthly:transfer-rules';
+
+export const loadTransferRules = () => {
+  try {
+    const raw = localStorage.getItem(TRANSFER_RULES_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : [];
+  } catch { return []; }
+};
+
+export const saveTransferRules = (rules) => {
+  try { localStorage.setItem(TRANSFER_RULES_KEY, JSON.stringify(rules || [])); }
+  catch {}
+};
+
+// Renvoie la 1re regle qui match le label de la tx (substring case insensitive).
+// Retourne { destAccountId, rule } ou null.
+export const matchTransferRule = (tx, rules) => {
+  if (!tx?.label || !Array.isArray(rules) || rules.length === 0) return null;
+  const label = tx.label.toUpperCase();
+  for (const r of rules) {
+    if (!r.pattern) continue;
+    if (label.includes(r.pattern.toUpperCase())) {
+      return { destAccountId: r.destAccountId, rule: r };
+    }
+  }
+  return null;
+};
+
 // Determine le type d'un virement interne :
 //   - 'savings'   si destination est un compte de role 'epargne' (ou 'investissement')
 //   - 'secondary' si destination est un compte de role 'depenses' (Revolut...)
