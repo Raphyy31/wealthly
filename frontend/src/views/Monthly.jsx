@@ -698,7 +698,15 @@ function MonthPicker({ selectedMonth, currentMonth, availableMonths, onChange })
 // Halo effect — white outline behind text so labels stay readable over colored flows.
 // Halo derrière les labels SVG du Sankey — utilise --bg pour s'adapter au theme
 // (sinon bloc blanc criard sur dark mode, bug repéré 2026-05-19).
-const HALO = { stroke: 'var(--bg)', strokeWidth: 5, strokeLinejoin: 'round', paintOrder: 'stroke' };
+const HALO = { stroke: 'var(--bg)', strokeWidth: 2.5, strokeLinejoin: 'round', paintOrder: 'stroke' };
+
+// Formatter compact pour les labels du Sankey — pas de décimales, espace
+// insécable fine pour les milliers. "6 000 €" au lieu de "6 000,00 €" pour
+// rester lisible à 10-13px avec halo.
+const sankeyFmt = new Intl.NumberFormat('fr-FR', {
+  style: 'currency', currency: 'EUR',
+  maximumFractionDigits: 0, minimumFractionDigits: 0,
+});
 
 function SankeyNode({ x, y, width, height, index, payload, fmt }) {
   if (!payload) return null;
@@ -716,7 +724,7 @@ function SankeyNode({ x, y, width, height, index, payload, fmt }) {
 
   const hasAmount = typeof payload.amount === 'number' && payload.amount > 0;
   const hasPct    = isMiddle && typeof payload.pctOfIncome === 'number' && payload.pctOfIncome > 0;
-  const amtStr    = hasAmount ? (fmt ? fmt(payload.amount) : `${payload.amount}€`) : '';
+  const amtStr    = hasAmount ? sankeyFmt.format(Math.round(payload.amount)) : '';
   const pctStr    = hasPct
     ? ` · ${payload.pctOfIncome >= 10 ? payload.pctOfIncome.toFixed(0) : payload.pctOfIncome.toFixed(1)}%`
     : '';
@@ -745,7 +753,7 @@ function SankeyNode({ x, y, width, height, index, payload, fmt }) {
       {!twoLines && (
         <text x={labelX} y={midY} textAnchor={anchor} fontSize={fontSize}
           fontWeight={isLeft || isMiddle ? 600 : 500} fill="var(--ink)"
-          dominantBaseline="middle" {...HALO}>
+          dominantBaseline="middle" style={{ fontVariantNumeric: 'tabular-nums' }} {...HALO}>
           {singleLine}
         </text>
       )}
