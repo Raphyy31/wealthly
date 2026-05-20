@@ -3618,6 +3618,23 @@ html, body {
   background: var(--bg-sunk);
   border-bottom: 1px solid var(--border);
 }
+.cdm-alloc {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  align-items: center;
+  gap: 28px;
+  padding: 24px;
+  background: var(--bg-sunk);
+}
+.cdm-alloc-donut {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+@media (max-width: 640px) {
+  .cdm-alloc { grid-template-columns: 1fr; padding: 18px; }
+}
 
 .cdm-body {
   overflow-y: auto;

@@ -8,6 +8,19 @@ import { useState, useRef, useLayoutEffect } from 'react';
 import { ChevronDown, Plus, Trash2, Wallet, TrendingUp, Home, Bitcoin, Sparkles, CreditCard } from 'lucide-react';
 import { gsap } from '../../../utils/gsapSetup.js';
 
+// Plafonds réglementés FR : détection inline + progress bar sur l'item
+const REG_CAPS = [
+  { label: 'PEA',      cap: 150000, match: (name) => /\bpea\b/i.test(name) && !/pme/i.test(name) },
+  { label: 'PEA-PME',  cap: 225000, match: (name) => /pea[-\s]?pme/i.test(name) },
+  { label: 'Livret A', cap: 22950,  match: (name) => /livret\s*a\b/i.test(name) },
+  { label: 'LDDS',     cap: 12000,  match: (name) => /\bldds\b/i.test(name) || /(développement\s+durable)/i.test(name) },
+  { label: 'LEP',      cap: 10000,  match: (name) => /\blep\b/i.test(name) },
+];
+const getRegCap = (name) => {
+  if (!name) return null;
+  return REG_CAPS.find(c => c.match(name)) || null;
+};
+
 const CATEGORY_VISUAL = {
   liquidites:      { Icon: Wallet,     color: 'var(--d2)',       tint: 'color-mix(in oklab, var(--d2) 14%, transparent)',       label: 'Liquidités' },
   investissements: { Icon: TrendingUp, color: 'var(--accent)',   tint: 'var(--accent-soft)',                                     label: 'Investissements' },
@@ -100,6 +113,22 @@ export function WealthCategoryCard({ category, items, total, totalWealth, fmt, o
                           {item.syncMode === 'synced' ? 'Sync' : 'Manuel'}
                         </span>
                       </div>
+                      {(() => {
+                        const cap = getRegCap(item.name);
+                        if (!cap) return null;
+                        const val = Math.abs(item.value || 0);
+                        const pct = Math.min(100, (val / cap.cap) * 100);
+                        const state = pct >= 99 ? 'over' : pct >= 90 ? 'warn' : 'ok';
+                        const remaining = Math.max(0, cap.cap - val);
+                        return (
+                          <div className={`wc-cap-bar state-${state}`} title={`Plafond ${cap.label} · reste ${fmt(remaining)}`}>
+                            <div className="wc-cap-bar-track">
+                              <div className="wc-cap-bar-fill" style={{ width: `${pct}%` }}/>
+                            </div>
+                            <span className="wc-cap-bar-label">{cap.label} · {pct.toFixed(0)}%</span>
+                          </div>
+                        );
+                      })()}
                     </div>
                     <div className="wc-card-item-value-wrap">
                       <div className="wc-card-item-value num">{fmt(item.value)}</div>

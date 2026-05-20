@@ -8,12 +8,11 @@ import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, AreaChart, Area,
 } from 'recharts';
 import {
-  Plus, Wallet, BarChart3, Bitcoin, TrendingUp, TrendingDown, CreditCard, Home, Sparkles, PiggyBank,
+  Plus, Wallet, BarChart3, Bitcoin, TrendingUp, TrendingDown, CreditCard, Home, Sparkles, PiggyBank, ChevronRight,
 } from 'lucide-react';
 import { ASSET_CLASS_MAP } from '../constants.js';
 import { AnimatedNumber } from '../components/AnimatedNumber.jsx';
 import { NetWorthChart } from '../components/NetWorthChart.jsx';
-import { RegulatoryCaps } from '../components/RegulatoryCaps.jsx';
 import { useWealthItems } from '../hooks/useWealthItems.js';
 import { WealthItemDrawer } from '../components/WealthItemDrawer.jsx';
 import { ImportPositionsModal } from '../components/ImportPositionsModal.jsx';
@@ -329,6 +328,41 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
         </section>
       )}
 
+      {/* Allocation mini — compact, click pour expand modal en grand */}
+      {isAll && classAllocation.length > 0 && (
+        <button
+          type="button"
+          className="wealth-alloc-mini"
+          onClick={() => setOpenCategoryModal('chart-alloc')}
+          title="Voir l'allocation détaillée"
+        >
+          <div className="wealth-alloc-mini-donut">
+            <ResponsiveContainer width={64} height={64}>
+              <PieChart>
+                <Pie data={classAllocation} dataKey="value" cx="50%" cy="50%" innerRadius={20} outerRadius={30} paddingAngle={2} stroke="none" isAnimationActive={false}>
+                  {classAllocation.map((entry, i) => <Cell key={i} fill={entry.color}/>)}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="wealth-alloc-mini-info">
+            <div className="wealth-alloc-mini-label">Allocation par classe d'actif</div>
+            <div className="wealth-alloc-mini-legend">
+              {classAllocation.slice(0, 4).map((c, i) => (
+                <span key={i} className="wealth-alloc-mini-chip">
+                  <span className="wealth-alloc-mini-dot" style={{ background: c.color }}/>
+                  {c.name} <strong>{c.pct.toFixed(0)}%</strong>
+                </span>
+              ))}
+              {classAllocation.length > 4 && (
+                <span className="wealth-alloc-mini-more">+{classAllocation.length - 4}</span>
+              )}
+            </div>
+          </div>
+          <ChevronRight size={16} className="wealth-alloc-mini-chev"/>
+        </button>
+      )}
+
       {/* Grid de cards par categorie — apres hero, AVANT chart/kpis */}
       {isAll && (() => {
         const handleItemClick = (it) => {
@@ -405,61 +439,7 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
         );
       })()}
 
-      {/* Plafonds régulés — only on 'all', renders nothing if no PEA/Livret A/LDDS detected */}
-      {isAll && (
-        <RegulatoryCaps visibleAssets={visibleAssets} memberShare={memberShare} fmt={fmt}/>
-      )}
 
-      {/* Allocation donut + legend en mini-bars — refonte 2026 */}
-      {isAll && classAllocation.length > 0 && (
-        <section className="card allocation-card">
-          <div className="card-header">
-            <h3><BarChart3 size={16}/> {t('wealth.allocationByClass')}</h3>
-            <span className="card-meta">{classAllocation.length} classe{classAllocation.length > 1 ? 's' : ''} · répartition sur {fmt(totalAssets)}</span>
-          </div>
-          <div className="allocation-body">
-            <div className="allocation-donut">
-              <ResponsiveContainer width={220} height={220}>
-                <PieChart>
-                  <Pie
-                    data={classAllocation}
-                    dataKey="value"
-                    cx="50%" cy="50%"
-                    innerRadius={68}
-                    outerRadius={100}
-                    paddingAngle={2}
-                    cornerRadius={3}
-                    stroke="none"
-                  >
-                    {classAllocation.map((entry, i) => <Cell key={i} fill={entry.color}/>)}
-                  </Pie>
-                  <Tooltip formatter={(v) => fmt(v)} contentStyle={{ background: 'var(--bg-elev)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, boxShadow: '0 4px 12px -4px rgba(0,0,0,.12)' }}/>
-                </PieChart>
-              </ResponsiveContainer>
-              {/* Total au centre */}
-              <div className="allocation-center">
-                <div className="allocation-center-label">Total actifs</div>
-                <div className="allocation-center-value num"><AnimatedNumber value={totalAssets} format={(v) => fmt(v)}/></div>
-              </div>
-            </div>
-            <div className="allocation-legend">
-              {classAllocation.map((c, i) => (
-                <div key={i} className="alloc-row">
-                  <div className="alloc-row-head">
-                    <div className="alloc-dot" style={{ background: c.color }}/>
-                    <div className="alloc-name">{c.name}</div>
-                    <div className="alloc-val num">{fmt(c.value)}</div>
-                  </div>
-                  <div className="alloc-bar">
-                    <div className="alloc-bar-fill" style={{ width: `${c.pct}%`, background: c.color }}/>
-                  </div>
-                  <div className="alloc-pct num">{c.pct.toFixed(1)}%</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* Filtre actif : single liste detaillee (le WealthItemRow refondu) */}
       {!isAll && (() => {
@@ -528,6 +508,8 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
           sparkSeries={sparkSeries}
           financialWealthLocal={financialWealthLocal}
           realEstateNetWealth={realEstateNetWealth}
+          classAllocation={classAllocation}
+          totalAssets={totalAssets}
           fmt={fmt}
           onClose={() => setOpenCategoryModal(null)}
           onItemClick={(it) => {
@@ -762,17 +744,30 @@ const MODAL_CATEGORY_META = {
   emprunts:        { Icon: CCIcon,     color: 'var(--negative)', title: 'Emprunts' },
   'chart-fin':     { Icon: LCIcon,     color: 'var(--accent)', title: 'Patrimoine financier — Évolution' },
   'chart-immo':    { Icon: LCIcon,     color: 'var(--d3)',     title: 'Patrimoine immobilier net — Évolution' },
+  'chart-alloc':   { Icon: BarChart3,  color: 'var(--accent)', title: 'Allocation par classe d\'actif' },
 };
 
-function CategoryDetailModal({ categoryKey, items, wealthHistory, sparkSeries, financialWealthLocal, realEstateNetWealth, fmt, onClose, onItemClick }) {
+// Helper detection plafonds reglementes (utilise dans le modal et la card)
+const _REG_CAPS = [
+  { label: 'PEA',      cap: 150000, match: (n) => /\bpea\b/i.test(n) && !/pme/i.test(n) },
+  { label: 'PEA-PME',  cap: 225000, match: (n) => /pea[-\s]?pme/i.test(n) },
+  { label: 'Livret A', cap: 22950,  match: (n) => /livret\s*a\b/i.test(n) },
+  { label: 'LDDS',     cap: 12000,  match: (n) => /\bldds\b/i.test(n) || /(développement\s+durable)/i.test(n) },
+  { label: 'LEP',      cap: 10000,  match: (n) => /\blep\b/i.test(n) },
+];
+const _getRegCap = (name) => name ? (_REG_CAPS.find(c => c.match(name)) || null) : null;
+
+function CategoryDetailModal({ categoryKey, items, wealthHistory, sparkSeries, financialWealthLocal, realEstateNetWealth, classAllocation = [], totalAssets = 0, fmt, onClose, onItemClick }) {
   const meta = MODAL_CATEGORY_META[categoryKey] || MODAL_CATEGORY_META.autres;
   const Icon = meta.Icon;
   const isChartFin = categoryKey === 'chart-fin';
   const isChartImmo = categoryKey === 'chart-immo';
+  const isChartAlloc = categoryKey === 'chart-alloc';
   const isChartMode = isChartFin || isChartImmo;
 
   const total = isChartFin ? financialWealthLocal
     : isChartImmo ? realEstateNetWealth
+    : isChartAlloc ? totalAssets
     : items.reduce((s, i) => s + Math.abs(parseFloat(i.value) || 0), 0);
 
   // ESC to close
@@ -827,7 +822,41 @@ function CategoryDetailModal({ categoryKey, items, wealthHistory, sparkSeries, f
           </div>
         )}
 
-        {!isChartMode && (
+        {isChartAlloc && (
+          <div className="cdm-alloc">
+            <div className="cdm-alloc-donut">
+              <ResponsiveContainer width={240} height={240}>
+                <PieChart>
+                  <Pie data={classAllocation} dataKey="value" cx="50%" cy="50%" innerRadius={72} outerRadius={108} paddingAngle={2} cornerRadius={3} stroke="none">
+                    {classAllocation.map((entry, i) => <Cell key={i} fill={entry.color}/>)}
+                  </Pie>
+                  <Tooltip formatter={(v) => fmt(v)} contentStyle={{ background: 'var(--bg-elev)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}/>
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="allocation-center">
+                <div className="allocation-center-label">Total actifs</div>
+                <div className="allocation-center-value num"><AnimatedNumber value={totalAssets} format={(v) => fmt(v)}/></div>
+              </div>
+            </div>
+            <div className="allocation-legend">
+              {classAllocation.map((c, i) => (
+                <div key={i} className="alloc-row">
+                  <div className="alloc-row-head">
+                    <div className="alloc-dot" style={{ background: c.color }}/>
+                    <div className="alloc-name">{c.name}</div>
+                    <div className="alloc-val num">{fmt(c.value)}</div>
+                  </div>
+                  <div className="alloc-bar">
+                    <div className="alloc-bar-fill" style={{ width: `${c.pct}%`, background: c.color }}/>
+                  </div>
+                  <div className="alloc-pct num">{c.pct.toFixed(1)}%</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!isChartMode && !isChartAlloc && (
           <div className="cdm-body">
             {items.length === 0 ? (
               <div className="cdm-empty">
@@ -852,6 +881,22 @@ function CategoryDetailModal({ categoryKey, items, wealthHistory, sparkSeries, f
                           {item.syncMode === 'synced' ? 'Sync' : 'Manuel'}
                         </span>
                       </div>
+                      {(() => {
+                        const cap = _getRegCap(item.name);
+                        if (!cap) return null;
+                        const val = Math.abs(item.value || 0);
+                        const pct = Math.min(100, (val / cap.cap) * 100);
+                        const state = pct >= 99 ? 'over' : pct >= 90 ? 'warn' : 'ok';
+                        const remaining = Math.max(0, cap.cap - val);
+                        return (
+                          <div className={`wc-cap-bar state-${state}`} title={`Plafond ${cap.label} · reste ${fmt(remaining)}`}>
+                            <div className="wc-cap-bar-track">
+                              <div className="wc-cap-bar-fill" style={{ width: `${pct}%` }}/>
+                            </div>
+                            <span className="wc-cap-bar-label">{cap.label} · {pct.toFixed(0)}%</span>
+                          </div>
+                        );
+                      })()}
                     </div>
                     <div className="cdm-item-value-wrap">
                       <div className="cdm-item-value num">{fmt(item.value)}</div>

@@ -1916,10 +1916,22 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     return activeMemberId;
   }, [activeMemberId, members]);
 
-  // Le Mois type courant — celui du scope actif. Fallback vide tant que
-  // le fetch n'a pas répondu (ex: switch vers un membre dont on n'a pas
-  // encore chargé le scope).
-  const refMonth = refMonthsByScope[refMonthScope] || { version: 1, updated_at: null, lines: [] };
+  // Le Mois type courant — celui du scope actif. Si le scope personnel d'un
+  // membre est vide (jamais configure), fallback automatique sur le mois
+  // type du foyer (household) — l'user voit la base familiale au lieu d'un
+  // vide qui surprend (fix 2026-05-20).
+  const refMonth = useMemo(() => {
+    const own = refMonthsByScope[refMonthScope];
+    if (own && (own.lines || []).length > 0) return own;
+    // Fallback : si on est sur un scope perso vide, utilise le household
+    if (refMonthScope !== 'household') {
+      const fallback = refMonthsByScope['household'];
+      if (fallback && (fallback.lines || []).length > 0) {
+        return { ...fallback, _fromFallback: true };
+      }
+    }
+    return own || { version: 1, updated_at: null, lines: [] };
+  }, [refMonthsByScope, refMonthScope]);
 
   // Charger à la volée le Mois type d'un scope quand l'utilisateur switche
   // sur cet onglet membre pour la première fois.

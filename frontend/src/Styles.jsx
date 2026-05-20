@@ -840,6 +840,103 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 
 /* WEALTH */
 .wealth-view { display: flex; flex-direction: column; gap: 20px; }
+/* Allocation mini-card — compact, click pour expand modal */
+.wealth-alloc-mini {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 18px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: border-color 0.22s, box-shadow 0.22s, background 0.22s;
+  text-align: left;
+  font-family: inherit;
+  width: 100%;
+}
+.wealth-alloc-mini:hover {
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 3%, var(--bg-elev));
+  box-shadow: 0 2px 8px -4px color-mix(in oklab, var(--accent) 20%, transparent);
+}
+.wealth-alloc-mini:hover .wealth-alloc-mini-chev {
+  color: var(--accent);
+  transform: translateX(2px);
+}
+.wealth-alloc-mini-donut { flex-shrink: 0; }
+.wealth-alloc-mini-info { flex: 1; min-width: 0; }
+.wealth-alloc-mini-label {
+  font: 600 10.5px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 8px;
+}
+.wealth-alloc-mini-legend {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.wealth-alloc-mini-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font: 500 12px/1 var(--font-sans);
+  color: var(--ink-2);
+  padding: 4px 8px;
+  background: var(--bg-sunk);
+  border-radius: 999px;
+}
+.wealth-alloc-mini-chip strong { color: var(--ink); font-weight: 600; }
+.wealth-alloc-mini-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.wealth-alloc-mini-more {
+  font: 500 11px/1 var(--font-mono);
+  color: var(--ink-3);
+  padding: 4px 8px;
+}
+.wealth-alloc-mini-chev {
+  color: var(--ink-3);
+  transition: color 0.18s, transform 0.22s;
+  flex-shrink: 0;
+}
+
+/* Cap bar — plafond reglemente (PEA/Livret A/LDDS) inline dans l'item */
+.wc-cap-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.wc-cap-bar-track {
+  flex: 1;
+  height: 3px;
+  background: var(--bg-sunk);
+  border-radius: 2px;
+  overflow: hidden;
+  max-width: 120px;
+}
+.wc-cap-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.32s ease;
+}
+.wc-cap-bar.state-warn .wc-cap-bar-fill { background: var(--warning); }
+.wc-cap-bar.state-over .wc-cap-bar-fill { background: var(--negative); }
+.wc-cap-bar-label {
+  font: 500 9.5px/1 var(--font-mono);
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.wc-cap-bar.state-warn .wc-cap-bar-label { color: var(--warning); }
+.wc-cap-bar.state-over .wc-cap-bar-label { color: var(--negative); }
+
 /* Grid de cartes par categorie — pattern principal de Patrimoine isAll */
 .wealth-cards-grid {
   display: grid;
