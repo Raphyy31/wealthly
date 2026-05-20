@@ -399,8 +399,24 @@ export function Monthly({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [monthTx, categories]);
 
-  // UI state — quelle carte Sankey est expanded ? null = 50/50 teaser
-  const [expandedSankey, setExpandedSankey] = useState(null); // null | 'type' | 'real'
+  // UI state — quelles cartes Sankey sont expanded ? Set ('type' et/ou 'real').
+  // Vide = 50/50 teaser. Une seule = 60/40. Les deux = 50/50 expanded.
+  const [expandedSankey, setExpandedSankey] = useState(() => new Set());
+  const toggleSankey = (key) => {
+    setExpandedSankey(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
+  const sankeyLayoutMode = (() => {
+    const t = expandedSankey.has('type');
+    const r = expandedSankey.has('real');
+    if (t && r) return 'both';
+    if (t) return 'type';
+    if (r) return 'real';
+    return 'none';
+  })();
 
   // Comparison table — sections: income / expense / saving.
   const tableSections = useMemo(() => {
@@ -547,29 +563,31 @@ export function Monthly({
       {/* ── Sankey duo : Mois type + Mois en cours ───────────────────
            50/50 teaser au mount, clic = focus 60/40, re-clic = collapse. */}
       {!isChildScope && hasRefMonth && (sankeyData.nodes.length > 0 || realSankeyData.nodes.length > 0) && (
-        <section className="mon-sankey-duo" data-expanded={expandedSankey || 'none'}>
+        <section className="mon-sankey-duo" data-expanded={sankeyLayoutMode}>
           <SankeyCard
             kind="type"
+            eyebrow="Prévu"
             label="Mois type"
-            subtitle="Ton plan habituel"
+            subtitle="Ta projection mensuelle habituelle"
             data={sankeyData}
             totals={refTotals}
-            isExpanded={expandedSankey === 'type'}
-            isTeaser={expandedSankey !== 'type'}
-            onClick={() => setExpandedSankey(expandedSankey === 'type' ? null : 'type')}
+            isExpanded={expandedSankey.has('type')}
+            isTeaser={!expandedSankey.has('type')}
+            onClick={() => toggleSankey('type')}
             fmt={fmt}
             isNarrow={isNarrow}
             empty={sankeyData.nodes.length === 0}
           />
           <SankeyCard
             kind="real"
+            eyebrow="Réel"
             label={monthHumanLabel(selectedMonth)}
-            subtitle={isCurrentMonth ? 'Ce mois-ci, en cours' : 'Le mois sélectionné'}
+            subtitle={isCurrentMonth ? 'Ce que tu as dépensé ce mois-ci' : 'Ce que tu as dépensé sur ce mois'}
             data={realSankeyData}
             totals={realTotals}
-            isExpanded={expandedSankey === 'real'}
-            isTeaser={expandedSankey !== 'real'}
-            onClick={() => setExpandedSankey(expandedSankey === 'real' ? null : 'real')}
+            isExpanded={expandedSankey.has('real')}
+            isTeaser={!expandedSankey.has('real')}
+            onClick={() => toggleSankey('real')}
             fmt={fmt}
             isNarrow={isNarrow}
             empty={realSankeyData.nodes.length === 0}
@@ -1008,13 +1026,15 @@ function monthHumanLabel(monthKey) {
   if (!monthKey) return '';
   const [y, m] = monthKey.split('-').map(Number);
   const d = new Date(y, m - 1, 1);
-  return d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  const raw = d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  // Capitalise la 1re lettre : "mai 2026" -> "Mai 2026"
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
 }
 
 // SankeyCard — encapsule un Sankey + son header (label, KPI strip).
 // En mode teaser : Sankey dimme et flouté, overlay invitant a cliquer.
 // En mode expanded : tout est visible normalement.
-function SankeyCard({ kind, label, subtitle, data, totals, isExpanded, isTeaser, onClick, fmt, isNarrow, empty, deltaVs }) {
+function SankeyCard({ kind, eyebrow, label, subtitle, data, totals, isExpanded, isTeaser, onClick, fmt, isNarrow, empty, deltaVs }) {
   const hasData = !empty && data.nodes.length > 0;
 
   // Hauteur dynamique du Sankey selon le nombre de feuilles. Teaser garde
@@ -1041,6 +1061,7 @@ function SankeyCard({ kind, label, subtitle, data, totals, isExpanded, isTeaser,
     >
       <div className="mon-sankey-card-head">
         <div className="mon-sankey-card-titles">
+          {eyebrow && <span className={`mon-sankey-card-eyebrow mon-sankey-card-eyebrow--${kind}`}>{eyebrow}</span>}
           <h3>{label}</h3>
           <span className="mon-sankey-card-subtitle">{subtitle}</span>
         </div>
