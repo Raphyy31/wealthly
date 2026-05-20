@@ -1017,16 +1017,32 @@ export function Transactions({ transactions, accounts, categories, members = [],
                                   : '↔ Virement interne';
                               const cls = txfType === 'savings' ? 'transfer savings' : txfType === 'secondary' ? 'transfer secondary' : 'transfer';
                               return (
-                                <button
-                                  className={`tx-card-cat-pill ${cls}`}
-                                  onClick={(e) => {
-                                    const rect = e.currentTarget.getBoundingClientRect();
-                                    setTransferPickerTx({ txId: tx.id, anchorRect: rect });
-                                  }}
-                                  title={destAcc ? `Vers ${destAcc.name || destAcc.bank} — clic pour modifier` : 'Clic pour préciser ou annuler'}
-                                >
-                                  {label}
-                                </button>
+                                <span className={`tx-card-cat-pill-wrap ${cls}`}>
+                                  <button
+                                    className={`tx-card-cat-pill ${cls} no-radius-right`}
+                                    onClick={(e) => {
+                                      const rect = e.currentTarget.getBoundingClientRect();
+                                      setTransferPickerTx({ txId: tx.id, anchorRect: rect });
+                                    }}
+                                    title={destAcc ? `Vers ${destAcc.name || destAcc.bank} — clic pour modifier` : 'Clic pour préciser le compte cible'}
+                                  >
+                                    {label}
+                                  </button>
+                                  <button
+                                    className={`tx-card-cat-pill-x ${cls}`}
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      // Retire le tag transfer-dest + override = false
+                                      const currentTags = (tx.tags || []).filter(t => !(typeof t === 'string' && t.startsWith('transfer-dest:')));
+                                      if (updateTags) await updateTags(tx.id, currentTags);
+                                      if (setTransferOverride) await setTransferOverride(tx.id, false);
+                                    }}
+                                    title="Retirer le marquage virement"
+                                    aria-label="Retirer le marquage virement"
+                                  >
+                                    <X size={11}/>
+                                  </button>
+                                </span>
                               );
                             })() : (
                               <button
@@ -1144,6 +1160,16 @@ export function Transactions({ transactions, accounts, categories, members = [],
             }
             setTransferPickerTx(null);
           }}
+          onChooseCategory={async () => {
+            const tx = transactions.find(t => t.id === transferPickerTx.txId);
+            if (!tx) { setTransferPickerTx(null); return; }
+            const currentTags = (tx.tags || []).filter(t => !(typeof t === 'string' && t.startsWith('transfer-dest:')));
+            if (updateTags) await updateTags(tx.id, currentTags);
+            if (setTransferOverride) await setTransferOverride(tx.id, false);
+            setTransferPickerTx(null);
+            // Ouvre le cat picker tout de suite
+            setEditingTx(tx.id);
+          }}
         />
       )}
     </div>
@@ -1158,7 +1184,7 @@ export function Transactions({ transactions, accounts, categories, members = [],
 //   - depenses → 'secondary' (neutralise, vraies depenses sur le cible)
 //   - principal → marquage 'sans destination' (legacy)
 // Animation GSAP : scale + opacity in 220ms.
-function TransferDestPopover({ tx, anchorRect, accounts, onClose, onMark }) {
+function TransferDestPopover({ tx, anchorRect, accounts, onClose, onMark, onChooseCategory }) {
   const ref = useRef(null);
   const overlayRef = useRef(null);
 
@@ -1260,12 +1286,14 @@ function TransferDestPopover({ tx, anchorRect, accounts, onClose, onMark }) {
         )}
 
         <div className="tdp-foot">
-          <button className="tdp-foot-btn" onClick={() => onMark(null, true)}>
-            Virement sans destination précise
+          <button className="tdp-foot-btn" onClick={() => onMark(null, true)} title="Marquer comme virement interne sans compte cible (neutralisé)">
+            Sans destination précise
           </button>
-          <button className="tdp-foot-btn danger" onClick={() => onMark(null, false)}>
-            Pas un virement
-          </button>
+          {onChooseCategory && (
+            <button className="tdp-foot-btn" onClick={onChooseCategory} title="Retire le marquage virement et ouvre le sélecteur de catégorie">
+              Choisir une catégorie…
+            </button>
+          )}
         </div>
       </div>
     </>
