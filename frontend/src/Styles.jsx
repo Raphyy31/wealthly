@@ -1040,18 +1040,85 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .tx-filter-reset { display: inline-flex; align-items: center; gap: 5px; height: 32px; padding: 0 10px; background: transparent; border: none; color: var(--text-tertiary); font-size: 12px; font-weight: 500; cursor: pointer; font-family: inherit; border-radius: 6px; transition: color .15s, background .15s; }
 .tx-filter-reset:hover { color: var(--text-primary); background: var(--bg-subtle); }
 
-.tx-filter-panel { position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 80; background: var(--bg-card); border: 1px solid var(--border-strong); border-radius: 12px; box-shadow: var(--shadow-xl); padding: 18px 20px; display: flex; flex-direction: column; gap: 18px; max-height: 70vh; overflow-y: auto; animation: txFilterIn .15s ease-out; }
-@keyframes txFilterIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
-.tx-filter-panel-header { display: flex; align-items: center; justify-content: space-between; font-size: 11px; text-transform: uppercase; letter-spacing: 0.16em; color: var(--text-tertiary); font-weight: 500; padding-bottom: 4px; border-bottom: 1px solid var(--border-light); }
+.tx-filter-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0; right: 0;
+  z-index: 80;
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+  box-shadow: 0 24px 64px -16px color-mix(in oklab, var(--ink) 24%, transparent),
+              0 4px 16px -4px color-mix(in oklab, var(--ink) 10%, transparent);
+  padding: 18px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-height: 72vh;
+  overflow-y: auto;
+  will-change: transform, opacity;
+}
+.tx-filter-panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  font: 600 11px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+  margin: -2px 0 -4px;
+}
 
-.tx-filter-section { display: flex; flex-direction: column; gap: 8px; }
-.tx-filter-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--text-tertiary); font-weight: 500; }
-.tx-filter-sublabel { font-size: 11px; color: var(--text-tertiary); margin: 6px 0 4px; }
+.tx-filter-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tx-filter-label {
+  font: 600 10.5px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.tx-filter-sublabel {
+  font: 500 10.5px/1 var(--font-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin: 8px 0 4px;
+  opacity: 0.85;
+}
 
-.tx-filter-radio-row { display: flex; gap: 4px; padding: 3px; background: var(--bg-subtle); border: 1px solid var(--border-light); border-radius: 8px; align-self: flex-start; }
-.tx-filter-pill { padding: 6px 14px; background: transparent; border: 1px solid transparent; color: var(--text-secondary); font-size: 12.5px; font-weight: 500; border-radius: 6px; cursor: pointer; font-family: inherit; transition: color .15s, background .15s, border-color .15s; }
-.tx-filter-pill:hover { color: var(--text-primary); }
-.tx-filter-pill.active { background: var(--bg-card); color: var(--primary); border-color: var(--border); }
+/* Type pills — coherent avec reg-tabs segmented control */
+.tx-filter-radio-row {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--bg-sunk);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  align-self: flex-start;
+}
+.tx-filter-pill {
+  padding: 8px 18px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--ink-3);
+  font: 600 12.5px/1 var(--font-sans);
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.18s, background 0.18s, box-shadow 0.22s;
+}
+.tx-filter-pill:hover {
+  color: var(--ink-2);
+  background: color-mix(in oklab, var(--ink-3) 8%, transparent);
+}
+.tx-filter-pill.active {
+  background: var(--bg-elev);
+  color: var(--accent);
+  box-shadow: 0 1px 3px color-mix(in oklab, var(--ink) 8%, transparent);
+}
 
 .tx-filter-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 

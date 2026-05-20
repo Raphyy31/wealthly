@@ -78,6 +78,19 @@ function SubCatPicker({ categories, topSlug, currentId, onSelect, onClose }) {
     return () => { clearTimeout(tid); window.removeEventListener('mousedown', handler); };
   }, [onClose]);
 
+  // GSAP entry
+  useLayoutEffect(() => {
+    if (!ref.current) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      gsap.set(ref.current, { opacity: 1 });
+      return;
+    }
+    gsap.fromTo(ref.current,
+      { opacity: 0, scale: 0.96, y: -6 },
+      { opacity: 1, scale: 1, y: 0, duration: 0.24, ease: 'power3.out' }
+    );
+  }, []);
+
   const subs = categories.filter(c => c.parent === topSlug);
   const top = categories.find(c => c.id === topSlug);
 
@@ -170,6 +183,19 @@ function CatPicker({ categories, currentId, onSelect, onClose }) {
     return () => { clearTimeout(tid); window.removeEventListener('mousedown', handler); };
   }, [onClose]);
 
+  // GSAP entry : scale + fade in (premium feel)
+  useLayoutEffect(() => {
+    if (!ref.current) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      gsap.set(ref.current, { opacity: 1 });
+      return;
+    }
+    gsap.fromTo(ref.current,
+      { opacity: 0, scale: 0.96, y: -6 },
+      { opacity: 1, scale: 1, y: 0, duration: 0.24, ease: 'power3.out' }
+    );
+  }, []);
+
   const q = search.toLowerCase();
   const matchesSearch = (c) => q === '' || c.name.toLowerCase().includes(q);
   // Group by top-level parent. Categories with parent=null are top-level.
@@ -217,6 +243,34 @@ function CatPicker({ categories, currentId, onSelect, onClose }) {
         ))}
         {groups.length === 0 && <div className="cat-picker-empty">Aucune catégorie trouvée</div>}
       </div>
+    </div>
+  );
+}
+
+// TxFilterPanel — wrapper avec GSAP scale+fade entry et CSS animation de
+// la barre de fond (no layout shift). Pas de framer-motion ici.
+function TxFilterPanel({ children, onClose }) {
+  const ref = useRef(null);
+  useLayoutEffect(() => {
+    if (!ref.current) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      gsap.set(ref.current, { opacity: 1 });
+      return;
+    }
+    gsap.fromTo(ref.current,
+      { opacity: 0, scale: 0.97, y: -8 },
+      { opacity: 1, scale: 1, y: 0, duration: 0.28, ease: 'power3.out' }
+    );
+  }, []);
+  // ESC pour fermer
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  return (
+    <div ref={ref} className="tx-filter-panel" style={{ transformOrigin: 'top right', opacity: 0 }}>
+      {children}
     </div>
   );
 }
@@ -478,19 +532,13 @@ export function Transactions({ transactions, accounts, categories, members = [],
           {activeCount > 0 && <span className="tx-filter-count">{activeCount}</span>}
         </button>
 
-        {(activeCount > 0 || search) && (
-          <button className="tx-filter-reset" onClick={resetFilters} title="Réinitialiser tous les filtres">
-            <RotateCcw size={13}/> Réinitialiser
-          </button>
-        )}
-
         <span className="result-count">
           <strong className="num"><AnimatedNumber value={filtered.length} duration={0.4} format={(v) => Math.round(v).toString()}/></strong>
           {' '}transaction{filtered.length > 1 ? 's' : ''}
         </span>
 
         {showPanel && (
-          <div className="tx-filter-panel">
+          <TxFilterPanel onClose={() => setShowPanel(false)}>
             <div className="tx-filter-panel-header">
               <span>Filtres avancés</span>
               <button className="icon-btn-sm" onClick={() => setShowPanel(false)} aria-label="Fermer"><X size={14}/></button>
@@ -641,7 +689,7 @@ export function Transactions({ transactions, accounts, categories, members = [],
                 Voir {filtered.length} résultat{filtered.length > 1 ? 's' : ''}
               </button>
             </div>
-          </div>
+          </TxFilterPanel>
         )}
       </div>
 
