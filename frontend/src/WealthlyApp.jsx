@@ -102,6 +102,35 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       { opacity: 1, y: 0, duration: 0.42, ease: 'power3.out' }
     );
   }, [view]);
+  // Sidebar nav magic line : un trait cobalt unique glisse vers l'item actif
+  // au lieu d'apparaitre brusquement. Mesure top/height du bouton .on et
+  // anime l'indicator. Premier rendu = snap (sans anim), changements = slide.
+  const navRef = useRef(null);
+  const navIndicatorRef = useRef(null);
+  const navIndicatorMountedRef = useRef(false);
+  useEffect(() => {
+    const nav = navRef.current;
+    const indicator = navIndicatorRef.current;
+    if (!nav || !indicator) return;
+    const activeBtn = nav.querySelector('button.on');
+    if (!activeBtn) {
+      gsap.to(indicator, { opacity: 0, duration: 0.18, ease: 'power2.out' });
+      return;
+    }
+    const top = activeBtn.offsetTop + (activeBtn.offsetHeight - 18) / 2;
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!navIndicatorMountedRef.current || reduced) {
+      gsap.set(indicator, { y: top, opacity: 1 });
+      navIndicatorMountedRef.current = true;
+    } else {
+      gsap.to(indicator, {
+        y: top,
+        opacity: 1,
+        duration: 0.42,
+        ease: 'expo.out',
+      });
+    }
+  }, [view, loading]);
   // Account drawer + cross-view transaction filter (set when "voir toutes" is
   // clicked from the drawer, consumed by <Transactions> on mount).
   const [drawerAccount, setDrawerAccount] = useState(null);
@@ -2221,7 +2250,8 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             </div>
           </div>
 
-          <nav className="ws-nav" aria-label="Navigation principale">
+          <nav className="ws-nav" aria-label="Navigation principale" ref={navRef}>
+            <span className="ws-nav-indicator" ref={navIndicatorRef} aria-hidden="true"/>
 
             <div className="ws-nav-group">
               <span className="ws-nav-group-label">{t('nav.group_pilotage')}</span>

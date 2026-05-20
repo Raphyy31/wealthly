@@ -1340,18 +1340,24 @@ html, body {
   background: var(--bg-sunk);
   color: var(--ink);
   font-weight: 500;
+  padding-left: 14px;
 }
-.ws-nav button.on::before {
-  content: '';
+.ws-nav button.on svg { color: var(--accent); }
+
+/* Magic line : trait cobalt unique qui glisse vers l'item actif (GSAP) */
+.ws-nav { position: relative; }
+.ws-nav-indicator {
   position: absolute;
   left: 0;
-  top: 50%; transform: translateY(-50%);
-  width: 3px; height: 18px;
+  top: 0;
+  width: 3px;
+  height: 18px;
   background: var(--accent);
   border-radius: 0 2px 2px 0;
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
 }
-.ws-nav button.on { padding-left: 14px; }
-.ws-nav button.on svg { color: var(--accent); }
 
 .ws-badge {
   display: inline-flex; align-items: center; justify-content: center;
