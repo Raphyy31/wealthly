@@ -222,6 +222,108 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
         })}
       </nav>
 
+      {/* HERO 2 cards + grid de categories — placement TOP pour visibilite immediate */}
+      {isAll && (
+        <section className="wealth-hero">
+          <div className="wealth-hero-card wealth-hero-card--financial">
+            <div className="wealth-hero-eyebrow">
+              <PiggyBank size={12}/>
+              <span>Patrimoine financier</span>
+            </div>
+            <div className="wealth-hero-value num">
+              <AnimatedNumber value={financialWealthLocal} format={(v) => fmt(v)}/>
+            </div>
+            <div className="wealth-hero-meta">
+              Liquidités, investissements, cryptos · hors immobilier
+            </div>
+            <div className="wealth-hero-breakdown">
+              <span><span className="wh-dot" style={{ background: 'var(--d2)' }}/> Liquidités <strong className="num">{fmt(liquidWealth)}</strong></span>
+              {(totalAssets - realEstateValue) > 0 && (
+                <span><span className="wh-dot" style={{ background: 'var(--d1)' }}/> Invest. + crypto <strong className="num">{fmt(totalAssets - realEstateValue)}</strong></span>
+              )}
+              {(totalLiabilities - mortgageDebt) > 0 && (
+                <span><span className="wh-dot" style={{ background: 'var(--negative)' }}/> Conso/auto <strong className="num">−{fmt(totalLiabilities - mortgageDebt)}</strong></span>
+              )}
+            </div>
+          </div>
+          <div className="wealth-hero-card wealth-hero-card--realestate">
+            <div className="wealth-hero-eyebrow">
+              <Home size={12}/>
+              <span>Patrimoine immobilier net</span>
+            </div>
+            <div className={`wealth-hero-value num ${realEstateNetWealth < 0 ? 'neg' : ''}`}>
+              <AnimatedNumber value={realEstateNetWealth} format={(v) => fmt(v)}/>
+            </div>
+            <div className="wealth-hero-meta">
+              Valorisation résidence − emprunt résidence
+            </div>
+            <div className="wealth-hero-breakdown">
+              {realEstateValue > 0 && (
+                <span><span className="wh-dot" style={{ background: 'var(--d3)' }}/> Valorisation <strong className="num">{fmt(realEstateValue)}</strong></span>
+              )}
+              {mortgageDebt > 0 && (
+                <span><span className="wh-dot" style={{ background: 'var(--negative)' }}/> Emprunt <strong className="num">−{fmt(mortgageDebt)}</strong></span>
+              )}
+              {realEstateValue === 0 && (
+                <span className="wealth-hero-empty">Pas encore de bien immobilier</span>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Grid de cards par categorie — apres hero, AVANT chart/kpis */}
+      {isAll && (() => {
+        const handleItemClick = (it) => {
+          if (it.sourceTable === 'liability') {
+            const l = liabilities.find(x => x.id === it.sourceId);
+            if (l) { setViewingLia(l); return; }
+          }
+          if (it.sourceTable === 'asset') {
+            const a = assets.find(x => x.id === it.sourceId);
+            if (a) {
+              if (it.category === 'immobilier')      { setViewingRE(a); return; }
+              if (it.category === 'liquidites')      { setViewingLiq({ ...a, _item: it, isAccount: false }); return; }
+              if (it.category === 'investissements') { setViewingInv(a); return; }
+              if (it.category === 'cryptos')         { setViewingCrypto(a); return; }
+              if (it.category === 'autres')          { setViewingOther(a); return; }
+            }
+          }
+          if (it.sourceTable === 'account') {
+            setViewingLiq({ ...it, isAccount: true });
+            return;
+          }
+          setDrawerItem(it);
+        };
+        const handleItemDelete = (it) => {
+          if (it.sourceTable === 'asset')     deleteAsset(it.sourceId);
+          if (it.sourceTable === 'liability') deleteLiability(it.sourceId);
+        };
+        const handleAdd = () => (onOpenAddWizard ? onOpenAddWizard() : setShowAddPicker(true));
+        const CATEGORIES_ORDER = ['liquidites', 'investissements', 'immobilier', 'cryptos', 'autres', 'emprunts'];
+        return (
+          <div className="wealth-cards-grid">
+            {CATEGORIES_ORDER.map(catKey => {
+              const items = visibleItems.filter(i => i.category === catKey);
+              const total = items.reduce((s, i) => s + Math.abs(parseFloat(i.value) || 0), 0);
+              return (
+                <WealthCategoryCard
+                  key={catKey}
+                  category={catKey}
+                  items={items}
+                  total={total}
+                  totalWealth={totalAssets + totalLiabilities}
+                  fmt={fmt}
+                  onItemClick={handleItemClick}
+                  onItemDelete={handleItemDelete}
+                  onAdd={handleAdd}
+                />
+              );
+            })}
+          </div>
+        );
+      })()}
+
       {/* Subview header (when not 'all') */}
       {!isAll && (() => {
         const SubIcon = currentSub.icon || BarChart3;
@@ -352,60 +454,8 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
         </section>
       )}
 
-      {/* HERO : 2 cards principales — les 2 chiffres qui comptent pour user */}
-      {isAll && (
-        <section className="wealth-hero">
-          <div className="wealth-hero-card wealth-hero-card--financial">
-            <div className="wealth-hero-eyebrow">
-              <PiggyBank size={12}/>
-              <span>Patrimoine financier</span>
-            </div>
-            <div className="wealth-hero-value num">
-              <AnimatedNumber value={financialWealthLocal} format={(v) => fmt(v)}/>
-            </div>
-            <div className="wealth-hero-meta">
-              Liquidités, investissements, cryptos · hors immobilier
-            </div>
-            <div className="wealth-hero-breakdown">
-              <span><span className="wh-dot" style={{ background: 'var(--d2)' }}/> Liquidités <strong className="num">{fmt(liquidWealth)}</strong></span>
-              {(totalAssets - realEstateValue) > 0 && (
-                <span><span className="wh-dot" style={{ background: 'var(--d1)' }}/> Invest. + crypto <strong className="num">{fmt(totalAssets - realEstateValue)}</strong></span>
-              )}
-              {(totalLiabilities - mortgageDebt) > 0 && (
-                <span><span className="wh-dot" style={{ background: 'var(--negative)' }}/> Conso/auto <strong className="num">−{fmt(totalLiabilities - mortgageDebt)}</strong></span>
-              )}
-            </div>
-          </div>
-          <div className="wealth-hero-card wealth-hero-card--realestate">
-            <div className="wealth-hero-eyebrow">
-              <Home size={12}/>
-              <span>Patrimoine immobilier net</span>
-            </div>
-            <div className={`wealth-hero-value num ${realEstateNetWealth < 0 ? 'neg' : ''}`}>
-              <AnimatedNumber value={realEstateNetWealth} format={(v) => fmt(v)}/>
-            </div>
-            <div className="wealth-hero-meta">
-              Valorisation résidence − emprunt résidence
-            </div>
-            <div className="wealth-hero-breakdown">
-              {realEstateValue > 0 && (
-                <span><span className="wh-dot" style={{ background: 'var(--d3)' }}/> Valorisation <strong className="num">{fmt(realEstateValue)}</strong></span>
-              )}
-              {mortgageDebt > 0 && (
-                <span><span className="wh-dot" style={{ background: 'var(--negative)' }}/> Emprunt <strong className="num">−{fmt(mortgageDebt)}</strong></span>
-              )}
-              {realEstateValue === 0 && (
-                <span className="wealth-hero-empty">Pas encore de bien immobilier</span>
-              )}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Unified WealthItem display :
-          - isAll = grid de cartes par categorie (top 3 + expand)
-          - filtre actif = single liste detaillee (WealthItemRow) */}
-      {(() => {
+      {/* Filtre actif : single liste detaillee (le WealthItemRow refondu) */}
+      {!isAll && (() => {
         const handleItemClick = (it) => {
           if (it.sourceTable === 'liability') {
             const l = liabilities.find(x => x.id === it.sourceId);
@@ -432,35 +482,6 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
           if (it.sourceTable === 'liability') deleteLiability(it.sourceId);
         };
         const handleAdd = () => (onOpenAddWizard ? onOpenAddWizard() : setShowAddPicker(true));
-
-        if (isAll) {
-          // Grid de cards par categorie (toutes les 6 categories rendues,
-          // meme vides — encourage l'ajout via CTA Plus integre)
-          const CATEGORIES_ORDER = ['liquidites', 'investissements', 'immobilier', 'cryptos', 'autres', 'emprunts'];
-          return (
-            <div className="wealth-cards-grid">
-              {CATEGORIES_ORDER.map(catKey => {
-                const items = visibleItems.filter(i => i.category === catKey);
-                const total = items.reduce((s, i) => s + Math.abs(parseFloat(i.value) || 0), 0);
-                return (
-                  <WealthCategoryCard
-                    key={catKey}
-                    category={catKey}
-                    items={items}
-                    total={total}
-                    totalWealth={totalAssets + totalLiabilities}
-                    fmt={fmt}
-                    onItemClick={handleItemClick}
-                    onItemDelete={handleItemDelete}
-                    onAdd={handleAdd}
-                  />
-                );
-              })}
-            </div>
-          );
-        }
-
-        // Filtre actif : single liste detaillee (le WealthItemRow refondu)
         return (
           <section className="card">
             <div className="card-header">
