@@ -294,6 +294,115 @@ export function Monthly({
     return { nodes, links };
   }, [refLines, hasRefMonth, categories]);
 
+  // Sankey data — Mois en cours (selectedMonth real transactions). Meme structure
+  // 3-niveaux que sankeyData : Income → Parent cats → Leaf subcategories.
+  const realSankeyData = useMemo(() => {
+    const incomeTx = monthTx.filter(t => {
+      const cat = catFor(t.categoryId);
+      return cat?.type === 'income' && (t.sharedAmount || 0) > 0;
+    });
+    const spendTx = monthTx.filter(t => {
+      const cat = catFor(t.categoryId);
+      const isSavingTx = isSavingCategory(t.categoryId);
+      const isExpenseTx = cat?.type !== 'income';
+      // For expenses, negative tx contributes positively. Refunds (positive on expense cat) reduce.
+      return isExpenseTx && (-t.sharedAmount > 0 || isSavingTx);
+    });
+    if (!incomeTx.length || !spendTx.length) return { nodes: [], links: [] };
+
+    const parentSlug = (cat) => (cat?.parent || cat?.parent_slug || null);
+    const topLevelFor = (cid) => {
+      const cat = catFor(cid);
+      const ps = parentSlug(cat);
+      return ps ? catFor(ps) : cat;
+    };
+
+    const nodes = [];
+    const links = [];
+
+    // Level 1 — income aggregated by income category (not per-tx)
+    const incomeAgg = new Map();
+    incomeTx.forEach(t => {
+      const cat = catFor(t.categoryId);
+      const key = cat?.id || cat?.slug || 'income';
+      if (!incomeAgg.has(key)) incomeAgg.set(key, { name: cat?.name || 'Entrée', amount: 0, icon: cat?.icon });
+      incomeAgg.get(key).amount += t.sharedAmount;
+    });
+    const incomeNodeIdx = {};
+    [...incomeAgg.entries()].forEach(([key, v]) => {
+      incomeNodeIdx[key] = nodes.length;
+      nodes.push({ name: v.name, icon: v.icon, level: 0, kind: 'income', amount: v.amount, color: 'var(--positive)' });
+    });
+
+    // Level 2 — top-level parent cats with aggregated totals
+    const topNodeIdx = {};
+    const topTotals = {};
+    const topTxByLeaf = new Map(); // for level 3
+    spendTx.forEach(t => {
+      const top = topLevelFor(t.categoryId || 'uncategorized');
+      const topId = top?.id || top?.slug || 'uncategorized';
+      if (!(topId in topNodeIdx)) {
+        topNodeIdx[topId] = nodes.length;
+        nodes.push({ name: top?.name || topId, icon: top?.icon || '', level: 1, kind: 'cat', color: top?.color || 'var(--ink)', amount: 0 });
+        topTotals[topId] = 0;
+      }
+      const amt = Math.max(0, -t.sharedAmount); // expense magnitude
+      topTotals[topId] += amt;
+    });
+    const totalIncomeForPct = [...incomeAgg.values()].reduce((s, v) => s + v.amount, 0);
+    Object.entries(topTotals).forEach(([topId, total]) => {
+      const node = nodes[topNodeIdx[topId]];
+      node.amount = total;
+      node.pctOfIncome = totalIncomeForPct > 0 ? (total / totalIncomeForPct) * 100 : null;
+    });
+
+    // Level 3 — leaf per sub-category (group tx by categoryId under their top)
+    const leafAgg = new Map(); // `${topId}::${catId}` → { name, icon, color, amount }
+    spendTx.forEach(t => {
+      const top = topLevelFor(t.categoryId || 'uncategorized');
+      const topId = top?.id || top?.slug || 'uncategorized';
+      const cat = catFor(t.categoryId);
+      const sameTop = (cat?.id || cat?.slug) === topId;
+      const leafKey = `${topId}::${cat?.id || cat?.slug || 'uncategorized'}`;
+      if (!leafAgg.has(leafKey)) {
+        leafAgg.set(leafKey, {
+          topId,
+          name: sameTop ? (top?.name || 'Ligne') : (cat?.name || 'Ligne'),
+          icon: sameTop ? '' : (cat?.icon || ''),
+          color: top?.color || 'var(--ink)',
+          amount: 0,
+        });
+      }
+      leafAgg.get(leafKey).amount += Math.max(0, -t.sharedAmount);
+    });
+    [...leafAgg.values()].forEach(leaf => {
+      const idx = nodes.length;
+      nodes.push({ name: leaf.name, icon: leaf.icon, level: 2, kind: 'expense', color: leaf.color, amount: leaf.amount });
+      links.push({ source: topNodeIdx[leaf.topId], target: idx, value: leaf.amount, color: leaf.color });
+    });
+
+    // Income → top-level links (proportional)
+    const totalIncome = totalIncomeForPct;
+    const totalSpend = Object.values(topTotals).reduce((s, v) => s + v, 0);
+    if (totalIncome > 0 && totalSpend > 0) {
+      [...incomeAgg.entries()].forEach(([incKey, inc]) => {
+        const incShare = inc.amount / totalIncome;
+        Object.entries(topTotals).forEach(([topId, topTotal]) => {
+          const val = topTotal * incShare;
+          if (val > 0.5) {
+            links.push({ source: incomeNodeIdx[incKey], target: topNodeIdx[topId], value: val, color: nodes[topNodeIdx[topId]].color });
+          }
+        });
+      });
+    }
+
+    return { nodes, links };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [monthTx, categories]);
+
+  // UI state — quelle carte Sankey est expanded ? null = 50/50 teaser
+  const [expandedSankey, setExpandedSankey] = useState(null); // null | 'type' | 'real'
+
   // Comparison table — sections: income / expense / saving.
   const tableSections = useMemo(() => {
     const sections = [
@@ -436,61 +545,37 @@ export function Monthly({
         </section>
       )}
 
-      {/* ── Sankey du Mois type ─────────────────────────────────────── */}
-      {!isChildScope && hasRefMonth && sankeyData.nodes.length > 0 && (
-        <section className="card mon-sankey">
-          <div className="card-header">
-            <h3>Flux du mois type</h3>
-            <span className="card-meta">Entrées → Catégories → Sous-catégories</span>
-          </div>
-          {/* Mini stats strip */}
-          <div className="mon-sankey-stats">
-            <div className="mon-sankey-stat">
-              <span className="mon-sankey-stat-dot" style={{ background: 'var(--positive)' }}/>
-              <span className="mon-sankey-stat-label">Entrées</span>
-              <span className="mon-sankey-stat-val">{fmt(refTotals.income)}</span>
-            </div>
-            <span className="mon-sankey-stat-arrow">→</span>
-            <div className="mon-sankey-stat">
-              <span className="mon-sankey-stat-dot" style={{ background: 'var(--negative)' }}/>
-              <span className="mon-sankey-stat-label">Dépenses</span>
-              <span className="mon-sankey-stat-val">{fmt(refTotals.expense)}</span>
-            </div>
-            {refTotals.saving > 0 && <>
-              <span className="mon-sankey-stat-arrow">·</span>
-              <div className="mon-sankey-stat">
-                <span className="mon-sankey-stat-dot" style={{ background: 'var(--accent)' }}/>
-                <span className="mon-sankey-stat-label">Épargne</span>
-                <span className="mon-sankey-stat-val">{fmt(refTotals.saving)}</span>
-              </div>
-            </>}
-            {refTotals.balance > 0 && <>
-              <span className="mon-sankey-stat-arrow">·</span>
-              <div className="mon-sankey-stat">
-                <span className="mon-sankey-stat-dot" style={{ background: 'var(--ink-3)' }}/>
-                <span className="mon-sankey-stat-label">Reste</span>
-                <span className="mon-sankey-stat-val positive">{fmt(refTotals.balance)}</span>
-              </div>
-            </>}
-          </div>
-          <div className="mon-sankey-body">
-            <ResponsiveContainer width="100%" height={isNarrow ? 440 : Math.max(520, sankeyData.nodes.filter(n => n.level === 2).length * 36 + 100)}>
-              <Sankey
-                data={sankeyData}
-                nodePadding={isNarrow ? 16 : 26}
-                nodeWidth={14}
-                iterations={64}
-                margin={{ top: 24, right: isNarrow ? 130 : 220, bottom: 24, left: isNarrow ? 100 : 160 }}
-                node={<SankeyNode fmt={fmt}/>}
-                link={<SankeyLink/>}
-              >
-                <Tooltip
-                  formatter={(v) => fmt(v)}
-                  contentStyle={{ background: 'var(--bg-elev)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, boxShadow: '0 8px 24px -8px rgba(0,0,0,.18)' }}
-                />
-              </Sankey>
-            </ResponsiveContainer>
-          </div>
+      {/* ── Sankey duo : Mois type + Mois en cours ───────────────────
+           50/50 teaser au mount, clic = focus 60/40, re-clic = collapse. */}
+      {!isChildScope && hasRefMonth && (sankeyData.nodes.length > 0 || realSankeyData.nodes.length > 0) && (
+        <section className="mon-sankey-duo" data-expanded={expandedSankey || 'none'}>
+          <SankeyCard
+            kind="type"
+            label="Mois type"
+            subtitle="Ton plan habituel"
+            data={sankeyData}
+            totals={refTotals}
+            isExpanded={expandedSankey === 'type'}
+            isTeaser={expandedSankey !== 'type'}
+            onClick={() => setExpandedSankey(expandedSankey === 'type' ? null : 'type')}
+            fmt={fmt}
+            isNarrow={isNarrow}
+            empty={sankeyData.nodes.length === 0}
+          />
+          <SankeyCard
+            kind="real"
+            label={monthHumanLabel(selectedMonth)}
+            subtitle={isCurrentMonth ? 'Ce mois-ci, en cours' : 'Le mois sélectionné'}
+            data={realSankeyData}
+            totals={realTotals}
+            isExpanded={expandedSankey === 'real'}
+            isTeaser={expandedSankey !== 'real'}
+            onClick={() => setExpandedSankey(expandedSankey === 'real' ? null : 'real')}
+            fmt={fmt}
+            isNarrow={isNarrow}
+            empty={realSankeyData.nodes.length === 0}
+            deltaVs={refTotals.expense > 0 ? realTotals.expense - refTotals.expense : null}
+          />
         </section>
       )}
 
@@ -708,10 +793,21 @@ const sankeyFmt = new Intl.NumberFormat('fr-FR', {
   maximumFractionDigits: 0, minimumFractionDigits: 0,
 });
 
-function SankeyNode({ x, y, width, height, index, payload, fmt }) {
+function SankeyNode({ x, y, width, height, index, payload, fmt, teaser }) {
   if (!payload) return null;
   const isLeft   = payload.level === 0;
   const isMiddle = payload.level === 1;
+  // Teaser mode : on garde les bandes/nodes mais on masque tous les labels
+  // texte pour donner cet effet "vignette previu" volontairement illisible.
+  if (teaser) {
+    const rx = Math.min(5, Math.floor(width / 2));
+    const fill = payload.color || '#94a3b8';
+    return (
+      <Layer key={`sn-teaser-${index}`}>
+        <rect x={x} y={y} width={width} height={height} rx={rx} ry={rx} fill={fill} fillOpacity={0.85}/>
+      </Layer>
+    );
+  }
   const fill = payload.color || '#94a3b8';
 
   // Node bar — cap rx so tall nodes stay rectangular, not pill-shaped.
@@ -779,6 +875,122 @@ function SankeyNode({ x, y, width, height, index, payload, fmt }) {
 
 // Links: gradient from income green → category colour, with fill instead of stroke
 // so the flow shape is solid (not just an outline).
+// Petit helper pour afficher le mois en humain ("mai 2026"), en fr-FR.
+function monthHumanLabel(monthKey) {
+  if (!monthKey) return '';
+  const [y, m] = monthKey.split('-').map(Number);
+  const d = new Date(y, m - 1, 1);
+  return d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+}
+
+// SankeyCard — encapsule un Sankey + son header (label, KPI strip).
+// En mode teaser : Sankey dimme et flouté, overlay invitant a cliquer.
+// En mode expanded : tout est visible normalement.
+function SankeyCard({ kind, label, subtitle, data, totals, isExpanded, isTeaser, onClick, fmt, isNarrow, empty, deltaVs }) {
+  const hasData = !empty && data.nodes.length > 0;
+
+  // Hauteur dynamique du Sankey selon le nombre de feuilles. Teaser garde
+  // une hauteur compacte pour laisser respirer le layout 50/50.
+  const leafCount = data.nodes.filter(n => n.level === 2).length;
+  const fullHeight = isNarrow ? 440 : Math.max(440, leafCount * 32 + 80);
+  const teaserHeight = 280;
+  const sankeyHeight = isExpanded ? fullHeight : teaserHeight;
+
+  // Marges : reduites en teaser pour que la structure reste lisible meme
+  // sans les labels detailles.
+  const margin = isExpanded
+    ? { top: 24, right: isNarrow ? 130 : 220, bottom: 24, left: isNarrow ? 100 : 160 }
+    : { top: 16, right: 24, bottom: 16, left: 24 };
+
+  return (
+    <div
+      className={`mon-sankey-card ${isExpanded ? 'is-expanded' : 'is-teaser'} mon-sankey-card--${kind}`}
+      onClick={onClick}
+      role="button"
+      tabIndex={0}
+      aria-label={`${label} — ${isExpanded ? 'Réduire' : 'Agrandir'}`}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
+    >
+      <div className="mon-sankey-card-head">
+        <div className="mon-sankey-card-titles">
+          <h3>{label}</h3>
+          <span className="mon-sankey-card-subtitle">{subtitle}</span>
+        </div>
+        {isExpanded && hasData && (
+          <div className="mon-sankey-card-stats">
+            <div className="mon-sankey-stat">
+              <span className="mon-sankey-stat-dot" style={{ background: 'var(--positive)' }}/>
+              <span className="mon-sankey-stat-label">Entrées</span>
+              <span className="mon-sankey-stat-val">{fmt(totals.income)}</span>
+            </div>
+            <span className="mon-sankey-stat-arrow">→</span>
+            <div className="mon-sankey-stat">
+              <span className="mon-sankey-stat-dot" style={{ background: 'var(--negative)' }}/>
+              <span className="mon-sankey-stat-label">Dépenses</span>
+              <span className="mon-sankey-stat-val">{fmt(totals.expense)}</span>
+            </div>
+            {totals.saving > 0 && <>
+              <span className="mon-sankey-stat-arrow">·</span>
+              <div className="mon-sankey-stat">
+                <span className="mon-sankey-stat-dot" style={{ background: 'var(--accent)' }}/>
+                <span className="mon-sankey-stat-label">Épargne</span>
+                <span className="mon-sankey-stat-val">{fmt(totals.saving)}</span>
+              </div>
+            </>}
+          </div>
+        )}
+        {!isExpanded && hasData && (
+          <div className="mon-sankey-card-kpis">
+            <span className="mon-sankey-card-kpi">
+              <span className="mon-sankey-card-kpi-val num">{fmt(totals.expense)}</span>
+              <span className="mon-sankey-card-kpi-label">de dépenses</span>
+            </span>
+            {typeof deltaVs === 'number' && Math.abs(deltaVs) > 1 && (
+              <span className={`mon-sankey-card-delta num ${deltaVs > 0 ? 'neg' : 'pos'}`}>
+                {deltaVs > 0 ? '+' : ''}{fmt(deltaVs)} vs habitude
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="mon-sankey-card-body" style={{ height: sankeyHeight }}>
+        {hasData ? (
+          <ResponsiveContainer width="100%" height="100%">
+            <Sankey
+              data={data}
+              nodePadding={isExpanded ? (isNarrow ? 16 : 26) : 10}
+              nodeWidth={isExpanded ? 14 : 8}
+              iterations={64}
+              margin={margin}
+              node={<SankeyNode fmt={fmt} teaser={isTeaser}/>}
+              link={<SankeyLink/>}
+            >
+              {isExpanded && (
+                <Tooltip
+                  formatter={(v) => fmt(v)}
+                  contentStyle={{ background: 'var(--bg-elev)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, boxShadow: '0 8px 24px -8px rgba(0,0,0,.18)' }}
+                />
+              )}
+            </Sankey>
+          </ResponsiveContainer>
+        ) : (
+          <div className="mon-sankey-card-empty">
+            <span>Pas encore de données sur ce mois.</span>
+          </div>
+        )}
+
+        {/* Overlay teaser : invite a cliquer */}
+        {isTeaser && hasData && (
+          <div className="mon-sankey-card-overlay">
+            <span className="mon-sankey-card-cta">Cliquer pour agrandir →</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function SankeyLink({ sourceX, targetX, sourceY, targetY, sourceControlX, targetControlX, linkWidth, payload, index }) {
   const color  = payload?.color || '#94a3b8';
   const gradId = `sk-g-${index}`;

@@ -1617,7 +1617,119 @@ html, body {
 .mon-empty-state p { max-width: 380px; }
 .mon-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 30px; color: var(--ink-3); }
 
-/* Sankey card */
+/* ── Sankey duo : 50/50 teaser au mount, 60/40 quand l'un est expanded.
+       Transition smooth sur flex, ResponsiveContainer s'adapte. */
+.mon-sankey-duo {
+  display: flex;
+  gap: 16px;
+  margin-top: 16px;
+}
+@media (max-width: 900px) {
+  .mon-sankey-duo { flex-direction: column; }
+}
+.mon-sankey-card {
+  flex: 1 1 0;
+  min-width: 0;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  cursor: pointer;
+  transition: flex 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color var(--t-base),
+              box-shadow var(--t-base),
+              background var(--t-base);
+  position: relative;
+  display: flex; flex-direction: column;
+}
+.mon-sankey-duo[data-expanded="type"] .mon-sankey-card--type { flex: 3 1 0; }
+.mon-sankey-duo[data-expanded="type"] .mon-sankey-card--real { flex: 2 1 0; }
+.mon-sankey-duo[data-expanded="real"] .mon-sankey-card--real { flex: 3 1 0; }
+.mon-sankey-duo[data-expanded="real"] .mon-sankey-card--type { flex: 2 1 0; }
+
+.mon-sankey-card.is-teaser:hover {
+  border-color: var(--accent);
+  background: var(--bg);
+  box-shadow: 0 8px 28px -10px var(--accent-soft);
+}
+.mon-sankey-card.is-expanded {
+  border-color: var(--border-strong);
+  cursor: default;
+}
+
+.mon-sankey-card-head {
+  padding: 16px 20px 0;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.mon-sankey-card-titles { display: flex; flex-direction: column; gap: 2px; }
+.mon-sankey-card-titles h3 {
+  margin: 0;
+  font: 600 18px/1.2 var(--font-sans);
+  color: var(--ink);
+}
+.mon-sankey-card-subtitle {
+  font: 400 12px/1 var(--font-sans);
+  color: var(--ink-3);
+}
+.mon-sankey-card-kpis {
+  display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+  margin-top: 4px;
+}
+.mon-sankey-card-kpi { display: inline-flex; align-items: baseline; gap: 6px; }
+.mon-sankey-card-kpi-val {
+  font: 600 16px/1 var(--font-sans);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.mon-sankey-card-kpi-label {
+  font: 400 12px/1 var(--font-sans);
+  color: var(--ink-3);
+}
+.mon-sankey-card-delta {
+  font: 500 12.5px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.mon-sankey-card-delta.pos { color: var(--positive); }
+.mon-sankey-card-delta.neg { color: var(--negative); }
+.mon-sankey-card-stats {
+  display: flex; align-items: center; gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.mon-sankey-card-body {
+  position: relative;
+  margin-top: 12px;
+  transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.mon-sankey-card-empty {
+  display: flex; align-items: center; justify-content: center;
+  height: 100%;
+  color: var(--ink-3);
+  font-style: italic;
+}
+
+/* Overlay teaser : centré, invite a cliquer. Pointer-events none pour
+   laisser le clic passer au card parent. */
+.mon-sankey-card-overlay {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(180deg, transparent 0%, var(--bg-elev) 100%);
+  opacity: 0; transition: opacity var(--t-base);
+  pointer-events: none;
+}
+.mon-sankey-card.is-teaser:hover .mon-sankey-card-overlay { opacity: 1; }
+.mon-sankey-card-cta {
+  font: 500 13px/1 var(--font-sans);
+  color: var(--accent);
+  padding: 8px 14px;
+  background: var(--bg);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+}
+
+/* Legacy Sankey card (gardé pour compatibilité, sera retiré quand le duo
+   est validé) */
 .mon-sankey-stats {
   display: flex; align-items: center; gap: 10px;
   padding: 0 20px 14px; flex-wrap: wrap;
