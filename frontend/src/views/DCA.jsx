@@ -11,7 +11,7 @@ import {
 } from 'recharts';
 import {
   Plus, TrendingUp, Pause, Play, Trash2, Edit2, X, Check,
-  Calendar, ChevronDown, ChevronUp,
+  Calendar, ChevronDown, ChevronUp, Bell, BellOff, Mail,
 } from 'lucide-react';
 import { dcaApi } from '../api.js';
 import { useQuotes } from '../hooks/useQuotes.js';
@@ -384,7 +384,7 @@ function PlanModal({ plan, accounts, members, onSave, onClose }) {
 }
 
 // ── Plan card ────────────────────────────────────────────────────────────────
-function PlanCard({ plan, accounts, quotes, onEdit, onToggle, onDelete, onSetExecutions }) {
+function PlanCard({ plan, accounts, quotes, onEdit, onToggle, onDelete, onSetExecutions, onToggleReminder }) {
   const { t } = useTranslation();
   const FREQ_LABEL_LOCAL = { monthly: t('dca.perFrequencyMonthly'), quarterly: t('dca.perFrequencyQuarterly'), annual: t('dca.perFrequencyAnnual') };
   const [expanded, setExpanded] = useState(false);
@@ -493,6 +493,16 @@ function PlanCard({ plan, accounts, quotes, onEdit, onToggle, onDelete, onSetExe
             {expanded ? <ChevronUp size={14}/> : <ChevronDown size={14}/>}
           </button>
           <button className="icon-btn-sm" onClick={() => onEdit(plan)} title={t('actions.edit')}><Edit2 size={13}/></button>
+          {onToggleReminder && (
+            <button
+              className={`icon-btn-sm ${plan.reminder_email_enabled ? 'is-on' : ''}`}
+              onClick={() => onToggleReminder(plan)}
+              title={plan.reminder_email_enabled ? `Rappel email actif (${plan.reminder_lead_days ?? 2}j avant)` : 'Activer rappel email'}
+              style={plan.reminder_email_enabled ? { color: 'var(--accent)', background: 'var(--accent-soft)' } : {}}
+            >
+              {plan.reminder_email_enabled ? <Bell size={13}/> : <BellOff size={13}/>}
+            </button>
+          )}
           <button className="icon-btn-sm" onClick={() => onToggle(plan)} title={plan.status === 'active' ? t('dca.pause') : t('dca.resume')}>
             {plan.status === 'active' ? <Pause size={13}/> : <Play size={13}/>}
           </button>
@@ -849,6 +859,18 @@ export function DCAView({ accounts = [], members = [], dcaPlans = [], onPlansCha
     } catch (e) { notify(e.message, false); }
   };
 
+  const handleToggleReminder = async (plan) => {
+    const next = !plan.reminder_email_enabled;
+    try {
+      await dcaApi.update(plan.id, { ...plan, reminder_email_enabled: next });
+      await reload();
+      notify(next
+        ? `Rappel email activé · ${plan.reminder_lead_days ?? 2}j avant exécution`
+        : 'Rappel email désactivé'
+      );
+    } catch (e) { notify(e.message, false); }
+  };
+
   const handleSetExecutions = async (plan, executions) => {
     // Optimistic update so the timeline reacts instantly.
     onPlansChange(dcaPlans.map(p => p.id === plan.id ? { ...p, executions } : p));
@@ -919,7 +941,8 @@ export function DCAView({ accounts = [], members = [], dcaPlans = [], onPlansCha
             {activePlans.map(p => (
               <PlanCard key={p.id} plan={p} accounts={accounts} quotes={quotes}
                 onEdit={setModal} onToggle={handleToggle} onDelete={handleDelete}
-                onSetExecutions={handleSetExecutions}/>
+                onSetExecutions={handleSetExecutions}
+                onToggleReminder={handleToggleReminder}/>
             ))}
           </div>
         )}

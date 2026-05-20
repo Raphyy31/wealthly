@@ -2016,11 +2016,49 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
   .dca-state-grid { grid-template-columns: 1fr; gap: 18px; }
   .dca-state-block + .dca-state-block { border-left: none; border-top: 1px dotted var(--border); padding-left: 0; padding-top: 18px; }
 }
-.dca-next-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
-.dca-next-card { background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
-.dca-next-date { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
-.dca-next-name { font-size: 13px; font-weight: 500; color: var(--ink); letter-spacing: -0.005em; }
-.dca-next-amount { font-size: 15px; font-weight: 600; color: var(--accent); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.dca-next-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+.dca-next-card {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: border-color 0.18s, box-shadow 0.22s;
+}
+.dca-next-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px -4px color-mix(in oklab, var(--accent) 22%, transparent);
+}
+.dca-next-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 500 11px/1 var(--font-mono);
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+.dca-next-name {
+  font: 600 13.5px/1.2 var(--font-sans);
+  color: var(--ink);
+  letter-spacing: -0.005em;
+}
+.dca-next-amount {
+  font: 600 16px/1 var(--font-sans);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.015em;
+  margin-top: 2px;
+}
+
+/* Bouton icon-btn-sm en mode 'is-on' (Bell activé) */
+.icon-btn-sm.is-on { background: var(--accent-soft); color: var(--accent); }
 
 /* MODAL */
 .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.62); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); animation: modalFadeIn .15s ease-out; }

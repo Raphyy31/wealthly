@@ -693,6 +693,13 @@ class DcaPlan(Base):
     # exceptions). Keeps backward-compat with existing plans.
     executions   = Column(JSON, default=dict, nullable=False, server_default='{}')
 
+    # Reminders (mig 0009). Cron Railway scanne chaque jour les plans actifs
+    # avec reminder_email_enabled=true ET next_execution_date - today <=
+    # reminder_lead_days -> envoie un email via Resend ('Pense a investir
+    # 300€ sur ton DCA ETF Monde le 1er mars').
+    reminder_email_enabled = Column(Boolean, default=False, nullable=False)
+    reminder_lead_days     = Column(Integer, default=2, nullable=False)  # jours avant l'execution
+
     created_at   = Column(DateTime, default=datetime.utcnow)
     updated_at   = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
