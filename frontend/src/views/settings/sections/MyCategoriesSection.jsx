@@ -3,6 +3,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { Sparkles, Plus, Trash2, X, AlertCircle } from 'lucide-react';
 import * as api from '../../../api.js';
 import { CategoryCreateModal } from '../modals/CategoryCreateModal.jsx';
+import { BusyButton } from '../../../components/ui/BusyButton.jsx';
 
 export function MyCategoriesSection({ categories, reloadCategories, onCategoryCreated, onCategoryDeleted, showToast }) {
   const [creating, setCreating] = useState(null); // null | { parent: string|null }
@@ -89,18 +90,18 @@ export function MyCategoriesSection({ categories, reloadCategories, onCategoryCr
                 <button className="icon-btn-sm" title="Ajouter un détail" onClick={() => setCreating({ parent: top.id, parentName: top.name, type: top.type })}>
                   <Plus size={13}/>
                 </button>
-                <button className="icon-btn-sm" title="Supprimer" disabled={busyId === top.id} onClick={() => onDelete(top.id, top.name)}>
+                <BusyButton className="icon-btn-sm" iconOnly spinnerSize={12} title="Supprimer" onClick={() => onDelete(top.id, top.name)}>
                   <Trash2 size={13}/>
-                </button>
+                </BusyButton>
               </div>
               {subs.length > 0 && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10, paddingLeft: 26 }}>
                   {subs.map(sub => (
                     <span key={sub.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 8px', borderRadius: 6, background: 'var(--bg-elev)', border: '1px solid var(--border)', fontSize: 12 }}>
                       {sub.icon} {sub.name}
-                      <button className="icon-btn-sm" style={{ padding: 2 }} disabled={busyId === sub.id} onClick={() => onDelete(sub.id, sub.name)}>
+                      <BusyButton className="icon-btn-sm" iconOnly spinnerSize={10} style={{ padding: 2 }} onClick={() => onDelete(sub.id, sub.name)}>
                         <X size={11}/>
-                      </button>
+                      </BusyButton>
                     </span>
                   ))}
                 </div>

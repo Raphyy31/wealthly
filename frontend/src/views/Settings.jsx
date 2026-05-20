@@ -198,8 +198,8 @@ function RegLesPanel({
       id: 'rules-cat',
       icon: Wand2,
       label: 'Catégorisation auto',
-      desc: 'Trie tes transactions sans clic — si un libellé contient un mot-clé, la catégorie est appliquée.',
-      example: '« NETFLIX » → Streaming vidéo',
+      desc: 'Pour les libellés bizarres qu\'aucun marchand ne couvre. Si la tx contient un mot-clé brut, elle reçoit la catégorie choisie. À utiliser quand l\'onglet Marchands ne suffit pas.',
+      example: '« VIR LBP 0345 » → Virement',
     },
     {
       id: 'rules-vir',
@@ -219,8 +219,8 @@ function RegLesPanel({
       id: 'payees',
       icon: Store,
       label: 'Marchands',
-      desc: 'Les enseignes détectées dans tes transactions (Carrefour, Netflix, Uber). Fusionne les doublons, renomme — chaque marchand garde sa catégorie par défaut.',
-      example: '',
+      desc: 'La méthode recommandée. L\'app détecte les variantes (« PICARD », « PICARD #234 », « PIC.PARIS ») et les unifie sous une seule enseigne. Tu lui assignes une catégorie une fois, toutes les variantes futures héritent.',
+      example: 'Picard → Courses (couvre toutes ses variantes)',
     },
     {
       id: 'tools',

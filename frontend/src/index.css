@@ -3497,6 +3497,44 @@ html, body {
   background: var(--border);
 }
 
+/* ── Top progress bar (mutation tracker) ─────────────────────────────
+   Apparait en haut quand au moins 1 POST/PUT/DELETE est en cours. Style
+   indeterminé (la barre cobalt swipe de gauche a droite en boucle).
+   Inspiration : YouTube, GitHub PR loading. */
+.top-progress-bar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: transparent;
+  z-index: 9999;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.top-progress-bar.is-active { opacity: 1; }
+.top-progress-fill {
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  position: absolute;
+  left: 0;
+  animation: top-progress-swipe 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  box-shadow: 0 0 8px color-mix(in oklab, var(--accent) 50%, transparent);
+}
+@keyframes top-progress-swipe {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .top-progress-fill {
+    animation: none;
+    width: 100%;
+    background: var(--accent);
+    opacity: 0.5;
+  }
+}
+
 /* ── Settings > Categories : tabs horizontales (segmented control) ─── */
 .reg-tabs {
   display: flex;

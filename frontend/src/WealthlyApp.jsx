@@ -148,6 +148,13 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   // Member editor accessible depuis la sidebar (+) ou Settings > Foyer.
   // {} = nouveau membre, objet = edition d'un membre existant, null = ferme.
   const [editingMember, setEditingMember] = useState(null);
+  // Mutation activity tracker — pilote la top progress bar pour que l'user
+  // sache que "ca tourne" et n'enchaine pas les double-clics.
+  const [mutationsInFlight, setMutationsInFlight] = useState(0);
+  useEffect(() => {
+    const unsub = api.subscribeMutations(count => setMutationsInFlight(count));
+    return unsub;
+  }, []);
   const [navOpen, setNavOpen] = useState(false);
   const [txInitialAccountFilter, setTxInitialAccountFilter] = useState(null);
   const [theme] = useTheme();
@@ -2185,6 +2192,11 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     <HideAmountsContext.Provider value={hideAmounts}>
     <div className={`app theme-${theme}`}>
       <Styles theme={theme}/>
+      {/* Top progress bar : indique a l'user que ca mute (POST/PUT/DELETE).
+          Apparait en haut sur toute la largeur en cobalt anime. */}
+      <div className={`top-progress-bar ${mutationsInFlight > 0 ? 'is-active' : ''}`} aria-hidden="true">
+        <div className="top-progress-fill"/>
+      </div>
       {toast && <Toast message={toast.message} type={toast.type}/>}
       {requires2FA && (
         <Mandatory2FAOverlay

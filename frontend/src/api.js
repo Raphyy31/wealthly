@@ -13,6 +13,25 @@ import { SUBTYPE_TO_CATEGORY } from './types/wealth.js';
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 // ============================================================================
+// MUTATION ACTIVITY TRACKER
+// ============================================================================
+// Counter incremente a chaque mutation (POST/PUT/DELETE) en cours, decremente
+// a la fin. Sert a piloter un indicateur global de "ca tourne" (top bar GSAP
+// dans WealthlyApp). Les GET ne comptent pas (trop frequents, bruit).
+let __mutationCount = 0;
+const __mutationListeners = new Set();
+const notifyMutations = () => {
+  __mutationListeners.forEach(fn => { try { fn(__mutationCount); } catch {} });
+};
+export const subscribeMutations = (fn) => {
+  __mutationListeners.add(fn);
+  fn(__mutationCount);
+  return () => __mutationListeners.delete(fn);
+};
+const startMutation = () => { __mutationCount++; notifyMutations(); };
+const endMutation = () => { __mutationCount = Math.max(0, __mutationCount - 1); notifyMutations(); };
+
+// ============================================================================
 // CORE FETCH WRAPPER
 // ============================================================================
 async function request(method, path, body = null) {
@@ -21,6 +40,9 @@ async function request(method, path, body = null) {
     if (method === 'GET') return null;
     throw new Error('Mode démo : modifications non enregistrées');
   }
+
+  const isMutation = method !== 'GET';
+  if (isMutation) startMutation();
 
   const headers = { 'Content-Type': 'application/json' };
 
@@ -35,32 +57,38 @@ async function request(method, path, body = null) {
   try {
     response = await fetch(`${API_BASE}${path}`, opts);
   } catch (err) {
+    if (isMutation) endMutation();
     throw new Error('Impossible de joindre le serveur. Vérifie que le backend tourne.');
   }
 
   if (response.status === 401) {
-    // Récupère le message d'erreur du backend — sinon une mauvaise
-    // tentative login n'afficherait jamais "mot de passe incorrect".
+    if (isMutation) endMutation();
     let errMsg = 'Session expirée';
     try { const d = await response.clone().json(); errMsg = d?.detail || errMsg; } catch {}
     throw new Error(errMsg);
   }
 
-  if (response.status === 204) return null; // No Content
+  if (response.status === 204) {
+    if (isMutation) endMutation();
+    return null; // No Content
+  }
 
   let data;
   try {
     data = await response.json();
   } catch {
+    if (isMutation) endMutation();
     if (!response.ok) throw new Error(`Erreur ${response.status}`);
     return null;
   }
 
   if (!response.ok) {
+    if (isMutation) endMutation();
     const detail = data?.detail || data?.message || `Erreur ${response.status}`;
     throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
   }
 
+  if (isMutation) endMutation();
   return data;
 }
 
