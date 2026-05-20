@@ -2,8 +2,9 @@
 // Wealth — assets + liabilities, with sub-view filter, allocation donut,
 // detail editors and the wealth-history chart.
 // ============================================================================
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { gsap } from '../utils/gsapSetup.js';
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, AreaChart, Area,
 } from 'recharts';
@@ -84,6 +85,23 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
   const [viewingOther, setViewingOther] = useState(null);
   const [subview, setSubview] = useState('all');
   const [showAddPicker, setShowAddPicker] = useState(false);
+
+  // GSAP page-enter stagger (sprint 2026-05-20) — fade-in cascade des
+  // sections principales : hero + alloc + grid cards categorie + items.
+  // Donne du rythme visuel a chaque arrivee sur Patrimoine.
+  const wealthRef = useRef(null);
+  useEffect(() => {
+    if (!wealthRef.current) return;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        ['.wealth-hero', '.wealth-alloc-mini', '.wc-card'],
+        { opacity: 0, y: 10 },
+        { opacity: 1, y: 0, duration: 0.4, ease: 'expo.out', stagger: 0.05, clearProps: 'transform' }
+      );
+    }, wealthRef);
+    return () => ctx.revert();
+  }, [subview]);
 
   // Quand le wizard "+ Ajouter" termine en mode manuel, WealthlyApp passe
   // ici { category, subtype } via seededNewItem. On ouvre alors l'éditeur
@@ -218,7 +236,7 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
   const illiquidRatio = totalAssets > 0 ? (iliquidAssets / totalAssets) * 100 : null;
 
   return (
-    <div className="wealth-view">
+    <div className="wealth-view" ref={wealthRef}>
       <div className="subview-header">
         <div>
           <h1>{t('views.wealth.title')} <em>{t('views.wealth.titleAccent')}</em></h1>

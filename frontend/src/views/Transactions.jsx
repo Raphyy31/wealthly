@@ -13,6 +13,7 @@ import { formatDate, getTransferType, getTransferDestAccountId, buildTransferDes
 import { gsap } from '../utils/gsapSetup.js';
 import { AnimatedNumber } from '../components/AnimatedNumber.jsx';
 import { EmptyState } from '../components/EmptyState.jsx';
+import { gsap as gsapTx } from '../utils/gsapSetup.js';
 
 const EMPTY_FILTERS = {
   cats: [],          // string[] — empty means "all"
@@ -287,6 +288,27 @@ export function Transactions({ transactions, accounts, categories, members = [],
   const [showPanel, setShowPanel] = useState(false);
   const [catFilterSearch, setCatFilterSearch] = useState('');
 
+  // GSAP page-enter — fade-in du header + filtres + premieres rows
+  // (sprint 2026-05-20). Cap a 20 rows pour eviter 200 anims simultanees.
+  const txRef = useRef(null);
+  useEffect(() => {
+    if (!txRef.current) return;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    const ctx = gsapTx.context(() => {
+      gsapTx.fromTo(
+        ['.subview-header', '.filters-bar', '.tx-sort-bar'],
+        { opacity: 0, y: 8 },
+        { opacity: 1, y: 0, duration: 0.32, ease: 'expo.out', stagger: 0.05, clearProps: 'transform' }
+      );
+      gsapTx.fromTo(
+        '.tx-row',
+        { opacity: 0, y: 6 },
+        { opacity: 1, y: 0, duration: 0.26, ease: 'power2.out', stagger: 0.018, delay: 0.18, clearProps: 'transform' }
+      );
+    }, txRef);
+    return () => ctx.revert();
+  }, []);
+
   // Consume the initial filter so it doesn't re-apply on subsequent navigations
   // back to this view.
   useEffect(() => {
@@ -479,7 +501,7 @@ export function Transactions({ transactions, accounts, categories, members = [],
   };
 
   return (
-    <div className="transactions-view">
+    <div className="transactions-view" ref={txRef}>
       <div className="subview-header">
         <div>
           <h1>{t('views.transactions.title')} <em>{t('views.transactions.titleAccent')}</em></h1>

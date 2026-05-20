@@ -2,7 +2,8 @@
 // DCA — Investissement Programmé
 // Plans DCA (Dollar Cost Averaging) : création, suivi, projection compound.
 // ============================================================================
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { gsap } from '../utils/gsapSetup.js';
 import { ChipSelect } from '../components/ChipSelect.jsx';
 import { Combobox } from '../components/Combobox.jsx';
 import { useTranslation } from 'react-i18next';
@@ -824,6 +825,21 @@ export function DCAView({ accounts = [], members = [], dcaPlans = [], onPlansCha
   const [modal, setModal] = useState(null); // null | 'new' | plan object
   const [toast, setToast] = useState(null);
 
+  // GSAP page-enter — stagger fade-in du header + projection hero + cards DCA
+  const dcaRef = useRef(null);
+  useEffect(() => {
+    if (!dcaRef.current) return;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        ['.dca-view > .subview-header', '.dca-view > .card', '.dca-view section.card'],
+        { opacity: 0, y: 10 },
+        { opacity: 1, y: 0, duration: 0.38, ease: 'expo.out', stagger: 0.06, clearProps: 'transform' }
+      );
+    }, dcaRef);
+    return () => ctx.revert();
+  }, []);
+
   const activePlans  = dcaPlans.filter(p => p.status !== 'stopped');
   const tickers = useMemo(() => activePlans.map(p => p.ticker).filter(Boolean), [activePlans]);
   const { quotes } = useQuotes(tickers);
@@ -921,7 +937,7 @@ export function DCAView({ accounts = [], members = [], dcaPlans = [], onPlansCha
   const fmt0 = v => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v);
 
   return (
-    <div className="dca-view">
+    <div className="dca-view" ref={dcaRef}>
       {/* Toast */}
       {toast && (
         <div style={{
