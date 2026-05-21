@@ -94,7 +94,7 @@ export function Onboarding({ onComplete }) {
                 </div>
               </div>
             </div>
-            <MagneticButton className="primary-btn-large" onClick={() => setStep(1)}>
+            <MagneticButton className="ds-btn primary lg" onClick={() => setStep(1)}>
               <Play size={16}/> Commencer
             </MagneticButton>
           </div>
@@ -131,7 +131,7 @@ export function Onboarding({ onComplete }) {
                   { value: 'child', label: 'Enfant' },
                 ]}
               />
-              <button className="primary-btn" onClick={addMember}><Plus size={14}/></button>
+              <button className="ds-btn primary" onClick={addMember}><Plus size={14}/></button>
             </div>
 
             <div className="ob-tip">
@@ -140,8 +140,8 @@ export function Onboarding({ onComplete }) {
             </div>
 
             <div className="onboarding-actions">
-              <button className="secondary-btn" onClick={() => setStep(0)}><ChevronLeft size={14}/> Retour</button>
-              <button className="primary-btn" onClick={() => setStep(2)} disabled={members.length === 0}>Suivant <ChevronRight size={14}/></button>
+              <button className="ds-btn" onClick={() => setStep(0)}><ChevronLeft size={14}/> Retour</button>
+              <button className="ds-btn primary" onClick={() => setStep(2)} disabled={members.length === 0}>Suivant <ChevronRight size={14}/></button>
             </div>
           </div>
         )}
@@ -184,8 +184,8 @@ export function Onboarding({ onComplete }) {
             </div>
 
             <div className="onboarding-actions">
-              <button className="secondary-btn" onClick={() => setStep(1)}><ChevronLeft size={14}/> Retour</button>
-              <MagneticButton className="primary-btn-large" onClick={finish}>
+              <button className="ds-btn" onClick={() => setStep(1)}><ChevronLeft size={14}/> Retour</button>
+              <MagneticButton className="ds-btn primary lg" onClick={finish}>
                 <Sparkles size={16}/> Entrer dans Wealthly
               </MagneticButton>
             </div>

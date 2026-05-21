@@ -2589,7 +2589,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
               <button className="icon-btn" onClick={() => setHideAmounts(!hideAmounts)} title="Masquer/afficher">
                 {hideAmounts ? <EyeOff size={16}/> : <Eye size={16}/>}
               </button>
-              <button className="primary-btn" onClick={() => { setView('import'); setImportStep('upload'); }}>
+              <button className="ds-btn primary" onClick={() => { setView('import'); setImportStep('upload'); }}>
                 <Upload size={14}/> <span>{t('nav.import')}</span>
               </button>
             </div>
@@ -2618,7 +2618,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
                 <strong>{duplicatePairs.length}</strong> doublon{duplicatePairs.length > 1 ? 's' : ''} détecté{duplicatePairs.length > 1 ? 's' : ''} dans votre patrimoine.
               </span>
               <div>
-                <button className="primary-btn" onClick={() => setShowDuplicates(true)}>Examiner</button>
+                <button className="ds-btn primary" onClick={() => setShowDuplicates(true)}>Examiner</button>
                 <button className="link-btn" onClick={() => setDuplicatesDismissed(true)}>Ignorer</button>
               </div>
             </div>
@@ -3189,7 +3189,7 @@ function AddAccountModal({ members = [], onSave, onClose, onImportCsv, initialSt
             )}
 
             <div style={{ marginTop: 4 }}>
-              <button className="secondary-btn" style={{ width: '100%' }} onClick={onClose}>Annuler</button>
+              <button className="ds-btn" style={{ width: '100%' }} onClick={onClose}>Annuler</button>
             </div>
           </div>
         )}
@@ -3250,7 +3250,7 @@ function AddAccountModal({ members = [], onSave, onClose, onImportCsv, initialSt
             )}
 
             {country && banks.length === 0 && (
-              <button className="primary-btn" style={{ width: '100%', marginTop: 12 }} onClick={loadBanks} disabled={loadingBanks}>
+              <button className="ds-btn primary" style={{ width: '100%', marginTop: 12 }} onClick={loadBanks} disabled={loadingBanks}>
                 {loadingBanks ? <><RefreshCw size={13} className="spin"/> Chargement…</> : 'Charger les banques'}
               </button>
             )}
@@ -3330,8 +3330,8 @@ function AddAccountModal({ members = [], onSave, onClose, onImportCsv, initialSt
               )}
             </div>
             <div className="modal-footer">
-              <button type="button" className="secondary-btn" onClick={onClose}>Annuler</button>
-              <button type="submit" className="primary-btn" disabled={saving || !form.name.trim()}>
+              <button type="button" className="ds-btn" onClick={onClose}>Annuler</button>
+              <button type="submit" className="ds-btn primary" disabled={saving || !form.name.trim()}>
                 {saving ? 'Enregistrement…' : 'Créer le compte'}
               </button>
             </div>

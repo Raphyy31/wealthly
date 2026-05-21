@@ -73,11 +73,11 @@ function TwoFactorRow({ t }) {
           {loading ? (
             <span style={{ color: 'var(--ink-3)', fontSize: 12 }}>Chargement…</span>
           ) : status.enabled ? (
-            <button className="secondary-btn" onClick={() => setShowDisable(true)}>
+            <button className="ds-btn" onClick={() => setShowDisable(true)}>
               Désactiver
             </button>
           ) : (
-            <button className="primary-btn" onClick={() => setShowSetup(true)}>
+            <button className="ds-btn primary" onClick={() => setShowSetup(true)}>
               Activer
             </button>
           )}
@@ -135,7 +135,7 @@ export function SecuriteSection({ currentUser }) {
             <div className="settings-field-hint">{t('settings.security.passwordHint')}</div>
           </div>
           <div className="settings-field-control">
-            <button className="secondary-btn" onClick={() => setShowPwdModal(true)}>
+            <button className="ds-btn" onClick={() => setShowPwdModal(true)}>
               {t('settings.security.changePassword')}
             </button>
           </div>

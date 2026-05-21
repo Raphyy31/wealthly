@@ -130,8 +130,8 @@ export function SimpleAssetEditor({ asset, members, onSave, onCancel }) {
           </label>
         </div>
         <div className="modal-footer">
-          <button className="secondary-btn" onClick={onCancel} disabled={saving}>Annuler</button>
-          <button className="primary-btn" onClick={handleSave} disabled={saving}>
+          <button className="ds-btn" onClick={onCancel} disabled={saving}>Annuler</button>
+          <button className="ds-btn primary" onClick={handleSave} disabled={saving}>
             {saving ? <><Loader2 size={14} className="spin"/> Enregistrement…</> : <><Check size={14}/> Enregistrer</>}
           </button>
         </div>

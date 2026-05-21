@@ -64,7 +64,7 @@ export function LiabilityDetail({ liability, assets, members, memberShare, fmt, 
           </button>
           <span className="loan-finary-pagetitle">Loan</span>
           <div className="loan-finary-topbar-actions">
-            <button className="secondary-btn" onClick={onEdit}><Edit3 size={13}/> Modifier</button>
+            <button className="ds-btn" onClick={onEdit}><Edit3 size={13}/> Modifier</button>
           </div>
         </header>
 

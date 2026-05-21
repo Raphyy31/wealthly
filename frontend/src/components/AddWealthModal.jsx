@@ -177,9 +177,9 @@ export function AddWealthModal({ onClose, onConnectBank, onPickType }) {
             )}
 
             <div className="modal-foot">
-              <button className="secondary-btn" onClick={goCategory} type="button">Retour</button>
+              <button className="ds-btn" onClick={goCategory} type="button">Retour</button>
               <button
-                className="primary-btn"
+                className="ds-btn primary"
                 disabled={!subtype || (SYNCABLE_SUBTYPES.includes(subtype) && !syncMode)}
                 onClick={continueFromDetail}
                 type="button"

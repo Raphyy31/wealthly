@@ -38,7 +38,7 @@ export function DuplicateMergeModal({ pairs, fmt, onMerge, onSkip, onClose }) {
               <h4>{current.accountItem.name}</h4>
               <p className="w-num">{fmt(current.accountItem.value)}</p>
               <button
-                className="primary-btn"
+                className="ds-btn primary"
                 onClick={async () => {
                   await onMerge(current, 'keep-account');
                   next();
@@ -52,7 +52,7 @@ export function DuplicateMergeModal({ pairs, fmt, onMerge, onSkip, onClose }) {
               <h4>{current.assetItem.name}</h4>
               <p className="w-num">{fmt(current.assetItem.value)}</p>
               <button
-                className="primary-btn"
+                className="ds-btn primary"
                 onClick={async () => {
                   await onMerge(current, 'keep-asset');
                   next();
@@ -64,10 +64,10 @@ export function DuplicateMergeModal({ pairs, fmt, onMerge, onSkip, onClose }) {
           </div>
 
           <div className="modal-foot">
-            <button className="secondary-btn" onClick={() => { onSkip && onSkip(current); next(); }}>
+            <button className="ds-btn" onClick={() => { onSkip && onSkip(current); next(); }}>
               Ce ne sont pas des doublons
             </button>
-            <button className="secondary-btn" onClick={next}>Passer</button>
+            <button className="ds-btn" onClick={next}>Passer</button>
           </div>
         </div>
       </ResponsiveModal>

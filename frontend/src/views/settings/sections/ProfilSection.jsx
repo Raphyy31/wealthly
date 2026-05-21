@@ -46,7 +46,7 @@ export function ProfilSection({ currentUser, baseCurrency, setBaseCurrency }) {
             <div className="settings-field-hint">{t('settings.profile.fullNameHint')}</div>
           </div>
           <div className="settings-field-control">
-            <button className="secondary-btn" disabled>
+            <button className="ds-btn" disabled>
               <Edit3 size={13}/> {t('settings.profile.changeName')}
             </button>
           </div>

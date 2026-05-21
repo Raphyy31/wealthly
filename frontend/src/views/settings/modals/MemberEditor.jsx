@@ -40,8 +40,8 @@ export function MemberEditor({ member, onSave, onCancel }) {
         </label>
       </div>
       <div className="modal-footer">
-        <button className="secondary-btn" onClick={onCancel}>{t('actions.cancel')}</button>
-        <BusyButton className="primary-btn" onClick={async () => { if (draft.name) await onSave(draft); }}><Check size={14}/> {t('actions.save')}</BusyButton>
+        <button className="ds-btn" onClick={onCancel}>{t('actions.cancel')}</button>
+        <BusyButton className="ds-btn primary" onClick={async () => { if (draft.name) await onSave(draft); }}><Check size={14}/> {t('actions.save')}</BusyButton>
       </div>
     </ResponsiveModal>
   );

@@ -99,7 +99,7 @@ export function ComptesSection({ accounts, accountBalances, members, transaction
         <div className="card-header">
           <h3><Wallet size={16}/> {t('settings.accounts.bankAccounts')}</h3>
           {onImport && (
-            <button className="secondary-btn" onClick={onImport}><Upload size={14}/> {t('settings.accounts.importCsv')}</button>
+            <button className="ds-btn" onClick={onImport}><Upload size={14}/> {t('settings.accounts.importCsv')}</button>
           )}
         </div>
 
@@ -108,7 +108,7 @@ export function ComptesSection({ accounts, accountBalances, members, transaction
             <Wallet size={24}/>
             <p>{t('settings.accounts.emptyAccounts')}</p>
             {onImport && (
-              <button className="primary-btn" style={{ marginTop: 12 }} onClick={onImport}>
+              <button className="ds-btn primary" style={{ marginTop: 12 }} onClick={onImport}>
                 <Upload size={14}/> {t('settings.accounts.importCsv')}
               </button>
             )}
@@ -348,12 +348,12 @@ function AccountEditor({ account, members, isOpen, updateAccount, onMerge, onDel
         {/* Actions */}
         <div className="acc-editor-row acc-editor-actions">
           {canMerge && (
-            <button className="secondary-btn" onClick={onMerge}>
+            <button className="ds-btn" onClick={onMerge}>
               <ArrowLeftRight size={12}/> Fusionner avec…
             </button>
           )}
           <BusyButton
-            className="danger-btn"
+            className="ds-btn danger"
             onClick={onDelete}
             spinnerSize={13}
           >

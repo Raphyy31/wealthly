@@ -48,10 +48,10 @@ export function TotpDisableModal({ onClose }) {
             {error && <div className="ds-input-help is-error" style={{ marginTop: 8 }}>{error}</div>}
           </div>
           <div className="modal-footer" style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <button type="button" className="secondary-btn" onClick={onClose} disabled={submitting}>
+            <button type="button" className="ds-btn" onClick={onClose} disabled={submitting}>
               Annuler
             </button>
-            <button type="submit" className="primary-btn danger" disabled={submitting}>
+            <button type="submit" className="ds-btn danger" disabled={submitting}>
               {submitting ? 'Désactivation…' : 'Désactiver'}
             </button>
           </div>

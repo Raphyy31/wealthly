@@ -148,7 +148,7 @@ export function AccountDrawer({ account, transactions, members = [], accountBala
         </div>
 
         <footer className="drawer-footer">
-          <button className="primary-btn" onClick={() => onSeeAll(account.id)}>
+          <button className="ds-btn primary" onClick={() => onSeeAll(account.id)}>
             Voir toutes les transactions <ChevronRight size={14}/>
           </button>
         </footer>

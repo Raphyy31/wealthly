@@ -179,7 +179,7 @@ export function RealEstateDetail({ asset, liabilities = [], members = [], member
           {/* Détenteurs */}
           <div className="re-footer">
             <div className="re-owners"><Users size={13}/> Détenu par {owners}</div>
-            <button className="secondary-btn" onClick={() => onEdit && onEdit(asset)}>
+            <button className="ds-btn" onClick={() => onEdit && onEdit(asset)}>
               <Edit3 size={14}/> Modifier
             </button>
           </div>

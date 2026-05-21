@@ -77,8 +77,8 @@ export function CategoryCreateModal({ parent, parentName, forcedType, onSave, on
           )}
         </div>
         <div className="modal-footer">
-          <button className="secondary-btn" onClick={onCancel}>Annuler</button>
-          <button className="primary-btn" disabled={!canSave} onClick={() => onSave(draft)}>
+          <button className="ds-btn" onClick={onCancel}>Annuler</button>
+          <button className="ds-btn primary" disabled={!canSave} onClick={() => onSave(draft)}>
             <Check size={14}/> Créer
           </button>
         </div>

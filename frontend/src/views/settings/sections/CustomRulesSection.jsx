@@ -122,7 +122,7 @@ export function CustomRulesSection({ categories }) {
         />
         <button
           type="submit"
-          className="primary-btn"
+          className="ds-btn primary"
           disabled={submitting || !newPattern.trim() || !targetSlug}
         >
           <Plus size={14}/> {t('actions.add')}

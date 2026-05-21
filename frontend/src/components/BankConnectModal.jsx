@@ -88,8 +88,8 @@ export function BankConnectModal({ onClose }) {
             </label>
             {error && <div className="error-banner" style={{ marginTop: 10 }}>{error}</div>}
             <div className="modal-footer">
-              <button className="secondary-btn" onClick={onClose}>Annuler</button>
-              <button className="primary-btn" onClick={loadBanks} disabled={loadingBanks}>
+              <button className="ds-btn" onClick={onClose}>Annuler</button>
+              <button className="ds-btn primary" onClick={loadBanks} disabled={loadingBanks}>
                 {loadingBanks ? '⏳ Chargement…' : 'Voir les banques →'}
               </button>
             </div>
@@ -132,7 +132,7 @@ export function BankConnectModal({ onClose }) {
             </div>
             {error && <div className="error-banner" style={{ marginTop: 10 }}>{error}</div>}
             <div style={{ marginTop: 12 }}>
-              <button className="secondary-btn" style={{ width: '100%' }} onClick={() => setStep('country')}>
+              <button className="ds-btn" style={{ width: '100%' }} onClick={() => setStep('country')}>
                 ← Changer de pays
               </button>
             </div>

@@ -143,7 +143,7 @@ export function BankConnectionsSection() {
     <section className="card">
       <div className="card-header">
         <h3><Cloud size={16}/> {t('settings.banks.title')} {loading && <RefreshCw size={12} className="spin" style={{marginLeft:6,opacity:.5}}/>}</h3>
-        <button className="primary-btn" style={{ fontSize: 12, padding: '6px 14px' }} onClick={() => setPicker(true)}>
+        <button className="ds-btn primary" style={{ fontSize: 12, padding: '6px 14px' }} onClick={() => setPicker(true)}>
           <Plus size={13}/> {t('settings.banks.connect')}
         </button>
       </div>
@@ -160,7 +160,7 @@ export function BankConnectionsSection() {
         <div className="empty-mini">
           <Cloud size={24}/>
           <p>{t('settings.banks.empty')}</p>
-          <button className="primary-btn" style={{ marginTop: 8 }} onClick={() => setPicker(true)}>
+          <button className="ds-btn primary" style={{ marginTop: 8 }} onClick={() => setPicker(true)}>
             {t('settings.banks.connectMine')}
           </button>
         </div>
@@ -238,7 +238,7 @@ export function BankConnectionsSection() {
             </div>
             {c.status === 'authorized' && (
               <button
-                className="secondary-btn"
+                className="ds-btn"
                 style={{ fontSize: 11, padding: '5px 10px', whiteSpace: 'nowrap' }}
                 onClick={() => handleDiagnose(c.id)}
                 disabled={diagId === c.id}
@@ -249,7 +249,7 @@ export function BankConnectionsSection() {
             )}
             {c.status === 'authorized' && (!c.accounts || c.accounts.length === 0) && (
               <button
-                className="primary-btn"
+                className="ds-btn primary"
                 style={{ fontSize: 11, padding: '5px 12px', whiteSpace: 'nowrap' }}
                 onClick={() => handleRefresh(c.id)}
                 disabled={refreshingId === c.id}
@@ -260,7 +260,7 @@ export function BankConnectionsSection() {
             )}
             {c.status === 'authorized' && c.accounts?.length > 0 && (
               <button
-                className="secondary-btn"
+                className="ds-btn"
                 style={{ fontSize: 11, padding: '5px 10px', whiteSpace: 'nowrap' }}
                 onClick={() => handleSync(c.id)}
                 disabled={syncingId === c.id}
@@ -272,7 +272,7 @@ export function BankConnectionsSection() {
               <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                 <span style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{t('confirms.confirmShort')}</span>
                 <button
-                  className="danger-btn"
+                  className="ds-btn danger"
                   style={{ fontSize: 11, padding: '4px 10px' }}
                   onClick={() => handleDelete(c.id)}
                   disabled={deletingId === c.id}
@@ -280,7 +280,7 @@ export function BankConnectionsSection() {
                   {deletingId === c.id ? <RefreshCw size={11} className="spin"/> : t('actions.yes')}
                 </button>
                 <button
-                  className="secondary-btn"
+                  className="ds-btn"
                   style={{ fontSize: 11, padding: '4px 10px' }}
                   onClick={() => setConfirmDeleteId(null)}
                 >

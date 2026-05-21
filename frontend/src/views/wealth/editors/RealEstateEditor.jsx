@@ -187,7 +187,7 @@ export function RealEstateEditor({ asset, members, liabilities, onSave, onCancel
                   <input type="number" value={draft.currentValue} onChange={(e) => set('currentValue', e.target.value)} step="any"/>
                 </label>
                 {suggestedValue > 0 && (!draft.currentValue || parseFloat(draft.currentValue) === 0) && (
-                  <button type="button" className="secondary-btn" style={{ alignSelf: 'flex-start' }} onClick={() => set('currentValue', String(suggestedValue))}>
+                  <button type="button" className="ds-btn" style={{ alignSelf: 'flex-start' }} onClick={() => set('currentValue', String(suggestedValue))}>
                     Estimer à {Math.round(suggestedValue).toLocaleString('fr-FR')} € (achat + travaux + ameublement)
                   </button>
                 )}
@@ -256,13 +256,13 @@ export function RealEstateEditor({ asset, members, liabilities, onSave, onCancel
           </div>
         </div>
         <div className="modal-footer wizard-footer">
-          <button className="secondary-btn" onClick={onCancel} disabled={saving}>Annuler</button>
+          <button className="ds-btn" onClick={onCancel} disabled={saving}>Annuler</button>
           <div style={{ flex: 1 }}/>
-          {stepIdx > 0 && <button className="secondary-btn" onClick={() => setStepIdx(stepIdx - 1)} disabled={saving}><ChevronLeft size={14}/> Retour</button>}
+          {stepIdx > 0 && <button className="ds-btn" onClick={() => setStepIdx(stepIdx - 1)} disabled={saving}><ChevronLeft size={14}/> Retour</button>}
           {stepIdx < RE_STEPS.length - 1 ? (
-            <button className="primary-btn" onClick={() => setStepIdx(stepIdx + 1)}>Suivant <ChevronRight size={14}/></button>
+            <button className="ds-btn primary" onClick={() => setStepIdx(stepIdx + 1)}>Suivant <ChevronRight size={14}/></button>
           ) : (
-            <button className="primary-btn" onClick={submit} disabled={!canSave || saving}>
+            <button className="ds-btn primary" onClick={submit} disabled={!canSave || saving}>
               {saving ? <><Loader2 size={14} className="spin"/> Enregistrement…</> : <><Check size={14}/> Enregistrer</>}
             </button>
           )}

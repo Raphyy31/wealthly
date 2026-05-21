@@ -18,8 +18,8 @@
 //       </Dialog.Header>
 //       <Dialog.Body>… contenu …</Dialog.Body>
 //       <Dialog.Footer>
-//         <Dialog.Close className="secondary-btn">Annuler</Dialog.Close>
-//         <button className="primary-btn">OK</button>
+//         <Dialog.Close className="ds-btn">Annuler</Dialog.Close>
+//         <button className="ds-btn primary">OK</button>
 //       </Dialog.Footer>
 //     </Dialog.Content>
 //   </Dialog>

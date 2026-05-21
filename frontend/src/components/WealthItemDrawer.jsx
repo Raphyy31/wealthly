@@ -190,11 +190,11 @@ function ConfigSection({ item, fmt, members = [], onEdit, onDelete }) {
         </div>
       </div>
       <div className="config-actions">
-        <button className="secondary-btn" onClick={() => onEdit && onEdit(item)}>
+        <button className="ds-btn" onClick={() => onEdit && onEdit(item)}>
           <Edit3 size={14}/> Modifier
         </button>
         <button
-          className="secondary-btn drawer-danger"
+          className="ds-btn danger drawer-danger"
           onClick={() => onDelete && onDelete(item)}
         >
           <Trash2 size={14}/> Supprimer

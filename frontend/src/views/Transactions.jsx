@@ -700,10 +700,10 @@ export function Transactions({ transactions, accounts, categories, members = [],
             )}
 
             <div className="tx-filter-panel-footer">
-              <button className="secondary-btn" onClick={resetFilters}>
+              <button className="ds-btn" onClick={resetFilters}>
                 <RotateCcw size={13}/> Réinitialiser
               </button>
-              <button className="primary-btn" onClick={() => setShowPanel(false)}>
+              <button className="ds-btn primary" onClick={() => setShowPanel(false)}>
                 Voir {filtered.length} résultat{filtered.length > 1 ? 's' : ''}
               </button>
             </div>

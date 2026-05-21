@@ -16,7 +16,7 @@
 //       <Sheet.Body>… formulaire …</Sheet.Body>
 //       <Sheet.Footer>
 //         <button onClick={() => setOpen(false)}>Annuler</button>
-//         <button className="primary-btn">Enregistrer</button>
+//         <button className="ds-btn primary">Enregistrer</button>
 //       </Sheet.Footer>
 //     </Sheet.Content>
 //   </Sheet>

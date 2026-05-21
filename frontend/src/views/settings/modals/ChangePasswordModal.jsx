@@ -68,8 +68,8 @@ export function ChangePasswordModal({ onClose }) {
             </div>
             {error && <div className="form-error">⚠︎ {error}</div>}
             <div className="modal-foot">
-              <button className="secondary-btn" onClick={onClose} type="button">{t('actions.cancel')}</button>
-              <button className="primary-btn" disabled={submitting} onClick={submit} type="button">
+              <button className="ds-btn" onClick={onClose} type="button">{t('actions.cancel')}</button>
+              <button className="ds-btn primary" disabled={submitting} onClick={submit} type="button">
                 {submitting ? t('settings.security.updating') : t('settings.security.update')}
               </button>
             </div>

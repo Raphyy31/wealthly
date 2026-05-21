@@ -539,7 +539,7 @@ function PlanModal({ plan, accounts, members, onSave, onClose }) {
           </label>
         </div>
       <div className="modal-footer">
-        <button className="secondary-btn" onClick={onClose}>{t('actions.cancel')}</button>
+        <button className="ds-btn" onClick={onClose}>{t('actions.cancel')}</button>
         <button className="ds-btn primary" onClick={submit} disabled={saving || !d.name || !d.amount}>
           <Check size={14}/> {saving ? t('actions.saving') : t('actions.save')}
         </button>

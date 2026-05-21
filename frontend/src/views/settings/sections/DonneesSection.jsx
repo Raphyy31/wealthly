@@ -22,8 +22,8 @@ export function DonneesSection({ exportData, importData, resetAllData }) {
       <div className="card">
         <div className="card-header"><h3><Database size={16}/> {t('settings.data.backupCard')}</h3></div>
         <div className="settings-buttons">
-          <button className="secondary-btn" onClick={exportData}><Download size={14}/> {t('settings.data.export')}</button>
-          <label className="secondary-btn" style={{ cursor: 'pointer' }}>
+          <button className="ds-btn" onClick={exportData}><Download size={14}/> {t('settings.data.export')}</button>
+          <label className="ds-btn" style={{ cursor: 'pointer' }}>
             <Upload size={14}/> {t('settings.data.import')}
             <input type="file" accept=".json" onChange={importData} style={{ display: 'none' }}/>
           </label>
@@ -36,7 +36,7 @@ export function DonneesSection({ exportData, importData, resetAllData }) {
       <div className="settings-danger-zone">
         <h3>{t('settings.data.dangerZone')}</h3>
         <p dangerouslySetInnerHTML={{ __html: t('settings.data.dangerBody') }} />
-        <BusyButton className="danger-btn" onClick={onReset}>
+        <BusyButton className="ds-btn danger" onClick={onReset}>
           <Trash2 size={14}/> {t('settings.data.resetAll')}
         </BusyButton>
       </div>

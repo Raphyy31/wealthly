@@ -151,7 +151,7 @@ export function TransferRulesSection({ accounts, transactions, transferIds, upda
             })}
           />
           <button
-            className="primary-btn tr-add-btn"
+            className="ds-btn primary tr-add-btn"
             disabled={!newPattern.trim() || !newDestId || submitting}
             onClick={addRule}
           >
@@ -204,7 +204,7 @@ export function TransferRulesSection({ accounts, transactions, transferIds, upda
                 <strong>{impactedCount}</strong> transaction{impactedCount > 1 ? 's' : ''} de l'historique correspond{impactedCount > 1 ? 'ent' : ''} à tes règles.
               </div>
               <button
-                className="primary-btn"
+                className="ds-btn primary"
                 onClick={applyToHistory}
                 disabled={applying}
               >

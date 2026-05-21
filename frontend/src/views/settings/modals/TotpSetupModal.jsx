@@ -91,10 +91,10 @@ export function TotpSetupModal({ onClose }) {
                 />
                 {error && <div className="ds-input-help is-error" style={{ marginTop: 8 }}>{error}</div>}
                 <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
-                  <button type="button" className="secondary-btn" onClick={onClose} disabled={submitting}>
+                  <button type="button" className="ds-btn" onClick={onClose} disabled={submitting}>
                     Annuler
                   </button>
-                  <button type="submit" className="primary-btn" disabled={submitting || code.length !== 6}>
+                  <button type="submit" className="ds-btn primary" disabled={submitting || code.length !== 6}>
                     {submitting ? 'Vérification…' : 'Activer'}
                   </button>
                 </div>
@@ -113,14 +113,14 @@ export function TotpSetupModal({ onClose }) {
               <p style={{ color: 'var(--ink-2)', fontSize: 13, marginBottom: 20 }}>
                 À chaque connexion, votre application d'authentification vous donnera un nouveau code 6 chiffres.
               </p>
-              <button className="primary-btn" onClick={onClose}>Terminé</button>
+              <button className="ds-btn primary" onClick={onClose}>Terminé</button>
             </div>
           )}
 
           {step === 'error' && (
             <div>
               <p style={{ color: 'var(--negative)' }}>{error}</p>
-              <button className="secondary-btn" onClick={onClose} style={{ marginTop: 12 }}>Fermer</button>
+              <button className="ds-btn" onClick={onClose} style={{ marginTop: 12 }}>Fermer</button>
             </div>
           )}
         </div>

@@ -314,17 +314,17 @@ Vérifie avant d'envoyer : ta réponse commence-t-elle par \`{\` et finit-elle p
         <div className="modal-footer">
           {step === 1 ? (
             <>
-              <button className="secondary-btn" onClick={onClose}>Annuler</button>
-              <button className="primary-btn" onClick={() => setStep(2)} disabled={candidates.length === 0}>
+              <button className="ds-btn" onClick={onClose}>Annuler</button>
+              <button className="ds-btn primary" onClick={() => setStep(2)} disabled={candidates.length === 0}>
                 J'ai ma réponse <ChevronRight size={14}/>
               </button>
             </>
           ) : (
             <>
-              <button className="secondary-btn" onClick={() => setStep(1)} disabled={applying}>
+              <button className="ds-btn" onClick={() => setStep(1)} disabled={applying}>
                 <ChevronLeft size={14}/> Retour
               </button>
-              <button className="primary-btn" onClick={apply} disabled={!response.trim() || applying}>
+              <button className="ds-btn primary" onClick={apply} disabled={!response.trim() || applying}>
                 <Check size={14}/> {applying ? 'Application…' : 'Appliquer les catégorisations'}
               </button>
             </>

@@ -334,7 +334,7 @@ function RegLesPanel({
                     <strong>Re-catégoriser les non catégorisées</strong>
                     <span>Ré-applique les règles aux transactions actuellement en « Non catégorisé ».</span>
                   </div>
-                  <button className="secondary-btn" type="button" onClick={recategorizeUncategorized}>Lancer</button>
+                  <button className="ds-btn" type="button" onClick={recategorizeUncategorized}>Lancer</button>
                 </div>
               )}
               {recategorizeTransfers && (
@@ -343,7 +343,7 @@ function RegLesPanel({
                     <strong>Rejouer la détection des virements</strong>
                     <span>Identifie AMEX, DÉPENSES ÉCHELONNÉES, top-ups Revolut/Lydia/Wise pré-v2. Tes overrides manuels sont préservés.</span>
                   </div>
-                  <button className="secondary-btn" type="button" onClick={recategorizeTransfers}>Lancer</button>
+                  <button className="ds-btn" type="button" onClick={recategorizeTransfers}>Lancer</button>
                 </div>
               )}
               {!recategorizeUncategorized && !recategorizeTransfers && (

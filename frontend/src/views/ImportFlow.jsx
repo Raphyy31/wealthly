@@ -36,7 +36,7 @@ export function ImportFlow({ step, parsedData, mapping, setMapping, account, set
           <span><strong>Crédit Agricole :</strong> exportez en PDF puis convertissez via OFXpress.fr ou BankStatementLab. Le CSV natif est instable.</span>
         </div>
         <div className="flow-actions" style={{ justifyContent: 'flex-start' }}>
-          <button className="secondary-btn" onClick={cancelImport}>Annuler</button>
+          <button className="ds-btn" onClick={cancelImport}>Annuler</button>
         </div>
       </div>
     );
@@ -75,8 +75,8 @@ export function ImportFlow({ step, parsedData, mapping, setMapping, account, set
           </table>
         </div>
         <div className="flow-actions">
-          <button className="secondary-btn" onClick={cancelImport}>Annuler</button>
-          <button className="primary-btn" onClick={proceedToAccountStep}>Suivant <ChevronRight size={14}/></button>
+          <button className="ds-btn" onClick={cancelImport}>Annuler</button>
+          <button className="ds-btn primary" onClick={proceedToAccountStep}>Suivant <ChevronRight size={14}/></button>
         </div>
       </div>
     );
@@ -135,8 +135,8 @@ export function ImportFlow({ step, parsedData, mapping, setMapping, account, set
           </label>
         </div>
         <div className="flow-actions">
-          <button className="secondary-btn" onClick={() => setStep('mapping')}>Retour</button>
-          <button className="primary-btn" onClick={proceedToPreview}>Aperçu <ChevronRight size={14}/></button>
+          <button className="ds-btn" onClick={() => setStep('mapping')}>Retour</button>
+          <button className="ds-btn primary" onClick={proceedToPreview}>Aperçu <ChevronRight size={14}/></button>
         </div>
       </div>
     );
@@ -178,8 +178,8 @@ export function ImportFlow({ step, parsedData, mapping, setMapping, account, set
           {preview.length > 30 && <div className="preview-more">+ {preview.length - 30} autres</div>}
         </div>
         <div className="flow-actions">
-          <button className="secondary-btn" onClick={() => setStep('account')} disabled={importing}>Retour</button>
-          <button className="primary-btn" onClick={confirmImport} disabled={aiCategorizing || importing} style={{ opacity: (aiCategorizing || importing) ? 0.6 : 1 }}>
+          <button className="ds-btn" onClick={() => setStep('account')} disabled={importing}>Retour</button>
+          <button className="ds-btn primary" onClick={confirmImport} disabled={aiCategorizing || importing} style={{ opacity: (aiCategorizing || importing) ? 0.6 : 1 }}>
             {importing
               ? <><Loader2 size={14} className="spin"/> Import en cours…</>
               : aiCategorizing

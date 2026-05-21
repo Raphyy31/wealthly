@@ -197,13 +197,13 @@ export function LiabilityEditor({ liability, members, assets = [], onSave, onCan
           </div>
         </div>
         <div className="modal-footer wizard-footer">
-          <button className="secondary-btn" onClick={onCancel} disabled={saving}>Annuler</button>
+          <button className="ds-btn" onClick={onCancel} disabled={saving}>Annuler</button>
           <div style={{ flex: 1 }}/>
-          {stepIdx > 0 && <button className="secondary-btn" onClick={() => setStepIdx(stepIdx - 1)} disabled={saving}><ChevronLeft size={14}/> Retour</button>}
+          {stepIdx > 0 && <button className="ds-btn" onClick={() => setStepIdx(stepIdx - 1)} disabled={saving}><ChevronLeft size={14}/> Retour</button>}
           {stepIdx < LIABILITY_STEPS.length - 1 ? (
-            <button className="primary-btn" onClick={() => setStepIdx(stepIdx + 1)}>Suivant <ChevronRight size={14}/></button>
+            <button className="ds-btn primary" onClick={() => setStepIdx(stepIdx + 1)}>Suivant <ChevronRight size={14}/></button>
           ) : (
-            <button className="primary-btn" onClick={submit} disabled={!canSave || saving}>
+            <button className="ds-btn primary" onClick={submit} disabled={!canSave || saving}>
               {saving ? <><Loader2 size={14} className="spin"/> Enregistrement…</> : <><Check size={14}/> Enregistrer</>}
             </button>
           )}

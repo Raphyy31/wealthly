@@ -242,7 +242,7 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
           <h1>{t('views.wealth.title')} <em>{t('views.wealth.titleAccent')}</em></h1>
           <p>{t('views.wealth.subtitle')}</p>
         </div>
-        <button className="primary-btn" onClick={() => (onOpenAddWizard ? onOpenAddWizard() : setShowAddPicker(true))}><Plus size={14}/> {t('actions.add')}</button>
+        <button className="ds-btn primary" onClick={() => (onOpenAddWizard ? onOpenAddWizard() : setShowAddPicker(true))}><Plus size={14}/> {t('actions.add')}</button>
       </div>
 
 
@@ -497,7 +497,7 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
                 <p style={{ fontFamily: 'Newsreader,Georgia,serif', fontStyle: 'italic', color: 'var(--ink-2)', fontSize: 15, lineHeight: 1.5 }}>
                   {t('wealth.emptyCategory', { category: t(currentSub.labelKey).toLowerCase() })}
                 </p>
-                <button className="primary-btn" onClick={handleAdd}>
+                <button className="ds-btn primary" onClick={handleAdd}>
                   <Plus size={14}/> Ajouter
                 </button>
               </div>

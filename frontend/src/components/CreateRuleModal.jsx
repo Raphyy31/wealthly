@@ -163,8 +163,8 @@ export function CreateRuleModal({ open, suggested = '', categories = [], initial
           </div>
         </div>
         <div className="modal-footer">
-          <button className="secondary-btn" onClick={onClose} disabled={submitting}>Annuler</button>
-          <button className="primary-btn" onClick={submit} disabled={!canSubmit}>
+          <button className="ds-btn" onClick={onClose} disabled={submitting}>Annuler</button>
+          <button className="ds-btn primary" onClick={submit} disabled={!canSubmit}>
             <Check size={14}/> {submitting ? '…' : (mode === 'transfer' ? 'Marquer comme virement' : 'Créer la règle')}
           </button>
         </div>

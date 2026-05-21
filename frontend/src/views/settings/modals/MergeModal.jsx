@@ -76,9 +76,9 @@ export function MergeModal({ accounts, sourceId, onConfirm, onClose }) {
               </div>
             </div>
             <div className="modal-footer">
-              <button className="secondary-btn" onClick={onClose}>Annuler</button>
+              <button className="ds-btn" onClick={onClose}>Annuler</button>
               <button
-                className="primary-btn"
+                className="ds-btn primary"
                 style={{ background: 'var(--negative)', borderColor: 'var(--negative)' }}
                 disabled={!targetId}
                 onClick={handleConfirm}
