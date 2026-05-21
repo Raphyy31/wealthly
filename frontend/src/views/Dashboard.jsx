@@ -277,9 +277,11 @@ export function Dashboard({
   const totalBudget = budgetItems.reduce((s, i) => s + i.amount, 0);
   const totalSpent  = budgetItems.reduce((s, i) => s + i.spent, 0);
 
-  // Rolling 6-month average of expenses per category, excluding current month.
-  // categoryAnalysis only covers the current month, so we recompute from raw
-  // transactions to surface "Comparer mois" deltas.
+  // Moyenne glissante par catégorie sur les mois passés AVEC DONNÉES (max 6),
+  // excluant le mois en cours. Critique : on divisait toujours par 6, donc un
+  // user avec 2 mois d'historique voyait des deltas absurdes (+200% sur tout).
+  // Maintenant on track les mois qui contiennent vraiment des tx et on divise
+  // par ce nombre réel. Si < 2 mois d'historique on désactive l'insight.
   const categoryCompare = useMemo(() => {
     const now = new Date();
     const curYear = now.getFullYear();
@@ -292,6 +294,7 @@ export function Dashboard({
     }
     const current = {};
     const prevSums = {};
+    const monthsWithData = new Set(); // mois passés qui ont au moins 1 tx eligible
     (transactions || []).forEach(tx => {
       if (!tx?.date || typeof tx.amount !== 'number') return;
       if (tx.amount >= 0) return;
@@ -304,17 +307,24 @@ export function Dashboard({
         current[catId] = (current[catId] || 0) + abs;
       } else if (prevKeys.has(key)) {
         prevSums[catId] = (prevSums[catId] || 0) + abs;
+        monthsWithData.add(key);
       }
     });
-    // Loosened thresholds (was cur>50€ / |Δ|>20%) so users with modest
-    // budgets or small swings still see at least one Comparer mois insight.
-    // The fallback below guarantees a signal even when nothing passes.
+
+    // Garde-fou anti-mensonge : pas assez d'historique → on ne sort aucun
+    // delta plutôt que de diviser par 6 et afficher "+412%" sur 1 mois.
+    const monthsUsed = monthsWithData.size;
+    if (monthsUsed < 2) {
+      return { items: [], monthsUsed };
+    }
+
     const result = [];
     const all = [];
     Object.keys(current).forEach(catId => {
       const cur = current[catId];
-      const avg = (prevSums[catId] || 0) / 6;
-      if (avg <= 0) return;
+      const sum = prevSums[catId] || 0;
+      if (sum <= 0) return;
+      const avg = sum / monthsUsed; // ← divise par les VRAIS mois dispos
       const deltaPct = ((cur - avg) / avg) * 100;
       all.push({ catId, current: cur, avg, deltaPct });
       if (cur <= 30) return;
@@ -323,34 +333,39 @@ export function Dashboard({
     });
     result.sort((a, b) => Math.abs(b.deltaPct) - Math.abs(a.deltaPct));
     if (result.length === 0 && all.length > 0) {
-      // Fallback: surface the single biggest mover as a neutral signal so
-      // the dashboard isn't empty when no category trips the strict thresholds.
+      // Fallback : surfacer le plus gros mover comme signal neutre pour pas
+      // laisser le dashboard vide si aucune cat ne passe les seuils stricts.
       all.sort((a, b) => Math.abs(b.deltaPct) - Math.abs(a.deltaPct));
       const top = all[0];
       if (top && top.avg > 0 && top.current > 0) {
         result.push({ ...top, fallback: true });
       }
     }
-    return result;
+    return { items: result, monthsUsed };
   }, [transactions, transferIds]);
 
   // Insights
   const insights = useMemo(() => {
     const list = [];
 
-    // Comparer mois — surface up to 2 categories with the biggest swing vs 6m avg
-    categoryCompare.slice(0, 2).forEach(({ catId, current, avg, deltaPct, fallback }) => {
+    // Comparer mois — surface up to 2 catégories avec le plus gros écart vs
+    // la moyenne sur les mois passés AVEC DONNÉES (max 6, min 2 — sinon skip).
+    // Le body affiche "moyenne sur N mois" pour ne plus mentir sur la période.
+    const { items: cmpItems, monthsUsed } = categoryCompare;
+    const monthsLabel = `${monthsUsed} mois`;
+    cmpItems.slice(0, 2).forEach(({ catId, current, avg, deltaPct, fallback }) => {
       const cat = categories?.find(c => c.id === catId || c.slug === catId);
       const catLabel = cat?.name || catId;
       const pct = Math.round(deltaPct);
       const pctStr = (pct > 0 ? '+' : '') + pct;
       const isIncrease = deltaPct > 0;
+      const avgWithPeriod = `${formatEUR(avg)} (moy. ${monthsLabel})`;
       if (fallback) {
         list.push({
           variant: 'neutral',
           icon: <Sparkles size={14}/>,
           title: t('dashboard.compareNeutralTitle', { category: catLabel, pct: pctStr }),
-          body: t('dashboard.compareNeutralBody', { current: formatEUR(current), avg: formatEUR(avg) }),
+          body: t('dashboard.compareNeutralBody', { current: formatEUR(current), avg: avgWithPeriod }),
         });
         return;
       }
@@ -359,7 +374,7 @@ export function Dashboard({
         variant: isIncrease ? 'neg' : 'pos',
         icon: isIncrease ? <AlertTriangle size={14}/> : <TrendingUp size={14}/>,
         title: t(`${tKey}Title`, { category: catLabel, pct: pctStr }),
-        body: t(`${tKey}Body`, { current: formatEUR(current), avg: formatEUR(avg) }),
+        body: t(`${tKey}Body`, { current: formatEUR(current), avg: avgWithPeriod }),
       });
     });
 
