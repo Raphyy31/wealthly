@@ -129,7 +129,26 @@ function monthsElapsed(startDate) {
   return Math.max(0, (n.getFullYear() - s.getFullYear()) * 12 + (n.getMonth() - s.getMonth()));
 }
 
-/** Next payment date given day_of_month */
+/** Next payment date given day_of_month — version "rich" : retourne Date + label + relatif */
+function nextPaymentInfo(dayOfMonth, frequency) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const d = dayOfMonth || 1;
+  const freqM = FREQ_MONTHS[frequency] || 1;
+  let candidate = new Date(today.getFullYear(), today.getMonth(), d);
+  if (candidate <= today) candidate = new Date(today.getFullYear(), today.getMonth() + freqM, d);
+  const diffMs = candidate.getTime() - today.getTime();
+  const diffDays = Math.round(diffMs / 86400000);
+  const label = candidate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  let relative;
+  if (diffDays === 0) relative = 'aujourd\'hui';
+  else if (diffDays === 1) relative = 'demain';
+  else if (diffDays <= 30) relative = `dans ${diffDays}j`;
+  else relative = `dans ${Math.round(diffDays / 30)} mois`;
+  return { date: candidate, label, relative, diffDays };
+}
+
+/** Legacy wrapper — gardé pour ne pas casser les appels existants. */
 function nextPaymentDate(dayOfMonth, frequency) {
   const today = new Date();
   const d = dayOfMonth || 1;
@@ -605,31 +624,35 @@ function PlanCard({ plan, accounts, quotes, onEdit, onToggle, onDelete, onSetExe
         </span>
       </div>
 
-      {/* Body — KPI row + actions */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', gap: 28, flex: 1, minWidth: 0 }}>
-          <div>
-            <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 5 }}>{t('dca.invested')}</div>
-            <div style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.015em', fontVariantNumeric: 'tabular-nums', color: 'var(--ink)' }}>{fmt(currentInvested)}</div>
-          </div>
-          <div>
-            <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 5 }}>
-              {isReal ? t('dca.currentValue') : t('dca.theoreticalValue')}
+      {/* Body — KPIs en haut, mini-sparkline en dessous, actions à droite */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 5 }}>{t('dca.invested')}</div>
+              <div style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.015em', fontVariantNumeric: 'tabular-nums', color: 'var(--ink)' }}>{fmt(currentInvested)}</div>
             </div>
-            <div style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.015em', fontVariantNumeric: 'tabular-nums', color: 'var(--accent)' }}>
-              {fmt(currentValue)}
+            <div>
+              <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 5 }}>
+                {isReal ? t('dca.currentValue') : t('dca.theoreticalValue')}
+              </div>
+              <div style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.015em', fontVariantNumeric: 'tabular-nums', color: 'var(--accent)' }}>
+                {fmt(currentValue)}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 5 }}>{t('dca.plusValue')}</div>
+              <div style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.015em', fontVariantNumeric: 'tabular-nums', color: currentGain >= 0 ? 'var(--positive)' : 'var(--negative)' }}>
+                {currentGain >= 0 ? '+' : ''}{fmt(currentGain)}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 5 }}>{t('dca.projectedFor', { n: horizon })}</div>
+              <div style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.015em', fontVariantNumeric: 'tabular-nums', color: 'var(--ink)' }}>{fmt(fv)} <span style={{ color: 'var(--positive)', fontSize: 13, marginLeft: 4 }}>×{multiplier.toFixed(1)}</span></div>
             </div>
           </div>
-          <div>
-            <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 5 }}>{t('dca.plusValue')}</div>
-            <div style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.015em', fontVariantNumeric: 'tabular-nums', color: currentGain >= 0 ? 'var(--positive)' : 'var(--negative)' }}>
-              {currentGain >= 0 ? '+' : ''}{fmt(currentGain)}
-            </div>
-          </div>
-          <div>
-            <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: 5 }}>{t('dca.projectedFor', { n: horizon })}</div>
-            <div style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.015em', fontVariantNumeric: 'tabular-nums', color: 'var(--ink)' }}>{fmt(fv)} <span style={{ color: 'var(--positive)', fontSize: 13, marginLeft: 4 }}>×{multiplier.toFixed(1)}</span></div>
-          </div>
+          {/* Mini-sparkline trajectoire projetée — cliquer expand pour vrai graph */}
+          {!expanded && <PlanMiniSparkline plan={plan} horizon={horizon}/>}
         </div>
 
         {/* Actions */}
@@ -977,6 +1000,234 @@ function ProjectionHero({ plans, quotes, fmt0 }) {
 }
 
 // ── Main view ────────────────────────────────────────────────────────────────
+// ── UpcomingPayments ─────────────────────────────────────────────────────────
+// Banner en haut de la vue DCA listant les prochains versements (jusqu'à 4),
+// chronologiques. Inclut le statut "rappel email" par plan, avec relative
+// date ("dans 4j", "demain", "aujourd'hui"). Cliquer une ligne → ouvre la
+// modale rappel pour ce plan (raccourci).
+function UpcomingPayments({ plans, onOpenReminder, fmt0 }) {
+  const upcoming = useMemo(() => {
+    const list = (plans || [])
+      .filter(p => p.status === 'active')
+      .map(p => {
+        const info = nextPaymentInfo(p.day_of_month, p.frequency);
+        return { plan: p, ...info };
+      })
+      .sort((a, b) => a.date.getTime() - b.date.getTime())
+      .slice(0, 4);
+    return list;
+  }, [plans]);
+
+  if (upcoming.length === 0) return null;
+
+  return (
+    <section
+      className="card"
+      style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Calendar size={13} style={{ color: 'var(--accent)' }}/>
+          <span style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-3)' }}>
+            Prochains versements
+          </span>
+          <span style={{ fontSize: 11.5, color: 'var(--ink-3)' }}>
+            · {upcoming.length} à venir
+          </span>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {upcoming.map(({ plan, label, relative, diffDays }) => {
+          const urgent = diffDays <= 3;
+          return (
+            <div
+              key={plan.id}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                padding: '8px 10px', borderRadius: 6,
+                background: urgent ? 'color-mix(in srgb, var(--accent) 6%, transparent)' : 'transparent',
+                border: '1px solid ' + (urgent ? 'color-mix(in srgb, var(--accent) 18%, transparent)' : 'transparent'),
+                transition: 'background 140ms',
+              }}
+            >
+              {/* Ticker / icone */}
+              {plan.ticker ? (
+                <span style={{
+                  fontFamily: 'Geist Mono, ui-monospace, Menlo, monospace',
+                  fontSize: 10, fontWeight: 700, color: 'var(--accent)',
+                  letterSpacing: '0.04em', padding: '2px 6px',
+                  background: 'var(--accent-soft)', borderRadius: 4, flexShrink: 0,
+                }}>{plan.ticker.toUpperCase()}</span>
+              ) : (
+                <span style={{
+                  width: 18, height: 18, borderRadius: '50%',
+                  background: 'var(--accent-soft)', color: 'var(--accent)',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 10, fontWeight: 700, flexShrink: 0,
+                }}>●</span>
+              )}
+
+              {/* Nom plan */}
+              <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>
+                {plan.name}
+              </span>
+
+              {/* Montant */}
+              <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: 'var(--ink)', flexShrink: 0 }}>
+                {fmt0(plan.amount)}
+              </span>
+
+              {/* Date + relatif */}
+              <span style={{ fontSize: 11.5, color: 'var(--ink-2)', textAlign: 'right', minWidth: 100, flexShrink: 0 }}>
+                <span style={{ color: 'var(--ink-3)' }}>{label} · </span>
+                <strong style={{ color: urgent ? 'var(--accent)' : 'var(--ink-2)', fontWeight: 600 }}>{relative}</strong>
+              </span>
+
+              {/* Chip rappel */}
+              {onOpenReminder && (
+                <button
+                  type="button"
+                  onClick={() => onOpenReminder(plan)}
+                  title={plan.reminder_email_enabled ? `Rappel ${plan.reminder_lead_days ?? 2}j avant — modifier` : 'Activer un rappel'}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                    padding: '3px 8px', borderRadius: 10,
+                    border: '1px solid ' + (plan.reminder_email_enabled ? 'color-mix(in srgb, var(--accent) 28%, transparent)' : 'var(--border)'),
+                    background: plan.reminder_email_enabled ? 'var(--accent-soft)' : 'transparent',
+                    color: plan.reminder_email_enabled ? 'var(--accent)' : 'var(--ink-3)',
+                    fontSize: 10.5, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap',
+                    flexShrink: 0, transition: 'all 140ms',
+                  }}
+                >
+                  {plan.reminder_email_enabled ? <Bell size={10}/> : <BellOff size={10}/>}
+                  <span>{plan.reminder_email_enabled ? `${plan.reminder_lead_days ?? 2}j` : 'Rappel'}</span>
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+// ── DcaKpiStrip ──────────────────────────────────────────────────────────────
+// Bandeau 4 KPI cumulés sur tous les plans actifs : nb plans / mensuel
+// équivalent / total versé / +/- value cumulée. Aucun toggle horizon —
+// l'info plan-spécifique vit dans les PlanCards en dessous.
+function DcaKpiStrip({ plans, quotes, fmt0 }) {
+  const activePlans = useMemo(() => plans.filter(p => p.status === 'active'), [plans]);
+
+  const monthlyEquiv = useMemo(() => activePlans.reduce((s, p) => {
+    const div = FREQ_MONTHS[p.frequency] || 1;
+    return s + (Number(p.amount) || 0) / div;
+  }, 0), [activePlans]);
+
+  const totals = useMemo(() => {
+    let invested = 0, value = 0;
+    for (const p of activePlans) {
+      const tickerKey = (p.ticker || '').trim().toUpperCase();
+      const quote = tickerKey ? quotes?.[tickerKey] : null;
+      const state = quote ? realCurrentState(p, quote.price) : currentState(p);
+      if (state) {
+        invested += state.invested || 0;
+        value += state.value || 0;
+      }
+    }
+    return { invested, value, gain: value - invested };
+  }, [activePlans, quotes]);
+
+  const KPIS = [
+    { label: 'Plans actifs', value: String(activePlans.length), color: 'var(--ink)' },
+    { label: 'Mensuel équiv.', value: fmt0(monthlyEquiv), color: 'var(--ink)' },
+    { label: 'Total versé', value: fmt0(totals.invested), color: 'var(--ink)' },
+    {
+      label: '+/- value',
+      value: (totals.gain >= 0 ? '+' : '') + fmt0(totals.gain),
+      color: totals.gain >= 0 ? 'var(--positive)' : 'var(--negative)',
+    },
+  ];
+
+  return (
+    <section
+      className="card"
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(4, 1fr)',
+        padding: 0,
+        overflow: 'hidden',
+      }}
+    >
+      {KPIS.map((kpi, i) => (
+        <div
+          key={kpi.label}
+          style={{
+            padding: '14px 18px',
+            borderLeft: i > 0 ? '1px solid var(--border)' : 'none',
+          }}
+        >
+          <div style={{
+            fontSize: 10, fontWeight: 600, letterSpacing: '0.14em',
+            textTransform: 'uppercase', color: 'var(--ink-3)', marginBottom: 4,
+          }}>
+            {kpi.label}
+          </div>
+          <div style={{
+            fontSize: 20, fontWeight: 600, letterSpacing: '-0.015em',
+            fontVariantNumeric: 'tabular-nums', color: kpi.color,
+          }}>
+            {kpi.value}
+          </div>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+// ── PlanMiniSparkline ────────────────────────────────────────────────────────
+// Sparkline inline 56px de haut affichée dans chaque PlanCard. Montre
+// rapidement la trajectoire de croissance projetée du plan (invested vs
+// portfolio) sans axes ni tooltip — c'est un teaser. Le user clique
+// "ChevronDown" pour expand et voir le vrai graph détaillé.
+function PlanMiniSparkline({ plan, horizon = 25 }) {
+  const data = useMemo(() => buildProjection(plan, horizon), [plan, horizon]);
+  if (!data.length) return null;
+  return (
+    <div style={{ width: '100%', height: 56, opacity: plan.status === 'paused' ? 0.5 : 1 }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={data} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
+          <defs>
+            <linearGradient id={`gMini${plan.id}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.28}/>
+              <stop offset="100%" stopColor="var(--accent)" stopOpacity={0}/>
+            </linearGradient>
+          </defs>
+          <Area
+            type="monotone"
+            dataKey="invested"
+            stroke="var(--ink-3)"
+            strokeWidth={1}
+            strokeDasharray="3 3"
+            fill="transparent"
+            isAnimationActive={false}
+            dot={false}
+          />
+          <Area
+            type="monotone"
+            dataKey="portfolio"
+            stroke="var(--accent)"
+            strokeWidth={1.6}
+            fill={`url(#gMini${plan.id})`}
+            isAnimationActive={false}
+            dot={false}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
 export function DCAView({ accounts = [], members = [], dcaPlans = [], onPlansChange, currentUserEmail }) {
   const { t } = useTranslation();
   const [modal, setModal] = useState(null); // null | 'new' | plan object
@@ -1096,12 +1347,7 @@ export function DCAView({ accounts = [], members = [], dcaPlans = [], onPlansCha
     }
   };
 
-  // KPIs are computed inside ProjectionHero from the (filtered) plan set.
-
-  const nextDates = activePlans
-    .filter(p => p.status === 'active')
-    .map(p => ({ name: p.name, date: nextPaymentDate(p.day_of_month, p.frequency), amount: p.amount, currency: p.currency }))
-    .slice(0, 6);
+  // KPIs cumulés affichés par DcaKpiStrip. Prochains versements par UpcomingPayments.
 
   const fmt0 = v => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v);
 
@@ -1126,11 +1372,18 @@ export function DCAView({ accounts = [], members = [], dcaPlans = [], onPlansCha
         </button>
       </div>
 
-      <ProjectionHero plans={activePlans.filter(p => p.status === 'active')} quotes={quotes} fmt0={fmt0}/>
+      {/* 1. Prochains versements en haut (banner alerte avec rappels par plan) */}
+      <UpcomingPayments plans={activePlans} onOpenReminder={handleOpenReminder} fmt0={fmt0}/>
 
+      {/* 2. KPI strip cumulés tous plans actifs */}
+      {activePlans.some(p => p.status === 'active') && (
+        <DcaKpiStrip plans={activePlans} quotes={quotes} fmt0={fmt0}/>
+      )}
+
+      {/* 3. Plans actifs — coeur de la vue, chaque card = unite d'interet */}
       <section className="card">
         <div className="card-header">
-          <h3><TrendingUp size={14}/> {t('dca.activePlans')}</h3>
+          <h3><TrendingUp size={14}/> Vos plans</h3>
           <span className="card-meta">{t('dca.plans', { count: activePlans.length })}</span>
         </div>
         {activePlans.length === 0 ? (
@@ -1152,25 +1405,8 @@ export function DCAView({ accounts = [], members = [], dcaPlans = [], onPlansCha
         )}
       </section>
 
-      {nextDates.length > 0 && (
-        <section className="card">
-          <div className="card-header">
-            <h3><Calendar size={14}/> {t('dca.upcomingPayments')}</h3>
-            <span className="card-meta">{t('dca.upcomingCount', { count: nextDates.length })}</span>
-          </div>
-          <div className="dca-next-grid">
-            {nextDates.map((nd, i) => (
-              <div key={i} className="dca-next-card">
-                <div className="dca-next-date"><Calendar size={10}/> {nd.date}</div>
-                <div className="dca-next-name">{nd.name}</div>
-                <div className="dca-next-amount">
-                  {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: nd.currency || 'EUR' }).format(nd.amount)}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      {/* "Prochains versements" remonté tout en haut via UpcomingPayments —
+          ancienne section grid retirée (faisait doublon avec le banner). */}
 
       {/* Modal édition / création plan */}
       {modal && (
