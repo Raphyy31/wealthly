@@ -328,7 +328,14 @@ export function Monthly({
       // For expenses, negative tx contributes positively. Refunds (positive on expense cat) reduce.
       return isExpenseTx && (-t.sharedAmount > 0 || isSavingTx);
     });
-    if (!incomeTx.length || !spendTx.length) return { nodes: [], links: [] };
+    // Bug user 2026-05-21 : avant on retournait vide des qu'UN seul cote
+    // manquait (|| au lieu de &&). Cas typique : debut de mois avec
+    // depenses mais salaire pas encore arrive, ou seulement des remboursements
+    // (categorises 'reimbursements' != 'income') -> Monthly affichait
+    // l'empty state "configure ton mois type" alors qu'il y avait 5000€ de
+    // tx visibles ailleurs (Dashboard cashflow). Maintenant on retourne vide
+    // seulement si les DEUX sont vides — sinon on rend le cote disponible.
+    if (!incomeTx.length && !spendTx.length) return { nodes: [], links: [] };
 
     const parentSlug = (cat) => (cat?.parent || cat?.parent_slug || null);
     const topLevelFor = (cid) => {
@@ -359,7 +366,10 @@ export function Monthly({
     // 3514€). On le masque dès que income < 50% spend. Le KPI strip en haut
     // affiche déjà le montant des Entrées, l'info n'est pas perdue.
     const previewSpendTotal = spendTx.reduce((s, t) => s + Math.max(0, -t.sharedAmount), 0);
-    const incomeShortfall = incomeAggregatedTotal > 0 && incomeAggregatedTotal < previewSpendTotal * 0.5;
+    // incomeShortfall couvre 2 cas : (1) zero income mais des depenses, (2)
+    // income trop petit (< 50% spend). Dans les deux cas on cache le node
+    // Entrees pour ne pas fausser la lecture du graph.
+    const incomeShortfall = incomeAggregatedTotal === 0 || (incomeAggregatedTotal < previewSpendTotal * 0.5);
     const incomeNodeSingleIdx = incomeShortfall ? -1 : nodes.length;
     if (!incomeShortfall) {
       nodes.push({
