@@ -516,9 +516,13 @@ export const effectiveMonth = (tx, settings, categories) => {
   const cfg = { ...INCOME_SHIFT_DEFAULTS, ...(settings || {}) };
   if (!cfg.enabled) return monthKey(tx.date);
 
-  // Resoudre le type categorie
-  const cat = (categories || []).find(c => c.id === tx.categoryId || c.slug === tx.categoryId);
-  if (cat?.type !== 'income') return monthKey(tx.date);
+  // Critère élargi : on shift toute transaction de MONTANT POSITIF reçue
+  // le jour pivot ou après, quelle que soit sa catégorie. C'est plus
+  // robuste que filtrer par cat.type === 'income' qui ratait les salaires
+  // mal categorises (auto-detectes comme "Virements internes" par exemple).
+  // Les dépenses (montant négatif) ne shiftent JAMAIS.
+  const amount = tx.sharedAmount ?? tx.amount ?? 0;
+  if (amount <= 0) return monthKey(tx.date);
 
   const d = new Date(tx.date);
   if (d.getDate() < cfg.pivotDay) return monthKey(tx.date);
