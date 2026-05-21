@@ -813,7 +813,14 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
 
   useEffect(() => {
     if (duplicatesDismissed) return;
-    if (!accounts.length || !assets.length) return;
+    // 2026-05-21 : avant on exigeait accounts.length ET assets.length pour
+    // declencher la detection (pensait que detectDuplicates ne matchait que
+    // Account ↔ Asset). Maintenant detectDuplicates couvre AUSSI les
+    // doublons Account ↔ Account (manuel + sync GoCardless) — on doit donc
+    // declencher des qu'il y a au moins 2 accounts. Cas user (frere) :
+    // connecte sa banque manuellement puis via GoCardless -> 2 lignes
+    // visibles, pas detectees avant.
+    if (accounts.length < 2 && assets.length === 0) return;
     const pairs = detectDuplicates(allWealthItems);
     setDuplicatePairs(pairs);
   }, [allWealthItems, accounts.length, assets.length, duplicatesDismissed]);
@@ -1817,53 +1824,110 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       return { totalImported: 0, errors: 0 };
     }
     const N = bankConnections.length;
+    // Petit sleep pour que le user puisse LIRE chaque stage avant le
+    // suivant. Sinon les stages defilent trop vite et l'effet "logs temps
+    // reel" est perdu. Pas applique en mode silent (auto-refresh).
+    const breathe = (ms) => silent ? Promise.resolve() : new Promise(r => setTimeout(r, ms));
+
     if (!silent) {
       setSyncStage('connecting',
         N === 1
           ? `Connexion à ${bankConnections[0].bank_name || 'votre banque'}…`
-          : `Synchronisation de ${N} banques…`,
+          : `Synchronisation de ${N} banques · démarrage…`,
         { current: 1, total: N }
       );
+      await breathe(400);
     }
+
     let totalImported = 0;
+    let totalUpdated = 0;
+    let totalSkipped = 0;
     let errors = 0;
     let firstError = null;
+    // Log par-banque pour le retour final (et debug investisseurs).
+    const perBankLog = [];
+
     try {
       for (let i = 0; i < N; i++) {
         const conn = bankConnections[i];
+        const bankLabel = conn.bank_name || 'Banque';
+        // Feedback temps reel : 3 stages mini par banque pour donner
+        // l'impression que l'app travaille pas que la barre tourne dans
+        // le vide. User feedback "qu'il dise en temps reel ce que ca fait".
         if (!silent) {
-          setSyncStage('transactions',
-            `${conn.bank_name || 'Banque'} — récupération des opérations…`,
+          setSyncStage('connecting',
+            `${bankLabel} — connexion sécurisée…`,
             { current: i + 1, total: N, progress: N > 1 ? i / N : null }
+          );
+          await breathe(350);
+          setSyncStage('balance',
+            `${bankLabel} — lecture des soldes…`,
+            { current: i + 1, total: N, progress: N > 1 ? (i + 0.33) / N : null }
+          );
+          await breathe(300);
+          setSyncStage('transactions',
+            `${bankLabel} — récupération des opérations…`,
+            { current: i + 1, total: N, progress: N > 1 ? (i + 0.66) / N : null }
           );
         }
         try {
           const result = await api.banking.sync(conn.id);
-          totalImported += result.imported || 0;
+          const imp = result.imported || 0;
+          const upd = result.updated || 0;
+          const skp = result.skipped || 0;
+          totalImported += imp;
+          totalUpdated += upd;
+          totalSkipped += skp;
+          perBankLog.push({ bank: bankLabel, imported: imp, updated: upd, skipped: skp, ok: true });
+
+          // Affichage du resume per-bank avant de passer a la suivante
+          if (!silent) {
+            const msg = imp > 0
+              ? `${bankLabel} ✓ ${imp} nouvelle${imp > 1 ? 's' : ''} op${imp > 1 ? 's' : ''}.`
+              : `${bankLabel} ✓ déjà à jour.`;
+            setSyncStage('success', msg, { current: i + 1, total: N, progress: (i + 1) / N });
+            await breathe(550);
+          }
         } catch (err) {
           errors++;
           if (!firstError) firstError = err;
+          perBankLog.push({ bank: bankLabel, imported: 0, updated: 0, skipped: 0, ok: false, error: err?.message });
+          if (!silent) {
+            setSyncStage('error',
+              `${bankLabel} ✗ échec`,
+              { current: i + 1, total: N, progress: (i + 1) / N }
+            );
+            await breathe(500);
+          }
         }
       }
       await reloadAll();
     } finally {
       if (!silent) {
-        // Stage final : success ou error. On laisse la barre une seconde
-        // visible pour que l'utilisateur voie l'aboutissement avant cleanup.
+        // Stage final enrichi : on resume tout ce qui s'est passe en 1 ligne
+        // explicite. Si N>1 banques, on inclut la repartition.
         if (errors === 0) {
-          setSyncStage('success',
-            totalImported > 0
-              ? `${totalImported} opération${totalImported > 1 ? 's' : ''} importée${totalImported > 1 ? 's' : ''}`
-              : 'Comptes à jour',
-            { current: N, total: N, progress: 1 }
-          );
-          setTimeout(() => setSyncStatus(null), 1800);
+          let summary;
+          if (totalImported > 0) {
+            summary = `${totalImported} opération${totalImported > 1 ? 's' : ''} importée${totalImported > 1 ? 's' : ''}`;
+            if (totalSkipped > 0) summary += ` · ${totalSkipped} déjà connue${totalSkipped > 1 ? 's' : ''}`;
+            if (N > 1) summary += ` · ${N} banques sync`;
+          } else {
+            summary = N > 1 ? `${N} banques à jour` : 'Comptes à jour';
+          }
+          setSyncStage('success', summary, { current: N, total: N, progress: 1 });
+          setTimeout(() => setSyncStatus(null), 2400);
         } else {
-          setSyncStage('error',
-            errors === N ? 'Échec de la synchronisation' : `${N - errors}/${N} banques synchronisées`,
-            { current: N, total: N, progress: 1 }
-          );
-          setTimeout(() => setSyncStatus(null), 3000);
+          const okBanks = perBankLog.filter(b => b.ok).map(b => b.bank).join(', ');
+          const koBanks = perBankLog.filter(b => !b.ok).map(b => b.bank).join(', ');
+          let summary;
+          if (errors === N) {
+            summary = `Échec ${N === 1 ? '' : `(${N} banques)`}`;
+          } else {
+            summary = `${N - errors}/${N} synchronisées · échec ${koBanks}`;
+          }
+          setSyncStage('error', summary, { current: N, total: N, progress: 1 });
+          setTimeout(() => setSyncStatus(null), 3800);
         }
       }
     }
