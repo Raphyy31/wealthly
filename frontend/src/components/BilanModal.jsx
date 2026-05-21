@@ -317,6 +317,47 @@ function BilanSection({ title, sections, total, totalLabel, formatEUR, hidden, n
       </h3>
       {sections.map((sec, i) => {
         const subTotal = sec.lines.reduce((s, l) => s + l.value, 0);
+        // Si une section n'a qu'UNE seule ligne et que son nom est tres
+        // proche du label de section, on fusionne pour eviter le doublon
+        // visuel "Crédit auto / • Crédit auto" qui paraissait redondant.
+        const singleLine = sec.lines.length === 1 ? sec.lines[0] : null;
+        const lineMatchesSection = singleLine && (
+          (singleLine.label || '').toLowerCase().includes(sec.label.toLowerCase()) ||
+          sec.label.toLowerCase().includes((singleLine.label || '').toLowerCase())
+        );
+        if (lineMatchesSection) {
+          return (
+            <div key={i} style={{ marginBottom: 10 }}>
+              <div style={{
+                display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+                padding: '8px 0',
+                fontSize: 13, fontWeight: 500, color: 'var(--ink)',
+                borderBottom: '1px dotted var(--border)',
+              }}>
+                <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 8 }}>
+                  <span>{sec.label}</span>
+                  {singleLine.hint && (
+                    <span style={{
+                      fontSize: 10.5, color: 'var(--ink-3)',
+                      fontFamily: 'Geist Mono, ui-monospace, Menlo, monospace',
+                      letterSpacing: '0.04em',
+                    }}>
+                      {singleLine.hint}
+                    </span>
+                  )}
+                </span>
+                <span style={{
+                  fontFamily: 'Geist Mono, ui-monospace, Menlo, monospace',
+                  fontVariantNumeric: 'tabular-nums',
+                  color: negative ? 'var(--negative)' : 'var(--ink)',
+                  letterSpacing: '0.01em',
+                }}>
+                  {hidden ? '···' : formatEUR(subTotal)}
+                </span>
+              </div>
+            </div>
+          );
+        }
         return (
           <div key={i} style={{ marginBottom: 18 }}>
             {/* Sub-section label + sous-total */}

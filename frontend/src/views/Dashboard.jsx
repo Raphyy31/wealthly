@@ -243,6 +243,29 @@ export function Dashboard({
     [cashWealth, otherDebt]
   );
 
+  // Label intelligent pour les dettes non-immo (= otherDebt). Avant on
+  // hardcodait "Crédits conso" → mensonger si l'user a seulement un crédit
+  // auto. Maintenant on derive du(des) type(s) reels :
+  //   - 1 seul type non-immo → label specifique ("Crédit auto", "Crédit conso"...)
+  //   - 2+ types non-immo    → "Autres crédits" (generique)
+  //   - 0 type               → null (KPI/breakdown caches)
+  const otherDebtLabel = useMemo(() => {
+    const nonMortgage = (visibleLiabilities || []).filter(l =>
+      l.type !== 'mortgage' && (parseFloat(l.remainingCapital) || 0) > 0.5
+    );
+    if (nonMortgage.length === 0) return null;
+    const types = new Set(nonMortgage.map(l => l.type || 'other_loan'));
+    if (types.size === 1) {
+      const t = [...types][0];
+      return ({
+        consumer_loan: 'Crédit conso',
+        auto_loan: 'Crédit auto',
+        other_loan: 'Autre prêt',
+      })[t] || 'Autres crédits';
+    }
+    return 'Autres crédits';
+  }, [visibleLiabilities]);
+
   // Patrimoine net total = financier + immo. Doit egaler netWorth (Actifs −
   // Passifs) sinon il y a divergence (= bug d'agregation a tracer).
   const patrimoineNetTotal = useMemo(
@@ -253,7 +276,9 @@ export function Dashboard({
   const kpis = [
     {
       label: 'Patrimoine financier net',
-      sub: 'Liquidités + Placements − Crédits conso',
+      sub: otherDebtLabel
+        ? `Liquidités + Placements − ${otherDebtLabel}`
+        : 'Liquidités + Placements',
       value: financialNet,
       delta: null,
       negative: financialNet < 0,
@@ -584,11 +609,11 @@ export function Dashboard({
                     </span>
                   </>
                 )}
-                {otherDebt > 0.5 && (
+                {otherDebt > 0.5 && otherDebtLabel && (
                   <>
                     <span style={{ color: 'var(--ink-3)', opacity: 0.4 }}>·</span>
                     <span>
-                      <span style={{ color: 'var(--ink-2)' }}>Crédits conso</span>
+                      <span style={{ color: 'var(--ink-2)' }}>{otherDebtLabel}</span>
                       {' '}
                       <span style={{ color: 'var(--negative)', fontWeight: 500 }}>−{formatEUR(otherDebt)}</span>
                     </span>
