@@ -30,6 +30,7 @@ import { Skeleton } from './components/Skeleton.jsx';
 import { Styles } from './Styles.jsx';
 import { Toast } from './components/Toast.jsx';
 import { DemoTour } from './components/DemoTour.jsx';
+import { BankMark } from './components/ui/BankMark.jsx';
 import { useIncomeShift } from './hooks/useIncomeShift.js';
 import { effectiveMonth } from './utils.js';
 import { getTransferType } from './utils.js';
@@ -1686,7 +1687,21 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     try {
       const updated = await api.accounts.update(accId, apiPatch);
       const mapped = accountFromApi(updated);
-      setAccounts(prev => prev.map(a => a.id === accId ? { ...a, ...mapped } : a));
+      // BUG FIX CRITIQUE 2026-05-21 — feedback user "en changeant le nom de
+      // son compte tout a bugé, transaction perdu, solde incohérent". Cause :
+      // si le backend PATCH renvoie une response partielle (sans certains
+      // champs comme last_known_balance, currentBalance, role...), accountFromApi
+      // produit { last_known_balance: undefined, currentBalance: undefined }.
+      // Le spread {...a, ...mapped} ecrasait alors les vraies valeurs avec
+      // undefined -> accountBalances bascule du last_known_balance (officiel
+      // banque) vers initialBalance + Σtx (= 0 + filteredTx = mauvais solde).
+      //
+      // Fix : on filtre les champs undefined de mapped AVANT de spread, ce
+      // qui preserve les champs existants quand l'API n'en parle pas.
+      const safeMapped = Object.fromEntries(
+        Object.entries(mapped).filter(([, v]) => v !== undefined)
+      );
+      setAccounts(prev => prev.map(a => a.id === accId ? { ...a, ...safeMapped } : a));
     } catch (err) { showToast(t('toasts.genericError', { message: err.message }), 'error'); }
   };
 
@@ -2693,6 +2708,44 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
               </button>
             )}
           </nav>
+
+          {/* Liste banques connectees — feedback user 2026-05-21
+              "ideallement tu peux rajouter les logos des banques dans la SideBar".
+              Group by bank label (case-insensitive), affiche le BankMark
+              26px + nom + counter comptes. Click -> Reglages > Banques. */}
+          {(() => {
+            const seen = new Map();
+            (visibleAccounts || []).forEach(a => {
+              const label = (a.bank || a.name || 'Banque').trim();
+              const key = label.toLowerCase();
+              if (!seen.has(key)) seen.set(key, { label, count: 0 });
+              seen.get(key).count += 1;
+            });
+            const banks = [...seen.values()].sort((a, b) => b.count - a.count).slice(0, 6);
+            if (banks.length === 0) return null;
+            return (
+              <div className="ws-banks">
+                <div className="ws-nav-group">
+                  <span className="ws-nav-group-label">Mes banques</span>
+                </div>
+                <div className="ws-banks-list">
+                  {banks.map(b => (
+                    <button
+                      key={b.label}
+                      className="ws-bank-chip"
+                      onClick={() => setView('settings')}
+                      title={`${b.label} · ${b.count} compte${b.count > 1 ? 's' : ''} — voir Réglages`}
+                      type="button"
+                    >
+                      <BankMark bank={b.label} size={22}/>
+                      <span className="ws-bank-name">{b.label}</span>
+                      <span className="ws-bank-count">{b.count}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
           <div className="ws-foot">
             <div className="ws-foot-actions">
