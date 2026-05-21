@@ -651,10 +651,10 @@ export function Monthly({
           </p>
         </div>
         <div className="mon-actions">
-          <button className="ds-btn ghost" onClick={() => setShowEvolution(true)}>
+          <button className="ds-btn" onClick={() => setShowEvolution(true)}>
             <TrendingUp size={14}/> {isNarrow ? '' : 'Évolution'}
           </button>
-          <button className="ds-btn ghost" onClick={() => setShow5030(true)}>
+          <button className="ds-btn" onClick={() => setShow5030(true)}>
             <Target size={14}/> {isNarrow ? '' : '50 / 30 / 20'}
           </button>
           {!isChildScope && (

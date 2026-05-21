@@ -19,6 +19,7 @@ import { useQuotes } from '../hooks/useQuotes.js';
 import { Amount } from '../components/ui/Amount.jsx';
 import { EmptyState } from '../components/EmptyState.jsx';
 import { ResponsiveModal } from '../components/ui/ResponsiveModal.jsx';
+import { AnimatedNumber } from '../components/AnimatedNumber.jsx';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -398,8 +399,8 @@ function DcaReminderModal({ plan, currentUserEmail, onSave, onClose }) {
       </div>
 
       <div className="modal-actions">
-        <button className="ghost-btn" onClick={onClose} disabled={saving}>Annuler</button>
-        <button className="primary-btn" onClick={submit} disabled={saving}>
+        <button className="ds-btn ghost" onClick={onClose} disabled={saving}>Annuler</button>
+        <button className="ds-btn primary" onClick={submit} disabled={saving}>
           <Check size={14}/> {saving ? 'Enregistrement…' : 'Enregistrer'}
         </button>
       </div>
@@ -539,7 +540,7 @@ function PlanModal({ plan, accounts, members, onSave, onClose }) {
         </div>
       <div className="modal-footer">
         <button className="secondary-btn" onClick={onClose}>{t('actions.cancel')}</button>
-        <button className="primary-btn" onClick={submit} disabled={saving || !d.name || !d.amount}>
+        <button className="ds-btn primary" onClick={submit} disabled={saving || !d.name || !d.amount}>
           <Check size={14}/> {saving ? t('actions.saving') : t('actions.save')}
         </button>
       </div>
@@ -1005,6 +1006,9 @@ function ProjectionHero({ plans, quotes, fmt0 }) {
 // chronologiques. Inclut le statut "rappel email" par plan, avec relative
 // date ("dans 4j", "demain", "aujourd'hui"). Cliquer une ligne → ouvre la
 // modale rappel pour ce plan (raccourci).
+//
+// GSAP : stagger fade-in des lignes au mount + pulse infini doux sur les
+// lignes urgentes (diffDays <= 3) pour attirer l'attention.
 function UpcomingPayments({ plans, onOpenReminder, fmt0 }) {
   const upcoming = useMemo(() => {
     const list = (plans || [])
@@ -1017,6 +1021,29 @@ function UpcomingPayments({ plans, onOpenReminder, fmt0 }) {
       .slice(0, 4);
     return list;
   }, [plans]);
+
+  const rowsRef = useRef(null);
+  useEffect(() => {
+    if (!rowsRef.current) return;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    const ctx = gsap.context(() => {
+      // Stagger fade-in des lignes
+      gsap.fromTo(
+        '[data-upcoming-row]',
+        { opacity: 0, x: -8 },
+        { opacity: 1, x: 0, duration: 0.35, ease: 'expo.out', stagger: 0.06, clearProps: 'transform' }
+      );
+      // Pulse subtil sur les lignes urgentes (≤ 3j) — box-shadow + scale léger
+      gsap.to('[data-upcoming-urgent]', {
+        boxShadow: '0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent)',
+        duration: 1.4,
+        repeat: -1,
+        yoyo: true,
+        ease: 'sine.inOut',
+      });
+    }, rowsRef);
+    return () => ctx.revert();
+  }, [upcoming.length]);
 
   if (upcoming.length === 0) return null;
 
@@ -1037,12 +1064,14 @@ function UpcomingPayments({ plans, onOpenReminder, fmt0 }) {
         </div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div ref={rowsRef} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {upcoming.map(({ plan, label, relative, diffDays }) => {
           const urgent = diffDays <= 3;
           return (
             <div
               key={plan.id}
+              data-upcoming-row
+              data-upcoming-urgent={urgent ? '' : null}
               style={{
                 display: 'flex', alignItems: 'center', gap: 12,
                 padding: '8px 10px', borderRadius: 6,
@@ -1138,13 +1167,17 @@ function DcaKpiStrip({ plans, quotes, fmt0 }) {
     return { invested, value, gain: value - invested };
   }, [activePlans, quotes]);
 
+  const fmtSigned = (n) => (n >= 0 ? '+' : '') + fmt0(n);
+  // Chaque KPI fournit valeur numerique + fonction de format pour AnimatedNumber
+  // (count-up GSAP au mount, pas de pulse a chaque rerender).
   const KPIS = [
-    { label: 'Plans actifs', value: String(activePlans.length), color: 'var(--ink)' },
-    { label: 'Mensuel équiv.', value: fmt0(monthlyEquiv), color: 'var(--ink)' },
-    { label: 'Total versé', value: fmt0(totals.invested), color: 'var(--ink)' },
+    { label: 'Plans actifs', value: activePlans.length, format: (n) => String(Math.round(n)), color: 'var(--ink)' },
+    { label: 'Mensuel équiv.', value: monthlyEquiv, format: fmt0, color: 'var(--ink)' },
+    { label: 'Total versé', value: totals.invested, format: fmt0, color: 'var(--ink)' },
     {
       label: '+/- value',
-      value: (totals.gain >= 0 ? '+' : '') + fmt0(totals.gain),
+      value: totals.gain,
+      format: fmtSigned,
       color: totals.gain >= 0 ? 'var(--positive)' : 'var(--negative)',
     },
   ];
@@ -1177,7 +1210,12 @@ function DcaKpiStrip({ plans, quotes, fmt0 }) {
             fontSize: 20, fontWeight: 600, letterSpacing: '-0.015em',
             fontVariantNumeric: 'tabular-nums', color: kpi.color,
           }}>
-            {kpi.value}
+            <AnimatedNumber
+              value={kpi.value}
+              format={kpi.format}
+              duration={0.9}
+              pulseOnChange={false}
+            />
           </div>
         </div>
       ))}
@@ -1367,7 +1405,7 @@ export function DCAView({ accounts = [], members = [], dcaPlans = [], onPlansCha
           <h1>{t('dca.title')} <em>{t('dca.titleAccent')}</em></h1>
           <p>{t('dca.subtitle')}</p>
         </div>
-        <button className="primary-btn" onClick={() => setModal('new')} style={{ flexShrink: 0 }}>
+        <button className="ds-btn primary" onClick={() => setModal('new')} style={{ flexShrink: 0 }}>
           <Plus size={14}/> {t('dca.newPlan')}
         </button>
       </div>
