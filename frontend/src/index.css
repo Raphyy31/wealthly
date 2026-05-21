@@ -1333,7 +1333,8 @@ html, body {
   box-shadow: 0 1px 0 rgba(0,0,0,0.08) inset, 0 1px 2px rgba(0,0,0,0.06);
 }
 
-.ws-nav button {
+.ws-nav button,
+.ws-nav a {
   display: flex; align-items: center; gap: 10px;
   padding: 7px 10px;
   border-radius: var(--radius-sm);
@@ -1342,6 +1343,7 @@ html, body {
   color: var(--ink-2);
   font: 450 13.5px/1.2 var(--font-sans);
   cursor: pointer;
+  text-decoration: none;
   text-align: left;
   transition: color 0.22s cubic-bezier(0.4, 0, 0.2, 1);
   width: 100%;
@@ -1352,7 +1354,7 @@ html, body {
 }
 /* Slide-in background : tire un fond depuis la gauche au hover, plus
    premium qu'un simple change de background couleur. */
-.ws-nav button::after {
+.ws-nav button::after, .ws-nav a::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -1363,28 +1365,28 @@ html, body {
   z-index: -1;
   border-radius: inherit;
 }
-.ws-nav button:hover::after { transform: scaleX(1); }
-.ws-nav button svg {
+.ws-nav button:hover::after, .ws-nav a:hover::after { transform: scaleX(1); }
+.ws-nav button svg, .ws-nav a svg {
   color: var(--ink-3);
   flex-shrink: 0;
   transition: color 0.22s cubic-bezier(0.4, 0, 0.2, 1), transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.ws-nav button > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ws-nav button:hover { color: var(--ink); }
-.ws-nav button:hover svg {
+.ws-nav button > span, .ws-nav a > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ws-nav button:hover, .ws-nav a:hover { color: var(--ink); }
+.ws-nav button:hover svg, .ws-nav a:hover svg {
   color: var(--accent);
   transform: scale(1.08);
 }
-.ws-nav button.on {
+.ws-nav button.on, .ws-nav a.on {
   background: var(--bg-sunk);
   color: var(--ink);
   font-weight: 500;
   padding-left: 14px;
 }
-.ws-nav button.on svg { color: var(--accent); }
+.ws-nav button.on svg, .ws-nav a.on svg { color: var(--accent); }
 /* Active item : pas de slide-in (deja un etat distinct), pas de pulse icone */
-.ws-nav button.on::after { display: none; }
-.ws-nav button.on:hover svg { transform: none; }
+.ws-nav button.on::after, .ws-nav a.on::after { display: none; }
+.ws-nav button.on:hover svg, .ws-nav a.on:hover svg { transform: none; }
 
 /* Magic line : trait cobalt unique qui glisse vers l'item actif (GSAP) */
 .ws-nav { position: relative; }

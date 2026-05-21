@@ -100,15 +100,16 @@ function drawHeader(doc, subtitle) {
   const monogramSize = 22;
   const monogramY = yBase - 16;
 
-  // Monogram square — gold stroke on the page bg, no fill (lets the dark show through)
-  doc.setDrawColor(...C.gold);
-  doc.setLineWidth(0.6);
-  doc.roundedRect(x, monogramY, monogramSize, monogramSize, 2.5, 2.5, 'S');
-  // Interior W glyph — two clean strokes drawn from a baseline inside the square
-  doc.setDrawColor(...C.gold);
-  doc.setLineWidth(0.7);
-  const wx = x + 4, wy = monogramY + 6, wh = 10, ww = monogramSize - 8;
-  doc.lines([[ww * 0.25, wh], [ww * 0.25, -wh + 3], [ww * 0.25, wh], [ww * 0.25, -wh + 3]], wx, wy);
+  // Monogram refondu 2026-05-21 (user "ancien logo" feedback) — aligne sur
+  // le composant Logo.jsx de l'app : carre INK filled + lettre W cream
+  // centree. Au lieu du W zigzag stroke-only qui faisait "ancien".
+  doc.setFillColor(...C.ink);
+  doc.roundedRect(x, monogramY, monogramSize, monogramSize, 4, 4, 'F');
+  // Lettre W centree, cream sur ink
+  doc.setFont(FONT, 'bold');
+  doc.setFontSize(14);
+  doc.setTextColor(...C.paper);
+  doc.text('W', x + monogramSize / 2, monogramY + monogramSize / 2 + 4.5, { align: 'center' });
 
   // Wordmark — slightly larger + tracked, no italic
   doc.setFont(FONT, 'bold');
@@ -529,13 +530,14 @@ export function generateBilanPdf({
   const yearMonth = new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }).toUpperCase();
 
   // === Top band — wordmark left, period right, gold rule beneath ===
-  // Monogram (stroke-only, dark fill = page bg shows through)
-  doc.setDrawColor(...C.gold);
-  doc.setLineWidth(0.7);
-  doc.roundedRect(PAGE_M, 56, 26, 26, 3, 3, 'S');
-  doc.setLineWidth(0.8);
-  // W glyph inside the square
-  doc.lines([[4, 11], [4, -8], [4, 8], [4, -11]], PAGE_M + 5, 64);
+  // Monogram refondu 2026-05-21 : aligne sur Logo.jsx (carré ink filled +
+  // W cream gros). Au lieu du W zigzag stroke "ancien" feedback user.
+  doc.setFillColor(...C.ink);
+  doc.roundedRect(PAGE_M, 56, 26, 26, 4, 4, 'F');
+  doc.setFont(FONT, 'bold');
+  doc.setFontSize(16);
+  doc.setTextColor(...C.paper);
+  doc.text('W', PAGE_M + 13, 75, { align: 'center' });
 
   doc.setFont(SERIF, 'bolditalic');
   doc.setFontSize(14);

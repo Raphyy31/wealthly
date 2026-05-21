@@ -2635,32 +2635,50 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             <div className="ws-nav-group">
               <span className="ws-nav-group-label">{t('nav.group_pilotage')}</span>
             </div>
-            <button onClick={() => setView('dashboard')} className={view === 'dashboard' ? 'on' : ''}>
+            {/* Nav links — passes de <button> a <a href> pour supporter
+                Cmd/Ctrl/Middle-click "ouvrir dans un nouvel onglet" (user
+                feedback 2026-05-21). Click normal = preventDefault + setView
+                (navigation React rapide). Cmd+Click = browser ignore le
+                preventDefault et ouvre l'href #/wealth dans un nouvel onglet,
+                qui boot l'app et parse le hash au mount. */}
+            <a href="#/dashboard"
+               onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('dashboard'); }}
+               className={view === 'dashboard' ? 'on' : ''}>
               <Activity size={16}/> <span>{t('nav.dashboard')}</span>
-            </button>
-            <button onClick={() => setView('wealth')} className={view === 'wealth' ? 'on' : ''}>
+            </a>
+            <a href="#/wealth"
+               onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('wealth'); }}
+               className={view === 'wealth' ? 'on' : ''}>
               <Landmark size={16}/> <span>{t('nav.wealth')}</span>
-            </button>
-            <button onClick={() => setView('transactions')} className={view === 'transactions' ? 'on' : ''}>
+            </a>
+            <a href="#/transactions"
+               onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('transactions'); }}
+               className={view === 'transactions' ? 'on' : ''}>
               <BarChart3 size={16}/> <span>{t('nav.transactions')}</span>
-            </button>
+            </a>
             <div className="ws-nav-group">
               <span className="ws-nav-group-label">{t('nav.group_gestion')}</span>
             </div>
-            <button onClick={() => setView('monthly')} className={view === 'monthly' ? 'on' : ''}>
+            <a href="#/monthly"
+               onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('monthly'); }}
+               className={view === 'monthly' ? 'on' : ''}>
               <Calendar size={16}/> <span>{t('nav.monthly')}</span>
               {budgetsOverCount > 0 && (
                 <span className="ws-nav-dot" title={`${budgetsOverCount} budget(s) dépassé(s)`}>
                   {budgetsOverCount}
                 </span>
               )}
-            </button>
-            <button onClick={() => setView('tax')} className={view === 'tax' ? 'on' : ''}>
+            </a>
+            <a href="#/tax"
+               onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('tax'); }}
+               className={view === 'tax' ? 'on' : ''}>
               <Calculator size={16}/> <span>{t('nav.tax')}</span>
-            </button>
-            <button onClick={() => setView('dca')} className={view === 'dca' ? 'on' : ''}>
+            </a>
+            <a href="#/dca"
+               onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('dca'); }}
+               className={view === 'dca' ? 'on' : ''}>
               <TrendingUp size={16}/> <span>{t('nav.dca')}</span>
-            </button>
+            </a>
 
             <div className="ws-nav-group ws-nav-group--with-cta">
               <span className="ws-nav-group-label">{t('nav.group_accounts')}</span>
@@ -2702,13 +2720,17 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             <div className="ws-nav-group">
               <span className="ws-nav-group-label">{t('nav.group_config')}</span>
             </div>
-            <button onClick={() => setView('settings')} className={view === 'settings' ? 'on' : ''}>
+            <a href="#/settings"
+               onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('settings'); }}
+               className={view === 'settings' ? 'on' : ''}>
               <Settings size={16}/> <span>{t('nav.settings')}</span>
-            </button>
+            </a>
             {currentUser?.is_admin && (
-              <button onClick={() => setView('admin')} className={view === 'admin' ? 'on' : ''}>
+              <a href="#/admin"
+                 onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('admin'); }}
+                 className={view === 'admin' ? 'on' : ''}>
                 <Lock size={16}/> <span>Admin</span>
-              </button>
+              </a>
             )}
           </nav>
 
