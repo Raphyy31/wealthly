@@ -142,7 +142,11 @@ export function BankConnectionsSection() {
   return (
     <section className="card">
       <div className="card-header">
-        <h3><Cloud size={16}/> {t('settings.banks.title')} {loading && <RefreshCw size={12} className="spin" style={{marginLeft:6,opacity:.5}}/>}</h3>
+        <h3>
+          <Cloud size={16} style={{ color: 'var(--accent)' }}/>
+          {t('settings.banks.title')}
+          {loading && <RefreshCw size={12} className="spin" style={{marginLeft:6,opacity:.5}}/>}
+        </h3>
         <button className="ds-btn primary" style={{ fontSize: 12, padding: '6px 14px' }} onClick={() => setPicker(true)}>
           <Plus size={13}/> {t('settings.banks.connect')}
         </button>

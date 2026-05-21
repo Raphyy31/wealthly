@@ -1,6 +1,13 @@
-// Source: Settings.jsx lines 2053-2120 — LearningToggle
+// LearningToggle — toggle "Apprentissage automatique" pour la categorisation IA.
+// Quand active, Wealthly cree des regles regex apprises apres 2 recategorisations
+// manuelles du meme marchand vers la meme categorie.
+//
+// Refondu 2026-05-21 pour utiliser le shared ToggleCard + style premium
+// (gradient cobalt-soft + GSAP) coherent avec FoyerSection.
 import { useState, useEffect } from 'react';
+import { Brain } from 'lucide-react';
 import * as api from '../../../api.js';
+import { ToggleCard } from '../../../components/ui/PremiumToggle.jsx';
 
 export function LearningToggle({ showToast }) {
   const [enabled, setEnabled] = useState(true);
@@ -18,8 +25,8 @@ export function LearningToggle({ showToast }) {
     })();
   }, []);
 
-  const toggle = async () => {
-    const next = !enabled;
+  const handleChange = async (next) => {
+    if (saving) return;
     setSaving(true);
     try {
       await api.categorizeEngine.updateLearningSettings(next);
@@ -35,34 +42,29 @@ export function LearningToggle({ showToast }) {
   if (loading) return null;
 
   return (
-    <section className="card" style={{ marginBottom: 16 }}>
-      <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h3 style={{ display: 'flex', alignItems: 'center', gap: 6, margin: 0 }}>
-            🧠 Apprentissage automatique
-          </h3>
-          <p style={{ fontSize: 12.5, color: 'var(--ink-3)', margin: '4px 0 0', lineHeight: 1.5, maxWidth: 540 }}>
-            Quand tu recatégorises 2 fois le même marchand dans la même catégorie, Wealthly crée automatiquement une règle apprise. Désactive si tu préfères tout gérer manuellement.
-          </p>
-        </div>
-        <button
-          type="button"
-          className={`learning-toggle-btn ${enabled ? 'on' : 'off'}`}
-          onClick={toggle}
+    <section className="card" style={{ marginBottom: 16, overflow: 'hidden' }}>
+      <div className="card-header">
+        <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Brain size={16} style={{ color: 'var(--accent)' }}/>
+          Apprentissage automatique
+        </h3>
+        <span className="card-meta">Catégorisation IA</span>
+      </div>
+      <div style={{ padding: '0 18px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <p style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.55, margin: 0 }}>
+          Quand tu recatégorises <strong style={{ color: 'var(--ink)' }}>2 fois le même marchand</strong> dans
+          la même catégorie, Wealthly crée automatiquement une règle apprise. Désactive si tu préfères tout
+          gérer manuellement.
+        </p>
+        <ToggleCard
+          checked={enabled}
+          onChange={handleChange}
+          title="Activer l'apprentissage"
+          description={enabled
+            ? 'Les règles apprises s\'appliquent à toutes les futures synchronisations.'
+            : 'Aucune nouvelle règle ne sera créée automatiquement.'}
           disabled={saving}
-          aria-pressed={enabled}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8,
-            padding: '8px 14px', borderRadius: 8,
-            background: enabled ? 'var(--accent)' : 'var(--bg-elev)',
-            color: enabled ? '#fff' : 'var(--ink-2)',
-            border: '1px solid ' + (enabled ? 'var(--accent)' : 'var(--border-strong)'),
-            fontWeight: 600, fontSize: 13, cursor: saving ? 'wait' : 'pointer',
-            transition: 'background 0.15s, color 0.15s, border-color 0.15s',
-          }}
-        >
-          {saving ? '…' : (enabled ? 'Activé' : 'Désactivé')}
-        </button>
+        />
       </div>
     </section>
   );

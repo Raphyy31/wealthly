@@ -1,9 +1,12 @@
 // Source: Settings.jsx lines 682-1040 — SecuriteSection (+ TwoFactorRow, IdleTimeoutRow)
+//
+// Refondu 2026-05-21 : cobalt accents sur les icones header, premium toggle
+// 2FA et idle-timeout via ToggleCard + ChoiceGrid, headers de cards explicites.
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Activity, Shield } from 'lucide-react';
+import { Activity, Shield, Lock, KeyRound, Clock, Smartphone } from 'lucide-react';
 import * as api from '../../../api.js';
-import { ChipSelect } from '../../../components/ChipSelect.jsx';
+import { ChoiceGrid } from '../../../components/ui/PremiumToggle.jsx';
 import { ChangePasswordModal } from '../modals/ChangePasswordModal.jsx';
 import { TotpSetupModal } from '../modals/TotpSetupModal.jsx';
 import { TotpDisableModal } from '../modals/TotpDisableModal.jsx';
@@ -23,19 +26,33 @@ function IdleTimeoutRow() {
     setValue(v);
     try { localStorage.setItem(STORAGE_KEY, v); } catch {}
   };
+  const labelFor = (v) => options.find(o => o.value === v)?.label;
   return (
-    <div className="settings-field-row">
-      <div>
-        <div className="settings-field-label">Déconnexion automatique</div>
-        <div className="settings-field-hint">
-          {value === '0'
-            ? 'Désactivée. Vous restez connecté tant que vous ne vous déconnectez pas.'
-            : `Au bout de ${options.find(o => o.value === value)?.label} sans activité, vous serez automatiquement déconnecté (avertissement 5 min avant).`}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{
+        display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Clock size={14} style={{ color: 'var(--accent)' }}/>
+          <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ink)' }}>
+            Déconnexion automatique
+          </span>
         </div>
+        <span style={{ fontSize: 11, color: 'var(--ink-3)', fontStyle: 'italic' }}>
+          {value === '0' ? 'jamais' : `après ${labelFor(value)} sans activité`}
+        </span>
       </div>
-      <div className="settings-field-control">
-        <ChipSelect options={options} value={value} onChange={onChange} />
-      </div>
+      <ChoiceGrid
+        value={value}
+        onChange={onChange}
+        options={options}
+        columns={4}
+      />
+      <p style={{ fontSize: 11.5, color: 'var(--ink-3)', margin: 0, lineHeight: 1.5 }}>
+        {value === '0'
+          ? 'Vous restez connecté tant que vous ne vous déconnectez pas manuellement.'
+          : `Un avertissement s'affiche 5 minutes avant la déconnexion automatique.`}
+      </p>
     </div>
   );
 }
@@ -62,10 +79,20 @@ function TwoFactorRow({ t }) {
     <>
       <div className="settings-field-row">
         <div>
-          <div className="settings-field-label">Authentification à 2 facteurs (TOTP)</div>
+          <div className="settings-field-label" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Smartphone size={14} style={{ color: 'var(--ink-3)' }}/>
+            Authentification à 2 facteurs (TOTP)
+            {status.enabled && (
+              <span style={{
+                fontSize: 9.5, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase',
+                color: 'var(--positive)', padding: '2px 6px', borderRadius: 4,
+                background: 'color-mix(in srgb, var(--positive) 14%, transparent)',
+              }}>actif</span>
+            )}
+          </div>
           <div className="settings-field-hint">
             {status.enabled
-              ? 'Active — code 6 chiffres requis à chaque connexion.'
+              ? 'Code 6 chiffres requis à chaque connexion.'
               : 'Renforce la sécurité de votre compte avec Google Authenticator, Authy ou 1Password.'}
           </div>
         </div>
@@ -129,25 +156,40 @@ export function SecuriteSection({ currentUser }) {
       </header>
 
       <div className="card">
-        <div className="settings-field-row">
-          <div>
-            <div className="settings-field-label">{t('settings.security.password')}</div>
-            <div className="settings-field-hint">{t('settings.security.passwordHint')}</div>
-          </div>
-          <div className="settings-field-control">
-            <button className="ds-btn" onClick={() => setShowPwdModal(true)}>
-              {t('settings.security.changePassword')}
-            </button>
-          </div>
+        <div className="card-header">
+          <h3>
+            <Shield size={16} style={{ color: 'var(--accent)' }}/>
+            Authentification
+          </h3>
+          <span className="card-meta">Mot de passe · 2FA · session</span>
         </div>
+        <div style={{ padding: '0 18px 18px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+          <div className="settings-field-row">
+            <div>
+              <div className="settings-field-label" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <KeyRound size={14} style={{ color: 'var(--ink-3)' }}/>
+                {t('settings.security.password')}
+              </div>
+              <div className="settings-field-hint">{t('settings.security.passwordHint')}</div>
+            </div>
+            <div className="settings-field-control">
+              <button className="ds-btn" onClick={() => setShowPwdModal(true)}>
+                {t('settings.security.changePassword')}
+              </button>
+            </div>
+          </div>
 
-        <TwoFactorRow t={t} />
-        <IdleTimeoutRow />
+          <TwoFactorRow t={t} />
+          <IdleTimeoutRow />
+        </div>
       </div>
 
       <div className="card">
         <div className="card-header">
-          <h3><Activity size={16}/> {t('settings.security.recentActivity')}</h3>
+          <h3>
+            <Activity size={16} style={{ color: 'var(--accent)' }}/>
+            {t('settings.security.recentActivity')}
+          </h3>
         </div>
         {!currentUser?.is_admin || eventsError ? (
           <p className="settings-panel-intro" style={{ margin: 0 }}>{t('settings.security.activityComingSoon')}</p>

@@ -1,6 +1,9 @@
 // Source: Settings.jsx lines 201-282 — ProfilSection
+//
+// Refondu 2026-05-21 : card header avec icone cobalt + meta, micro-icons
+// dans les labels de champs, badge currency a cote du label.
 import { useTranslation } from 'react-i18next';
-import { Edit3 } from 'lucide-react';
+import { Edit3, UserCircle, Globe, Coins } from 'lucide-react';
 import { ChipSelect } from '../../../components/ChipSelect.jsx';
 import { Combobox } from '../../../components/Combobox.jsx';
 import { SUPPORTED_CURRENCIES } from '../../../utils.js';
@@ -30,57 +33,72 @@ export function ProfilSection({ currentUser, baseCurrency, setBaseCurrency }) {
       </header>
 
       <div className="card">
-        <div className="settings-profile-card">
-          <span className="settings-profile-avatar">{initials}</span>
-          <div className="settings-profile-meta">
-            <div className="settings-profile-name">
-              {currentUser?.full_name || (currentUser?.email ? currentUser.email.split('@')[0] : t('settings.profile.userFallback'))}
+        <div className="card-header">
+          <h3>
+            <UserCircle size={16} style={{ color: 'var(--accent)' }}/>
+            Identité
+          </h3>
+          <span className="card-meta">Nom · email · langue</span>
+        </div>
+        <div style={{ padding: '0 18px 18px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+          <div className="settings-profile-card">
+            <span className="settings-profile-avatar">{initials}</span>
+            <div className="settings-profile-meta">
+              <div className="settings-profile-name">
+                {currentUser?.full_name || (currentUser?.email ? currentUser.email.split('@')[0] : t('settings.profile.userFallback'))}
+              </div>
+              <div className="settings-profile-email">{currentUser?.email || t('settings.profile.demoMode')}</div>
             </div>
-            <div className="settings-profile-email">{currentUser?.email || t('settings.profile.demoMode')}</div>
           </div>
-        </div>
 
-        <div className="settings-field-row">
-          <div>
-            <div className="settings-field-label">{t('settings.profile.fullName')}</div>
-            <div className="settings-field-hint">{t('settings.profile.fullNameHint')}</div>
+          <div className="settings-field-row">
+            <div>
+              <div className="settings-field-label">{t('settings.profile.fullName')}</div>
+              <div className="settings-field-hint">{t('settings.profile.fullNameHint')}</div>
+            </div>
+            <div className="settings-field-control">
+              <button className="ds-btn" disabled>
+                <Edit3 size={13}/> {t('settings.profile.changeName')}
+              </button>
+            </div>
           </div>
-          <div className="settings-field-control">
-            <button className="ds-btn" disabled>
-              <Edit3 size={13}/> {t('settings.profile.changeName')}
-            </button>
-          </div>
-        </div>
 
-        <div className="settings-field-row">
-          <div>
-            <div className="settings-field-label">{t('settings.profile.uiLanguage')}</div>
-            <div className="settings-field-hint">{t('settings.profile.uiLanguageHint')}</div>
+          <div className="settings-field-row">
+            <div>
+              <div className="settings-field-label" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Globe size={14} style={{ color: 'var(--ink-3)' }}/>
+                {t('settings.profile.uiLanguage')}
+              </div>
+              <div className="settings-field-hint">{t('settings.profile.uiLanguageHint')}</div>
+            </div>
+            <div className="settings-field-control">
+              <ChipSelect
+                value={currentLang}
+                onChange={(val) => i18nHook.changeLanguage(val)}
+                options={[
+                  { value: 'fr', label: 'Français' },
+                  { value: 'en', label: 'English' },
+                ]}
+              />
+            </div>
           </div>
-          <div className="settings-field-control">
-            <ChipSelect
-              value={currentLang}
-              onChange={(val) => i18nHook.changeLanguage(val)}
-              options={[
-                { value: 'fr', label: 'Français' },
-                { value: 'en', label: 'English' },
-              ]}
-            />
-          </div>
-        </div>
 
-        <div className="settings-field-row">
-          <div>
-            <div className="settings-field-label">{t('settings.profile.refCurrency')}</div>
-            <div className="settings-field-hint">{t('settings.profile.refCurrencyHint')}</div>
-          </div>
-          <div className="settings-field-control">
-            <Combobox
-              value={baseCurrency}
-              onChange={(val) => setBaseCurrency && setBaseCurrency(val)}
-              disabled={!setBaseCurrency}
-              options={SUPPORTED_CURRENCIES.map(c => ({ value: c, label: `${c} — ${CURRENCY_NAMES[c]}`, icon: CURRENCY_FLAGS[c] }))}
-            />
+          <div className="settings-field-row">
+            <div>
+              <div className="settings-field-label" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Coins size={14} style={{ color: 'var(--ink-3)' }}/>
+                {t('settings.profile.refCurrency')}
+              </div>
+              <div className="settings-field-hint">{t('settings.profile.refCurrencyHint')}</div>
+            </div>
+            <div className="settings-field-control">
+              <Combobox
+                value={baseCurrency}
+                onChange={(val) => setBaseCurrency && setBaseCurrency(val)}
+                disabled={!setBaseCurrency}
+                options={SUPPORTED_CURRENCIES.map(c => ({ value: c, label: `${c} — ${CURRENCY_NAMES[c]}`, icon: CURRENCY_FLAGS[c] }))}
+              />
+            </div>
           </div>
         </div>
       </div>

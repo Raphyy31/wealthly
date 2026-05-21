@@ -20,7 +20,7 @@ export function DonneesSection({ exportData, importData, resetAllData }) {
       </header>
 
       <div className="card">
-        <div className="card-header"><h3><Database size={16}/> {t('settings.data.backupCard')}</h3></div>
+        <div className="card-header"><h3><Database size={16} style={{ color: 'var(--accent)' }}/> {t('settings.data.backupCard')}</h3></div>
         <div className="settings-buttons">
           <button className="ds-btn" onClick={exportData}><Download size={14}/> {t('settings.data.export')}</button>
           <label className="ds-btn" style={{ cursor: 'pointer' }}>

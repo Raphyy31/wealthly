@@ -87,7 +87,7 @@ export function CustomRulesSection({ categories }) {
   return (
     <section className="card">
       <div className="card-header">
-        <h3><Sparkles size={16}/> {t('settings.rules.cardTitle')}</h3>
+        <h3><Sparkles size={16} style={{ color: 'var(--accent)' }}/> {t('settings.rules.cardTitle')}</h3>
         <span className="card-meta">{t('settings.rules.rules', { count: rules.length })}</span>
       </div>
       <p style={{ fontSize: 12.5, color: 'var(--text-tertiary)', margin: '0 0 14px', lineHeight: 1.55, maxWidth: 640 }}>

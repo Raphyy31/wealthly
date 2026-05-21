@@ -97,7 +97,7 @@ export function ComptesSection({ accounts, accountBalances, members, transaction
         {activeTab === 'comptes' && (
       <div className="card">
         <div className="card-header">
-          <h3><Wallet size={16}/> {t('settings.accounts.bankAccounts')}</h3>
+          <h3><Wallet size={16} style={{ color: 'var(--accent)' }}/> {t('settings.accounts.bankAccounts')}</h3>
           {onImport && (
             <button className="ds-btn" onClick={onImport}><Upload size={14}/> {t('settings.accounts.importCsv')}</button>
           )}

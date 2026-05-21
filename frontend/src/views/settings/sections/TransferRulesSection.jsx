@@ -121,7 +121,7 @@ export function TransferRulesSection({ accounts, transactions, transferIds, upda
   return (
     <section className="card transfer-rules-section">
       <div className="card-header">
-        <h3><Wand2 size={16}/> Règles de marquage automatique</h3>
+        <h3><Wand2 size={16} style={{ color: 'var(--accent)' }}/> Règles de marquage automatique</h3>
         <span className="card-meta">Le label contient X → marqué comme virement vers compte Y</span>
       </div>
 

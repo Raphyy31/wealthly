@@ -21,7 +21,10 @@ export function FoyerSection({ members, setEditingMember, deleteMember, COLORS }
 
       <div className="card">
         <div className="card-header">
-          <h3><Users size={16}/> {t('settings.household.members')}</h3>
+          <h3>
+            <Users size={16} style={{ color: 'var(--accent)' }}/>
+            {t('settings.household.members')}
+          </h3>
           <button
             className="ds-btn"
             onClick={() => setEditingMember({ id: null, name: '', role: 'adult', color: COLORS[members.length % COLORS.length] })}

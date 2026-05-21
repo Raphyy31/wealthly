@@ -61,7 +61,7 @@ export function MyCategoriesSection({ categories, reloadCategories, onCategoryCr
   return (
     <section className="card" style={{ marginBottom: 16 }}>
       <div className="card-header">
-        <h3><Sparkles size={16}/> Mes catégories</h3>
+        <h3><Sparkles size={16} style={{ color: 'var(--accent)' }}/> Mes catégories</h3>
         <button className="ds-btn" onClick={() => setCreating({ parent: null })}>
           <Plus size={14}/> Catégorie
         </button>

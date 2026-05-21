@@ -104,9 +104,26 @@ export default function App() {
   });
 
   if (authState === 'checking') {
-    // Empty div — index.html's #root:empty CSS already renders the cobalt
-    // spinner on a papier-chaud background. No duplicate "Chargement…" text.
-    return <div/>;
+    // Loader explicite — anciennement `return <div/>` qui CASSAIT le selecteur
+    // `#root:empty` de index.html (root n'est plus vide -> pas de spinner) ->
+    // ecran noir pendant jusqu'a 5s sur mobile (fix 2026-05-21 demo investors).
+    // On reproduit ici la meme anim que le pre-paint pour continuite visuelle.
+    return (
+      <div style={{
+        position: 'fixed', inset: 0,
+        background: 'var(--bg, #F7F6F2)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 1,
+      }}>
+        <div style={{
+          width: 28, height: 28,
+          border: '2px solid var(--border, #E4E1D8)',
+          borderTopColor: 'var(--accent, #2540D9)',
+          borderRadius: '50%',
+          animation: 'ws 0.7s linear infinite',
+        }}/>
+      </div>
+    );
   }
 
   if (authState === 'demo') {

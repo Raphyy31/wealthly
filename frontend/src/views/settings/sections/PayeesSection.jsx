@@ -91,7 +91,7 @@ export function PayeesSection({ categories, showToast }) {
   return (
     <section className="card" style={{ marginBottom: 16 }}>
       <div className="card-header">
-        <h3><Sparkles size={16}/> Marchands canoniques</h3>
+        <h3><Sparkles size={16} style={{ color: 'var(--accent)' }}/> Marchands canoniques</h3>
         <span className="card-meta">{payees.length} marchand{payees.length > 1 ? 's' : ''}</span>
       </div>
       <p style={{ fontSize: 12.5, color: 'var(--text-tertiary)', margin: '0 0 14px', lineHeight: 1.55, maxWidth: 640 }}>
