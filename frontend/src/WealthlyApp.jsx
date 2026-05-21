@@ -2683,9 +2683,12 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
                   className="ws-account-item"
                   title={a.name || a.bank}
                 >
-                  <span className="ws-bank-dot" style={{ background: bankColor(a.bank) }}>
-                    {(a.name || a.bank || '?')[0].toUpperCase()}
-                  </span>
+                  {/* Badge banque — 2026-05-21 : passe de ws-bank-dot (rectangle
+                      etire, 1 lettre couleur hash) a BankMark (carré 22px,
+                      couleurs officielles BNP/Boursorama/CA/etc). Si l'user
+                      n'a pas renseigne la banque, BankMark fallback sur le
+                      nom -> couleur HSL stable mais quand meme square. */}
+                  <BankMark bank={a.bank || a.name || '?'} size={22}/>
                   <span className="ws-account-name">{a.name || a.bank}</span>
                   {Number.isFinite(balance) && !hideAmounts && (
                     <span className="ws-account-balance">
@@ -2709,43 +2712,9 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             )}
           </nav>
 
-          {/* Liste banques connectees — feedback user 2026-05-21
-              "ideallement tu peux rajouter les logos des banques dans la SideBar".
-              Group by bank label (case-insensitive), affiche le BankMark
-              26px + nom + counter comptes. Click -> Reglages > Banques. */}
-          {(() => {
-            const seen = new Map();
-            (visibleAccounts || []).forEach(a => {
-              const label = (a.bank || a.name || 'Banque').trim();
-              const key = label.toLowerCase();
-              if (!seen.has(key)) seen.set(key, { label, count: 0 });
-              seen.get(key).count += 1;
-            });
-            const banks = [...seen.values()].sort((a, b) => b.count - a.count).slice(0, 6);
-            if (banks.length === 0) return null;
-            return (
-              <div className="ws-banks">
-                <div className="ws-nav-group">
-                  <span className="ws-nav-group-label">Mes banques</span>
-                </div>
-                <div className="ws-banks-list">
-                  {banks.map(b => (
-                    <button
-                      key={b.label}
-                      className="ws-bank-chip"
-                      onClick={() => setView('settings')}
-                      title={`${b.label} · ${b.count} compte${b.count > 1 ? 's' : ''} — voir Réglages`}
-                      type="button"
-                    >
-                      <BankMark bank={b.label} size={22}/>
-                      <span className="ws-bank-name">{b.label}</span>
-                      <span className="ws-bank-count">{b.count}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            );
-          })()}
+          {/* "Mes banques" section retiree 2026-05-21 — faisait doublon
+              avec la section COMPTES existante (plus haut dans la nav).
+              Le badge a ete migre vers BankMark dans COMPTES directement. */}
 
           <div className="ws-foot">
             <div className="ws-foot-actions">

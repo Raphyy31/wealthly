@@ -1317,58 +1317,20 @@ html, body {
 }
 .ws-nav-group-cta:hover { background: var(--bg-hover); color: var(--accent); }
 
-/* ── Mes banques (sidebar 2026-05-21) ──────────────────────────────────
-   Liste des banques connectees sous la nav principale. Chip = BankMark
-   logo + nom tronque + counter. Click -> Reglages. */
-.ws-banks {
-  padding: 4px 8px 8px;
-  border-top: 1px dotted var(--border);
-  margin-top: 8px;
-}
-.ws-banks-list {
-  display: flex; flex-direction: column;
-  gap: 2px;
-  margin-top: 4px;
-}
-.ws-bank-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  padding: 5px 8px;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  border: none;
-  color: var(--ink-2);
-  font: 450 12.5px/1.2 var(--font-sans);
-  cursor: pointer;
-  text-align: left;
-  width: 100%;
-  transition: background var(--t-fast), color var(--t-fast);
-}
-.ws-bank-chip:hover {
-  background: var(--bg-hover);
-  color: var(--ink);
-}
-.ws-bank-name {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.ws-bank-count {
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  color: var(--ink-3);
-  background: var(--bg-sunk);
-  padding: 2px 6px;
-  border-radius: 999px;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.04em;
-}
-.ws-bank-chip:hover .ws-bank-count {
-  color: var(--accent);
-  background: var(--accent-soft);
+/* Mes banques (sidebar 2026-05-21) — section retiree au profit de
+   l'enrichissement direct des badges COMPTES via BankMark. CSS gardee
+   inerte au cas ou on veut reintroduire la section plus tard. */
+
+/* BankMark force carre dans les comptes sidebar — fix screenshot 2026-05-21
+   "badges etires rectangulaires". Override defensif au cas ou un parent
+   flex tente de stretch le badge en cross-axis. width/height inline du
+   composant + ces regles = certitude que ca reste un carre. */
+.ws-account-item .ds-bank-mark,
+.ws-bank-chip .ds-bank-mark {
+  flex: 0 0 auto;
+  align-self: center;
+  border-radius: 5px;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.08) inset, 0 1px 2px rgba(0,0,0,0.06);
 }
 
 .ws-nav button {
