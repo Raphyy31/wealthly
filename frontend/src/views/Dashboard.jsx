@@ -27,6 +27,7 @@ import { useHideAmounts } from '../contexts/HideAmounts.jsx';
 import { BankMark } from '../components/ui/BankMark.jsx';
 import { Sparkline } from '../components/ui/Sparkline.jsx';
 import { Donut } from '../components/ui/Donut.jsx';
+import { BilanModal } from '../components/BilanModal.jsx';
 // Note: fmtAmount/formatDelta retirés du Dashboard avec la suppression
 // des multi-deltas 30j/3M/YTD (feedback user 2026-05-18 — perf % jugée
 // peu utile sur la vitrine). KPI strip réorienté patrimoine cash + immo.
@@ -102,6 +103,7 @@ export function Dashboard({
   const [period, setPeriod] = useState('6m');
   const [txFilter, setTxFilter] = useState('all'); // all | expense | income
   const [hover, setHover] = useState(null); // chart hover point
+  const [bilanOpen, setBilanOpen] = useState(false); // modale Bilan patrimonial complet
   const [syncing, setSyncing] = useState(false);
 
   // GSAP page-enter stagger — fade-in en cascade des sections principales
@@ -469,12 +471,8 @@ export function Dashboard({
           </h1>
           <div className="dash-sub">
             {t('dashboard.accountsConnected', { count: visibleAccounts?.length || 0 })}
-            {accounts && visibleAccounts && accounts.length > visibleAccounts.length && (
-              <span className="dash-sub-aside">
-                {' · '}
-                {accounts.length - (visibleAccounts.length || 0)} {t('nav.account_count_filtered')}
-              </span>
-            )}
+            {/* "X filtré(s) sur" retire 2026-05-21 (user feedback) — l'info ne
+                parlait a personne, on garde juste le nombre de comptes connectes. */}
           </div>
         </div>
         <div className="dash-actions">
@@ -525,7 +523,7 @@ export function Dashboard({
         <div className="hero-card">
           <div className="hero-top">
             <div className="dash-eyebrow">
-              <span className="dash-eyebrow-label">Patrimoine total</span>
+              <span className="dash-eyebrow-label">Patrimoine financier net</span>
             </div>
             <div className="ds-range-tabs">
               {PERIODS.map(p => (
@@ -553,58 +551,50 @@ export function Dashboard({
               />
             </div>
           )}
-          {/* HERO REFONDU 2026-05-21 — investor demo grade.
-              Avant : hero = netWorth (456k) avec split Actifs/Passifs en
-              dessous. Feedback user : "j'ai pas 456k de patrimoine debile,
-              456k tu le mets actifs et pas Patrimoine".
-              Maintenant : hero = ACTIFS TOTAL (796k), avec ligne explicite
-              "Net apres dettes : 457k" + breakdown Actifs - Passifs = Net
-              en row visuel sage/terracotta/cobalt. */}
+
+          {/* HERO REFONDU v3 (2026-05-21 — user feedback "j'aime pas du tout
+              le cadre patrimoine total niveau design pas aligne degeulasse,
+              j'aurais aime patrimoine financier le plus important").
+              - Hero = patrimoine financier NET (le metric qui bouge tous les
+                jours — liquidites + placements − credits conso). L'immo est
+                accessible via le bouton "Voir tout le patrimoine" en bas.
+              - Breakdown inline propre : separateurs · plutot que chips.
+              - Look private banking sobre, pas chip cm2. */}
           <div className="hero-number-row">
             <div className="hero-net-stack">
-              <Amount value={hover?.balance ?? ((liquidWealth || 0) + (assetsValue || 0))} hero/>
-              {(totalDebt > 0 || (assetsValue || 0) > 0 || (liquidWealth || 0) > 0) && (
-                <div className="hero-split" style={{
-                  display: 'flex', alignItems: 'center', gap: 12,
-                  marginTop: 10, flexWrap: 'wrap',
-                }}>
-                  <span style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 6,
-                    padding: '4px 10px', borderRadius: 6,
-                    background: 'color-mix(in srgb, var(--positive) 10%, transparent)',
-                    border: '1px solid color-mix(in srgb, var(--positive) 22%, transparent)',
-                  }}>
-                    <span style={{ fontSize: 9.5, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--positive)' }}>Actifs</span>
-                    <span className="num" style={{ fontSize: 12, fontWeight: 600, color: 'var(--positive)', fontVariantNumeric: 'tabular-nums' }}>
-                      {formatEUR((liquidWealth || 0) + (assetsValue || 0))}
+              <Amount value={hover?.balance ?? financialNet} hero/>
+              {/* Decomposition inline sobre */}
+              <div style={{
+                marginTop: 12, fontSize: 13, color: 'var(--ink-3)',
+                display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap',
+                fontVariantNumeric: 'tabular-nums',
+              }}>
+                <span>
+                  <span style={{ color: 'var(--ink-2)' }}>Liquidités</span>
+                  {' '}
+                  <span style={{ color: 'var(--ink)', fontWeight: 500 }}>{formatEUR(liquidWealth)}</span>
+                </span>
+                {(cashWealth - liquidWealth) > 0.5 && (
+                  <>
+                    <span style={{ color: 'var(--ink-3)', opacity: 0.4 }}>·</span>
+                    <span>
+                      <span style={{ color: 'var(--ink-2)' }}>Placements</span>
+                      {' '}
+                      <span style={{ color: 'var(--ink)', fontWeight: 500 }}>{formatEUR(cashWealth - liquidWealth)}</span>
                     </span>
-                  </span>
-                  <span style={{ color: 'var(--ink-3)', fontWeight: 300, fontSize: 14 }}>−</span>
-                  <span style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 6,
-                    padding: '4px 10px', borderRadius: 6,
-                    background: 'color-mix(in srgb, var(--negative) 10%, transparent)',
-                    border: '1px solid color-mix(in srgb, var(--negative) 22%, transparent)',
-                  }}>
-                    <span style={{ fontSize: 9.5, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--negative)' }}>Passifs</span>
-                    <span className="num" style={{ fontSize: 12, fontWeight: 600, color: 'var(--negative)', fontVariantNumeric: 'tabular-nums' }}>
-                      {formatEUR(totalDebt)}
+                  </>
+                )}
+                {otherDebt > 0.5 && (
+                  <>
+                    <span style={{ color: 'var(--ink-3)', opacity: 0.4 }}>·</span>
+                    <span>
+                      <span style={{ color: 'var(--ink-2)' }}>Crédits conso</span>
+                      {' '}
+                      <span style={{ color: 'var(--negative)', fontWeight: 500 }}>−{formatEUR(otherDebt)}</span>
                     </span>
-                  </span>
-                  <span style={{ color: 'var(--ink-3)', fontWeight: 300, fontSize: 14 }}>=</span>
-                  <span style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 6,
-                    padding: '4px 10px', borderRadius: 6,
-                    background: 'var(--accent-soft)',
-                    border: '1px solid color-mix(in srgb, var(--accent) 30%, transparent)',
-                  }}>
-                    <span style={{ fontSize: 9.5, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--accent)' }}>Net</span>
-                    <span className="num" style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', fontVariantNumeric: 'tabular-nums' }}>
-                      {formatEUR(netWorth)}
-                    </span>
-                  </span>
-                </div>
-              )}
+                  </>
+                )}
+              </div>
             </div>
             {periodDelta.abs !== 0 && (
               <div className="hero-delta">
@@ -631,9 +621,42 @@ export function Dashboard({
 
           <HeroChart data={chartData} onHover={setHover} hover={hover}/>
 
+          {/* Bouton "Voir tout le patrimoine" — ouvre la modale Bilan complet
+              avec immobilier inclus, style bilan d'expert-comptable.
+              Le hero focus le financier (qui bouge quotidien), l'immo est
+              accessible a la demande pour ne pas polluer la vue principale. */}
+          <button
+            type="button"
+            onClick={() => setBilanOpen(true)}
+            style={{
+              marginTop: 16, alignSelf: 'flex-start',
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '8px 14px', borderRadius: 8,
+              background: 'transparent',
+              border: '1px solid var(--border)',
+              color: 'var(--ink-2)',
+              fontSize: 12.5, fontWeight: 500, cursor: 'pointer',
+              transition: 'all 140ms',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'color-mix(in srgb, var(--accent) 6%, transparent)';
+              e.currentTarget.style.borderColor = 'color-mix(in srgb, var(--accent) 28%, var(--border))';
+              e.currentTarget.style.color = 'var(--accent)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.borderColor = 'var(--border)';
+              e.currentTarget.style.color = 'var(--ink-2)';
+            }}
+          >
+            <FileText size={13}/>
+            <span>Voir tout le patrimoine (incl. immo)</span>
+            <span style={{ color: 'var(--ink-3)', marginLeft: 4 }}>→</span>
+          </button>
+
           <div
             className="kpi-strip"
-            style={{ gridTemplateColumns: `repeat(${kpis.length}, 1fr)` }}
+            style={{ gridTemplateColumns: `repeat(${kpis.length}, 1fr)`, marginTop: 24 }}
           >
             {kpis.map((k, i) => {
               // Color-code: negative explicit (autres dettes, monthSaving<0) → terracotta.
@@ -938,6 +961,20 @@ export function Dashboard({
           </div>
         </div>
       </section>
+
+      {/* Modale Bilan complet (clic "Voir tout le patrimoine") */}
+      <BilanModal
+        open={bilanOpen}
+        onClose={() => setBilanOpen(false)}
+        visibleAccounts={visibleAccounts}
+        accountBalances={accountBalances}
+        visibleAssets={visibleAssets}
+        visibleLiabilities={visibleLiabilities}
+        memberShare={memberShare}
+        ASSET_CLASS_MAP={ASSET_CLASS_MAP}
+        formatEUR={formatEUR}
+        hidden={hidden}
+      />
     </div>
   );
 }
