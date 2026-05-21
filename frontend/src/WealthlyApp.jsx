@@ -29,6 +29,7 @@ import { Mandatory2FAOverlay } from './components/Mandatory2FAOverlay.jsx';
 import { Skeleton } from './components/Skeleton.jsx';
 import { Styles } from './Styles.jsx';
 import { Toast } from './components/Toast.jsx';
+import { DemoTour } from './components/DemoTour.jsx';
 import { AnimatedNumber } from './components/AnimatedNumber.jsx';
 import { SyncProgressBar } from './components/SyncProgressBar.jsx';
 import { Onboarding } from './views/Onboarding.jsx';
@@ -197,6 +198,19 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     if (hideAmounts) document.documentElement.setAttribute('data-hide-amounts', '1');
     else document.documentElement.removeAttribute('data-hide-amounts');
   }, [hideAmounts]);
+
+  // Keyboard shortcut Cmd/Ctrl+Shift+P -> launch demo tour. Pratique pour
+  // les pitches : pas besoin de cliquer dans le menu sur scene.
+  useEffect(() => {
+    const onKey = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'P' || e.key === 'p')) {
+        e.preventDefault();
+        setDemoTourActive(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
   const [toast, setToast] = useState(null);
   // Sync orchestration — remplace le syncBusy string par un objet structure
   // qui pilote SyncProgressBar (top bar + pill stages). Shape :
@@ -232,6 +246,9 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   const [sidebarMenuOpen, setSidebarMenuOpen] = useState(false);
   // C4 — workspace switcher (member dropdown, kept for fallback / future)
   const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
+  // Mode Presentation auto-tour (pitch investisseurs 2026-05). Trigger via
+  // user menu OU keyboard shortcut Cmd+Shift+P (Ctrl+Shift+P sur Windows).
+  const [demoTourActive, setDemoTourActive] = useState(false);
 
   // Multi-currency: user's display currency + live FX rates (Frankfurter, 1h cache).
   // EUR base is implicit (rates table is { USD: 1.08, GBP: 0.85, CHF: 0.97 }).
@@ -2584,6 +2601,18 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
                     <Settings size={14}/>
                     <span>{t('nav.settings')}</span>
                   </button>
+                  <button
+                    onClick={() => { setDemoTourActive(true); setSidebarMenuOpen(false); }}
+                    role="menuitem"
+                    title="Lance un tour guidé pour pitch (raccourci ⇧⌘P)"
+                  >
+                    <Play size={14} style={{ color: 'var(--accent)' }}/>
+                    <span>Mode présentation</span>
+                    <span style={{
+                      marginLeft: 'auto', fontSize: 9, color: 'var(--ink-3)',
+                      letterSpacing: '0.06em', fontFamily: 'Geist Mono, monospace',
+                    }}>⇧⌘P</span>
+                  </button>
                   <div className="ws-popover-divider"/>
                   <button
                     onClick={() => { logout(); setSidebarMenuOpen(false); }}
@@ -2966,6 +2995,14 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
           initialStep={addBankAccountStep}
         />
       )}
+
+      {/* Mode Presentation — overlay z-index 9000+, controlled par demoTourActive.
+          Trigger : user menu OR ⇧⌘P. Le composant navigue lui-meme via setView. */}
+      <DemoTour
+        active={demoTourActive}
+        onExit={() => setDemoTourActive(false)}
+        setView={setView}
+      />
     </div>
     </HideAmountsContext.Provider>
     </CurrencyContext.Provider>
