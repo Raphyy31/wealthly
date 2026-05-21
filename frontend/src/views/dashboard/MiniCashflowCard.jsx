@@ -66,18 +66,15 @@ export function MiniCashflowCard({ thisMonthStats, onOpenMonthly, currentMonth, 
           <h3 className="mcc-title">
             {(() => {
               const deficit = expenses - income;
-              const savingsRate = income > 0 ? (saving / income) * 100 : 0;
-              // Priorite 1 : epargne effective -> "Tu epargnes X (Y%)"
+              // Pourcentage retire (user feedback 2026-05-21) : avec un income
+              // tres faible (refunds only) le ratio donne des chiffres absurdes
+              // type "13004 %". L'epargne brute parle deja toute seule.
               if (saving > 0) {
-                return savingsRate >= 1
-                  ? <>Tu épargnes <em>{formatEUR(saving, { abbr: false })}</em> · {savingsRate.toFixed(0)} % des revenus.</>
-                  : <>Tu épargnes <em>{formatEUR(saving, { abbr: false })}</em>.</>;
+                return <>Tu épargnes <em>{formatEUR(saving, { abbr: false })}</em>.</>;
               }
-              // Priorite 2 : depenses > revenus -> deficit explicite
               if (deficit > 0 && income > 0) {
                 return <>Tu dépasses ton budget de <em>{formatEUR(deficit, { abbr: false })}</em>.</>;
               }
-              // Sinon : equilibre ou pas de donnees
               return <>Mois équilibré.</>;
             })()}
           </h3>

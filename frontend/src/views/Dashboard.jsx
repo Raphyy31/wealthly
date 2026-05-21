@@ -44,6 +44,159 @@ const PERIODS = [
 
 const DATAVIZ = ['var(--d2)', 'var(--d1)', 'var(--d3)', 'var(--d5)', 'var(--d4)', 'var(--d6)', 'var(--d7)'];
 
+// ─── AllocationCard ─────────────────────────────────────────────────────
+// Refonte 2026-05-21 (user feedback "le cadre est moche mal proportionné,
+// utilise gsap et ui ux"). Avant : Donut + liste simple, ratio vide qui
+// laissait 50% de blanc en bas.
+//
+// Maintenant : Donut compact + barres horizontales par classe (largeur =
+// % du total) qui s'animent en GSAP au mount. Plus dense visuellement,
+// pas de vide. height: fit-content -> ne stretch plus pour matcher le hero.
+function AllocationCard({ allocationData, allocationTotal, formatEUR, hidden, onDetails, t }) {
+  const listRef = useRef(null);
+
+  useEffect(() => {
+    if (!listRef.current) return;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    const ctx = gsap.context(() => {
+      // Stagger fade-up des items + width animation sur les barres de progress
+      gsap.fromTo('[data-alloc-row]',
+        { opacity: 0, y: 6 },
+        { opacity: 1, y: 0, duration: 0.42, ease: 'expo.out', stagger: 0.05, delay: 0.1 }
+      );
+      gsap.fromTo('[data-alloc-bar-fill]',
+        { width: '0%' },
+        { width: (i, el) => el.dataset.target, duration: 0.9, ease: 'expo.out', stagger: 0.05, delay: 0.2 }
+      );
+    }, listRef);
+    return () => ctx.revert();
+  }, [allocationData.length]);
+
+  if (!allocationData.length) {
+    return (
+      <div className="alloc-card" style={{ height: 'fit-content' }}>
+        <div className="alloc-head">
+          <div className="dash-eyebrow">
+            <span className="dash-eyebrow-label">{t('dashboard.allocation')}</span>
+          </div>
+          <button className="link-btn" onClick={onDetails}>{t('dashboard.details')}</button>
+        </div>
+        <div className="dash-empty">
+          <span className="dash-empty-lead">{t('dashboard.noAllocData')}</span>
+          <button className="link-btn" onClick={onDetails}>{t('dashboard.details')} →</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="alloc-card" style={{ height: 'fit-content', alignSelf: 'flex-start' }}>
+      <div className="alloc-head">
+        <div className="dash-eyebrow">
+          <span className="dash-eyebrow-label">{t('dashboard.allocation')}</span>
+        </div>
+        <button className="link-btn" onClick={onDetails}>{t('dashboard.details')}</button>
+      </div>
+
+      {/* Donut centre + total a cote (pas en-dessous = layout plus compact) */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 18,
+        paddingBottom: 4,
+      }}>
+        <Donut
+          data={allocationData}
+          size={108}
+          centerLabel={t('dashboard.allocCenterLabel')}
+          centerValue={formatEUR(allocationTotal, { abbr: true })}
+        />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{
+            fontSize: 10, fontWeight: 600, letterSpacing: '0.16em',
+            textTransform: 'uppercase', color: 'var(--ink-3)', marginBottom: 4,
+          }}>
+            Total actifs
+          </div>
+          <div style={{
+            fontFamily: 'Newsreader, Georgia, serif', fontStyle: 'italic',
+            fontSize: 22, fontWeight: 400, color: 'var(--ink)',
+            letterSpacing: '-0.015em',
+            fontVariantNumeric: 'tabular-nums',
+          }}>
+            {hidden ? '···' : formatEUR(allocationTotal, { abbr: false })}
+          </div>
+          <div style={{
+            fontSize: 11, color: 'var(--ink-3)', marginTop: 4,
+          }}>
+            réparti sur {allocationData.length} classe{allocationData.length > 1 ? 's' : ''}
+          </div>
+        </div>
+      </div>
+
+      {/* Liste avec barres de progress horizontales animees GSAP */}
+      <div ref={listRef} style={{
+        display: 'flex', flexDirection: 'column', gap: 10,
+        paddingTop: 12, borderTop: '1px solid var(--border)',
+      }}>
+        {allocationData.map((d, i) => {
+          const pct = allocationTotal ? (d.value / allocationTotal) * 100 : 0;
+          return (
+            <div key={d.name} data-alloc-row style={{
+              display: 'flex', flexDirection: 'column', gap: 5,
+            }}>
+              <div style={{
+                display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+                gap: 8,
+              }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                  <span style={{
+                    width: 8, height: 8, borderRadius: 2, background: d.color,
+                    flexShrink: 0,
+                  }}/>
+                  <span style={{ fontSize: 13, color: 'var(--ink)', whiteSpace: 'nowrap' }}>
+                    {d.name}
+                  </span>
+                </span>
+                <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 8, flexShrink: 0 }}>
+                  <span style={{
+                    fontSize: 12.5, color: 'var(--ink-2)', fontWeight: 500,
+                    fontVariantNumeric: 'tabular-nums',
+                  }}>
+                    {hidden ? '···' : formatEUR(d.value, { abbr: false })}
+                  </span>
+                  <span style={{
+                    fontSize: 11, color: 'var(--ink-3)',
+                    fontFamily: 'Geist Mono, ui-monospace, Menlo, monospace',
+                    minWidth: 36, textAlign: 'right',
+                  }}>
+                    {hidden ? '···' : `${pct.toFixed(0)} %`}
+                  </span>
+                </span>
+              </div>
+              <div style={{
+                position: 'relative', height: 4, borderRadius: 2,
+                background: 'color-mix(in srgb, var(--ink-3) 12%, transparent)',
+                overflow: 'hidden',
+              }}>
+                <div
+                  data-alloc-bar-fill
+                  data-target={`${pct}%`}
+                  style={{
+                    position: 'absolute', inset: 0,
+                    width: '0%',
+                    background: d.color,
+                    borderRadius: 2,
+                    boxShadow: `0 0 8px ${d.color}40`,
+                  }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 const INITIAL = (s) => {
   if (!s) return '••';
   const t = String(s).trim().split(/\s+/);
@@ -705,39 +858,14 @@ export function Dashboard({
           </div>
         </div>
 
-        <div className="alloc-card">
-          <div className="alloc-head">
-            <div className="dash-eyebrow">
-              <span className="dash-eyebrow-label">{t('dashboard.allocation')}</span>
-            </div>
-            <button className="link-btn" onClick={() => setView?.('wealth')}>{t('dashboard.details')}</button>
-          </div>
-          {allocationData.length ? (
-            <div className="alloc-body">
-              <Donut
-                data={allocationData}
-                size={140}
-                centerLabel={t('dashboard.allocCenterLabel')}
-                centerValue={formatEUR(allocationTotal, { abbr: true })}
-              />
-              <ul className="alloc-list">
-                {allocationData.map(d => (
-                  <li key={d.name}>
-                    <span className="swatch" style={{ background: d.color }}/>
-                    <span className="alloc-name">{d.name}</span>
-                    <span className="alloc-val num">{formatEUR(d.value, { abbr: true })}</span>
-                    <span className="alloc-pct num">{hidden ? '···' : `${allocationTotal ? ((d.value / allocationTotal) * 100).toFixed(0) : '0'} %`}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : (
-            <div className="dash-empty">
-              <span className="dash-empty-lead">{t('dashboard.noAllocData')}</span>
-              <button className="link-btn" onClick={() => setView?.('wealth')}>{t('dashboard.details')} →</button>
-            </div>
-          )}
-        </div>
+        <AllocationCard
+          allocationData={allocationData}
+          allocationTotal={allocationTotal}
+          formatEUR={formatEUR}
+          hidden={hidden}
+          onDetails={() => setView?.('wealth')}
+          t={t}
+        />
       </section>
 
       {/* ── §02 Cashflow mini — vue du mois en cours (sprint 2026-05-20) ── */}
@@ -913,7 +1041,11 @@ export function Dashboard({
         </div>
 
         <div className="dash-side-stack">
-          {/* §05 Budget panel */}
+          {/* §05 Budget panel — retire 2026-05-21 (user feedback :
+              "ca renvoi a rien ce bouton plus c'st faux , vire ce cadre
+              useless"). Le routing 'budgets' n'est pas wirre, totaux toujours
+              a 0 -> aucune valeur. Garde en historique git. */}
+          {false && (
           <div className="ds-panel">
             <div className="ds-panel-head">
               <div>
@@ -956,6 +1088,7 @@ export function Dashboard({
               )}
             </div>
           </div>
+          )}
 
           {/* §06 Insights panel */}
           <div className="ds-panel">
