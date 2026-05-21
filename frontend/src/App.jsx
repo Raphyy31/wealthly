@@ -141,6 +141,14 @@ export default function App() {
             onSignIn={() => { setAuthInitialMode('login'); setUnauthedView('auth'); }}
             onSignUp={() => { setAuthInitialMode('register'); setUnauthedView('auth'); }}
             onTryDemo={() => { enableDemoMode(); setAuthState('demo'); }}
+            onPresent={() => {
+              // Mode Presentation depuis Landing : on enable la demo (donnees
+              // synthetiques) + on pose un flag pour que WealthlyApp lance
+              // automatiquement le DemoTour au mount.
+              try { localStorage.setItem('wealthly:auto_demo_tour', '1'); } catch {}
+              enableDemoMode();
+              setAuthState('demo');
+            }}
           />
         </Suspense>
       );

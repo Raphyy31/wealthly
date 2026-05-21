@@ -213,6 +213,20 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
+
+  // Auto-launch DemoTour quand l'user vient de Landing via le bouton
+  // "Voir la presentation" -> App.jsx pose le flag, on le pioche ici
+  // au mount, on le supprime, puis on declenche le tour apres un court
+  // delai pour laisser l'app finir son premier render.
+  useEffect(() => {
+    try {
+      if (localStorage.getItem('wealthly:auto_demo_tour') === '1') {
+        localStorage.removeItem('wealthly:auto_demo_tour');
+        const tid = setTimeout(() => setDemoTourActive(true), 600);
+        return () => clearTimeout(tid);
+      }
+    } catch {}
+  }, []);
   const [toast, setToast] = useState(null);
   // Reglage decalage salaire fin de mois — partage avec Monthly.jsx via
   // localStorage. Utilise ici pour que monthlyEvolution / thisMonthStats /

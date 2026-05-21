@@ -298,7 +298,7 @@ function Aurora() {
   );
 }
 
-export default function Landing({ onSignIn, onSignUp, onTryDemo }) {
+export default function Landing({ onSignIn, onSignUp, onTryDemo, onPresent }) {
   const [scrolled, setScrolled] = useState(false);
   const mockupRef = useRef(null);
   const { scrollYProgress } = useScroll({ target: mockupRef, offset: ['start end', 'end start'] });
@@ -449,9 +449,14 @@ export default function Landing({ onSignIn, onSignUp, onTryDemo }) {
               Commencer gratuitement
               <ArrowRight />
             </button>
-            {/* "Voir la demo" retire 2026-05-21 — faisait doublon avec le
-                Mode Presentation in-app (DemoTour, ⇧⌘P). Hero CTA simplifie
-                pour focus single-action conversion. */}
+            {/* Mode Presentation accessible avant login (feedback user
+                2026-05-21). Click -> enable demo mode + auto-launch
+                DemoTour cinematic (intro full-screen + 4 scenes + outro). */}
+            {onPresent && (
+              <button className="lc-btn-ghost" data-magnetic onClick={onPresent}>
+                ▶ Voir la présentation
+              </button>
+            )}
           </motion.div>
           {/* Trust badges retires 2026-05-19 — redondants avec la section Why. */}
 

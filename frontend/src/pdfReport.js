@@ -573,42 +573,84 @@ export function generateBilanPdf({
   doc.setLineWidth(0.8);
   doc.line(PAGE_M, 308, PAGE_M + 56, 308);
 
-  // === Hero — patrimoine net, the single biggest number on the document ===
+  // === Hero — PATRIMOINE TOTAL (= Actifs total), aligne refonte Dashboard
+  // 2026-05-21. Avant : netWorth (Actifs - Passifs) -> user "j'ai pas
+  // 456k de patrimoine debile". Maintenant : Actifs total comme grand
+  // chiffre (impressionnant + semantiquement "ce que vous possedez"),
+  // Net souligne en sous-titre comme metric secondaire honnete.
+  const actifsTotal = liquidWealth + assetsValue;
   doc.setFont(FONT, 'bold');
   doc.setFontSize(8.5);
   doc.setTextColor(...C.muted);
-  doc.text('PATRIMOINE NET CONSOLIDÉ', PAGE_M, 392, { charSpace: 2.4 });
+  doc.text('PATRIMOINE TOTAL', PAGE_M, 392, { charSpace: 2.4 });
 
   doc.setFont(SERIF, 'bold');
   doc.setFontSize(72);
   doc.setTextColor(...C.ink);
-  doc.text(fmtEUR(netWorth), PAGE_M, 462);
+  doc.text(fmtEUR(actifsTotal), PAGE_M, 462);
 
-  // Performance pill if we have one
+  // Sous-titre : Net apres dettes (transparence math)
+  doc.setFont(FONT, 'normal');
+  doc.setFontSize(11);
+  doc.setTextColor(...C.body);
+  const netLine = liabilitiesValue > 0
+    ? `Net après dettes : ${fmtEUR(netWorth)}`
+    : 'Aucune dette en cours';
+  doc.text(netLine, PAGE_M, 488);
+
   if (perf1m != null) {
     const perfTxt = `${perf1m >= 0 ? '+' : ''}${perf1m.toFixed(2)} %  sur le mois`;
     const perfColor = perf1m >= 0 ? C.sage : C.terracotta;
     doc.setFont(FONT, 'bold');
     doc.setFontSize(11);
     doc.setTextColor(...perfColor);
-    doc.text(perfTxt, PAGE_M, 488);
+    doc.text(perfTxt, PAGE_M, 506);
   }
 
-  // === Stat grid — three mini-cards with a gold left strip each ===
-  const statY = 560;
+  // === Stat grid — 4 mini-cards alignes sur les KPI du Dashboard pour
+  // que la math FERME : Cash + Immo Net − Autres dettes = Net.
+  // Calcule la decomposition Immo/Other matchant Dashboard.realEstateNet.
+  const immoAssets = visibleAssets.reduce((sum, a) => {
+    const cls = ASSET_CLASS_MAP?.[a.type]?.class;
+    return cls === 'Immobilier' ? sum + (parseFloat(a.currentValue) || 0) * memberShare(a) : sum;
+  }, 0);
+  const mortgageDebt = visibleLiabilities.reduce((sum, l) => {
+    if (l.type !== 'mortgage') return sum;
+    const bal = parseFloat(l.remainingCapital ?? l.remaining_capital ?? 0) || 0;
+    return sum + bal * memberShare(l);
+  }, 0);
+  const immoNet = immoAssets - mortgageDebt;
+  const otherDebt = Math.max(0, liabilitiesValue - mortgageDebt);
+  // Cash = liquidWealth + placements + epargne (= actifsTotal - immoAssets)
+  const cashWealth = actifsTotal - immoAssets;
+
+  const statY = 568;
   const statH = 64;
-  const statGap = 12;
-  const statW = (pageW - PAGE_M * 2 - statGap * 2) / 3;
+  const statGap = 10;
+  const cardCount = otherDebt > 0.5 ? 4 : 3;
+  const statW = (pageW - PAGE_M * 2 - statGap * (cardCount - 1)) / cardCount;
   const statCards = [
-    { label: 'LIQUIDITÉS',     value: fmtEUR(liquidWealth),                                  meta: `${visibleAccounts.length} compte${visibleAccounts.length > 1 ? 's' : ''}` },
-    { label: 'ACTIFS',         value: fmtEUR(assetsValue),                                   meta: `${visibleAssets.length} ligne${visibleAssets.length > 1 ? 's' : ''}` },
     {
-      label: liabilitiesValue > 0 ? 'DETTES' : 'SCORE SANTÉ',
-      value: liabilitiesValue > 0 ? `-${fmtEUR(liabilitiesValue)}` : `${score.total}`,
-      valueColor: liabilitiesValue > 0 ? C.terracotta : scoreColor,
-      meta: liabilitiesValue > 0
-        ? `${visibleLiabilities.length} prêt${visibleLiabilities.length > 1 ? 's' : ''}`
-        : (score.total < 40 ? 'À surveiller' : score.total < 70 ? 'Correct' : 'Solide'),
+      label: 'CASH',
+      value: fmtEUR(cashWealth),
+      meta: 'Liquidités + Placements + Épargne',
+    },
+    {
+      label: 'IMMO NET',
+      value: fmtEUR(immoNet),
+      meta: 'Bien − crédit',
+    },
+    ...(otherDebt > 0.5 ? [{
+      label: 'AUTRES DETTES',
+      value: `-${fmtEUR(otherDebt)}`,
+      valueColor: C.terracotta,
+      meta: 'Conso, étudiant, autre',
+    }] : []),
+    {
+      label: 'NET TOTAL',
+      value: fmtEUR(netWorth),
+      valueColor: scoreColor,
+      meta: `Score santé ${score.total}/100`,
     },
   ];
   statCards.forEach((s, i) => {
@@ -668,17 +710,21 @@ export function generateBilanPdf({
   y += 50;
 
   drawSection(doc, y, 'Indicateurs clés', 'I'); y += 16;
+  // Aligne sur la refonte Dashboard 2026-05-21 :
+  //  - Patrimoine total = Actifs (liquidWealth + assetsValue)
+  //  - Net affiche en card avec hint "actifs − dettes"
+  //  - Decomposition Cash / Immo Net / Autres dettes pour fermer la math
   y = drawKpiCards(doc, y, [
-    { label: 'Patrimoine net', value: fmtEUR(netWorth), hint: 'liquidités + actifs − dettes' },
+    { label: 'Patrimoine total', value: fmtEUR(actifsTotal), hint: 'liquidités + placements + immo' },
+    { label: 'Net après dettes', value: fmtEUR(netWorth), hint: 'actifs − passifs' },
+    { label: 'Cash', value: fmtEUR(cashWealth), hint: `liquidités + placements (${visibleAccounts.length} compte${visibleAccounts.length > 1 ? 's' : ''})` },
+    { label: 'Immobilier net', value: fmtEUR(immoNet), hint: 'bien − crédit immo' },
     {
       label: 'Performance 1 mois',
       value: perf1m == null ? '—' : `${perf1m >= 0 ? '+' : ''}${perf1m.toFixed(2)} %`,
       color: perf1m == null ? C.muted : perf1m >= 0 ? C.sage : C.terracotta,
       hint: 'sur les liquidités',
     },
-    { label: 'Liquidités', value: fmtEUR(liquidWealth), hint: `${visibleAccounts.length} compte${visibleAccounts.length > 1 ? 's' : ''}` },
-    { label: 'Actifs', value: fmtEUR(assetsValue), hint: `${visibleAssets.length} ligne${visibleAssets.length > 1 ? 's' : ''}` },
-    { label: 'Dettes', value: liabilitiesValue > 0 ? `−${fmtEUR(liabilitiesValue)}` : fmtEUR(0), color: liabilitiesValue > 0 ? C.terracotta : C.muted, hint: `${visibleLiabilities.length} prêt${visibleLiabilities.length > 1 ? 's' : ''}` },
     { label: "Ratio d'endettement", value: fmtPct(debtRatio), color: debtRatio == null ? C.muted : debtRatio < 30 ? C.sage : debtRatio < 50 ? C.amber : C.terracotta, hint: debtRatio == null ? '' : debtRatio < 30 ? 'sain' : debtRatio < 50 ? 'surveillé' : 'élevé' },
   ]);
 
