@@ -24,7 +24,8 @@ import {
   ChevronDown, ChevronRight, X, BarChart3, Calendar,
   ChevronLeft, Coins, Sparkles, Maximize2,
 } from 'lucide-react';
-import { formatCurrency, formatDate, monthKey, getTransferType } from '../utils.js';
+import { formatCurrency, formatDate, monthKey, effectiveMonth, getTransferType } from '../utils.js';
+import { useIncomeShift } from '../hooks/useIncomeShift.js';
 import { useIsNarrow } from '../hooks/useIsNarrow.js';
 import { RefMonthEditor } from '../components/RefMonthEditor.jsx';
 import { FiftyThirtyTwentyModal } from '../components/FiftyThirtyTwentyModal.jsx';
@@ -72,6 +73,9 @@ export function Monthly({
       ? 'Famille (compte joint)'
       : (activeMember?.name || 'Personnel');
   const { t } = useTranslation();
+  // Réglage décalage salaire fin de mois — backed par localStorage. Default
+  // enabled + pivot jour 25 (cas francais standard).
+  const { settings: incomeShift } = useIncomeShift();
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [showEditor, setShowEditor] = useState(false);
   const [show5030, setShow5030] = useState(false);
@@ -126,23 +130,26 @@ export function Monthly({
   const hasRefMonth = refLines.length > 0;
 
   // Real month: aggregate transactions by (kind, categoryId).
+  // Utilise effectiveMonth pour gerer les salaires verses fin du mois precedent :
+  // un salaire date 28/04 finance le budget de mai -> attribue a "2026-05".
   const monthTx = useMemo(() => {
     return transactions
-      .filter(t => monthKey(t.date) === selectedMonth)
+      .filter(t => effectiveMonth(t, incomeShift, categories) === selectedMonth)
       .filter(t => !transferIds.has(t.id))
       .map(t => {
         const acc = accounts.find(a => a.id === t.accountId);
         const share = acc ? memberShare(acc) : 1;
         return { ...t, sharedAmount: (t.amount || 0) * share };
       });
-  }, [transactions, accounts, memberShare, transferIds, selectedMonth]);
+  }, [transactions, accounts, memberShare, transferIds, selectedMonth, incomeShift, categories]);
 
   // Virements internes typés 'savings' du mois sélectionné. On les sort du
   // bucket "neutralisé" et on les compte comme epargne (cas Livret A pas
   // synchro : l'utilisateur veut que le 1000 EUR aille en epargne et pas
-  // disparaisse silencieusement).
+  // disparaisse silencieusement). Utilise effectiveMonth pour rester
+  // coherent avec le filtre principal monthTx.
   const monthSavingsTransfers = useMemo(() => {
-    const monthIds = new Set(transactions.filter(t => monthKey(t.date) === selectedMonth).map(t => t.id));
+    const monthIds = new Set(transactions.filter(t => effectiveMonth(t, incomeShift, categories) === selectedMonth).map(t => t.id));
     return transactions
       .filter(t => transferIds.has(t.id) && monthIds.has(t.id))
       .filter(t => getTransferType(t, accounts) === 'savings')
@@ -151,7 +158,7 @@ export function Monthly({
         const share = acc ? memberShare(acc) : 1;
         return { ...t, sharedAmount: (t.amount || 0) * share };
       });
-  }, [transactions, accounts, memberShare, transferIds, selectedMonth]);
+  }, [transactions, accounts, memberShare, transferIds, selectedMonth, incomeShift, categories]);
 
   // Total savings provenant des virements typés (outflows depuis le compte source).
   const savingsFromTransfers = useMemo(() => {

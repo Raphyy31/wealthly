@@ -489,6 +489,76 @@ export const dayOfMonth = (dateStr) => {
   return d.getDate();
 };
 
+// effectiveMonth — mois "comptable" d'une transaction, qui peut différer
+// du mois civil de sa date. Cas d'usage français : le salaire est viré
+// fin avril (28-30) mais finance les dépenses de mai. Sans shift, Monthly
+// affiche "Mai 2026 = 0€ d'entrées" alors qu'il y a un salaire en avril.
+//
+// Règles :
+//   1. Si tx.effective_month_override est defini → utilise-le (per-tx manual).
+//   2. Sinon si la tx est de type revenu (cat.type === 'income') ET datee
+//      le jour `pivotDay` ou apres ET shift active → mois suivant.
+//   3. Sinon → mois civil normal.
+//
+// `categories` est nécessaire pour résoudre cat.type. Si pas dispo, on
+// fallback sur monthKey classique (pas de risque de mal-attribuer).
+//
+// `settings` = { enabled: boolean, pivotDay: 1..31 } — typiquement lu
+// depuis localStorage 'wealthly:income_shift' (default { enabled: true,
+// pivotDay: 25 }).
+export const INCOME_SHIFT_DEFAULTS = { enabled: true, pivotDay: 25 };
+
+export const effectiveMonth = (tx, settings, categories) => {
+  if (!tx?.date) return null;
+  // Override manuel per-tx — prioritaire absolu
+  if (tx.effective_month_override) return tx.effective_month_override;
+
+  const cfg = { ...INCOME_SHIFT_DEFAULTS, ...(settings || {}) };
+  if (!cfg.enabled) return monthKey(tx.date);
+
+  // Resoudre le type categorie
+  const cat = (categories || []).find(c => c.id === tx.categoryId || c.slug === tx.categoryId);
+  if (cat?.type !== 'income') return monthKey(tx.date);
+
+  const d = new Date(tx.date);
+  if (d.getDate() < cfg.pivotDay) return monthKey(tx.date);
+
+  // Shift au mois suivant
+  const next = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`;
+};
+
+// Helper pour savoir si une tx est SHIFTÉE par rapport à sa date civile.
+// Utile pour afficher un badge "→ mois X" dans la liste Transactions.
+export const isIncomeShifted = (tx, settings, categories) => {
+  if (!tx?.date) return false;
+  if (tx.effective_month_override) return tx.effective_month_override !== monthKey(tx.date);
+  const eff = effectiveMonth(tx, settings, categories);
+  return eff !== monthKey(tx.date);
+};
+
+// Lit le réglage shift depuis localStorage (default = enabled + pivot 25).
+// Volontairement synchrone — pas besoin de hook React, c'est lu rarement.
+export const readIncomeShiftSetting = () => {
+  try {
+    const raw = localStorage.getItem('wealthly:income_shift');
+    if (!raw) return INCOME_SHIFT_DEFAULTS;
+    const parsed = JSON.parse(raw);
+    return {
+      enabled: parsed.enabled !== false, // default true si absent
+      pivotDay: Math.min(31, Math.max(1, parseInt(parsed.pivotDay) || INCOME_SHIFT_DEFAULTS.pivotDay)),
+    };
+  } catch {
+    return INCOME_SHIFT_DEFAULTS;
+  }
+};
+
+export const writeIncomeShiftSetting = (settings) => {
+  try {
+    localStorage.setItem('wealthly:income_shift', JSON.stringify(settings));
+  } catch {}
+};
+
 export const generateId = () => `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
 export const hashTransaction = (tx) => `${tx.accountId}|${tx.date}|${tx.amount.toFixed(2)}|${(tx.label || '').slice(0, 50).toLowerCase().trim()}`;
