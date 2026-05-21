@@ -2194,12 +2194,35 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   // null = encore en cours de check backend ; on n'affiche PAS l'Onboarding
   // tant qu'on ne sait pas (evite le flash qui ferait recreer un user sur
   // nouveau device alors que le household a deja des membres).
+  //
+  // BUG FIX 2026-05-21 (demo investisseurs mobile) : ce state intermediaire
+  // entre `loading=false` et `onboarded` resolu rendait un div vide avec
+  // juste un sr-only span -> sur mobile dark mode = ecran NOIR complet
+  // pendant la requete backend. Maintenant on render un spinner cobalt
+  // visible identique au pre-paint script de index.html.
   if (onboarded === null) {
     return (
-      <div className="app theme-light">
+      <div className={`app theme-${theme}`}>
         <Styles theme={theme}/>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', color: 'var(--ink-3)' }}>
-          <span className="sr-only">Chargement…</span>
+        <div
+          style={{
+            position: 'fixed', inset: 0,
+            background: 'var(--bg)',
+            zIndex: 1,
+          }}
+          role="status"
+          aria-live="polite"
+          aria-label="Chargement de l'application"
+        >
+          <div style={{
+            position: 'fixed', top: '50%', left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: 28, height: 28,
+            border: '2px solid var(--border)',
+            borderTopColor: 'var(--accent)',
+            borderRadius: '50%',
+            animation: 'ws 0.7s linear infinite',
+          }}/>
         </div>
       </div>
     );

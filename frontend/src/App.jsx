@@ -107,15 +107,18 @@ export default function App() {
     // Loader explicite — anciennement `return <div/>` qui CASSAIT le selecteur
     // `#root:empty` de index.html (root n'est plus vide -> pas de spinner) ->
     // ecran noir pendant jusqu'a 5s sur mobile (fix 2026-05-21 demo investors).
-    // On reproduit ici la meme anim que le pre-paint pour continuite visuelle.
+    // On reproduit la meme position fixed + transform centering que le
+    // pre-paint pour que l'animation 'ws' (qui inclut translate(-50%,-50%))
+    // marche sans decalage visuel.
     return (
       <div style={{
         position: 'fixed', inset: 0,
         background: 'var(--bg, #F7F6F2)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
         zIndex: 1,
       }}>
         <div style={{
+          position: 'fixed', top: '50%', left: '50%',
+          transform: 'translate(-50%, -50%)',
           width: 28, height: 28,
           border: '2px solid var(--border, #E4E1D8)',
           borderTopColor: 'var(--accent, #2540D9)',
