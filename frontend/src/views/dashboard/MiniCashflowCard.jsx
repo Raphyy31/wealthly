@@ -17,7 +17,12 @@ export function MiniCashflowCard({ thisMonthStats, onOpenMonthly, currentMonth, 
   const rootRef = useRef(null);
   const income = Math.max(0, thisMonthStats?.income || 0);
   const expenses = Math.max(0, thisMonthStats?.expenses || 0);
-  const saving = income - expenses;
+  // CHANTIER 2 — saving = vraie epargne (virements savings + cat=savings)
+  // remontee par WealthlyApp.monthlyEvolution. Avant : saving = income -
+  // expenses (= reste a vivre), trompeur car comptait les virements savings
+  // dans expenses ET produisait un deficit affiche en rouge alors que le
+  // user avait justement epargne.
+  const saving = thisMonthStats?.savings || 0;
   const maxVal = Math.max(income, expenses, Math.abs(saving), 1);
 
   const rows = useMemo(() => [
@@ -59,8 +64,22 @@ export function MiniCashflowCard({ thisMonthStats, onOpenMonthly, currentMonth, 
             <span className="dash-eyebrow-label">Cashflow · {monthLabel}</span>
           </div>
           <h3 className="mcc-title">
-            {saving >= 0 ? <>Tu épargnes <em>{formatEUR(saving, { abbr: false })}</em>.</>
-                       : <>Tu dépenses <em>{formatEUR(Math.abs(saving), { abbr: false })}</em> de plus.</>}
+            {(() => {
+              const deficit = expenses - income;
+              const savingsRate = income > 0 ? (saving / income) * 100 : 0;
+              // Priorite 1 : epargne effective -> "Tu epargnes X (Y%)"
+              if (saving > 0) {
+                return savingsRate >= 1
+                  ? <>Tu épargnes <em>{formatEUR(saving, { abbr: false })}</em> · {savingsRate.toFixed(0)} % des revenus.</>
+                  : <>Tu épargnes <em>{formatEUR(saving, { abbr: false })}</em>.</>;
+              }
+              // Priorite 2 : depenses > revenus -> deficit explicite
+              if (deficit > 0 && income > 0) {
+                return <>Tu dépasses ton budget de <em>{formatEUR(deficit, { abbr: false })}</em>.</>;
+              }
+              // Sinon : equilibre ou pas de donnees
+              return <>Mois équilibré.</>;
+            })()}
           </h3>
         </div>
         <button className="link-btn mcc-link" onClick={onOpenMonthly}>

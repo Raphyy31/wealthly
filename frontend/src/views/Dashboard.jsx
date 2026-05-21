@@ -172,13 +172,22 @@ export function Dashboard({
   //   1. Patrimoine cash = liquidités + placements + épargne + retraite
   //   2. Patrimoine immo net = immobilier − crédits immo (mortgage)
   //   3. Épargne du mois (conservée, utile en daily check)
-  const monthSaving = (thisMonthStats?.income || 0) - (thisMonthStats?.expenses || 0);
+  // CHANTIER 2 — Epargne effective (= virements savings + cat=savings),
+  // pas "income - expenses" (qui est le reste a vivre, concept different).
+  // thisMonthStats.savings est rempli par monthlyEvolution depuis 2026-05-21.
+  const monthSaving = thisMonthStats?.savings || 0;
 
+  // cashWealth (Patrimoine financier brut, avant deduction crédits conso) =
+  // liquidWealth + tous les actifs non-immobiliers (Placements, Épargne,
+  // Retraite, Alternatifs, Divers). Aligne sur la formule Wealth.jsx
+  // (financialWealthLocal = liquidWealth + (totalAssets - realEstateValue)
+  // − consumerLoans) pour eviter divergence cross-views.
   const cashWealth = useMemo(() => {
     let total = liquidWealth || 0;
     (visibleAssets || []).forEach(a => {
       const cls = ASSET_CLASS_MAP[a.type]?.class;
-      if (cls === 'Placements' || cls === 'Épargne' || cls === 'Retraite') {
+      // Tout sauf Immobilier (qui est compte separement dans realEstateNet)
+      if (cls && cls !== 'Immobilier') {
         total += (parseFloat(a.currentValue) || 0) * (memberShare?.(a) ?? 1);
       }
     });
@@ -206,37 +215,61 @@ export function Dashboard({
     return { value: immoAssets - mortgageDebt, assets: immoAssets, debt: mortgageDebt };
   }, [visibleAssets, visibleLiabilities, memberShare]);
 
-  // Autres dettes (= total Passifs − crédits immo). Cas typique : crédit
-  // conso, crédit étudiant, decouvert. Permet a la math des KPI de FERMER :
-  // Cash + Immo net + Autres dettes (negatif) = Patrimoine net.
-  // Sans cette ligne, l'user voyait 41k + 421k = 462k mais le hero affichait
-  // 456k -> 6k "disparus" dans la nature, incomprehensible.
+  // CHANTIER 1 — Refonte calculs Patrimoine (user feedback 2026-05-21)
+  // ─────────────────────────────────────────────────────────────────
+  // Logique cible :
+  //   Patrimoine financier net = liquidWealth + placements/épargne
+  //                              − crédits non-immo (conso, auto, etc.)
+  //   Patrimoine immo net      = immobilier − crédit immo
+  //   Patrimoine net total     = financier net + immo net
+  //
+  // Test user :
+  //   Liquidités 30000 + PEA 1870 − Crédit conso 11000 = 20 870 (financier)
+  //   RP 755000 − Mortgage 670000 = 85 000 (immo net)
+  //   Total = 105 870
+  // ─────────────────────────────────────────────────────────────────
+
+  // Autres dettes = total liabilities − crédit immo (crédits conso/auto/etc).
   const otherDebt = useMemo(() => {
     const total = Math.abs(liabilitiesValue || 0);
     return Math.max(0, total - (realEstateNet.debt || 0));
   }, [liabilitiesValue, realEstateNet.debt]);
 
+  // Patrimoine financier net = cashWealth brut − dettes non-immo.
+  const financialNet = useMemo(
+    () => (cashWealth || 0) - (otherDebt || 0),
+    [cashWealth, otherDebt]
+  );
+
+  // Patrimoine net total = financier + immo. Doit egaler netWorth (Actifs −
+  // Passifs) sinon il y a divergence (= bug d'agregation a tracer).
+  const patrimoineNetTotal = useMemo(
+    () => financialNet + (realEstateNet.value || 0),
+    [financialNet, realEstateNet.value]
+  );
+
   const kpis = [
     {
-      label: 'Patrimoine cash',
-      sub: 'Liquidités + Placements + Épargne',
-      value: cashWealth,
+      label: 'Patrimoine financier net',
+      sub: 'Liquidités + Placements − Crédits conso',
+      value: financialNet,
       delta: null,
+      negative: financialNet < 0,
     },
     {
       label: 'Patrimoine immo net',
-      sub: 'Immo − Crédits immo',
+      sub: 'Immobilier − Crédit immo',
       value: realEstateNet.value,
       delta: null,
+      negative: realEstateNet.value < 0,
     },
-    // 4e KPI conditionnel — uniquement si des autres dettes existent.
-    ...(otherDebt > 0.5 ? [{
-      label: 'Autres dettes',
-      sub: 'Conso, étudiant, découvert',
-      value: -otherDebt,
+    {
+      label: 'Patrimoine net total',
+      sub: 'Financier + Immo',
+      value: patrimoineNetTotal,
       delta: null,
-      negative: true,
-    }] : []),
+      negative: patrimoineNetTotal < 0,
+    },
     {
       label: t('dashboard.savingsMonth'),
       sub: 'Revenus − dépenses',

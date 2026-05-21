@@ -32,6 +32,7 @@ import { Toast } from './components/Toast.jsx';
 import { DemoTour } from './components/DemoTour.jsx';
 import { useIncomeShift } from './hooks/useIncomeShift.js';
 import { effectiveMonth } from './utils.js';
+import { getTransferType } from './utils.js';
 import { AnimatedNumber } from './components/AnimatedNumber.jsx';
 import { SyncProgressBar } from './components/SyncProgressBar.jsx';
 import { Onboarding } from './views/Onboarding.jsx';
@@ -992,11 +993,28 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       // Cashflow attribution depends on (1) whether this tx is an internal
       // transfer (excluded from income/expense regardless of role), and
       // (2) the account's role for non-transfer flows.
-      if (!isTransfer) {
-        // Manual category override : si l'user a explicitement catégorisé
-        // une transaction en income/expense sur un compte de rôle qui exclut
-        // ces flux par défaut (ex : cadeau Lydia sur un compte depenses,
-        // ou retrait manuel d'un livret), on respecte la volonté de l'user.
+      // CHANTIER 2 — Detection epargne (user feedback 2026-05-21) :
+      // Une tx est consideree comme epargne si :
+      //   a) Categorie cat.kind === 'savings' (explicitement Epargne)
+      //   b) OU c'est un virement interne (isTransfer) ET la destination
+      //      est un compte de role epargne/investissement
+      //      (getTransferType === 'savings')
+      // Les tx epargne sont EXCLUES des Depenses du mois ET agregees
+      // dans monthly[].savings comme troisieme indicateur.
+      const isSavingsCategory = cat?.kind === 'savings';
+      const isSavingsTransfer = isTransfer && getTransferType(t, accounts) === 'savings';
+      const isSavingsTx = isSavingsCategory || isSavingsTransfer;
+
+      if (isSavingsTx) {
+        // EPARGNE : pour les transferts -> credit positif sur le compte
+        // source signifie une sortie de cash (sharedAmount negatif). Pour
+        // les tx categorisees savings -> meme principe (la depense quitte
+        // le compte). On prend abs pour avoir un total positif d'epargne.
+        const absShared = Math.abs(sharedAmount);
+        if (absShared > 0) monthly[mCivil].savings += absShared;
+      } else if (!isTransfer) {
+        // CASHFLOW NORMAL (income/depense) — uniquement si pas un transfert
+        // (les transferts non-epargne sont des arbitrages, exclus du cashflow).
         const isManualIncome = t.isManualCategory && cat?.type === 'income';
         const isManualExpense = t.isManualCategory && cat?.type === 'expense';
         if (t.amount > 0) {
@@ -1012,7 +1030,6 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             monthly[mCivil].expenses += absShared;
             if (recurringIds.has(t.id)) monthly[mCivil].fixed += absShared;
             else monthly[mCivil].variable += absShared;
-            if (cat?.kind === 'savings') monthly[mCivil].savings += absShared;
           }
         }
       }
