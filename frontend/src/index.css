@@ -2531,6 +2531,34 @@ html, body {
   .rm-col:last-child { border-bottom: none; }
   .rm-modal { width: 100vw; max-height: 100vh; border-radius: 0; }
 }
+
+/* RefMonthEditor — opt-out du bottom-sheet pattern mobile (user feedback
+   2026-05-21 "éditer mon mois type s'affiche trop en bas, fait que ca
+   s'affiche normalement milieu de page").
+   Styles.jsx L2627 + L3495 forcent align-items: flex-end + border-radius
+   top-only sur tous les .modal-backdrop / .modal a partir de 767px. Pour
+   le RefMonthEditor (modale wide complexe avec 3 cols), on contre-attaque
+   avec une specificite plus haute (.rm-backdrop direct au lieu de
+   .modal-backdrop generique) + !important pour battre les regles mobiles. */
+.rm-backdrop {
+  align-items: center !important;
+  padding: 16px !important;
+}
+.rm-backdrop .rm-modal {
+  border-radius: var(--radius-lg) !important;
+  margin: 0 auto !important;
+}
+@media (max-width: 767px) {
+  .rm-backdrop {
+    padding: 8px !important;
+  }
+  .rm-backdrop .rm-modal {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: calc(100vh - 16px) !important;
+    border-radius: 12px !important;
+  }
+}
 .rm-toolbar-meta { margin-left: auto; color: var(--ink-3); }
 .rm-head {
   padding: 20px 24px 16px;
