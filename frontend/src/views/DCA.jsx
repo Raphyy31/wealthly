@@ -244,6 +244,150 @@ const EMPTY = {
   status: 'active', target_years: 10, expected_return: 7, notes: '',
 };
 
+// ── DcaReminderModal ─────────────────────────────────────────────────────────
+// Modale dédiée pour configurer le rappel email d'un plan DCA.
+// Permet de toggler ON/OFF + choisir le délai d'anticipation (1/2/3/5/7j).
+// Backend exposé : reminder_email_enabled + reminder_lead_days. L'email est
+// envoyé à l'adresse du compte (pas d'override per-plan en DB actuellement).
+function DcaReminderModal({ plan, currentUserEmail, onSave, onClose }) {
+  const [enabled, setEnabled] = useState(!!plan.reminder_email_enabled);
+  const [leadDays, setLeadDays] = useState(plan.reminder_lead_days ?? 2);
+  const [saving, setSaving] = useState(false);
+
+  const LEAD_OPTIONS = [
+    { value: 1, label: '1 jour' },
+    { value: 2, label: '2 jours' },
+    { value: 3, label: '3 jours' },
+    { value: 5, label: '5 jours' },
+    { value: 7, label: '7 jours' },
+  ];
+
+  const submit = async () => {
+    setSaving(true);
+    try {
+      await onSave({ reminder_email_enabled: enabled, reminder_lead_days: leadDays });
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <ResponsiveModal open={true} onClose={onClose} className="dca-reminder-modal">
+      <div className="modal-header">
+        <h2 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Bell size={16}/> Rappel email
+        </h2>
+        <button className="icon-btn-sm" onClick={onClose}><X size={16}/></button>
+      </div>
+
+      <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+        {/* Plan ciblé */}
+        <div style={{ fontSize: 12.5, color: 'var(--ink-2)', padding: '4px 0' }}>
+          Pour le plan <strong style={{ color: 'var(--ink)' }}>{plan.name}</strong>
+          {plan.ticker && <span style={{ fontFamily: 'var(--font-mono)', marginLeft: 6, color: 'var(--accent)' }}>{plan.ticker}</span>}
+        </div>
+
+        {/* Toggle principal */}
+        <div
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '14px 16px', borderRadius: 8,
+            background: enabled ? 'var(--accent-soft)' : 'var(--bg-sunk)',
+            border: '1px solid ' + (enabled ? 'color-mix(in srgb, var(--accent) 30%, transparent)' : 'var(--border)'),
+            transition: 'all 160ms cubic-bezier(0.16, 1, 0.3, 1)',
+          }}
+        >
+          <div>
+            <div style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--ink)' }}>
+              Recevoir un email avant chaque versement
+            </div>
+            <div style={{ fontSize: 11.5, color: 'var(--ink-3)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <Mail size={11}/> Envoyé à {currentUserEmail || 'ton compte'}
+            </div>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={enabled}
+            onClick={() => setEnabled(e => !e)}
+            style={{
+              position: 'relative',
+              width: 42, height: 24, borderRadius: 12,
+              background: enabled ? 'var(--accent)' : 'var(--ink-3)',
+              border: 'none', cursor: 'pointer', flexShrink: 0,
+              transition: 'background 180ms ease',
+            }}
+          >
+            <span style={{
+              position: 'absolute', top: 2, left: enabled ? 20 : 2,
+              width: 20, height: 20, borderRadius: '50%',
+              background: '#fff',
+              transition: 'left 180ms cubic-bezier(0.16, 1, 0.3, 1)',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+            }}/>
+          </button>
+        </div>
+
+        {/* Délai d'anticipation — caché si rappel off */}
+        <div style={{ opacity: enabled ? 1 : 0.5, pointerEvents: enabled ? 'auto' : 'none', transition: 'opacity 160ms' }}>
+          <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-3)', marginBottom: 8 }}>
+            Quand prévenir
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 }}>
+            {LEAD_OPTIONS.map(opt => {
+              const active = leadDays === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setLeadDays(opt.value)}
+                  style={{
+                    padding: '10px 6px', borderRadius: 6,
+                    border: '1px solid ' + (active ? 'var(--accent)' : 'var(--border)'),
+                    background: active ? 'var(--accent-soft)' : 'var(--bg-elev)',
+                    color: active ? 'var(--accent)' : 'var(--ink-2)',
+                    fontSize: 12, fontWeight: active ? 600 : 500, cursor: 'pointer',
+                    transition: 'all 140ms ease',
+                  }}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+          <p style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 8, fontStyle: 'italic' }}>
+            Tu recevras un email {leadDays} jour{leadDays > 1 ? 's' : ''} avant chaque exécution prévue.
+          </p>
+        </div>
+
+        {/* Footer info — fréquence d'envoi */}
+        {enabled && (
+          <div style={{
+            padding: '10px 12px', borderRadius: 6,
+            background: 'color-mix(in srgb, var(--positive) 8%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--positive) 18%, transparent)',
+            fontSize: 11.5, color: 'var(--positive)',
+            display: 'flex', alignItems: 'flex-start', gap: 6,
+          }}>
+            <Bell size={12} style={{ flexShrink: 0, marginTop: 2 }}/>
+            <span>
+              Un cron quotidien vérifie chaque jour les versements à venir. L'email part automatiquement quand un plan tombe dans la fenêtre.
+            </span>
+          </div>
+        )}
+      </div>
+
+      <div className="modal-actions">
+        <button className="ghost-btn" onClick={onClose} disabled={saving}>Annuler</button>
+        <button className="primary-btn" onClick={submit} disabled={saving}>
+          <Check size={14}/> {saving ? 'Enregistrement…' : 'Enregistrer'}
+        </button>
+      </div>
+    </ResponsiveModal>
+  );
+}
+
 function PlanModal({ plan, accounts, members, onSave, onClose }) {
   const { t } = useTranslation();
   const [d, setD] = useState(plan ? {
@@ -385,7 +529,7 @@ function PlanModal({ plan, accounts, members, onSave, onClose }) {
 }
 
 // ── Plan card ────────────────────────────────────────────────────────────────
-function PlanCard({ plan, accounts, quotes, onEdit, onToggle, onDelete, onSetExecutions, onToggleReminder }) {
+function PlanCard({ plan, accounts, quotes, onEdit, onToggle, onDelete, onSetExecutions, onOpenReminder }) {
   const { t } = useTranslation();
   const FREQ_LABEL_LOCAL = { monthly: t('dca.perFrequencyMonthly'), quarterly: t('dca.perFrequencyQuarterly'), annual: t('dca.perFrequencyAnnual') };
   const [expanded, setExpanded] = useState(false);
@@ -494,14 +638,27 @@ function PlanCard({ plan, accounts, quotes, onEdit, onToggle, onDelete, onSetExe
             {expanded ? <ChevronUp size={14}/> : <ChevronDown size={14}/>}
           </button>
           <button className="icon-btn-sm" onClick={() => onEdit(plan)} title={t('actions.edit')}><Edit2 size={13}/></button>
-          {onToggleReminder && (
+          {onOpenReminder && (
             <button
-              className={`icon-btn-sm ${plan.reminder_email_enabled ? 'is-on' : ''}`}
-              onClick={() => onToggleReminder(plan)}
-              title={plan.reminder_email_enabled ? `Rappel email actif (${plan.reminder_lead_days ?? 2}j avant)` : 'Activer rappel email'}
-              style={plan.reminder_email_enabled ? { color: 'var(--accent)', background: 'var(--accent-soft)' } : {}}
+              type="button"
+              className={`dca-reminder-chip ${plan.reminder_email_enabled ? 'is-on' : ''}`}
+              onClick={() => onOpenReminder(plan)}
+              title={plan.reminder_email_enabled
+                ? `Rappel email actif · ${plan.reminder_lead_days ?? 2}j avant exécution — cliquer pour modifier`
+                : 'Configurer un rappel email'}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                padding: '4px 9px', borderRadius: 12,
+                border: '1px solid ' + (plan.reminder_email_enabled ? 'color-mix(in srgb, var(--accent) 30%, transparent)' : 'var(--border)'),
+                background: plan.reminder_email_enabled ? 'var(--accent-soft)' : 'transparent',
+                color: plan.reminder_email_enabled ? 'var(--accent)' : 'var(--ink-3)',
+                fontSize: 11, fontWeight: 500, cursor: 'pointer',
+                whiteSpace: 'nowrap', height: 26, flexShrink: 0,
+                transition: 'all 140ms ease',
+              }}
             >
-              {plan.reminder_email_enabled ? <Bell size={13}/> : <BellOff size={13}/>}
+              {plan.reminder_email_enabled ? <Bell size={11}/> : <BellOff size={11}/>}
+              <span>{plan.reminder_email_enabled ? `${plan.reminder_lead_days ?? 2}j` : 'Rappel'}</span>
             </button>
           )}
           <button className="icon-btn-sm" onClick={() => onToggle(plan)} title={plan.status === 'active' ? t('dca.pause') : t('dca.resume')}>
@@ -820,9 +977,10 @@ function ProjectionHero({ plans, quotes, fmt0 }) {
 }
 
 // ── Main view ────────────────────────────────────────────────────────────────
-export function DCAView({ accounts = [], members = [], dcaPlans = [], onPlansChange }) {
+export function DCAView({ accounts = [], members = [], dcaPlans = [], onPlansChange, currentUserEmail }) {
   const { t } = useTranslation();
   const [modal, setModal] = useState(null); // null | 'new' | plan object
+  const [reminderPlan, setReminderPlan] = useState(null); // null | plan object — plan en cours de config rappel
   const [toast, setToast] = useState(null);
 
   // GSAP page-enter — stagger fade-in du header + projection hero + cards DCA
@@ -889,16 +1047,27 @@ export function DCAView({ accounts = [], members = [], dcaPlans = [], onPlansCha
     } catch (e) { notify(e.message, false); }
   };
 
-  const handleToggleReminder = async (plan) => {
-    const next = !plan.reminder_email_enabled;
+  // Ouverture de la modale Rappel pour un plan donné. La modale gère
+  // toggle + délai d'anticipation, puis appelle handleSaveReminder au submit.
+  const handleOpenReminder = (plan) => setReminderPlan(plan);
+
+  const handleSaveReminder = async ({ reminder_email_enabled, reminder_lead_days }) => {
+    if (!reminderPlan) return;
     try {
-      await dcaApi.update(plan.id, { ...plan, reminder_email_enabled: next });
+      await dcaApi.update(reminderPlan.id, {
+        ...reminderPlan,
+        reminder_email_enabled,
+        reminder_lead_days,
+      });
       await reload();
-      notify(next
-        ? `Rappel email activé · ${plan.reminder_lead_days ?? 2}j avant exécution`
+      notify(reminder_email_enabled
+        ? `Rappel email activé · ${reminder_lead_days}j avant exécution`
         : 'Rappel email désactivé'
       );
-    } catch (e) { notify(e.message, false); }
+    } catch (e) {
+      notify(e.message, false);
+      throw e; // rethrow pour que la modale ne se ferme pas en cas d'echec
+    }
   };
 
   const handleSetExecutions = async (plan, executions) => {
@@ -977,7 +1146,7 @@ export function DCAView({ accounts = [], members = [], dcaPlans = [], onPlansCha
               <PlanCard key={p.id} plan={p} accounts={accounts} quotes={quotes}
                 onEdit={setModal} onToggle={handleToggle} onDelete={handleDelete}
                 onSetExecutions={handleSetExecutions}
-                onToggleReminder={handleToggleReminder}/>
+                onOpenReminder={handleOpenReminder}/>
             ))}
           </div>
         )}
@@ -1003,7 +1172,7 @@ export function DCAView({ accounts = [], members = [], dcaPlans = [], onPlansCha
         </section>
       )}
 
-      {/* Modal */}
+      {/* Modal édition / création plan */}
       {modal && (
         <PlanModal
           plan={modal === 'new' ? null : modal}
@@ -1011,6 +1180,16 @@ export function DCAView({ accounts = [], members = [], dcaPlans = [], onPlansCha
           members={members}
           onSave={handleSave}
           onClose={() => setModal(null)}
+        />
+      )}
+
+      {/* Modal configuration rappel email */}
+      {reminderPlan && (
+        <DcaReminderModal
+          plan={reminderPlan}
+          currentUserEmail={currentUserEmail}
+          onSave={handleSaveReminder}
+          onClose={() => setReminderPlan(null)}
         />
       )}
     </div>

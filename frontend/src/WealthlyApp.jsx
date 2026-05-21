@@ -2684,6 +2684,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
           <DCAView
             accounts={accounts} members={members}
             dcaPlans={dcaPlans} onPlansChange={setDcaPlans}
+            currentUserEmail={currentUser?.email}
           />
         )}
         {view === 'wealth' && (
