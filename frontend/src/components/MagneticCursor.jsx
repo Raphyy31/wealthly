@@ -122,18 +122,19 @@ function CursorStyles() {
   will-change: transform, opacity;
 }
 .mc-dot {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  background: #7E92FF;
-  mix-blend-mode: difference;
+  background: #F1EEE4; /* cream pur — toujours visible sur le bg #0F0E0C de la Landing */
+  box-shadow: 0 0 0 1px rgba(126,146,255,.45), 0 0 12px rgba(126,146,255,.35);
 }
 .mc-ring {
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
-  border: 1.5px solid rgba(241, 238, 228, 0.4);
+  border: 1.5px solid rgba(241, 238, 228, 0.85); /* cream tres visible (avant 0.4 -> invisible sur dark) */
   background: rgba(126, 146, 255, 0);
+  box-shadow: 0 0 0 1px rgba(15, 14, 12, .2);
   transition: backdrop-filter 0.2s;
 }
 /* Hide native cursor on Landing (only on fine pointer = desktop) */

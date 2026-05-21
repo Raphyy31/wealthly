@@ -449,9 +449,9 @@ export default function Landing({ onSignIn, onSignUp, onTryDemo }) {
               Commencer gratuitement
               <ArrowRight />
             </button>
-            <button className="lc-btn-ghost" onClick={onTryDemo} data-magnetic>
-              Voir la démo →
-            </button>
+            {/* "Voir la demo" retire 2026-05-21 — faisait doublon avec le
+                Mode Presentation in-app (DemoTour, ⇧⌘P). Hero CTA simplifie
+                pour focus single-action conversion. */}
           </motion.div>
           {/* Trust badges retires 2026-05-19 — redondants avec la section Why. */}
 
@@ -558,7 +558,7 @@ export default function Landing({ onSignIn, onSignUp, onTryDemo }) {
             <p className="lc-final-sub">Gratuit. Sans carte bancaire. Sans engagement.</p>
             <div className="lc-cta-row" style={{ justifyContent: 'center' }}>
               <button className="lc-btn-primary lc-btn-primary--pulse" data-magnetic onClick={onSignUp}>Créer mon compte<ArrowRight /></button>
-              <button className="lc-btn-ghost" onClick={onTryDemo}>Voir la démo</button>
+              {/* Demo CTA retire 2026-05-21 — Mode Presentation in-app remplace. */}
             </div>
           </motion.div>
 
