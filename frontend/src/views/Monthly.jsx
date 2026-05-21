@@ -31,9 +31,32 @@ import { RefMonthEditor } from '../components/RefMonthEditor.jsx';
 import { FiftyThirtyTwentyModal } from '../components/FiftyThirtyTwentyModal.jsx';
 
 const SAVING_SLUGS = new Set(['savings']);
+const SAVING_KEYWORDS = ['saving', 'virement', 'transfer', 'epargne', 'épargne', 'livret'];
 
-function isSavingCategory(catId) {
-  return catId && SAVING_SLUGS.has(String(catId).toLowerCase());
+// isSavingCategory — détecte si une catégorie représente un mouvement
+// d'épargne/transfert interne plutôt qu'une vraie dépense.
+//
+// Détection en cascade :
+//   1. Slug exact dans SAVING_SLUGS (legacy match)
+//   2. Slug contient un mot-clé épargne/virement/transfer/livret
+//   3. (si categories fourni) cat.kind === 'savings' ou cat.type === 'savings'
+//
+// Avant 2026-05-21 : ne matchait QUE le slug 'savings' -> les tx
+// categorisees "Virements internes" / "Livret A" passaient dans le bucket
+// dépenses et écrasaient le Sankey (3900€ qui dwarf le reste).
+function isSavingCategory(catId, categories) {
+  if (!catId) return false;
+  const slug = String(catId).toLowerCase();
+  if (SAVING_SLUGS.has(slug)) return true;
+  if (SAVING_KEYWORDS.some(kw => slug.includes(kw))) return true;
+  if (categories) {
+    const cat = categories.find(c => c.id === catId || c.slug === catId);
+    if (cat?.kind === 'savings' || cat?.type === 'savings') return true;
+    // Match aussi sur le nom affiché (FR/EN) pour les categories user-created
+    const name = String(cat?.name || '').toLowerCase();
+    if (SAVING_KEYWORDS.some(kw => name.includes(kw))) return true;
+  }
+  return false;
 }
 
 function monthLabel(m) {
@@ -174,7 +197,7 @@ export function Monthly({
     for (const t of monthTx) {
       const catId = t.categoryId || 'uncategorized';
       const cat = catFor(catId);
-      const kind = cat?.type === 'income' ? 'income' : isSavingCategory(catId) ? 'saving' : 'expense';
+      const kind = cat?.type === 'income' ? 'income' : isSavingCategory(catId, categories) ? 'saving' : 'expense';
       const k = `${kind}::${catId}`;
       if (!map.has(k)) map.set(k, { kind, category_id: catId, total: 0, count: 0 });
       const v = map.get(k);
@@ -328,13 +351,26 @@ export function Monthly({
       const cat = catFor(t.categoryId);
       return cat?.type === 'income' && (t.sharedAmount || 0) > 0;
     });
+    // spendTx = vraies dépenses uniquement. Les tx categorisees comme
+    // épargne/virement/transfert sont gerees a part par la branche
+    // savings (ci-dessous) pour ne pas ecraser le Sankey (3900€ de Livret
+    // dwarferaient les autres categories sinon).
     const spendTx = monthTx.filter(t => {
       const cat = catFor(t.categoryId);
-      const isSavingTx = isSavingCategory(t.categoryId);
+      if (isSavingCategory(t.categoryId, categories)) return false;
       const isExpenseTx = cat?.type !== 'income';
-      // For expenses, negative tx contributes positively. Refunds (positive on expense cat) reduce.
-      return isExpenseTx && (-t.sharedAmount > 0 || isSavingTx);
+      return isExpenseTx && -t.sharedAmount > 0;
     });
+
+    // savingTx = tx classees comme epargne/virement interne par categorie.
+    // Distinct de monthSavingsTransfers qui pioche dans transferIds (paires
+    // detectees automatiquement). Ici on attrape aussi les tx isolees sans
+    // pair detectee mais clairement categorisees comme epargne.
+    const savingTx = monthTx.filter(t => isSavingCategory(t.categoryId, categories));
+    const savingsFromCategorized = savingTx.reduce(
+      (s, t) => s + Math.abs(t.sharedAmount || 0), 0
+    );
+    const totalSavingsForSankey = savingsFromTransfers + savingsFromCategorized;
     // Bug user 2026-05-21 : avant on retournait vide des qu'UN seul cote
     // manquait (|| au lieu de &&). Cas typique : debut de mois avec
     // depenses mais salaire pas encore arrive, ou seulement des remboursements
@@ -451,10 +487,12 @@ export function Monthly({
       });
     }
 
-    // Branche Épargne (virements internes typés 'savings'). Ajoute un node
-    // de niveau 1 + 2 si savingsFromTransfers > 0, alimente proportionnellement
-    // depuis chaque source de revenu.
-    if (savingsFromTransfers > 0.5 && totalIncome > 0) {
+    // Branche Épargne — toujours affichée s'il y a des mouvements épargne,
+    // que ce soit via flagged transfers (savingsFromTransfers) ou via tx
+    // categorisees epargne/virement isolees (savingsFromCategorized).
+    // Anciennement gatee sur `totalIncome > 0` -> les savings disparaissaient
+    // les mois sans revenus, alors qu'on veut justement les voir.
+    if (totalSavingsForSankey > 0.5) {
       const savingsNodeIdx = nodes.length;
       nodes.push({
         name: 'Épargne',
@@ -462,8 +500,8 @@ export function Monthly({
         level: 1,
         kind: 'saving',
         color: 'var(--accent)',
-        amount: savingsFromTransfers,
-        pctOfIncome: (savingsFromTransfers / totalIncome) * 100,
+        amount: totalSavingsForSankey,
+        pctOfIncome: totalIncome > 0 ? (totalSavingsForSankey / totalIncome) * 100 : null,
       });
       // Sous-node (level 2) : "Virement Livret", lien parent -> sous-node
       const savingsLeafIdx = nodes.length;
@@ -473,17 +511,17 @@ export function Monthly({
         level: 2,
         kind: 'saving',
         color: 'var(--accent)',
-        amount: savingsFromTransfers,
+        amount: totalSavingsForSankey,
       });
       links.push({
         source: savingsNodeIdx,
         target: savingsLeafIdx,
-        value: savingsFromTransfers,
+        value: totalSavingsForSankey,
         color: 'var(--accent)',
       });
       // Income unique → savings (uniquement si on a effectivement push le node Entrées)
       if (!incomeShortfall) {
-        links.push({ source: incomeNodeSingleIdx, target: savingsNodeIdx, value: savingsFromTransfers, color: 'var(--accent)' });
+        links.push({ source: incomeNodeSingleIdx, target: savingsNodeIdx, value: totalSavingsForSankey, color: 'var(--accent)' });
       }
     }
 
