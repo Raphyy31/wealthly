@@ -87,7 +87,11 @@ export function MiniCashflowCard({ thisMonthStats, onOpenMonthly, currentMonth, 
                 />
               </span>
               <span className={`mcc-row-val num tone-${r.tone}`}>
-                {hidden ? '···' : formatEUR(Math.abs(r.value), { abbr: false })}
+                {hidden
+                  ? '···'
+                  : (r.key === 'saving' && r.value < 0
+                      ? '−' + formatEUR(Math.abs(r.value), { abbr: false })
+                      : formatEUR(Math.abs(r.value), { abbr: false }))}
               </span>
             </div>
           );

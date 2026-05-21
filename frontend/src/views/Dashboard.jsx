@@ -206,6 +206,16 @@ export function Dashboard({
     return { value: immoAssets - mortgageDebt, assets: immoAssets, debt: mortgageDebt };
   }, [visibleAssets, visibleLiabilities, memberShare]);
 
+  // Autres dettes (= total Passifs − crédits immo). Cas typique : crédit
+  // conso, crédit étudiant, decouvert. Permet a la math des KPI de FERMER :
+  // Cash + Immo net + Autres dettes (negatif) = Patrimoine net.
+  // Sans cette ligne, l'user voyait 41k + 421k = 462k mais le hero affichait
+  // 456k -> 6k "disparus" dans la nature, incomprehensible.
+  const otherDebt = useMemo(() => {
+    const total = Math.abs(liabilitiesValue || 0);
+    return Math.max(0, total - (realEstateNet.debt || 0));
+  }, [liabilitiesValue, realEstateNet.debt]);
+
   const kpis = [
     {
       label: 'Patrimoine cash',
@@ -219,6 +229,14 @@ export function Dashboard({
       value: realEstateNet.value,
       delta: null,
     },
+    // 4e KPI conditionnel — uniquement si des autres dettes existent.
+    ...(otherDebt > 0.5 ? [{
+      label: 'Autres dettes',
+      sub: 'Conso, étudiant, découvert',
+      value: -otherDebt,
+      delta: null,
+      negative: true,
+    }] : []),
     {
       label: t('dashboard.savingsMonth'),
       sub: 'Revenus − dépenses',
@@ -474,7 +492,7 @@ export function Dashboard({
         <div className="hero-card">
           <div className="hero-top">
             <div className="dash-eyebrow">
-              <span className="dash-eyebrow-label">{t('dashboard.totalNetWorth')}</span>
+              <span className="dash-eyebrow-label">Patrimoine total</span>
             </div>
             <div className="ds-range-tabs">
               {PERIODS.map(p => (
@@ -502,25 +520,55 @@ export function Dashboard({
               />
             </div>
           )}
+          {/* HERO REFONDU 2026-05-21 — investor demo grade.
+              Avant : hero = netWorth (456k) avec split Actifs/Passifs en
+              dessous. Feedback user : "j'ai pas 456k de patrimoine debile,
+              456k tu le mets actifs et pas Patrimoine".
+              Maintenant : hero = ACTIFS TOTAL (796k), avec ligne explicite
+              "Net apres dettes : 457k" + breakdown Actifs - Passifs = Net
+              en row visuel sage/terracotta/cobalt. */}
           <div className="hero-number-row">
             <div className="hero-net-stack">
-              <Amount value={hover?.balance ?? netWorth} hero/>
-              {/* Décomposition Actifs − Passifs = Net visible en permanence
-                  (feedback user 2026-05-19 : "Patrimoine Net c'est pas 457K,
-                  ça sort d'où ?"). Avant on cachait la décomposition sauf
-                  quand assetsValue=0 — l'utilisateur n'avait aucun moyen
-                  de relier le chiffre hero à ses données. Maintenant la
-                  formule est toujours lisible. */}
+              <Amount value={hover?.balance ?? ((liquidWealth || 0) + (assetsValue || 0))} hero/>
               {(totalDebt > 0 || (assetsValue || 0) > 0 || (liquidWealth || 0) > 0) && (
-                <div className="hero-split">
-                  <span className="hero-split-cell">
-                    <span className="hero-split-label">Actifs</span>
-                    <span className="hero-split-val num">{formatEUR((liquidWealth || 0) + (assetsValue || 0))}</span>
+                <div className="hero-split" style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  marginTop: 10, flexWrap: 'wrap',
+                }}>
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    padding: '4px 10px', borderRadius: 6,
+                    background: 'color-mix(in srgb, var(--positive) 10%, transparent)',
+                    border: '1px solid color-mix(in srgb, var(--positive) 22%, transparent)',
+                  }}>
+                    <span style={{ fontSize: 9.5, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--positive)' }}>Actifs</span>
+                    <span className="num" style={{ fontSize: 12, fontWeight: 600, color: 'var(--positive)', fontVariantNumeric: 'tabular-nums' }}>
+                      {formatEUR((liquidWealth || 0) + (assetsValue || 0))}
+                    </span>
                   </span>
-                  <span className="hero-split-minus">−</span>
-                  <span className="hero-split-cell">
-                    <span className="hero-split-label">Passifs</span>
-                    <span className="hero-split-val num">{formatEUR(totalDebt)}</span>
+                  <span style={{ color: 'var(--ink-3)', fontWeight: 300, fontSize: 14 }}>−</span>
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    padding: '4px 10px', borderRadius: 6,
+                    background: 'color-mix(in srgb, var(--negative) 10%, transparent)',
+                    border: '1px solid color-mix(in srgb, var(--negative) 22%, transparent)',
+                  }}>
+                    <span style={{ fontSize: 9.5, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--negative)' }}>Passifs</span>
+                    <span className="num" style={{ fontSize: 12, fontWeight: 600, color: 'var(--negative)', fontVariantNumeric: 'tabular-nums' }}>
+                      {formatEUR(totalDebt)}
+                    </span>
+                  </span>
+                  <span style={{ color: 'var(--ink-3)', fontWeight: 300, fontSize: 14 }}>=</span>
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    padding: '4px 10px', borderRadius: 6,
+                    background: 'var(--accent-soft)',
+                    border: '1px solid color-mix(in srgb, var(--accent) 30%, transparent)',
+                  }}>
+                    <span style={{ fontSize: 9.5, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--accent)' }}>Net</span>
+                    <span className="num" style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', fontVariantNumeric: 'tabular-nums' }}>
+                      {formatEUR(netWorth)}
+                    </span>
                   </span>
                 </div>
               )}
@@ -550,19 +598,29 @@ export function Dashboard({
 
           <HeroChart data={chartData} onHover={setHover} hover={hover}/>
 
-          <div className="kpi-strip">
-            {kpis.map((k, i) => (
-              <div key={i} className="kpi-cell">
-                <div className="ds-micro">{k.label}</div>
-                {k.sub && <div className="kpi-sub">{k.sub}</div>}
-                <div className="kpi-val num">{hidden ? '···' : formatEUR(k.value)}</div>
-                {k.delta != null && (
-                  <div className={`kpi-delta num ${k.delta >= 0 ? 'pos' : 'neg'}`}>
-                    {hidden ? '···' : `${k.delta >= 0 ? '+' : ''}${k.delta.toFixed(1).replace('.', ',')} %`}
+          <div
+            className="kpi-strip"
+            style={{ gridTemplateColumns: `repeat(${kpis.length}, 1fr)` }}
+          >
+            {kpis.map((k, i) => {
+              // Color-code: negative explicit (autres dettes, monthSaving<0) → terracotta.
+              const negative = k.negative || (typeof k.value === 'number' && k.value < 0);
+              const valColor = negative ? 'var(--negative)' : 'var(--ink)';
+              return (
+                <div key={i} className="kpi-cell">
+                  <div className="ds-micro">{k.label}</div>
+                  {k.sub && <div className="kpi-sub">{k.sub}</div>}
+                  <div className="kpi-val num" style={{ color: valColor }}>
+                    {hidden ? '···' : formatEUR(k.value)}
                   </div>
-                )}
-              </div>
-            ))}
+                  {k.delta != null && (
+                    <div className={`kpi-delta num ${k.delta >= 0 ? 'pos' : 'neg'}`}>
+                      {hidden ? '···' : `${k.delta >= 0 ? '+' : ''}${k.delta.toFixed(1).replace('.', ',')} %`}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 

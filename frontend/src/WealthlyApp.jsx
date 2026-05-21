@@ -30,6 +30,8 @@ import { Skeleton } from './components/Skeleton.jsx';
 import { Styles } from './Styles.jsx';
 import { Toast } from './components/Toast.jsx';
 import { DemoTour } from './components/DemoTour.jsx';
+import { useIncomeShift } from './hooks/useIncomeShift.js';
+import { effectiveMonth } from './utils.js';
 import { AnimatedNumber } from './components/AnimatedNumber.jsx';
 import { SyncProgressBar } from './components/SyncProgressBar.jsx';
 import { Onboarding } from './views/Onboarding.jsx';
@@ -212,6 +214,12 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     return () => window.removeEventListener('keydown', onKey);
   }, []);
   const [toast, setToast] = useState(null);
+  // Reglage decalage salaire fin de mois — partage avec Monthly.jsx via
+  // localStorage. Utilise ici pour que monthlyEvolution / thisMonthStats /
+  // Dashboard reflechissent le shift (sinon Dashboard affiche "0 entrees
+  // ce mois" alors que Monthly affiche le salaire shifte).
+  const { settings: incomeShiftSettings } = useIncomeShift();
+
   // Sync orchestration — remplace le syncBusy string par un objet structure
   // qui pilote SyncProgressBar (top bar + pill stages). Shape :
   //   null                                = idle
@@ -932,7 +940,15 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     const monthly = {};
     const sortedTx = [...visibleTransactions].sort((a, b) => a.date.localeCompare(b.date));
     const months = new Set();
-    sortedTx.forEach(t => months.add(monthKey(t.date)));
+    // Bug fix 2026-05-21 : avant on n'agregait que les monthKey civils. Si un
+    // salaire date du 28 avril est shifte vers mai par incomeShiftSettings,
+    // le mois "mai" du monthlyEvolution n'existait pas tant qu'il n'y avait
+    // aucune tx en date civile de mai. Maintenant on enregistre aussi les
+    // effectiveMonth pour garantir l'existence du bucket cible.
+    sortedTx.forEach(t => {
+      months.add(monthKey(t.date));
+      months.add(effectiveMonth(t, incomeShiftSettings, categories));
+    });
     const sortedMonths = Array.from(months).sort();
     // Fix 2026-05-19 : avant on partait de initialBalance puis on ajoutait
     // chronologiquement -> le balance final divergeait du solde courant
@@ -948,7 +964,11 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       .reduce((sum, a) => sum + (accountBalances[a.id] || 0) * memberShare(a), 0);
     sortedMonths.forEach(m => { monthly[m] = { month: m, income: 0, expenses: 0, net: 0, balance: 0, fixed: 0, variable: 0, savings: 0 }; });
     sortedTx.forEach(t => {
-      const m = monthKey(t.date);
+      // mCivil = mois civil pour les depenses + le running balance (NW)
+      // mIncome = mois "comptable" pour les revenus, peut etre shifte vers
+      //           mois suivant pour les salaires verses fin de mois (cas FR).
+      const mCivil = monthKey(t.date);
+      const mIncome = effectiveMonth(t, incomeShiftSettings, categories);
       const acc = accounts.find(a => a.id === t.accountId);
       const share = acc ? memberShare(acc) : 1;
       const sharedAmount = t.amount * share;
@@ -966,22 +986,26 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
         const isManualIncome = t.isManualCategory && cat?.type === 'income';
         const isManualExpense = t.isManualCategory && cat?.type === 'expense';
         if (t.amount > 0) {
-          if (accountCountsAsIncome(role) || isManualIncome) monthly[m].income += sharedAmount;
+          // INCOME : attribue au mois COMPTABLE (effectiveMonth) -> salaire
+          // d'avril verse fin du mois apparait sur mai dans le Dashboard.
+          if ((accountCountsAsIncome(role) || isManualIncome) && monthly[mIncome]) {
+            monthly[mIncome].income += sharedAmount;
+          }
         } else {
+          // EXPENSE : reste sur le mois CIVIL — les depenses ne shiftent pas.
           if (accountCountsAsExpense(role) || isManualExpense) {
             const absShared = Math.abs(sharedAmount);
-            monthly[m].expenses += absShared;
-            if (recurringIds.has(t.id)) monthly[m].fixed += absShared;
-            else monthly[m].variable += absShared;
-            if (cat?.kind === 'savings') monthly[m].savings += absShared;
+            monthly[mCivil].expenses += absShared;
+            if (recurringIds.has(t.id)) monthly[mCivil].fixed += absShared;
+            else monthly[mCivil].variable += absShared;
+            if (cat?.kind === 'savings') monthly[mCivil].savings += absShared;
           }
         }
       }
       // Running balance still tracks every transaction on a NW-eligible
-      // account, so the net worth chart stays correct even when an epargne
-      // account receives a transfer (the source account's symmetric outflow
-      // cancels it out at the foyer level).
-      if (accountIncludeInNetWorth(role)) monthly[m].net += sharedAmount;
+      // account on its CIVIL month, so the net worth chart stays correct
+      // (cash flow d'avril impacte le solde fin avril, pas fin mai).
+      if (accountIncludeInNetWorth(role)) monthly[mCivil].net += sharedAmount;
     });
     // Marche a rebours depuis le mois le plus recent en partant du solde
     // courant officiel. balance(mois n) = solde a la fin du mois n.
@@ -993,7 +1017,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       cursor -= monthly[m].net;
     }
     return Object.values(monthly);
-  }, [visibleTransactions, visibleAccounts, accounts, categories, recurringIds, memberShare, transferIds, accountBalances]);
+  }, [visibleTransactions, visibleAccounts, accounts, categories, recurringIds, memberShare, transferIds, accountBalances, incomeShiftSettings]);
 
   const currentMonth = useMemo(() => {
     const now = new Date();
