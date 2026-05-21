@@ -13,6 +13,7 @@ import { formatDate, getTransferType, getTransferDestAccountId, buildTransferDes
 import { gsap } from '../utils/gsapSetup.js';
 import { AnimatedNumber } from '../components/AnimatedNumber.jsx';
 import { EmptyState } from '../components/EmptyState.jsx';
+import { SyncButton } from '../components/SyncButton.jsx';
 import { gsap as gsapTx } from '../utils/gsapSetup.js';
 
 const EMPTY_FILTERS = {
@@ -508,6 +509,7 @@ export function Transactions({ transactions, accounts, categories, members = [],
           <p>{t('views.transactions.subtitle')}</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
+          <SyncButton/>
           <button className="ds-btn ghost" onClick={exportCsv} title={`Exporter les ${filtered.length} transactions visibles en CSV`}>
             <Download size={14}/> Export CSV
           </button>

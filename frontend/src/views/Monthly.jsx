@@ -351,16 +351,27 @@ export function Monthly({
     });
     const incomeBreakdown = [...incomeAgg.values()];
     const incomeAggregatedTotal = incomeBreakdown.reduce((s, v) => s + v.amount, 0);
-    const incomeNodeSingleIdx = nodes.length;
-    nodes.push({
-      name: incomeBreakdown.length > 1 ? 'Entrées' : (incomeBreakdown[0]?.name || 'Salaire'),
-      icon: incomeBreakdown.length > 1 ? '💰' : incomeBreakdown[0]?.icon,
-      level: 0,
-      kind: 'income',
-      amount: incomeAggregatedTotal,
-      color: 'var(--positive)',
-      breakdown: incomeBreakdown.length > 1 ? incomeBreakdown.map(v => ({ label: v.name, amount: v.amount })) : null,
-    });
+
+    // Mode "Entrées discrètes" — quand Entrées << Dépenses (début de mois,
+    // salaire pas encore arrivé, juste des remboursements...), le node
+    // Entrées serait dessiné à la taille des flux sortants (totalSpend) et
+    // fausserait le graph (un remboursement 230€ aussi épais qu'un loyer
+    // 3514€). On le masque dès que income < 50% spend. Le KPI strip en haut
+    // affiche déjà le montant des Entrées, l'info n'est pas perdue.
+    const previewSpendTotal = spendTx.reduce((s, t) => s + Math.max(0, -t.sharedAmount), 0);
+    const incomeShortfall = incomeAggregatedTotal > 0 && incomeAggregatedTotal < previewSpendTotal * 0.5;
+    const incomeNodeSingleIdx = incomeShortfall ? -1 : nodes.length;
+    if (!incomeShortfall) {
+      nodes.push({
+        name: incomeBreakdown.length > 1 ? 'Entrées' : (incomeBreakdown[0]?.name || 'Salaire'),
+        icon: incomeBreakdown.length > 1 ? '💰' : incomeBreakdown[0]?.icon,
+        level: 0,
+        kind: 'income',
+        amount: incomeAggregatedTotal,
+        color: 'var(--positive)',
+        breakdown: incomeBreakdown.length > 1 ? incomeBreakdown.map(v => ({ label: v.name, amount: v.amount })) : null,
+      });
+    }
 
     // Level 2 — top-level parent cats with aggregated totals
     const topNodeIdx = {};
@@ -413,7 +424,9 @@ export function Monthly({
     // node 'Entrées' agrege).
     const totalIncome = totalIncomeForPct;
     const totalSpend = Object.values(topTotals).reduce((s, v) => s + v, 0);
-    if (totalIncome > 0 && totalSpend > 0) {
+    // Skip income→category links quand on a masqué le node Entrées (shortfall).
+    // Les catégories restent dessinées via leurs flux sortants vers les leaves.
+    if (totalIncome > 0 && totalSpend > 0 && !incomeShortfall) {
       Object.entries(topTotals).forEach(([topId, topTotal]) => {
         if (topTotal > 0.5) {
           links.push({ source: incomeNodeSingleIdx, target: topNodeIdx[topId], value: topTotal, color: nodes[topNodeIdx[topId]].color });
@@ -451,8 +464,10 @@ export function Monthly({
         value: savingsFromTransfers,
         color: 'var(--accent)',
       });
-      // Income unique → savings
-      links.push({ source: incomeNodeSingleIdx, target: savingsNodeIdx, value: savingsFromTransfers, color: 'var(--accent)' });
+      // Income unique → savings (uniquement si on a effectivement push le node Entrées)
+      if (!incomeShortfall) {
+        links.push({ source: incomeNodeSingleIdx, target: savingsNodeIdx, value: savingsFromTransfers, color: 'var(--accent)' });
+      }
     }
 
     return { nodes, links };
