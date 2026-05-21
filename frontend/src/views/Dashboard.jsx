@@ -15,7 +15,7 @@
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MagneticButton } from '../components/MagneticButton.jsx';
-import { gsap } from '../utils/gsapSetup.js';
+import { gsap, ScrollTrigger } from '../utils/gsapSetup.js';
 import { MiniCashflowCard } from './dashboard/MiniCashflowCard.jsx';
 import {
   Plus, FileText, RefreshCw, ArrowUp, ArrowDown,
@@ -267,13 +267,35 @@ export function Dashboard({
     if (!dashRef.current) return;
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
     const ctx = gsap.context(() => {
+      // Page-enter stagger (head + hero immediately visible)
       gsap.fromTo(
-        ['.dash-head', '.dash-hero-row', '.mcc-card', '.accounts-panel', '.ds-panel'],
+        ['.dash-head', '.dash-hero-row'],
         { opacity: 0, y: 12 },
-        { opacity: 1, y: 0, duration: 0.42, ease: 'expo.out', stagger: 0.07, clearProps: 'transform' }
+        { opacity: 1, y: 0, duration: 0.5, ease: 'expo.out', stagger: 0.08, clearProps: 'transform' }
       );
+      // ScrollTrigger reveal pour les rows below-the-fold (all-in GSAP per
+      // user feedback 2026-05-21). Fade-up declanche quand 88% de la
+      // viewport touche le top de la section.
+      gsap.utils.toArray('[data-dash-reveal]').forEach(el => {
+        gsap.fromTo(el,
+          { opacity: 0, y: 18 },
+          {
+            opacity: 1, y: 0, duration: 0.55, ease: 'expo.out',
+            scrollTrigger: {
+              trigger: el,
+              start: 'top 88%',
+              toggleActions: 'play none none reverse',
+            },
+            clearProps: 'transform',
+          }
+        );
+      });
     }, dashRef);
-    return () => ctx.revert();
+    return () => {
+      ctx.revert();
+      // Cleanup ScrollTrigger instances scoped a ce composant
+      ScrollTrigger?.getAll().forEach(s => s.kill());
+    };
   }, []);
 
   // ── Allocation : liquidités + actifs par classe ─────────────────────────
@@ -872,6 +894,7 @@ export function Dashboard({
       </section>
 
       {/* ── §02 Cashflow mini — vue du mois en cours (sprint 2026-05-20) ── */}
+      <div data-dash-reveal>
       <MiniCashflowCard
         thisMonthStats={thisMonthStats}
         currentMonth={currentMonth}
@@ -879,8 +902,12 @@ export function Dashboard({
         hidden={hidden}
         onOpenMonthly={() => setView?.('monthly')}
       />
+      </div>
 
-      {/* ── §03 Mes comptes ────────────────────────────────────────────── */}
+      {/* ── §03 Mes comptes — masque 2026-05-21 (user feedback refonte ciblee
+              "skip Insights et Mes comptes"). Garde le code en historique git,
+              ressort facile via setShowFullAccounts ulterieurement. */}
+      {false && (
       <section className="accounts-panel ds-panel">
         <div className="ds-panel-head">
           <div className="dash-eyebrow">
@@ -929,6 +956,7 @@ export function Dashboard({
           )}
         </div>
       </section>
+      )}
 
       {/* ── Mouvements internes du mois (C15 2026-05-18) ──────────────── */}
       {(() => {
@@ -970,8 +998,8 @@ export function Dashboard({
         );
       })()}
 
-      {/* ── Transactions + Budget + Insights ───────────────────────────── */}
-      <section className="dash-bottom-row">
+      {/* ── Transactions (Budget + Insights caches 2026-05-21) ────────── */}
+      <section className="dash-bottom-row" data-dash-reveal>
         {/* §04 Transactions panel */}
         <div className="ds-panel">
           <div className="ds-panel-head">
@@ -1093,7 +1121,11 @@ export function Dashboard({
           </div>
           )}
 
-          {/* §06 Insights panel */}
+          {/* §06 Insights panel — masque 2026-05-21 (user feedback :
+              "skip Insights et Mes comptes pour la demo"). Garde le code
+              en historique git. Pour le pitch on focus le storytelling
+              sur Patrimoine / Cashflow / Transactions. */}
+          {false && (
           <div className="ds-panel">
             <div className="ds-panel-head">
               <div>
@@ -1120,6 +1152,7 @@ export function Dashboard({
               )}
             </div>
           </div>
+          )}
         </div>
       </section>
 
@@ -1313,6 +1346,26 @@ function DashStyles() {
 .dash-v3 .link-btn:hover { color: var(--ink); }
 .dash-v3 .cell-r { text-align: right; }
 
+/* Cards hover effect — refonte all-in 2026-05-21. NO translateY (design
+   rule), juste box-shadow grow + border accent fade. Cohabite avec les
+   stages d'apparition GSAP (clearProps: transform). */
+.dash-v3 .hero-card,
+.dash-v3 .alloc-card,
+.dash-v3 .mcc-card,
+.dash-v3 .ds-panel,
+.dash-v3 .accounts-panel {
+  transition: box-shadow 280ms ease, border-color 280ms ease;
+}
+.dash-v3 .hero-card:hover,
+.dash-v3 .alloc-card:hover,
+.dash-v3 .mcc-card:hover,
+.dash-v3 .ds-panel:hover {
+  border-color: color-mix(in srgb, var(--accent) 22%, var(--border));
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.04) inset,
+    0 12px 32px -16px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
 /* Header */
 .dash-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 4px; flex-wrap: wrap; }
 .dash-h1 { font: 500 26px/1.15 var(--font-sans); letter-spacing: -0.02em; margin: 0 0 6px; color: var(--ink); }
@@ -1327,7 +1380,9 @@ function DashStyles() {
 }
 
 /* Hero row */
-.dash-hero-row { display: grid; grid-template-columns: 1.5fr 1fr; gap: 16px; }
+/* dash-hero-row : 2026-05-21 grid 8/4 strict (sur 12-cols) — refonte
+   visuelle. Avant 1.5/1 = 7.5/4 approximatif. */
+.dash-hero-row { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
 @media (max-width: 1024px) { .dash-hero-row { grid-template-columns: 1fr; } }
 
 .hero-card {
@@ -1552,7 +1607,10 @@ function DashStyles() {
 .account-name .line2 { font-size: 11px; color: var(--ink-3); }
 
 /* Bottom row */
-.dash-bottom-row { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+/* dash-bottom-row : 2026-05-21 refonte ciblee — Insights cache, Transactions
+   prend toute la largeur (12 cols). Anciennement 2fr/1fr quand Insights
+   etait visible a droite. */
+.dash-bottom-row { display: grid; grid-template-columns: 1fr; gap: 16px; }
 @media (max-width: 1024px) { .dash-bottom-row { grid-template-columns: 1fr; } }
 .dash-side-stack { display: flex; flex-direction: column; gap: 16px; }
 
