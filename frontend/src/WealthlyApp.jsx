@@ -751,6 +751,22 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     return 1 / item.memberIds.length;
   }, [activeMemberId]);
 
+  // liabilityShare — version SPECIFIQUE aux emprunts (user feedback 2026-05-21).
+  // Difference avec memberShare : on ne divise PAS un emprunt entre co-emprunteurs
+  // car une dette est une obligation conjointe et solidaire (chaque emprunteur
+  // doit le total). Cas concrets :
+  //   - Pret etudiant memberIds=[toi]            -> 1 (full, OK)
+  //   - Credit auto memberIds=[toi, conjoint]    -> 1 (full, AVANT 0.5)
+  //   - Credit auto du conjoint memberIds=[conj] -> 0 (filtre out, OK)
+  //   - Vue 'Famille' (activeMemberId === 'all') -> 1 (tout affiche)
+  // Bref : binary 1/0 selon que l'user est concerne ou non, jamais de fraction.
+  const liabilityShare = useCallback((item) => {
+    if (!item.memberIds || item.memberIds.length === 0) return 1;
+    if (activeMemberId === 'all') return 1;
+    if (!item.memberIds.includes(activeMemberId)) return 0;
+    return 1;
+  }, [activeMemberId]);
+
   // ===== Computed values =====
   const accountBalances = useMemo(() => {
     const balances = {};
@@ -809,7 +825,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     [visibleAccounts, accountBalances, memberShare]
   );
   const assetsValue = useMemo(() => visibleAssets.reduce((sum, a) => sum + (parseFloat(a.currentValue) || 0) * memberShare(a), 0), [visibleAssets, memberShare]);
-  const liabilitiesValue = useMemo(() => visibleLiabilities.reduce((sum, l) => sum + (parseFloat(l.remainingCapital) || 0) * memberShare(l), 0), [visibleLiabilities, memberShare]);
+  const liabilitiesValue = useMemo(() => visibleLiabilities.reduce((sum, l) => sum + (parseFloat(l.remainingCapital) || 0) * liabilityShare(l), 0), [visibleLiabilities, liabilityShare]);
   const netWorth = liquidWealth + assetsValue - liabilitiesValue;
 
   // Patrimoine financier : exclut immobilier (valeur du bien) + emprunts immo
@@ -2741,7 +2757,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             visibleAssets={visibleAssets} visibleLiabilities={visibleLiabilities}
             members={members} activeMemberId={activeMemberId}
             transactions={visibleTransactions} categories={categories} fmt={fmt}
-            memberShare={memberShare} categoryAnalysis={categoryAnalysis}
+            memberShare={memberShare} liabilityShare={liabilityShare} categoryAnalysis={categoryAnalysis}
             anomalies={anomalies} cashflowProjection={cashflowProjection}
             goals={goals} budgets={budgets} wealthHistory={wealthHistory}
             recurringGroups={recurringGroups} currentMonth={currentMonth}

@@ -238,7 +238,7 @@ export function Dashboard({
   thisMonthStats, monthlyEvolution,
   accounts = [],
   visibleAccounts, accountBalances,
-  visibleAssets, visibleLiabilities,
+  visibleAssets, visibleLiabilities, liabilityShare,
   members, activeMemberId,
   transactions, categories, fmt, memberShare,
   categoryAnalysis = {}, anomalies = [], cashflowProjection,
@@ -364,11 +364,14 @@ export function Dashboard({
         // "Patrimoine immo net" affichait la valeur brute de l'immo au lieu
         // de (immo − emprunt restant). Fallback snake_case pour robustesse.
         const bal = parseFloat(l.remainingCapital ?? l.remaining_capital ?? 0) || 0;
-        mortgageDebt += bal * (memberShare?.(l) ?? 1);
+        // 2026-05-21 : liabilityShare (binary 1/0) au lieu de memberShare
+        // (qui divise par nb co-emprunteurs). Un emprunt est solidaire,
+        // pas une fraction.
+        mortgageDebt += bal * (liabilityShare?.(l) ?? memberShare?.(l) ?? 1);
       }
     });
     return { value: immoAssets - mortgageDebt, assets: immoAssets, debt: mortgageDebt };
-  }, [visibleAssets, visibleLiabilities, memberShare]);
+  }, [visibleAssets, visibleLiabilities, memberShare, liabilityShare]);
 
   // CHANTIER 1 — Refonte calculs Patrimoine (user feedback 2026-05-21)
   // ─────────────────────────────────────────────────────────────────
@@ -1129,6 +1132,7 @@ export function Dashboard({
         visibleAssets={visibleAssets}
         visibleLiabilities={visibleLiabilities}
         memberShare={memberShare}
+        liabilityShare={liabilityShare}
         ASSET_CLASS_MAP={ASSET_CLASS_MAP}
         formatEUR={formatEUR}
         hidden={hidden}

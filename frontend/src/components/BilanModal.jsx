@@ -52,6 +52,7 @@ export function BilanModal({
   visibleAssets = [],
   visibleLiabilities = [],
   memberShare,
+  liabilityShare,
   ASSET_CLASS_MAP,
   onExportPdf,
   formatEUR,
@@ -134,11 +135,13 @@ export function BilanModal({
     const typeKey = l.type || 'other_loan';
     const groupLabel = LIAB_CLASS[typeKey] || 'Autre prêt';
     if (!liabByType[groupLabel]) liabByType[groupLabel] = [];
+    // 2026-05-21 : liabilityShare (1/0) au lieu de memberShare (1/N) —
+    // un emprunt est solidaire, on n'en affiche pas la moitie.
     liabByType[groupLabel].push({
       id: l.id,
       label: l.name || l.bank || 'Prêt',
       hint: l.bank && l.name ? l.bank : null,
-      value: (parseFloat(l.remainingCapital) || 0) * (memberShare?.(l) ?? 1),
+      value: (parseFloat(l.remainingCapital) || 0) * (liabilityShare?.(l) ?? memberShare?.(l) ?? 1),
     });
   }
   const liabSectionOrder = ['Crédit conso', 'Crédit auto', 'Autre prêt', 'Crédit immobilier'];

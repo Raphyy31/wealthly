@@ -521,7 +521,19 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
       {openCategoryModal && (
         <CategoryDetailModal
           categoryKey={openCategoryModal}
-          items={openCategoryModal.startsWith('chart-') ? [] : visibleItems.filter(i => i.category === openCategoryModal)}
+          items={
+            // Bug fix 2026-05-21 : avant le mode 'chart-immo' passait [] -> modale
+            // vide (ecran noir presque) si on n'avait pas >=2 points wealth
+            // history. Maintenant on passe les biens + emprunts immo pour avoir
+            // toujours du contenu utile en dessous du chart.
+            openCategoryModal === 'chart-immo'
+              ? visibleItems.filter(i => i.category === 'immobilier' || i.category === 'emprunts')
+              : openCategoryModal === 'chart-fin'
+              ? visibleItems.filter(i => i.category !== 'immobilier' && i.category !== 'emprunts')
+              : openCategoryModal.startsWith('chart-')
+              ? []
+              : visibleItems.filter(i => i.category === openCategoryModal)
+          }
           wealthHistory={wealthHistory}
           sparkSeries={sparkSeries}
           financialWealthLocal={financialWealthLocal}
@@ -874,11 +886,19 @@ function CategoryDetailModal({ categoryKey, items, wealthHistory, sparkSeries, f
           </div>
         )}
 
-        {!isChartMode && !isChartAlloc && (
+        {/* Body items — affiche aussi pour chart-fin / chart-immo (= breakdown
+            des biens et emprunts en dessous du chart) sauf chart-alloc qui
+            a son propre body donut+legende. Bug fix 2026-05-21 modale immo
+            vide quand peu d'historique. */}
+        {!isChartAlloc && (
           <div className="cdm-body">
             {items.length === 0 ? (
               <div className="cdm-empty">
-                <em>Aucun élément dans cette catégorie.</em>
+                <em>{isChartImmo
+                  ? 'Aucun bien immobilier renseigné. Ajoute une résidence depuis Patrimoine.'
+                  : isChartFin
+                  ? 'Aucun actif financier renseigné.'
+                  : 'Aucun élément dans cette catégorie.'}</em>
               </div>
             ) : (
               <ul className="cdm-items">
