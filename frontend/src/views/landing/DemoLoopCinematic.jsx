@@ -325,7 +325,7 @@ function DemoLoopCinematic({ onComplete, replayToken = 0 }) {
                   <div className="intro-name">wealthly</div>
                 </div>
                 <div className="intro-tagline">
-                  Ayez la vue sur <em>votre patrimoine.</em>
+                  Bonjour<em>.</em>
                 </div>
               </div>
             );

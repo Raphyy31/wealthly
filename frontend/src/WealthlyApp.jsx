@@ -498,6 +498,10 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   });
 
   // Sync view + activeMember → URL hash, so refresh / back / forward / share work.
+  // Edge case 2026-05-22 : skip la 1re écriture si l'URL boot SANS hash. Sinon
+  // dès qu'on monte WealthlyApp on pollue l'URL avec #/dashboard — visible
+  // depuis la landing (user voit "/#/dashboard" et trouve ça pas pro).
+  const hasInitialHashRef = useRef(typeof window !== 'undefined' && !!window.location.hash);
   useEffect(() => {
     if (typeof window === 'undefined') return;
     // Edge case 2026-05-19 : Settings gère son propre format de hash
@@ -507,10 +511,17 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     if (view === 'settings' && window.location.hash.startsWith('#settings/')) {
       return;
     }
+    // Skip si on n'avait pas de hash au boot ET qu'on est sur la vue défaut.
+    // Évite #/dashboard polluant à l'arrivée. Le hash apparaîtra dès la 1re
+    // navigation utilisateur (clic sidebar / back-forward).
+    if (!hasInitialHashRef.current && view === 'dashboard' && (!activeMemberId || activeMemberId === 'all')) {
+      return;
+    }
     const params = activeMemberId && activeMemberId !== 'all' ? `?m=${activeMemberId}` : '';
     const next = `#/${view}${params}`;
     if (window.location.hash !== next) {
       window.history.replaceState(null, '', next);
+      hasInitialHashRef.current = true; // dès qu'on écrit une fois, on continue à sync.
     }
   }, [view, activeMemberId]);
 
