@@ -2281,10 +2281,19 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   };
 
   const logout = async () => {
-    // Fire-and-forget backend call to clear the HttpOnly cookie.
-    // We don't await it — transition the UI immediately so the user
-    // never sees a frozen screen. The cookie clear runs in the background.
-    api.auth.logout().catch(() => {});
+    // 2026-05-22 : on AWAIT la requete logout (cookie clear) avant de
+    // transition l'UI. L'ancienne version fire-and-forget pouvait laisser
+    // l'user F5 avant que le cookie soit nettoye -> auth.me() reussissait
+    // au refresh -> retour automatique sur le dashboard. Le request /logout
+    // est ~50ms, le user ne percoit pas le delai.
+    try {
+      await api.auth.logout();
+    } catch (e) {
+      // Backend pas joignable : on continue quand meme, le cookie sera
+      // peut-etre orphan cote serveur mais l'UI se transitionne.
+      // eslint-disable-next-line no-console
+      console.warn('[logout] backend request failed, continuing anyway', e);
+    }
     if (onLogout) {
       onLogout();
     } else {
