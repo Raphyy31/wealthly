@@ -203,18 +203,8 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     else document.documentElement.removeAttribute('data-hide-amounts');
   }, [hideAmounts]);
 
-  // Keyboard shortcut Cmd/Ctrl+Shift+P -> launch demo tour. Pratique pour
-  // les pitches : pas besoin de cliquer dans le menu sur scene.
-  useEffect(() => {
-    const onKey = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'P' || e.key === 'p')) {
-        e.preventDefault();
-        setDemoTourActive(true);
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  // Mode presentation retire 2026-05-22 (raccourci Cmd+Shift+P + entree menu)
+  // — non utilise avec la nouvelle landing v4 cinematic.
 
   // Auto-launch DemoTour quand l'user vient de Landing via le bouton
   // "Voir la presentation" -> App.jsx pose le flag, on le pioche ici
@@ -2790,18 +2780,6 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
                   <button onClick={() => { setView('settings'); setSidebarMenuOpen(false); }} role="menuitem">
                     <Settings size={14}/>
                     <span>{t('nav.settings')}</span>
-                  </button>
-                  <button
-                    onClick={() => { setDemoTourActive(true); setSidebarMenuOpen(false); }}
-                    role="menuitem"
-                    title="Lance un tour guidé pour pitch (raccourci ⇧⌘P)"
-                  >
-                    <Play size={14} style={{ color: 'var(--accent)' }}/>
-                    <span>Mode présentation</span>
-                    <span style={{
-                      marginLeft: 'auto', fontSize: 9, color: 'var(--ink-3)',
-                      letterSpacing: '0.06em', fontFamily: 'Geist Mono, monospace',
-                    }}>⇧⌘P</span>
                   </button>
                   <div className="ws-popover-divider"/>
                   <button
