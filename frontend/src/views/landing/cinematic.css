@@ -1,0 +1,214 @@
+/* ============================================================================
+   Cinematic landing — header minimal + démo fullscreen + CTAs end-of-loop
+   ============================================================================ */
+
+html, body {
+  height: 100%;
+  overflow: hidden; /* No scroll on cinematic landing */
+}
+
+body.cinematic {
+  background: var(--bg);
+  overflow: hidden;
+}
+
+/* ─── Header — ultra minimal ─────────────────────────────────────────── */
+.cin-header {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 50;
+  height: 64px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 32px;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--bg) 92%, transparent),
+    color-mix(in srgb, var(--bg) 0%, transparent));
+}
+.cin-mark {
+  display: inline-flex; align-items: center; gap: 12px;
+  color: var(--ink);
+}
+.cin-mark-glyph {
+  width: 28px; height: 28px; border-radius: 7px;
+  background: var(--ink); color: var(--bg);
+  display: grid; place-items: center;
+  font: 700 14px/1 var(--font-sans);
+}
+.cin-mark-word {
+  font: 500 15px/1 var(--font-sans);
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.cin-signin {
+  background: transparent; border: none;
+  font: 500 13px/1 var(--font-sans);
+  letter-spacing: -0.005em;
+  color: var(--ink-2);
+  padding: 10px 14px;
+  border-radius: 8px;
+  transition: color .15s, background .15s;
+  cursor: pointer;
+}
+.cin-signin:hover { color: var(--ink); background: var(--bg-elev); }
+
+/* ─── Demo stage — fullscreen, centered ─────────────────────────────── */
+.cin-stage {
+  position: fixed;
+  top: 64px; left: 0; right: 0; bottom: 0;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px 32px 32px;
+}
+
+/* Override the demo-stage to fill cin-stage */
+.cin-stage .demo-stage {
+  margin: 0;
+  width: 100%;
+  max-width: min(1480px, calc((100vh - 120px) * 16 / 9));
+  aspect-ratio: 16 / 9;
+  border-radius: 18px;
+}
+
+/* Halo behind the demo */
+.cin-halo {
+  position: fixed;
+  top: 50%; left: 50%;
+  width: min(1280px, 90vw); height: 720px;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(ellipse 55% 50% at 50% 50%,
+    rgba(126,146,255,0.18) 0%,
+    rgba(126,146,255,0.04) 40%,
+    transparent 72%);
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ─── End-of-loop CTAs overlay ──────────────────────────────────────── */
+.cin-cta-layer {
+  position: fixed;
+  inset: 64px 0 0 0;
+  z-index: 60;
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column;
+  gap: 36px;
+  padding: 32px;
+  pointer-events: none; /* enable only when visible */
+  background: radial-gradient(ellipse at center,
+    color-mix(in srgb, var(--bg) 75%, transparent) 0%,
+    color-mix(in srgb, var(--bg) 88%, transparent) 60%,
+    var(--bg) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  opacity: 0;
+}
+.cin-cta-layer.visible {
+  pointer-events: auto;
+}
+
+.cin-cta-title {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: clamp(36px, 5vw, 64px);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  text-align: center;
+  margin: 0;
+  max-width: 18ch;
+}
+.cin-cta-title em {
+  font-style: italic;
+  color: color-mix(in srgb, var(--ink) 80%, var(--ink-2));
+  letter-spacing: -0.034em;
+}
+.cin-cta-title-line {
+  display: block;
+  white-space: nowrap;
+}
+.cin-cta-title .word { display: inline-block; }
+
+.cin-cta-row {
+  display: flex; align-items: center; gap: 14px;
+  flex-wrap: wrap; justify-content: center;
+}
+
+.cin-cta {
+  display: inline-flex; align-items: center; gap: 9px;
+  font: 500 14px/1 var(--font-sans);
+  letter-spacing: -0.005em;
+  padding: 16px 26px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s, box-shadow .2s;
+  text-decoration: none;
+  border: none;
+}
+.cin-cta-primary {
+  background: var(--ink); color: var(--bg);
+  box-shadow:
+    0 1px 0 rgba(0,0,0,0.3),
+    0 12px 28px -8px rgba(126,146,255,0.55);
+}
+.cin-cta-primary:hover {
+  background: #E5E2D8;
+  box-shadow:
+    0 1px 0 rgba(0,0,0,0.3),
+    0 16px 36px -8px rgba(126,146,255,0.7);
+}
+.cin-cta-ghost {
+  background: color-mix(in srgb, var(--bg-elev) 80%, transparent);
+  color: var(--ink);
+  border: 1px solid var(--border-strong);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.cin-cta-ghost:hover {
+  background: var(--bg-elev);
+  border-color: var(--ink-2);
+}
+
+/* Subtle replay link */
+.cin-replay {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: transparent; border: none;
+  font: 500 12px/1 var(--font-mono);
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-3);
+  cursor: pointer;
+  padding: 8px 12px;
+  transition: color .15s;
+}
+.cin-replay:hover { color: var(--ink-2); }
+
+/* ─── Skip-to-details hint (subtle, top-right under header) ─────────── */
+.cin-skip {
+  position: fixed;
+  top: 80px; right: 32px;
+  z-index: 55;
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-3);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: color .15s, background .15s;
+  opacity: 0;
+  animation: cinSkipFadeIn 0.6s ease 1.2s forwards;
+}
+.cin-skip:hover { color: var(--ink-2); background: var(--bg-elev); }
+@keyframes cinSkipFadeIn {
+  to { opacity: 1; }
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .cin-header { padding: 0 20px; height: 56px; }
+  .cin-stage { top: 56px; padding: 16px 20px 20px; }
+  .cin-stage .demo-stage { aspect-ratio: 4 / 5; max-width: 100%; }
+  .cin-cta-layer { inset: 56px 0 0 0; padding: 24px; gap: 24px; }
+  .cin-cta-title { font-size: clamp(28px, 7vw, 40px); }
+  .cin-cta { width: 100%; max-width: 320px; justify-content: center; }
+  .cin-skip { top: 64px; right: 16px; }
+}
