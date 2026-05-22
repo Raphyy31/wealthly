@@ -311,50 +311,8 @@ function DemoLoopCinematic({ onComplete, replayToken = 0 }) {
 
   return (
     <div className="demo-stage">
-      <div className="demo-statusbar">
-        <div className="demo-statusbar-left">
-          <span className="demo-statusbar-dot"/>
-          <span className="demo-statusbar-label">Démo en direct</span>
-        </div>
-        <div className="demo-progress" aria-hidden>
-          {SCENES.filter(s => !s.isIntro).map((s) => {
-            const realIdx = SCENES.findIndex(x => x.id === s.id);
-            const isActive = realIdx === sceneIdx;
-            return (
-              <button
-                key={s.id}
-                className={`demo-progress-dot ${isActive ? 'active' : ''}`}
-                onClick={() => {
-                  if (isAnimatingRef.current) return;
-                  if (realIdx === sceneIdx) return;
-                  if (timerRef.current) clearTimeout(timerRef.current);
-                  completedRef.current = false;
-                  const els = [spotlightRef.current, annotationRef.current].filter(Boolean);
-                  if (els.length) {
-                    gsap.to(els, { opacity: 0, scale: 0.985, filter: 'blur(6px)',
-                      duration: 0.25, ease: 'power3.in',
-                      onComplete: () => { setSpotRect(null); setSceneIdx(realIdx); } });
-                  } else { setSpotRect(null); setSceneIdx(realIdx); }
-                }}
-                aria-label={`Aller à ${s.eyebrow}`}
-                title={s.eyebrow}
-              />
-            );
-          })}
-        </div>
-        <button
-          className="demo-play"
-          onClick={() => setPaused(p => !p)}
-          aria-label={paused ? 'Reprendre' : 'Mettre en pause'}
-          title={paused ? 'Reprendre' : 'Pause'}
-        >
-          {paused ? (
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-          ) : (
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
-          )}
-        </button>
-      </div>
+      {/* statusbar (dots + pause + "Démo en direct") retirée 2026-05-22 —
+          jugée pas pro. La progression reste visible via .demo-bar en bas. */}
 
       <div className="demo-canvas" ref={canvasRef}>
         {SCENES.map((s, i) => {
@@ -407,7 +365,6 @@ function DemoLoopCinematic({ onComplete, replayToken = 0 }) {
             key={`anno-${sceneIdx}`}>
             <div className="annotation-eye">
               <span>{scene.eyebrow}</span>
-              <span className="ix">{SCENES.slice(0, sceneIdx+1).filter(x => !x.isIntro).length} / {SCENES.filter(x => !x.isIntro).length}</span>
             </div>
             <h3 className="annotation-title" ref={annoTitleRef}>
               <SplitWords html={scene.title}/>
@@ -420,18 +377,7 @@ function DemoLoopCinematic({ onComplete, replayToken = 0 }) {
           </div>
         )}
 
-        {/* Focused scenes — discrete index pill bottom-right */}
-        {scene.focused && (
-          <div className="focused-index" aria-hidden>
-            <span className="focused-index-n">
-              {SCENES.slice(0, sceneIdx+1).filter(x => !x.isIntro).length}
-            </span>
-            <span className="focused-index-sep">/</span>
-            <span className="focused-index-total">
-              {SCENES.filter(x => !x.isIntro).length}
-            </span>
-          </div>
-        )}
+        {/* focused-index pill (3/5 bottom-right) retiré 2026-05-22 */}
 
         {countActive && scene.countUp && (
           <div ref={countLayerRef} className="countup-layer" style={{ opacity: 0 }}>

@@ -34,6 +34,17 @@ export default function Landing({ onSignIn, onSignUp, onTryDemo, onPresent }) {
     };
   }, []);
 
+  // Scrub le hash router (#/dashboard, #/transactions, ...) au mount de la
+  // landing : si l'user vient de se déconnecter, son URL garde l'ancien
+  // hash et c'est moche en barre d'adresse. Pas pro de voir "#/dashboard"
+  // sur la landing publique.
+  useEffect(() => {
+    if (window.location.hash && window.location.hash.startsWith('#/')) {
+      const url = window.location.pathname + window.location.search;
+      window.history.replaceState(null, '', url);
+    }
+  }, []);
+
   // Scroll-to-top quand on bascule de vue (sinon Details démarre en bas).
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });

@@ -2,14 +2,16 @@
    Cinematic landing — header minimal + démo fullscreen + CTAs end-of-loop
    ============================================================================ */
 
-html, body {
+/* Scope scroll-lock to body.cinematic ONLY — sinon le rule global survit
+   au switch vers la page Details (qui DOIT scroller). */
+body.cinematic,
+body.cinematic > html {
   height: 100%;
-  overflow: hidden; /* No scroll on cinematic landing */
+  overflow: hidden;
 }
 
 body.cinematic {
   background: var(--bg);
-  overflow: hidden;
 }
 
 /* ─── Header — ultra minimal ─────────────────────────────────────────── */
