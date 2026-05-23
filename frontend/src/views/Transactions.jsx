@@ -15,6 +15,7 @@ import { AnimatedNumber } from '../components/AnimatedNumber.jsx';
 import { EmptyState } from '../components/EmptyState.jsx';
 import { SyncButton } from '../components/SyncButton.jsx';
 import { gsap as gsapTx } from '../utils/gsapSetup.js';
+import { useIsNarrow } from '../hooks/useIsNarrow.js';
 
 const EMPTY_FILTERS = {
   cats: [],          // string[] — empty means "all"
@@ -250,21 +251,32 @@ function CatPicker({ categories, currentId, onSelect, onClose }) {
   );
 }
 
-// TxFilterPanel — wrapper avec GSAP scale+fade entry et CSS animation de
-// la barre de fond (no layout shift). Pas de framer-motion ici.
+// TxFilterPanel — wrapper avec GSAP scale+fade entry (desktop) ou slide-up
+// (mobile bottom-sheet). Pas de framer-motion ici.
 function TxFilterPanel({ children, onClose }) {
   const ref = useRef(null);
+  const isMobile = useIsNarrow(640);
+
   useLayoutEffect(() => {
     if (!ref.current) return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       gsap.set(ref.current, { opacity: 1 });
       return;
     }
-    gsap.fromTo(ref.current,
-      { opacity: 0, scale: 0.97, y: -8 },
-      { opacity: 1, scale: 1, y: 0, duration: 0.28, ease: 'power3.out' }
-    );
-  }, []);
+    if (isMobile) {
+      // Bottom-sheet: slide up from bottom
+      gsap.fromTo(ref.current,
+        { opacity: 0, y: 40 },
+        { opacity: 1, y: 0, duration: 0.32, ease: 'power3.out' }
+      );
+    } else {
+      // Desktop: scale+fade from top-right
+      gsap.fromTo(ref.current,
+        { opacity: 0, scale: 0.97, y: -8 },
+        { opacity: 1, scale: 1, y: 0, duration: 0.28, ease: 'power3.out' }
+      );
+    }
+  }, [isMobile]);
   // ESC pour fermer
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
@@ -272,7 +284,11 @@ function TxFilterPanel({ children, onClose }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
   return (
-    <div ref={ref} className="tx-filter-panel" style={{ transformOrigin: 'top right', opacity: 0 }}>
+    <div
+      ref={ref}
+      className="tx-filter-panel"
+      style={{ transformOrigin: isMobile ? 'bottom center' : 'top right', opacity: 0 }}
+    >
       {children}
     </div>
   );
@@ -561,6 +577,9 @@ export function Transactions({ transactions, accounts, categories, members = [],
           <strong className="num"><AnimatedNumber value={filtered.length} duration={0.4} format={(v) => Math.round(v).toString()}/></strong>
           {' '}transaction{filtered.length > 1 ? 's' : ''}
         </span>
+
+        {/* Backdrop for filter panel on mobile — shows as bottom-sheet overlay */}
+        {showPanel && <div className="tx-filter-overlay" onClick={() => setShowPanel(false)} />}
 
         {showPanel && (
           <TxFilterPanel onClose={() => setShowPanel(false)}>

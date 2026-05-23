@@ -366,6 +366,9 @@ export function Styles({ theme }) {
   .app-header-mobile .icon-btn { width: 32px; height: 32px; }
   .app-header-mobile .primary-btn span { display: none; }
   .app-header-mobile .primary-btn { padding: 0 10px; height: 32px; }
+  /* Fix: ds-btn.primary in mobile header — hide text, keep icon */
+  .app-header-mobile .mob-icon-only span { display: none; }
+  .app-header-mobile .mob-icon-only { padding: 0 10px; height: 32px; min-width: 32px; }
 
   .bottom-nav {
     display: flex;
@@ -397,7 +400,32 @@ export function Styles({ theme }) {
   .bottom-nav button.active { color: var(--primary); }
   .bottom-nav button.active svg { color: var(--primary); }
   .bottom-nav button .nav-alert-dot { position: absolute; top: 4px; right: 16px; min-width: 14px; height: 14px; padding: 0 4px; font-size: 9px; }
+
+  /* FAB — Floating Action Button pour ajout transaction rapide */
+  .mobile-fab {
+    display: flex;
+    align-items: center; justify-content: center;
+    position: fixed;
+    right: 16px;
+    bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    z-index: 88;
+    box-shadow: 0 4px 14px -4px ${dark ? 'rgba(126,146,255,.45)' : 'rgba(37,64,217,.35)'};
+    transition: transform .15s, box-shadow .15s;
+    font-family: inherit;
+  }
+  .mobile-fab:hover { box-shadow: 0 6px 18px -4px ${dark ? 'rgba(126,146,255,.55)' : 'rgba(37,64,217,.45)'}; }
+  .mobile-fab:active { transform: scale(0.93); }
+  .mobile-fab:focus-visible { outline: none; box-shadow: var(--focus-ring), 0 4px 14px -4px ${dark ? 'rgba(126,146,255,.45)' : 'rgba(37,64,217,.35)'}; }
 }
+
+/* FAB hidden on desktop/tablet — only visible inside @media (max-width: 767px) above */
+.mobile-fab { display: none; }
 
 /* Layout Binance/Finary-style — pleine largeur disponible apres la sidebar.
    Avant : cape a 1280px, laissait ~400px de blanc a droite sur ecran 1920+.
@@ -1568,6 +1596,8 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
   overflow-y: auto;
   will-change: transform, opacity;
 }
+/* Backdrop overlay for filter panel — hidden on desktop, shown as mobile bottom-sheet overlay */
+.tx-filter-overlay { display: none; }
 .tx-filter-panel-header {
   display: flex; align-items: center; justify-content: space-between;
   font: 600 11px/1 var(--font-mono);
@@ -2655,6 +2685,28 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
   .search-box { min-width: 0; flex: 1 1 100%; order: -1; }
   .result-count { display: none; }
 
+  /* Filter panel → bottom-sheet on mobile */
+  .tx-filter-panel {
+    position: fixed;
+    top: auto !important;
+    left: 0; right: 0; bottom: 0;
+    border-radius: 16px 16px 0 0;
+    border-bottom: none;
+    max-height: 86vh;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    z-index: 200;
+    box-shadow: 0 -8px 40px -8px color-mix(in oklab, var(--ink) 20%, transparent);
+  }
+  /* Mobile filter backdrop */
+  .tx-filter-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: ${dark ? 'rgba(0,0,0,0.55)' : 'rgba(0,0,0,0.38)'};
+    backdrop-filter: blur(2px);
+    z-index: 199;
+  }
+
   /* Onboarding: tighter padding */
   .onboarding { padding: 16px 12px; }
   .onboarding-card { padding: 24px 20px; border-radius: 14px; }
@@ -3662,6 +3714,143 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
   .modal-header h2, .modal-head h2 { font-size: 16px !important; }
   .wc-card-total { font-size: 16px !important; }
   .wealth-hero-card .wealth-hero-value { font-size: 22px !important; }
+}
+
+/* ============================================================================
+   QuickAddTxModal — FAB bottom-sheet pour ajout transaction rapide
+   ============================================================================ */
+.qadd-overlay {
+  position: fixed; inset: 0;
+  background: ${dark ? 'rgba(0,0,0,0.55)' : 'rgba(0,0,0,0.38)'};
+  backdrop-filter: blur(2px);
+  z-index: 300;
+}
+.qadd-sheet {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 301;
+  background: var(--bg-card);
+  border-radius: 20px 20px 0 0;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  box-shadow: 0 -8px 40px -8px color-mix(in oklab, var(--ink) 22%, transparent);
+  display: flex; flex-direction: column;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  animation: qadd-slide-up 0.3s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+@keyframes qadd-slide-up {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.qadd-handle {
+  width: 36px; height: 4px;
+  border-radius: 2px;
+  background: var(--border-strong);
+  margin: 10px auto 4px;
+  flex-shrink: 0;
+}
+.qadd-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 18px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.qadd-title {
+  font-size: 15px; font-weight: 600;
+  letter-spacing: -0.02em; color: var(--ink);
+}
+/* Type toggle row */
+.qadd-type-row {
+  display: flex; gap: 8px;
+  padding: 14px 16px 4px;
+}
+.qadd-type-btn {
+  flex: 1;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-subtle);
+  color: var(--ink-2);
+  font: 500 13px/1 var(--font-sans);
+  cursor: pointer; transition: color .15s, background .15s, border-color .15s;
+}
+.qadd-type-btn:hover { color: var(--ink); border-color: var(--border-strong); }
+.qadd-type-btn.active.expense { color: var(--negative); border-color: var(--negative); background: color-mix(in oklab, var(--negative) 10%, transparent); }
+.qadd-type-btn.active.income  { color: var(--positive); border-color: var(--positive); background: color-mix(in oklab, var(--positive) 10%, transparent); }
+/* Body */
+.qadd-body {
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 14px 16px;
+  overflow-y: auto;
+}
+/* Big amount input */
+.qadd-amount-row {
+  display: flex; align-items: center; gap: 4px;
+  padding: 10px 14px;
+  background: var(--bg-subtle);
+  border: 1.5px solid var(--border-strong);
+  border-radius: 12px;
+  transition: border-color .15s;
+}
+.qadd-amount-row:focus-within { border-color: var(--accent); }
+.qadd-amount-sign {
+  font-size: 24px; font-weight: 600; line-height: 1;
+  color: var(--ink-3); flex-shrink: 0; width: 18px; text-align: center;
+}
+.qadd-amount-sign.neg { color: var(--negative); }
+.qadd-amount-sign.pos { color: var(--positive); }
+.qadd-amount-input {
+  flex: 1; border: none; background: transparent;
+  font-size: 28px; font-weight: 600;
+  letter-spacing: -0.03em; font-variant-numeric: tabular-nums;
+  color: var(--ink); padding: 0; min-width: 0;
+  font-family: 'Geist Mono', monospace;
+}
+.qadd-amount-input:focus { outline: none; box-shadow: none; }
+.qadd-amount-input::placeholder { color: var(--ink-3); }
+.qadd-amount-currency {
+  font-size: 20px; font-weight: 500; color: var(--ink-3);
+  flex-shrink: 0;
+}
+/* Fields */
+.qadd-field {
+  display: flex; flex-direction: column; gap: 5px;
+  font-size: 11.5px; font-weight: 600; color: var(--ink-2);
+  letter-spacing: 0.01em;
+}
+.qadd-field input, .qadd-field select {
+  font-size: 14px; padding: 9px 12px;
+  border-radius: 8px; border: 1px solid var(--border);
+  background: var(--bg-subtle);
+  color: var(--ink);
+}
+.qadd-field input:focus, .qadd-field select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 15%, transparent);
+}
+/* Footer */
+.qadd-footer {
+  display: flex; gap: 8px; justify-content: flex-end;
+  padding: 12px 16px 14px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+/* On desktop: show as a centered modal instead of bottom-sheet */
+@media (min-width: 641px) {
+  .qadd-overlay { z-index: 300; }
+  .qadd-sheet {
+    position: fixed;
+    left: 50%; top: 50%; bottom: auto;
+    transform: translate(-50%, -50%);
+    width: 400px;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    animation: qadd-scale-in 0.22s cubic-bezier(0.32, 0.72, 0, 1) both;
+  }
+  @keyframes qadd-scale-in {
+    from { transform: translate(-50%, -50%) scale(0.97); opacity: 0; }
+    to   { transform: translate(-50%, -50%) scale(1);    opacity: 1; }
+  }
 }
 `;
   return <style>{css}</style>;

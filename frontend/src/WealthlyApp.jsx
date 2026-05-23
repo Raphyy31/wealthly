@@ -56,6 +56,7 @@ import { CreateRuleModal } from './components/CreateRuleModal.jsx';
 import { AiPromptModal } from './components/AiPromptModal.jsx';
 import { detectDuplicates } from './utils/duplicateDetector.js';
 import { DuplicateMergeModal } from './components/DuplicateMergeModal.jsx';
+import { QuickAddTxModal } from './components/QuickAddTxModal.jsx';
 import { gsap } from './utils/gsapSetup.js';
 import { useWealthItems } from './hooks/useWealthItems.js';
 
@@ -282,6 +283,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   const [bankingPendingState, setBankingPendingState] = useState(null); // state param from callback URL
 
   const [showAddAccount, setShowAddAccount] = useState(false);
+  const [showQuickAddTx, setShowQuickAddTx] = useState(false);
   // Etape initiale du modal compte bancaire (sidebar + button vs Dashboard
   // CTA). null = ferme, 'choice' = ouvre sur le choix banque / manuel,
   // 'bank-list' = skip directement a la liste des banques.
@@ -2818,7 +2820,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
               <button className="icon-btn" onClick={() => setHideAmounts(!hideAmounts)} title="Masquer/afficher">
                 {hideAmounts ? <EyeOff size={16}/> : <Eye size={16}/>}
               </button>
-              <button className="ds-btn primary" onClick={() => { setView('import'); setImportStep('upload'); }}>
+              <button className="ds-btn primary mob-icon-only" onClick={() => { setView('import'); setImportStep('upload'); }}>
                 <Upload size={14}/> <span>{t('nav.import')}</span>
               </button>
             </div>
@@ -3054,7 +3056,17 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
         </div>
       )}
 
-      {/* Mobile bottom nav (<768px) — fixed bottom bar */}
+      {/* Mobile FAB — quick-add transaction, shown only on mobile (<768px) */}
+      <button
+        className="mobile-fab"
+        onClick={() => setShowQuickAddTx(true)}
+        aria-label="Ajouter une transaction"
+        title="Ajouter une transaction"
+      >
+        <Plus size={22}/>
+      </button>
+
+      {/* Mobile bottom nav (<768px) — fixed bottom bar, 5 items max */}
       <nav className="bottom-nav">
         <button onClick={() => setView('dashboard')} className={view === 'dashboard' ? 'active' : ''}><Activity size={18}/> <span>{t('nav.dashboard')}</span></button>
         <button onClick={() => setView('wealth')} className={view === 'wealth' ? 'active' : ''}><Landmark size={18}/> <span>{t('nav.wealth')}</span></button>
@@ -3063,7 +3075,6 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
           {budgetsOverCount > 0 && <span className="nav-alert-dot">{budgetsOverCount}</span>}
         </button>
         <button onClick={() => setView('transactions')} className={view === 'transactions' ? 'active' : ''}><BarChart3 size={18}/> <span>{t('nav.transactionsShort')}</span></button>
-        <button onClick={() => setView('tax')} className={view === 'tax' ? 'active' : ''}><Calculator size={18}/> <span>{t('nav.tax')}</span></button>
         <button onClick={() => setView('settings')} className={view === 'settings' ? 'active' : ''}><Settings size={18}/> <span>{t('nav.settings')}</span></button>
       </nav>
 
@@ -3127,6 +3138,14 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
         onApply={applyAiCategorizations}
         onClose={() => setShowAiPromptModal(false)}
       />
+
+      {showQuickAddTx && (
+        <QuickAddTxModal
+          accounts={accounts}
+          createTransaction={createTransaction}
+          onClose={() => setShowQuickAddTx(false)}
+        />
+      )}
 
       {showAddAccount && (
         <AddWealthModal
