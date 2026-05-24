@@ -1547,11 +1547,13 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .transactions-view { display: flex; flex-direction: column; gap: 16px; }
 /* Header action buttons — label hidden on mobile, icon stays */
 @media (max-width: 640px) {
-  /* On mobile, the Export/AI buttons in the header wrap to a standalone row
-     creating a large empty gap. Hide them — secondary actions, not primary. */
+  /* Secondary action buttons in tx header → hidden on mobile */
   .tx-hdr-btn { display: none; }
-  /* Tighten the header margin so it flows right into the filter bar. */
-  .transactions-view .subview-header { margin-bottom: 0 !important; }
+  /* Reduce gap between tx header and filter bar */
+  .transactions-view .subview-header { margin-bottom: 8px !important; }
+  /* Prevent subview-header buttons from wrapping to their own row:
+     title takes remaining space, sync button stays compact on same line */
+  .transactions-view .subview-header { flex-wrap: nowrap; align-items: flex-start; gap: 8px; }
 }
 .filters-bar { position: relative; display: flex; align-items: center; gap: 8px; padding: 12px; background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border); flex-wrap: wrap; box-shadow: var(--shadow-sm); }
 
@@ -2668,10 +2670,14 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
   .tx-row .td-amount { grid-column: 2; order: 2; font-size: 14px; align-self: center; }
   .tx-row .td-actions { grid-column: 1 / -1; order: 4; justify-content: flex-end; margin-top: 4px; }
 
-  /* Filters bar: stack and smaller */
-  .filters-bar { padding: 10px; gap: 6px; }
-  .search-box { min-width: 0; flex: 1 1 100%; order: -1; }
+  /* Filters bar: single row on mobile — search + Filtres côte à côte */
+  .filters-bar { padding: 8px 10px; gap: 6px; flex-wrap: nowrap; align-items: center; }
+  .search-box { min-width: 0; flex: 1 1 auto; }  /* plus de flex:1 1 100% qui forçait le retour à la ligne */
   .result-count { display: none; }
+
+  /* SyncButton : icône + badge, pas de label texte "Sync" (trop large) */
+  .sync-btn-label { display: none; }
+  .sync-btn-wrap .ds-btn { min-height: 36px; padding: 0 8px; gap: 4px; }
 
   /* Filter panel → bottom-sheet on mobile */
   .tx-filter-panel {

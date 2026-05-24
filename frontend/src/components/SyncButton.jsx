@@ -199,7 +199,7 @@ export function SyncButton({ onAfterSync }) {
         <span ref={iconRef} style={{ display: 'inline-flex' }}>
           <RefreshCw size={14}/>
         </span>
-        <span>Sync</span>
+        <span className="sync-btn-label">Sync</span>
         <span
           className="sync-badge"
           style={{
