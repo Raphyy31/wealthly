@@ -1905,6 +1905,15 @@ html, body {
    en mode expanded (labels visibles, stats strip, etc.) */
 .mon-sankey-duo[data-expanded="both"] .mon-sankey-card { flex: 1 1 0; }
 
+/* Mobile column mode: flex:1 1 0 + overflow:hidden collapses cards to 0px.
+   overflow:hidden removes the implicit minimum-content-size constraint, so
+   the cards shrink to 0 in an auto-sized column container.
+   Override to flex:0 0 auto so each card sizes to its content height. */
+@media (max-width: 900px) {
+  .mon-sankey-duo[data-expanded] .mon-sankey-card,
+  .mon-sankey-duo .mon-sankey-card { flex: 0 0 auto !important; }
+}
+
 .mon-sankey-card.is-teaser:hover {
   border-color: var(--accent);
   background: var(--bg);

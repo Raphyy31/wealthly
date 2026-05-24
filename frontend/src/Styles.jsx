@@ -1570,8 +1570,11 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .transactions-view { display: flex; flex-direction: column; gap: 16px; }
 /* Header action buttons — label hidden on mobile, icon stays */
 @media (max-width: 640px) {
-  .tx-hdr-btn { padding: 0 10px; }
-  .tx-hdr-label { display: none; }
+  /* On mobile, the Export/AI buttons in the header wrap to a standalone row
+     creating a large empty gap. Hide them — secondary actions, not primary. */
+  .tx-hdr-btn { display: none; }
+  /* Tighten the header margin so it flows right into the filter bar. */
+  .transactions-view .subview-header { margin-bottom: 0 !important; }
 }
 .filters-bar { position: relative; display: flex; align-items: center; gap: 8px; padding: 12px; background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border); flex-wrap: wrap; box-shadow: var(--shadow-sm); }
 
@@ -3315,12 +3318,33 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .settings-auth-event-time { color: var(--ink-3); font-variant-numeric: tabular-nums; }
 @media (max-width: 900px) {
   .settings-layout { grid-template-columns: 1fr; gap: 16px; }
+
+  /* Fix: horizontal pill rail — each item must NOT be full-width.
+     Desktop has width:100% for sidebar column; override to auto for
+     horizontal scroll row on mobile. Add scroll fade hint on right. */
   .settings-rail {
     position: static; flex-direction: row; overflow-x: auto; gap: 4px;
-    padding-bottom: 8px;
-    margin: 0 -20px; padding-left: 20px; padding-right: 20px;
+    padding-bottom: 6px;
+    margin: 0 -16px; padding-left: 16px; padding-right: 40px;
+    scrollbar-width: none;
+    /* Gradient fade on right to hint more tabs */
+    -webkit-mask-image: linear-gradient(to right, black calc(100% - 40px), transparent 100%);
+    mask-image: linear-gradient(to right, black calc(100% - 40px), transparent 100%);
   }
-  .settings-rail-item { flex-shrink: 0; padding: 8px 12px; }
+  .settings-rail::-webkit-scrollbar { display: none; }
+  .settings-rail-item {
+    flex-shrink: 0;
+    width: auto !important; /* ← critical: undo the desktop width:100% */
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .settings-rail-item.active {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
   .settings-rail-item.active::before { display: none; }
 }
 
@@ -3524,7 +3548,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
   .field-row { grid-template-columns: 1fr; gap: 10px; }
 
   /* ─ Boutons : 44px touch target minimum partout */
-  button:not(.bottom-nav button):not(.sankey-fullscreen-close):not(.icon-only-mini):not(.tx-month-chip):not(.tx-active-chip):not(.wealth-alloc-mini-chip):not(.reg-tabs button):not(.mon-sankey-card-maximize),
+  button:not(.bottom-nav button):not(.sankey-fullscreen-close):not(.icon-only-mini):not(.tx-month-chip):not(.tx-active-chip):not(.wealth-alloc-mini-chip):not(.reg-tabs button):not(.mon-sankey-card-maximize):not(.tx-sort-btn):not(.search-clear):not(.settings-rail-item),
   .btn,
   .primary-btn,
   .secondary-btn,
