@@ -56,7 +56,6 @@ import { CreateRuleModal } from './components/CreateRuleModal.jsx';
 import { AiPromptModal } from './components/AiPromptModal.jsx';
 import { detectDuplicates } from './utils/duplicateDetector.js';
 import { DuplicateMergeModal } from './components/DuplicateMergeModal.jsx';
-import { QuickAddTxModal } from './components/QuickAddTxModal.jsx';
 import { gsap } from './utils/gsapSetup.js';
 import { useWealthItems } from './hooks/useWealthItems.js';
 
@@ -283,7 +282,6 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   const [bankingPendingState, setBankingPendingState] = useState(null); // state param from callback URL
 
   const [showAddAccount, setShowAddAccount] = useState(false);
-  const [showQuickAddTx, setShowQuickAddTx] = useState(false);
   // Etape initiale du modal compte bancaire (sidebar + button vs Dashboard
   // CTA). null = ferme, 'choice' = ouvre sur le choix banque / manuel,
   // 'bank-list' = skip directement a la liste des banques.
@@ -3056,15 +3054,6 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
         </div>
       )}
 
-      {/* Mobile FAB — quick-add transaction, shown only on mobile (<768px) */}
-      <button
-        className="mobile-fab"
-        onClick={() => setShowQuickAddTx(true)}
-        aria-label="Ajouter une transaction"
-        title="Ajouter une transaction"
-      >
-        <Plus size={22}/>
-      </button>
 
       {/* Mobile bottom nav (<768px) — fixed bottom bar, 5 items max */}
       <nav className="bottom-nav">
@@ -3139,13 +3128,6 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
         onClose={() => setShowAiPromptModal(false)}
       />
 
-      {showQuickAddTx && (
-        <QuickAddTxModal
-          accounts={accounts}
-          createTransaction={createTransaction}
-          onClose={() => setShowQuickAddTx(false)}
-        />
-      )}
 
       {showAddAccount && (
         <AddWealthModal
