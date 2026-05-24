@@ -1132,6 +1132,19 @@ export function Transactions({ transactions, accounts, categories, members = [],
                                 'llm': 'Catégorisé par l\'IA',
                               })[tx.catSource]}/>
                             )}
+                            {/* Mobile-only: category shown as second line below label */}
+                            {!isTransfer && (
+                              <button
+                                className="tx-mobile-cat"
+                                onClick={() => setEditingTx(tx.id)}
+                                title="Changer la catégorie"
+                              >
+                                {display
+                                  ? <><span>{display.icon}</span> {display.name}</>
+                                  : <><span>❓</span> Non catégorisé</>
+                                }
+                              </button>
+                            )}
                           </div>
                           <div className="tx-card-col tx-card-col-cat">
                             {isTransfer ? (() => {

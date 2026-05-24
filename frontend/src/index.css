@@ -4251,10 +4251,27 @@ html, body {
 .tx-card-amount.negative { color: var(--negative); }
 .tx-card-amount.transfer { color: var(--ink-3); font-weight: 500; }
 
+/* tx-mobile-cat : catégorie affichée sous le libellé sur mobile.
+   Cachée sur desktop (la colonne cat est déjà présente dans la grille). */
+.tx-mobile-cat { display: none; }
+
 /* Mobile / tablette : on retombe sur 3 colonnes (icon + libellé + montant).
    Le détail des autres colonnes (cat/sub/compte/actions) est masqué pour
-   garder une ligne propre — l'utilisateur ouvre les filtres pour pivoter. */
+   garder une ligne propre — la catégorie est désormais visible sous le libellé. */
 @media (max-width: 880px) {
+  .tx-mobile-cat {
+    display: flex; align-items: center; gap: 4px;
+    margin-top: 3px;
+    font-size: 11.5px; font-weight: 500;
+    color: var(--ink-3);
+    background: none; border: none; padding: 0;
+    cursor: pointer; font-family: inherit;
+    text-align: left;
+    transition: color .15s;
+  }
+  .tx-mobile-cat:hover { color: var(--accent); }
+  .tx-mobile-cat span { font-size: 13px; line-height: 1; }
+
   .tx-feed-colhead { display: none; }
   .tx-card {
     grid-template-columns: 40px minmax(0, 1fr) auto;
