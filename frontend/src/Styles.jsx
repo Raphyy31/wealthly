@@ -328,6 +328,9 @@ export function Styles({ theme }) {
 /* Mobile bottom nav — hidden on desktop, shown <768px */
 .bottom-nav { display: none; }
 
+/* Mobile FAB — hidden by default, shown inside @media (max-width: 767px) below */
+.mobile-fab { display: none; }
+
 /* ── Tablet (768–1023px): sidebar collapsed to icons only ── */
 @media (min-width: 768px) and (max-width: 1023px) {
   .app-sidebar { width: 64px; padding: 18px 10px 14px; gap: 12px; align-items: center; }
@@ -423,9 +426,6 @@ export function Styles({ theme }) {
   .mobile-fab:active { transform: scale(0.93); }
   .mobile-fab:focus-visible { outline: none; box-shadow: var(--focus-ring), 0 4px 14px -4px ${dark ? 'rgba(126,146,255,.45)' : 'rgba(37,64,217,.35)'}; }
 }
-
-/* FAB hidden on desktop/tablet — only visible inside @media (max-width: 767px) above */
-.mobile-fab { display: none; }
 
 /* Layout Binance/Finary-style — pleine largeur disponible apres la sidebar.
    Avant : cape a 1280px, laissait ~400px de blanc a droite sur ecran 1920+.
@@ -1568,6 +1568,11 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 
 /* TRANSACTIONS */
 .transactions-view { display: flex; flex-direction: column; gap: 16px; }
+/* Header action buttons — label hidden on mobile, icon stays */
+@media (max-width: 640px) {
+  .tx-hdr-btn { padding: 0 10px; }
+  .tx-hdr-label { display: none; }
+}
 .filters-bar { position: relative; display: flex; align-items: center; gap: 8px; padding: 12px; background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border); flex-wrap: wrap; box-shadow: var(--shadow-sm); }
 
 /* Tx advanced-filter panel — collapsible popover anchored to .filters-bar */
@@ -1661,6 +1666,9 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 }
 
 .tx-filter-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+/* On mobile bottom-sheet, date/amount pairs stack vertically — native date
+   pickers have a minimum width that overflows 2-col on narrow screens */
+@media (max-width: 640px) { .tx-filter-row-2 { grid-template-columns: 1fr; gap: 6px; } }
 
 /* Layout 2-col responsive — Période|Montant et Comptes|Membres */
 .tx-filter-grid-2col {
@@ -3463,6 +3471,8 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 /* ─── Month filter bar ─── */
 .tx-month-bar { display: flex; gap: 6px; flex-wrap: wrap; padding: 10px 0 4px; overflow-x: auto; scrollbar-width: none; }
 .tx-month-bar::-webkit-scrollbar { display: none; }
+/* Mobile: single-row horizontal scroll — wrapping wastes too much vertical space */
+@media (max-width: 640px) { .tx-month-bar { flex-wrap: nowrap; padding-bottom: 8px; } }
 .tx-month-chip { padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg); color: var(--ink-2); font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: border-color .15s, background .15s, color .15s; font-family: inherit; }
 .tx-month-chip:hover { border-color: var(--accent); color: var(--accent); }
 .tx-month-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }

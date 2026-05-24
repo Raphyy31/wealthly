@@ -1734,6 +1734,13 @@ function DashStyles() {
   .account-row > :nth-child(3),
   .account-row > :nth-child(4),
   .account-row > :nth-child(5) { display: none; }
+
+  /* Hero card: period tabs wrap below the eyebrow instead of overflowing */
+  .hero-top { flex-wrap: wrap; gap: 8px; align-items: center; }
+  /* Reduce period button size to fit all 6 in one row on wrap */
+  .hero-top .ds-range-tabs button { padding: 0 7px; font-size: 11px; height: 24px; }
+  /* Eyebrow takes full width so tabs start on next line */
+  .hero-top .dash-eyebrow { flex: 1 1 100%; }
 }
 `;
   return <style dangerouslySetInnerHTML={{ __html: css }}/>;

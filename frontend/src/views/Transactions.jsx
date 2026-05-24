@@ -526,19 +526,19 @@ export function Transactions({ transactions, accounts, categories, members = [],
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <SyncButton/>
-          <button className="ds-btn ghost" onClick={exportCsv} title={`Exporter les ${filtered.length} transactions visibles en CSV`}>
-            <Download size={14}/> Export CSV
+          <button className="ds-btn ghost tx-hdr-btn" onClick={exportCsv} title={`Exporter les ${filtered.length} transactions visibles en CSV`}>
+            <Download size={14}/> <span className="tx-hdr-label">Export CSV</span>
           </button>
           {onOpenAiPrompt && (() => {
             const uncatCount = transactions.filter(tx => (!tx.categoryId || tx.categoryId === 'uncategorized') && !transferIds.has(tx.id) && (tx.label || '').trim()).length;
             return (
               <button
-                className={`ds-btn ${uncatCount > 0 ? 'primary' : 'ghost'}`}
+                className={`ds-btn tx-hdr-btn ${uncatCount > 0 ? 'primary' : 'ghost'}`}
                 onClick={onOpenAiPrompt}
                 title="Génère un prompt à coller dans Claude/ChatGPT pour catégoriser en lot (sans clé API)"
                 disabled={uncatCount === 0}
               >
-                <Sparkles size={14}/> Catégoriser via IA
+                <Sparkles size={14}/> <span className="tx-hdr-label">Catégoriser via IA</span>
                 {uncatCount > 0 && <span className="ds-btn-badge">{uncatCount}</span>}
               </button>
             );
