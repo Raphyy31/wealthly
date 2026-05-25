@@ -36,6 +36,7 @@ import { effectiveMonth } from './utils.js';
 import { getTransferType } from './utils.js';
 import { AnimatedNumber } from './components/AnimatedNumber.jsx';
 import { SyncProgressBar } from './components/SyncProgressBar.jsx';
+import { PostSyncReviewModal } from './components/PostSyncReviewModal.jsx';
 import { Onboarding } from './views/Onboarding.jsx';
 import { Transactions } from './views/Transactions.jsx';
 import { Monthly } from './views/Monthly.jsx';
@@ -257,6 +258,11 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   // la règle aux tx historiques du marchand. null = idle, sinon les infos
   // pour rendre la bannière + appeler /apply-retroactively.
   const [learningOffer, setLearningOffer] = useState(null);
+  // IDs des nouvelles tx ramenées par la dernière sync GoCardless. Alimente
+  // la PostSyncReviewModal qui propose à l'user de valider les catégories
+  // attribuées automatiquement. null = pas de modale, [] = aucune nouvelle tx
+  // (donc on n'ouvre pas).
+  const [postSyncReviewIds, setPostSyncReviewIds] = useState(null);
   const [sidebarMenuOpen, setSidebarMenuOpen] = useState(false);
   // C4 — workspace switcher (member dropdown, kept for fallback / future)
   const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
@@ -355,6 +361,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     payeeId: t.payee_id || null,
     payeeName: t.payee_name || null,
     catSource: t.cat_source || null, // user_rule | payee_default | learned_rule | builtin_rule | llm | unknown
+    reviewStatus: t.review_status || null, // null | 'pending' | 'reviewed' — alimente la modale post-sync
   });
   const txToApi = (t) => ({
     account_id: t.accountId,
@@ -601,6 +608,19 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       showToast(t('toasts.loadError', { message: err.message }), 'error');
     }
   }, [demoMode]);
+
+  // Callback déclenché par SyncButton après une sync GoCardless. Recharge
+  // toutes les données pour propager les nouvelles tx dans le state, puis
+  // ouvre la PostSyncReviewModal si au moins une tx a été importée.
+  const handleAfterSync = useCallback(async (res) => {
+    try {
+      await reloadAll();
+    } catch {/* tolérable — reload pas critique pour la modale */}
+    const ids = (res && Array.isArray(res.new_tx_ids)) ? res.new_tx_ids : [];
+    if (ids.length > 0) {
+      setPostSyncReviewIds(ids);
+    }
+  }, [reloadAll]);
 
   // Load
   useEffect(() => {
@@ -2538,6 +2558,18 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       )}
       <SyncProgressBar status={syncStatus}/>
 
+      <PostSyncReviewModal
+        open={Array.isArray(postSyncReviewIds) && postSyncReviewIds.length > 0}
+        onClose={() => setPostSyncReviewIds(null)}
+        transactions={Array.isArray(postSyncReviewIds)
+          ? transactions.filter(t => postSyncReviewIds.includes(t.id))
+          : []}
+        categories={categories}
+        accounts={accounts}
+        onUpdateCategory={updateTransactionCategory}
+        onAfterValidate={() => { reloadAll(); }}
+      />
+
       {learningOffer && (
         <div className="learning-banner" role="status">
           <div className="learning-banner-text">
@@ -2943,6 +2975,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             initialAccountFilter={txInitialAccountFilter}
             onConsumeInitialFilter={() => setTxInitialAccountFilter(null)}
             onOpenAiPrompt={() => setShowAiPromptModal(true)}
+            onAfterSync={handleAfterSync}
           />
         )}
         {view === 'settings' && (

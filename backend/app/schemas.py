@@ -159,6 +159,8 @@ class TransactionUpdate(BaseModel):
     is_transfer_override: Optional[bool] = None
     notes: Optional[str] = Field(default=None, max_length=2000)
     tags: Optional[List[str]] = Field(default=None, max_length=20)
+    # 'reviewed' pour clore la revue post-sync. Restreint côté router.
+    review_status: Optional[str] = Field(default=None, max_length=16)
 
 
 class TransactionOut(TransactionBase):
@@ -167,6 +169,7 @@ class TransactionOut(TransactionBase):
     payee_id: Optional[str] = None
     payee_name: Optional[str] = None
     cat_source: Optional[str] = None
+    review_status: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 

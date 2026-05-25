@@ -79,6 +79,7 @@ def _to_out(tx: Transaction, db: Session) -> dict:
         "payee_id": tx.payee_id,
         "payee_name": payee_name,
         "cat_source": tx.cat_source,
+        "review_status": tx.review_status,
     }
 
 
@@ -222,6 +223,11 @@ def update_transaction(tx_id: str, payload: TransactionUpdate, db: Session = Dep
         cat_slug = data.pop("category_slug")
         tx.category_id = _resolve_category_id(db, user.household_id, cat_slug)
         cat_changed_to = tx.category_id
+    if "review_status" in data:
+        rs = data.pop("review_status")
+        # Whitelist : seuls 'pending' / 'reviewed' / None acceptés.
+        if rs in (None, "pending", "reviewed"):
+            tx.review_status = rs
     for k, v in data.items():
         setattr(tx, k, v)
     db.commit()
@@ -354,6 +360,30 @@ def recategorize_transfers(db: Session = Depends(get_db), user: User = Depends(g
         "flagged": len(flagged_details),
         "details": flagged_details,
     }
+
+
+@router.post("/mark-reviewed")
+def mark_reviewed(payload: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Marque une liste de transactions comme revues (review_status='reviewed').
+
+    Appelé par la modale post-sync ("Tout valider"). Plus efficace que N appels
+    PUT individuels — un seul COMMIT pour le lot. Scope strict au foyer.
+
+    Body : { "ids": ["<uuid>", ...] }
+    """
+    ids = payload.get("ids") or []
+    if not isinstance(ids, list) or not ids:
+        return {"updated": 0}
+    # Limite défensive : un sync ramène rarement >500 tx, on cape pour éviter
+    # un payload abusif qui flood la DB.
+    ids = [str(x) for x in ids[:500]]
+    q = db.query(Transaction).filter(
+        Transaction.household_id == user.household_id,
+        Transaction.id.in_(ids),
+    )
+    updated = q.update({"review_status": "reviewed"}, synchronize_session=False)
+    db.commit()
+    return {"updated": updated}
 
 
 @router.delete("/{tx_id}", status_code=204)

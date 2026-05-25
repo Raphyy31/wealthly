@@ -278,6 +278,12 @@ class Transaction(Base):
     # Stable identifier from the bank aggregator (e.g. GoCardless transactionId).
     # When set, a unique (account_id, external_id) index dedups syncs across runs.
     external_id = Column(String, nullable=True, index=True)
+    # Statut de revue par l'utilisateur — alimente la modale post-sync qui
+    # invite à valider catégorie/payee des nouvelles tx importées via GoCardless.
+    # NULL = pas besoin de revue (manual / CSV / déjà revue par l'user).
+    # 'pending' = nouvelle tx importée par sync, en attente de validation.
+    # 'reviewed' = l'user a explicitement validé.
+    review_status = Column(String, nullable=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     household_id = Column(String, ForeignKey("households.id", ondelete="CASCADE"), nullable=False, index=True)

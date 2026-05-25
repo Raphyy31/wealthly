@@ -294,7 +294,7 @@ function TxFilterPanel({ children, onClose }) {
   );
 }
 
-export function Transactions({ transactions, accounts, categories, members = [], recurringIds, toggleRecurring, transferIds = new Set(), setTransferOverride, updateCategory, updateTags, deleteTransaction, createTransaction, fmt, initialAccountFilter, onConsumeInitialFilter, onOpenAiPrompt }) {
+export function Transactions({ transactions, accounts, categories, members = [], recurringIds, toggleRecurring, transferIds = new Set(), setTransferOverride, updateCategory, updateTags, deleteTransaction, createTransaction, fmt, initialAccountFilter, onConsumeInitialFilter, onOpenAiPrompt, onAfterSync }) {
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
   // Seed the account filter on mount if the parent passed one (e.g. coming
@@ -525,7 +525,7 @@ export function Transactions({ transactions, accounts, categories, members = [],
           <p>{t('views.transactions.subtitle')}</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <SyncButton/>
+          <SyncButton onAfterSync={onAfterSync}/>
           <button className="ds-btn ghost tx-hdr-btn" onClick={exportCsv} title={`Exporter les ${filtered.length} transactions visibles en CSV`}>
             <Download size={14}/> <span className="tx-hdr-label">Export CSV</span>
           </button>

@@ -439,6 +439,7 @@ async def _sync_one_connection(
     total_updated = 0
     total_skipped = 0
     batch_hashes = set()
+    new_tx_ids: list[str] = []
     errors: list[str] = []
 
     from app.models import Member  # local import to avoid circular at module load
@@ -627,7 +628,7 @@ async def _sync_one_connection(
                     cat_source = None
                     transfer_auto = None
 
-                db.add(Transaction(
+                new_tx = Transaction(
                     account_id=wl_acc.id,
                     household_id=household_id,
                     date=tx_date,
@@ -640,7 +641,14 @@ async def _sync_one_connection(
                     payee_id=payee_id_resolved,
                     cat_source=cat_source,
                     is_transfer_override=transfer_auto,
-                ))
+                    # Marque comme à revoir post-sync. Le frontend ouvre une
+                    # modale qui liste ces tx pour confirmation rapide de la
+                    # catégorie/payee assignés automatiquement.
+                    review_status="pending",
+                )
+                db.add(new_tx)
+                db.flush()  # nécessaire pour récupérer l'id avant commit
+                new_tx_ids.append(new_tx.id)
                 total_new += 1
             batch_hashes.add(dh)
 
@@ -654,6 +662,7 @@ async def _sync_one_connection(
         "skipped": total_skipped,
         "errors": errors,
         "last_synced_at": _iso_utc(conn.last_synced_at),
+        "new_tx_ids": new_tx_ids,
     }
 
 

@@ -274,6 +274,8 @@ export const transactions = {
   delete: (id) => del(`/transactions/${id}`),
   applyRuleRetroactively: (ruleId) => post(`/transactions/rules/${ruleId}/apply-retroactively`, {}),
   recategorizeTransfers: () => post('/transactions/recategorize-transfers', {}),
+  /** Marque un lot de tx comme revues (review_status='reviewed'). */
+  markReviewed: (ids) => post('/transactions/mark-reviewed', { ids }),
 };
 
 // ============================================================================
