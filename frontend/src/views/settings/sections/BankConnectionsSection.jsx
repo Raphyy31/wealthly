@@ -4,6 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { Cloud, Plus, RefreshCw, AlertCircle, Unlink, Activity } from 'lucide-react';
 import * as api from '../../../api.js';
 import { BankConnectModal } from '../../../components/BankConnectModal.jsx';
+import { isDemoMode } from '../../../demoData.js';
+
+const DEMO_DISABLED_STYLE = { opacity: 0.5, pointerEvents: 'none', cursor: 'not-allowed' };
+const DEMO_TOOLTIP = 'Indisponible en mode démo';
 
 // Parse defensif d'un ISO timestamp en UTC. Si la string n'a pas de suffix
 // Z ni d'offset (+HH:MM), JS la traite comme local time -> ecart de 1-2h
@@ -48,6 +52,7 @@ function syncFreshness(isoStr) {
 
 export function BankConnectionsSection() {
   const { t } = useTranslation();
+  const demo = isDemoMode();
   const [connections, setConnections] = useState([]);
   const [loading, setLoading] = useState(false);
   const [picker, setPicker] = useState(false);
@@ -147,7 +152,12 @@ export function BankConnectionsSection() {
           {t('settings.banks.title')}
           {loading && <RefreshCw size={12} className="spin" style={{marginLeft:6,opacity:.5}}/>}
         </h3>
-        <button className="ds-btn primary" style={{ fontSize: 12, padding: '6px 14px' }} onClick={() => setPicker(true)}>
+        <button
+          className="ds-btn primary"
+          style={demo ? { ...DEMO_DISABLED_STYLE, fontSize: 12, padding: '6px 14px' } : { fontSize: 12, padding: '6px 14px' }}
+          onClick={() => !demo && setPicker(true)}
+          title={demo ? DEMO_TOOLTIP : undefined}
+        >
           <Plus size={13}/> {t('settings.banks.connect')}
         </button>
       </div>
@@ -164,7 +174,12 @@ export function BankConnectionsSection() {
         <div className="empty-mini">
           <Cloud size={24}/>
           <p>{t('settings.banks.empty')}</p>
-          <button className="ds-btn primary" style={{ marginTop: 8 }} onClick={() => setPicker(true)}>
+          <button
+            className="ds-btn primary"
+            style={demo ? { ...DEMO_DISABLED_STYLE, marginTop: 8 } : { marginTop: 8 }}
+            onClick={() => !demo && setPicker(true)}
+            title={demo ? DEMO_TOOLTIP : undefined}
+          >
             {t('settings.banks.connectMine')}
           </button>
         </div>

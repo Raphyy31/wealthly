@@ -10,6 +10,12 @@ import { ChoiceGrid } from '../../../components/ui/PremiumToggle.jsx';
 import { ChangePasswordModal } from '../modals/ChangePasswordModal.jsx';
 import { TotpSetupModal } from '../modals/TotpSetupModal.jsx';
 import { TotpDisableModal } from '../modals/TotpDisableModal.jsx';
+import { isDemoMode } from '../../../demoData.js';
+
+// Petit helper visuel — masque les CTA mutateurs en mode démo et affiche
+// un badge "indisponible en démo" plutôt qu'un toast d'erreur au clic.
+const DEMO_DISABLED_STYLE = { opacity: 0.5, pointerEvents: 'none', cursor: 'not-allowed' };
+const DEMO_TOOLTIP = 'Indisponible en mode démo';
 
 function IdleTimeoutRow() {
   const STORAGE_KEY = 'wealthly:idleTimeoutMin';
@@ -58,12 +64,19 @@ function IdleTimeoutRow() {
 }
 
 function TwoFactorRow({ t }) {
-  const [status, setStatus] = useState({ enabled: false, setup_in_progress: false });
-  const [loading, setLoading] = useState(true);
+  const demo = isDemoMode();
+  // En démo : pas d'appel API, on simule "2FA actif" (cohérent avec
+  // currentUser.totp_enabled=true seedé dans demoData).
+  const [status, setStatus] = useState(demo
+    ? { enabled: true, setup_in_progress: false }
+    : { enabled: false, setup_in_progress: false }
+  );
+  const [loading, setLoading] = useState(!demo);
   const [showSetup, setShowSetup] = useState(false);
   const [showDisable, setShowDisable] = useState(false);
 
   const reload = async () => {
+    if (demo) return;
     try {
       const s = await api.totp.status();
       setStatus(s);
@@ -100,11 +113,21 @@ function TwoFactorRow({ t }) {
           {loading ? (
             <span style={{ color: 'var(--ink-3)', fontSize: 12 }}>Chargement…</span>
           ) : status.enabled ? (
-            <button className="ds-btn" onClick={() => setShowDisable(true)}>
+            <button
+              className="ds-btn"
+              onClick={() => !demo && setShowDisable(true)}
+              style={demo ? DEMO_DISABLED_STYLE : undefined}
+              title={demo ? DEMO_TOOLTIP : undefined}
+            >
               Désactiver
             </button>
           ) : (
-            <button className="ds-btn primary" onClick={() => setShowSetup(true)}>
+            <button
+              className="ds-btn primary"
+              onClick={() => !demo && setShowSetup(true)}
+              style={demo ? DEMO_DISABLED_STYLE : undefined}
+              title={demo ? DEMO_TOOLTIP : undefined}
+            >
               Activer
             </button>
           )}
@@ -123,6 +146,7 @@ function TwoFactorRow({ t }) {
 
 export function SecuriteSection({ currentUser }) {
   const { t } = useTranslation();
+  const demo = isDemoMode();
   const [showPwdModal, setShowPwdModal] = useState(false);
   const [events, setEvents] = useState(null);  // null = not loaded, [] = loaded empty, [...] = data
   const [eventsError, setEventsError] = useState(false);
@@ -173,7 +197,12 @@ export function SecuriteSection({ currentUser }) {
               <div className="settings-field-hint">{t('settings.security.passwordHint')}</div>
             </div>
             <div className="settings-field-control">
-              <button className="ds-btn" onClick={() => setShowPwdModal(true)}>
+              <button
+                className="ds-btn"
+                onClick={() => !demo && setShowPwdModal(true)}
+                style={demo ? DEMO_DISABLED_STYLE : undefined}
+                title={demo ? DEMO_TOOLTIP : undefined}
+              >
                 {t('settings.security.changePassword')}
               </button>
             </div>

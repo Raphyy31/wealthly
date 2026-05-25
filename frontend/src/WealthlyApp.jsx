@@ -554,11 +554,21 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       setCategories(DEFAULT_CATEGORIES);
       setBudgets(d.budgets);
       setGoals(d.goals);
+      setAchievements(d.achievements || []);
       setFixedCharges(d.fixedCharges || []);
       setWealthHistory(d.wealthHistory || []);
       setCustomRules(d.customRules);
+      setBankConnections(d.bankConnections || []);
+      // Cache pour BankConnectionsSection / SyncButton qui rappellent
+      // api.banking.listConnections() avec leur propre state local.
+      try { localStorage.setItem('wealthly:demo_bank_connections_cache', JSON.stringify(d.bankConnections || [])); } catch {}
+      if (d.currentUser) {
+        setCurrentUser(d.currentUser);
+        try { localStorage.setItem('w2:current_user', JSON.stringify(d.currentUser)); } catch {}
+      }
+      // Mois type seede depuis demoData (sinon Sankey Monthly vide).
+      setRefMonthsByScope({ household: d.refMonth || { version: 1, updated_at: null, lines: [] } });
       dcaApi.list().then(setDcaPlans).catch(() => {});
-      api.refMonth.get().then(rm => setRefMonthsByScope({ household: rm })).catch(() => {});
       return;
     }
     try {
@@ -853,7 +863,11 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       .reduce((sum, a) => sum + (accountBalances[a.id] || 0) * memberShare(a), 0),
     [visibleAccounts, accountBalances, memberShare]
   );
-  const assetsValue = useMemo(() => visibleAssets.reduce((sum, a) => sum + (parseFloat(a.currentValue) || 0) * memberShare(a), 0), [visibleAssets, memberShare]);
+  // Fix bug double-comptage PEA : les positions filles (parentAssetId set)
+  // sont deja incluses dans la valorisation du parent (cf useWealthItems).
+  // Sans ce filtre, un PEA de 32 500 € avec 6 positions filles ~32 400 €
+  // gonflait le patrimoine de 32 k €.
+  const assetsValue = useMemo(() => visibleAssets.filter(a => !a.parentAssetId).reduce((sum, a) => sum + (parseFloat(a.currentValue) || 0) * memberShare(a), 0), [visibleAssets, memberShare]);
   const liabilitiesValue = useMemo(() => visibleLiabilities.reduce((sum, l) => sum + (parseFloat(l.remainingCapital) || 0) * liabilityShare(l), 0), [visibleLiabilities, liabilityShare]);
   const netWorth = liquidWealth + assetsValue - liabilitiesValue;
 
@@ -2963,6 +2977,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             reload={reloadAll}
             seededNewItem={seededNewItem}
             onSeededConsumed={() => setSeededNewItem(null)}
+            demoMode={demoMode}
           />
         )}
         {view === 'transactions' && (
@@ -3019,6 +3034,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             onImport={() => { setView('import'); setImportStep('upload'); }}
             recategorizeUncategorized={recategorizeUncategorized}
             recategorizeTransfers={recategorizeTransfers}
+            demoMode={demoMode}
           />
         )}
         {view === 'admin' && currentUser?.is_admin && (

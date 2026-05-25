@@ -490,10 +490,20 @@ auth.changePassword = (currentPassword, newPassword) =>
 // ============================================================================
 // GoCardless Bank Account Data — open banking sync
 // ============================================================================
+// Demo seed pour banking.* — alimenté depuis demoData via getDemoData() ;
+// dupliqué ici car api.js ne doit pas importer demoData.js (cycle).
+const DEMO_BANK_CONNECTIONS = () => {
+  try {
+    const raw = window?.localStorage?.getItem('wealthly:demo_bank_connections_cache');
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return [];
+};
+
 export const banking = {
   /** List available banks in a country (default FR). Returns institutions
    *  with their GoCardless id (used as bank_name in /connect). */
-  listBanks: (country = 'FR') => get(`/banking/banks?country=${country}`),
+  listBanks: (country = 'FR') => isDemo() ? Promise.resolve([]) : get(`/banking/banks?country=${country}`),
 
   /** Initiate connection → returns {redirect_url, connection_id, state}.
    *  The user is then sent to redirect_url to consent at their bank. */
@@ -503,21 +513,28 @@ export const banking = {
   /** Complete after the bank redirects back with ?ref={state}. */
   complete: (state) => post('/banking/complete', { state }),
 
-  /** Sync transactions for a connection */
+  /** Sync transactions for a connection. En démo : renvoie un succès vide
+   *  immédiat plutôt qu'un throw, pour que le SyncButton ait un comportement
+   *  crédible (badge "à l'instant", pas d'erreur visible). */
   sync: (connectionId, daysBack = 90) =>
-    post(`/banking/sync/${connectionId}?days_back=${daysBack}`),
+    isDemo()
+      ? Promise.resolve({ connection_id: connectionId, imported: 0, skipped: 0, errors: [], last_synced_at: new Date().toISOString(), new_tx_ids: [] })
+      : post(`/banking/sync/${connectionId}?days_back=${daysBack}`),
 
   /** Re-poll requisition status to update accounts list */
   refreshConnection: (id) => post(`/banking/refresh/${id}`),
 
-  /** List all connections */
-  listConnections: () => get('/banking/connections'),
+  /** List all connections. En démo : lit la liste seedée par WealthlyApp
+   *  (mis en cache dans localStorage lors du reloadAll démo). */
+  listConnections: () => isDemo() ? Promise.resolve(DEMO_BANK_CONNECTIONS()) : get('/banking/connections'),
 
   /** Delete a connection (also revokes the GoCardless requisition) */
   deleteConnection: (id) => del(`/banking/connections/${id}`),
 
   /** Diagnostic santé d'une connexion (ping GoCardless en temps réel) */
-  diagnose: (id) => get(`/banking/connections/${id}/diagnose`),
+  diagnose: (id) => isDemo()
+    ? Promise.resolve({ connection_id: id, verdict: 'ok', issues: [], recommendation: null, local_status: 'authorized', gocardless_status: 'LN', last_sync_age_hours: 2 })
+    : get(`/banking/connections/${id}/diagnose`),
 };
 
 // ============================================================================
