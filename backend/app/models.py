@@ -710,3 +710,38 @@ class DcaPlan(Base):
     updated_at   = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     household    = relationship("Household")
+
+
+class PlannedEvent(Base):
+    """A one-off, future-dated cash movement entered by the user.
+
+    The missing brick for the forward cash-flow projection (Vue Projection).
+    Unlike FixedCharge (recurring) and RefMonth (typical month), a planned
+    event happens ONCE on a specific date — e.g. '−4 200 € impôts le
+    2026-09-15' or '+1 500 € prime le 2026-12-01'.
+
+    `direction`: 'out' (sortie, default) or 'in' (entrée). `amount` is
+    always stored positive; the sign is derived from direction at
+    projection time.
+
+    `account_id` is optional: when set, the event is attributed to a
+    specific liquid account (e.g. 'je puise dans le Livret A'), which lets
+    the per-account projection stay accurate. When null, it applies to the
+    aggregate liquid balance.
+    """
+    __tablename__ = "planned_events"
+
+    id           = Column(String, primary_key=True, default=_uuid)
+    household_id = Column(String, ForeignKey("households.id", ondelete="CASCADE"), nullable=False, index=True)
+    label        = Column(String, nullable=False)
+    amount       = Column(Float, nullable=False, default=0.0)   # always positive
+    direction    = Column(String, nullable=False, default="out")  # 'in' | 'out'
+    date         = Column(Date, nullable=False, index=True)      # the day it hits
+    account_id   = Column(String, ForeignKey("accounts.id", ondelete="SET NULL"), nullable=True)
+    category_slug = Column(String, nullable=True)
+    notes        = Column(Text, nullable=True, default="")
+
+    created_at   = Column(DateTime, default=datetime.utcnow)
+    updated_at   = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    household    = relationship("Household")

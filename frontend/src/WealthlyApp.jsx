@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react';
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, RadialBarChart, RadialBar, ComposedChart, Sankey, Layer, Rectangle } from 'recharts';
-import { Upload, Plus, TrendingUp, TrendingDown, Wallet, Home, Coins, CreditCard, Users, Settings, Download, Trash2, Edit3, Check, X, ChevronRight, ChevronLeft, ChevronDown, AlertCircle, AlertTriangle, Repeat, Calendar, ArrowUpDown, Eye, EyeOff, Sparkles, PiggyBank, Bitcoin, Banknote, Landmark, BarChart3, Target, Heart, Sun, Moon, Zap, Activity, ArrowUp, ArrowDown, Minus, PartyPopper, Lightbulb, Bell, ChevronUp, Play, Lock, Unlock, LogOut, Cloud, RefreshCw, FileText, FileUp, Calculator, Link2, Unlink, Menu, Search } from 'lucide-react';
+import { Upload, Plus, TrendingUp, TrendingDown, Wallet, Home, Coins, CreditCard, Users, Settings, Download, Trash2, Edit3, Check, X, ChevronRight, ChevronLeft, ChevronDown, AlertCircle, AlertTriangle, Repeat, Calendar, ArrowUpDown, Eye, EyeOff, Sparkles, PiggyBank, Bitcoin, Banknote, Landmark, BarChart3, Target, Heart, Sun, Moon, Zap, Activity, ArrowUp, ArrowDown, Minus, PartyPopper, Lightbulb, Bell, ChevronUp, Play, Lock, Unlock, LogOut, Cloud, RefreshCw, FileText, FileUp, Calculator, Link2, Unlink, Menu, Search, LineChart as LineChartIcon } from 'lucide-react';
 import * as api from './api.js';
 import { useTranslation } from 'react-i18next';
 import { LangButton } from './components/LangButton.jsx';
@@ -47,6 +47,7 @@ import { SettingsView } from './views/Settings.jsx';
 import { Admin } from './views/Admin.jsx';
 import { ImportFlow } from './views/ImportFlow.jsx';
 import { DCAView } from './views/DCA.jsx';
+import { Projection } from './views/Projection.jsx';
 import { dcaApi } from './api.js';
 import { AccountDrawer } from './components/AccountDrawer.jsx';
 import { useTheme, ThemeToggle } from './components/ui/ThemeToggle.jsx';
@@ -192,6 +193,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   const [achievements, setAchievements] = useState([]);
   const [fixedCharges, setFixedCharges] = useState([]);
   const [dcaPlans, setDcaPlans] = useState([]);
+  const [plannedEvents, setPlannedEvents] = useState([]);
   // Mois type est scoped par (foyer, membre). Map { scopeKey: refMonth }.
   // scopeKey = activeMemberId si adulte, sinon 'household' (Famille / compte joint).
   const [refMonthsByScope, setRefMonthsByScope] = useState({});
@@ -569,10 +571,11 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       // Mois type seede depuis demoData (sinon Sankey Monthly vide).
       setRefMonthsByScope({ household: d.refMonth || { version: 1, updated_at: null, lines: [] } });
       dcaApi.list().then(setDcaPlans).catch(() => {});
+      api.plannedEvents.list().then(setPlannedEvents).catch(() => {});
       return;
     }
     try {
-      const [memList, accList, txList, astList, liaList, catList, budList, goalList, achList, ruleList, connList, dcaList, rmData] = await Promise.all([
+      const [memList, accList, txList, astList, liaList, catList, budList, goalList, achList, ruleList, connList, dcaList, rmData, peList, fcList] = await Promise.all([
         api.members.list(),
         api.accounts.list(),
         api.transactions.list(),
@@ -586,6 +589,8 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
         api.banking.listConnections().catch(() => []),
         dcaApi.list().catch(() => []),
         api.refMonth.get().catch(() => ({ version: 1, updated_at: null, lines: [] })),
+        api.plannedEvents.list().catch(() => []),
+        api.fixedCharges.list().catch(() => []),
       ]);
       const mappedAccounts = accList.map(accountFromApi);
       const mappedTx = txList.map(txFromApi);
@@ -610,6 +615,8 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       setCustomRules((ruleList || []).map(r => ({ pattern: r.pattern, categoryId: r.category_slug, source: r.source, _id: r.id })));
       setBankConnections(connList || []);
       setDcaPlans(dcaList || []);
+      setPlannedEvents(peList || []);
+      setFixedCharges(fcList || []);
       // rmData est le Mois type 'Famille' (member_id absent → ménage).
       // Les Mois types personnels des adultes se chargent à la demande quand
       // l'utilisateur switche sur leur onglet.
@@ -2247,6 +2254,33 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     } catch (err) { showToast(t('toasts.genericError', { message: err.message }), 'error'); }
   };
 
+  // ===== Planned events (Vue Projection — événements ponctuels futurs) =====
+  const savePlannedEvent = async (ev) => {
+    try {
+      const payload = {
+        label: ev.label,
+        amount: Math.abs(parseFloat(ev.amount) || 0),
+        direction: ev.direction === 'in' ? 'in' : 'out',
+        date: ev.date,
+        account_id: ev.account_id || null,
+        category_slug: ev.category_slug || null,
+        notes: ev.notes || '',
+      };
+      let saved;
+      if (ev.id) saved = await api.plannedEvents.update(ev.id, payload);
+      else saved = await api.plannedEvents.create(payload);
+      setPlannedEvents(prev => ev.id ? prev.map(p => p.id === ev.id ? saved : p) : [...prev, saved]);
+      return saved;
+    } catch (err) { showToast(t('toasts.genericError', { message: err.message }), 'error'); throw err; }
+  };
+
+  const deletePlannedEvent = async (id) => {
+    try {
+      await api.plannedEvents.delete(id);
+      setPlannedEvents(prev => prev.filter(p => p.id !== id));
+    } catch (err) { showToast(t('toasts.genericError', { message: err.message }), 'error'); }
+  };
+
   const exportData = () => {
     // Export current frontend state as JSON (matches v2 backup format)
     const data = {
@@ -2735,6 +2769,11 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
                className={view === 'dca' ? 'on' : ''}>
               <TrendingUp size={16}/> <span>{t('nav.dca')}</span>
             </a>
+            <a href="#/projection"
+               onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('projection'); }}
+               className={view === 'projection' ? 'on' : ''}>
+              <LineChartIcon size={16}/> <span>{t('nav.projection')}</span>
+            </a>
 
             <div className="ws-nav-group ws-nav-group--with-cta">
               <span className="ws-nav-group-label">{t('nav.group_accounts')}</span>
@@ -2960,6 +2999,16 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             accounts={accounts} members={members}
             dcaPlans={dcaPlans} onPlansChange={setDcaPlans}
             currentUserEmail={currentUser?.email}
+          />
+        )}
+        {view === 'projection' && (
+          <Projection
+            accounts={accounts} accountBalances={accountBalances}
+            liabilities={liabilities} fixedCharges={fixedCharges}
+            dcaPlans={dcaPlans} plannedEvents={plannedEvents}
+            savePlannedEvent={savePlannedEvent} deletePlannedEvent={deletePlannedEvent}
+            categories={categories} members={members}
+            fmt={fmt} currentMonth={currentMonth}
           />
         )}
         {view === 'wealth' && (

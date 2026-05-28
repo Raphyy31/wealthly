@@ -2351,6 +2351,37 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .cashflow-kpi-value { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text-primary); }
 .cashflow-kpi-value.positive { color: var(--success); }
 .cashflow-kpi-value.negative { color: var(--danger); }
+
+/* ── Projection (anticipateur de trésorerie) ─────────────────────────── */
+.projection-accounts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.projection-acc-pill {
+  padding: 5px 12px; border-radius: 999px; font-size: 12px; font-weight: 500;
+  border: 1px solid var(--border); background: var(--bg-card); color: var(--text-tertiary);
+  cursor: pointer; transition: background .15s, color .15s, border-color .15s;
+}
+.projection-acc-pill:hover { border-color: var(--border-strong); }
+.projection-acc-pill.on { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.projection-warning {
+  display: flex; align-items: flex-start; gap: 10px; margin-bottom: 16px;
+  padding: 12px 14px; border-radius: 12px; font-size: 13px; line-height: 1.45;
+  background: color-mix(in srgb, var(--danger) 9%, transparent);
+  border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
+  color: var(--text-primary);
+}
+.projection-warning svg { color: var(--danger); flex-shrink: 0; margin-top: 1px; }
+.projection-event-list { display: flex; flex-direction: column; gap: 4px; }
+.projection-event-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; transition: background .15s; }
+.projection-event-row:hover { background: var(--bg-subtle); }
+.projection-event-icon { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.projection-event-icon.in { color: var(--success); }
+.projection-event-icon.out { color: var(--danger); }
+.projection-event-info { flex: 1; min-width: 0; }
+.projection-event-label { font-size: 14px; font-weight: 500; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.projection-event-meta { font-size: 11px; color: var(--text-tertiary); }
+.projection-event-amount { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.projection-event-amount.positive { color: var(--success); }
+.projection-event-amount.negative { color: var(--danger); }
+.projection-event-actions { display: inline-flex; gap: 2px; flex-shrink: 0; }
 .cashflow-cats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 @media (max-width: 900px) { .cashflow-cats-grid { grid-template-columns: 1fr; } }
 .cashflow-cat-list { display: flex; flex-direction: column; gap: 4px; }
