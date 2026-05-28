@@ -16,6 +16,11 @@ import {
 } from 'recharts';
 import { LineChart as LineChartIcon, AlertTriangle, Plus, Trash2, Pencil, X, Check, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
 import { ResponsiveModal } from '../components/ui/ResponsiveModal.jsx';
+import { AnimatedNumber } from '../components/AnimatedNumber.jsx';
+
+const prefersReducedMotion = () =>
+  typeof window !== 'undefined' &&
+  window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 // Liquid roles that contribute to the cash anticipation. We deliberately
 // exclude 'investissement' (broker) and 'professionnel' (out of personal
@@ -228,9 +233,11 @@ export function Projection({
             return (
               <button
                 key={a.id}
+                type="button"
+                aria-pressed={on}
                 className={`projection-acc-pill ${on ? 'on' : ''}`}
                 onClick={() => toggleAccount(a.id)}
-                title={`${a.name}${a.bank ? ' · ' + a.bank : ''}`}
+                title={`${a.name}${a.bank ? ' · ' + a.bank : ''} — ${on ? 'inclus' : 'exclu'} de la projection`}
               >
                 {a.name}
               </button>
@@ -248,22 +255,26 @@ export function Projection({
       <div className="cashflow-kpi-row" style={{ marginBottom: 16 }}>
         <div className="cashflow-kpi">
           <div className="cashflow-kpi-label">Solde actuel</div>
-          <div className="cashflow-kpi-value">{fmtShort(startBalance)}</div>
+          <div className="cashflow-kpi-value"><AnimatedNumber value={startBalance} format={fmtShort}/></div>
         </div>
         <div className="cashflow-kpi">
           <div className="cashflow-kpi-label">Projeté à {horizon}</div>
-          <div className={`cashflow-kpi-value ${endBalance >= startBalance ? 'positive' : 'negative'}`}>{fmtShort(endBalance)}</div>
+          <div className={`cashflow-kpi-value ${endBalance >= startBalance ? 'positive' : 'negative'}`}>
+            <AnimatedNumber value={endBalance} format={fmtShort}/>
+          </div>
         </div>
         <div className="cashflow-kpi">
           <div className="cashflow-kpi-label">Point bas (creux)</div>
-          <div className={`cashflow-kpi-value ${willGoNegative ? 'negative' : ''}`}>{fmtShort(trough.balance)}</div>
+          <div className={`cashflow-kpi-value ${willGoNegative ? 'negative' : ''}`}>
+            <AnimatedNumber value={trough.balance} format={fmtShort}/>
+          </div>
           <div style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 2 }}>{fmtDate(trough.date)}</div>
         </div>
       </div>
 
       {willGoNegative && (
-        <div className="projection-warning">
-          <AlertTriangle size={18}/>
+        <div className="projection-warning" role="alert">
+          <AlertTriangle size={18} aria-hidden="true"/>
           <span>
             Sur cet horizon, votre solde liquide passe sous zéro le <strong>{fmtDate(trough.date)}</strong>
             {' '}({fmtShort(trough.balance)}). Anticipez un transfert ou décalez une dépense.
@@ -277,6 +288,10 @@ export function Projection({
           <h3>Solde liquide projeté</h3>
           <span className="card-meta">{HORIZONS.find(h => h.key === horizon)?.months} mois · {upcoming.length} événement{upcoming.length > 1 ? 's' : ''} planifié{upcoming.length > 1 ? 's' : ''}</span>
         </div>
+        <p className="sr-only">
+          Solde liquide actuel {fmtShort(startBalance)}, projeté à {fmtShort(endBalance)} dans {horizonMonths} mois.
+          Point bas estimé : {fmtShort(trough.balance)} le {fmtDate(trough.date)}.
+        </p>
         {series.length > 1 ? (
           <ResponsiveContainer width="100%" height={340}>
             <AreaChart data={series} margin={{ top: 10, right: 12, bottom: 0, left: 4 }}>
@@ -299,7 +314,8 @@ export function Projection({
               <ReferenceLine y={0} stroke="var(--negative)" strokeDasharray="4 4" strokeOpacity={0.7}/>
               <Area
                 type="monotone" dataKey="balance" stroke="var(--accent)" strokeWidth={2}
-                fill="url(#projFill)" isAnimationActive={false} dot={false}
+                fill="url(#projFill)" dot={false}
+                isAnimationActive={!prefersReducedMotion()} animationDuration={700} animationEasing="ease-out"
               />
               <ReferenceDot
                 x={trough.date} y={trough.balance} r={5}
