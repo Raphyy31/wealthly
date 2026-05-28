@@ -413,6 +413,22 @@ export const dcaApi = {
 };
 
 // ============================================================================
+// PLANNED EVENTS — one-off future-dated cash movements (Vue Projection)
+// ============================================================================
+export const plannedEvents = {
+  list:   ()         => isDemo() ? Promise.resolve(DEMO_PLANNED_EVENTS) : get('/planned-events'),
+  create: (body)     => post('/planned-events', body),
+  update: (id, body) => put(`/planned-events/${id}`, body),
+  delete: (id)       => del(`/planned-events/${id}`),
+};
+
+// Demo seed so the Projection view shows a meaningful trough in demo mode.
+const DEMO_PLANNED_EVENTS = [
+  { id: 'demo-pe-1', label: 'Impôts sur le revenu', amount: 4200, direction: 'out', date: '2026-09-15', account_id: null, category_slug: 'taxes', notes: '' },
+  { id: 'demo-pe-2', label: 'Prime annuelle', amount: 1800, direction: 'in', date: '2026-12-01', account_id: null, category_slug: null, notes: '' },
+];
+
+// ============================================================================
 // REF MONTH (Mois type) — JSON budget template scoped per (household, member).
 // memberId = null/'all'/'household' → Famille (compte joint).
 // memberId = '<uuid>'              → Mois type personnel de cet adulte.
