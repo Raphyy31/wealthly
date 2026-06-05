@@ -2768,7 +2768,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
               <BarChart3 size={16}/> <span>{t('nav.transactions')}</span>
             </a>
             <div className="ws-nav-group">
-              <span className="ws-nav-group-label">{t('nav.group_gestion')}</span>
+              <span className="ws-nav-group-label">{t('nav.group_budget')}</span>
             </div>
             <a href="#/monthly"
                onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('monthly'); }}
@@ -2780,26 +2780,32 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
                 </span>
               )}
             </a>
-            <a href="#/tax"
-               onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('tax'); }}
-               className={view === 'tax' ? 'on' : ''}>
-              <Calculator size={16}/> <span>{t('nav.tax')}</span>
-            </a>
-            <a href="#/dca"
-               onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('dca'); }}
-               className={view === 'dca' ? 'on' : ''}>
-              <TrendingUp size={16}/> <span>{t('nav.dca')}</span>
-            </a>
             <a href="#/projection"
                onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('projection'); }}
                className={view === 'projection' ? 'on' : ''}>
               <LineChartIcon size={16}/> <span>{t('nav.projection')}</span>
+            </a>
+            <div className="ws-nav-group">
+              <span className="ws-nav-group-label">{t('nav.group_invest')}</span>
+            </div>
+            <a href="#/dca"
+               onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('dca'); }}
+               className={view === 'dca' ? 'on' : ''}>
+              <TrendingUp size={16}/> <span>{t('nav.dca')}</span>
             </a>
             <a href="#/immo"
                onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('immo'); }}
                className={view === 'immo' ? 'on' : ''}>
               <Home size={16}/> <span>{t('nav.immo')}</span>
             </a>
+            <a href="#/tax"
+               onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('tax'); }}
+               className={view === 'tax' ? 'on' : ''}>
+              <Calculator size={16}/> <span>{t('nav.tax')}</span>
+            </a>
+            <div className="ws-nav-group">
+              <span className="ws-nav-group-label">{t('nav.group_documents')}</span>
+            </div>
             <a href="#/vault"
                onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('vault'); }}
                className={view === 'vault' ? 'on' : ''}>
