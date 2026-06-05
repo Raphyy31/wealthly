@@ -2389,6 +2389,29 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .projection-event-amount.positive { color: var(--success); }
 .projection-event-amount.negative { color: var(--danger); }
 .projection-event-actions { display: inline-flex; gap: 2px; flex-shrink: 0; }
+
+/* ── Simulateur immobilier ───────────────────────────────────────────── */
+.immo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+@media (max-width: 900px) { .immo-grid { grid-template-columns: 1fr; } }
+.immo-form { display: flex; flex-direction: column; gap: 12px; }
+.immo-verdict { display: flex; align-items: flex-start; gap: 10px; padding: 11px 13px; border-radius: 10px; font-size: 13px; line-height: 1.45; margin-bottom: 14px; }
+.immo-verdict svg { flex-shrink: 0; margin-top: 1px; }
+.immo-verdict.ok { background: color-mix(in srgb, var(--success) 10%, transparent); color: var(--text-primary); }
+.immo-verdict.ok svg { color: var(--success); }
+.immo-verdict.ko { background: color-mix(in srgb, var(--danger) 10%, transparent); color: var(--text-primary); }
+.immo-verdict.ko svg { color: var(--danger); }
+.cashflow-kpi-value.warning { color: var(--warning); }
+.immo-capacity { display: flex; align-items: flex-start; gap: 9px; margin: 16px 0; padding: 12px 14px; border-radius: 10px; background: var(--accent-soft); color: var(--text-primary); font-size: 13px; line-height: 1.5; }
+.immo-capacity svg { color: var(--accent); flex-shrink: 0; margin-top: 1px; }
+.immo-breakdown { display: flex; flex-direction: column; gap: 2px; }
+.immo-bd-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border-light); font-size: 13px; color: var(--text-secondary); }
+.immo-bd-row b { color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.immo-bd-row.total { border-bottom: none; border-top: 1px solid var(--border-strong); margin-top: 4px; padding-top: 12px; font-weight: 600; }
+.immo-bd-row.total span, .immo-bd-row.total b { color: var(--text-primary); font-size: 14px; }
+.immo-legend { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+.immo-legend-item { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-secondary); }
+.immo-legend-item b { margin-left: auto; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.immo-legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
 .cashflow-cats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 @media (max-width: 900px) { .cashflow-cats-grid { grid-template-columns: 1fr; } }
 .cashflow-cat-list { display: flex; flex-direction: column; gap: 4px; }

@@ -48,6 +48,7 @@ import { Admin } from './views/Admin.jsx';
 import { ImportFlow } from './views/ImportFlow.jsx';
 import { DCAView } from './views/DCA.jsx';
 import { Projection } from './views/Projection.jsx';
+import { ImmoSimulator } from './views/ImmoSimulator.jsx';
 import { dcaApi } from './api.js';
 import { AccountDrawer } from './components/AccountDrawer.jsx';
 import { useTheme, ThemeToggle } from './components/ui/ThemeToggle.jsx';
@@ -2775,6 +2776,11 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
                className={view === 'projection' ? 'on' : ''}>
               <LineChartIcon size={16}/> <span>{t('nav.projection')}</span>
             </a>
+            <a href="#/immo"
+               onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('immo'); }}
+               className={view === 'immo' ? 'on' : ''}>
+              <Home size={16}/> <span>{t('nav.immo')}</span>
+            </a>
 
             <div className="ws-nav-group ws-nav-group--with-cta">
               <span className="ws-nav-group-label">{t('nav.group_accounts')}</span>
@@ -3010,6 +3016,13 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             savePlannedEvent={savePlannedEvent} deletePlannedEvent={deletePlannedEvent}
             categories={categories} members={members}
             fmt={fmt} currentMonth={currentMonth}
+          />
+        )}
+        {view === 'immo' && (
+          <ImmoSimulator
+            fmt={fmt}
+            monthlyIncome={thisMonthStats?.income || 0}
+            monthlyCharges={0}
           />
         )}
         {view === 'wealth' && (
