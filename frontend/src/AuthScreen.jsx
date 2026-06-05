@@ -569,6 +569,7 @@ const css = `
   box-shadow: 0 1px 0 rgba(0,0,0,.3), 0 8px 22px -6px rgba(126,146,255,.4);
 }
 .auth-submit:disabled { opacity: 0.55; cursor: wait; box-shadow: none; }
+.auth-submit:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-soft), 0 0 0 4px var(--accent); }
 
 /* Error / info banners */
 .auth-error, .auth-info {

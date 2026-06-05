@@ -13,7 +13,7 @@ Hierarchy:
 from datetime import datetime, date
 from sqlalchemy import (
     Column, String, Integer, Float, Boolean, DateTime, Date,
-    ForeignKey, Table, JSON, Text, UniqueConstraint, Index
+    ForeignKey, Table, JSON, Text, UniqueConstraint, Index, LargeBinary
 )
 from sqlalchemy.orm import relationship
 import uuid
@@ -745,3 +745,33 @@ class PlannedEvent(Base):
     updated_at   = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     household    = relationship("Household")
+
+
+class Document(Base):
+    """Coffre-fort — un document stocké par l'utilisateur (facture, bail,
+    justificatif, attestation d'assurance…).
+
+    v1 : les octets sont stockés directement en base (LargeBinary), avec un
+    plafond de taille appliqué côté router. Auto-suffisant — aucun bucket ni
+    service externe à configurer. Une v2 pourra migrer vers Supabase Storage
+    (déplacer `data` vers un object store et garder ici l'URL signée).
+
+    Liens optionnels vers un compte ou un actif, pour retrouver le bail d'un
+    bien immobilier ou la facture liée à un compte.
+    """
+    __tablename__ = "documents"
+
+    id            = Column(String, primary_key=True, default=_uuid)
+    household_id  = Column(String, ForeignKey("households.id", ondelete="CASCADE"), nullable=False, index=True)
+    filename      = Column(String, nullable=False)
+    content_type  = Column(String, nullable=False, default="application/octet-stream")
+    size_bytes    = Column(Integer, nullable=False, default=0)
+    category      = Column(String, nullable=True)  # facture | bail | assurance | justificatif | autre
+    account_id    = Column(String, ForeignKey("accounts.id", ondelete="SET NULL"), nullable=True)
+    asset_id      = Column(String, ForeignKey("assets.id", ondelete="SET NULL"), nullable=True)
+    notes         = Column(Text, nullable=True, default="")
+    data          = Column(LargeBinary, nullable=False)  # octets du fichier
+
+    created_at    = Column(DateTime, default=datetime.utcnow)
+
+    household     = relationship("Household")

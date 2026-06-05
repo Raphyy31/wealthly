@@ -2389,6 +2389,46 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .projection-event-amount.positive { color: var(--success); }
 .projection-event-amount.negative { color: var(--danger); }
 .projection-event-actions { display: inline-flex; gap: 2px; flex-shrink: 0; }
+
+/* ── Simulateur immobilier ───────────────────────────────────────────── */
+.immo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+@media (max-width: 900px) { .immo-grid { grid-template-columns: 1fr; } }
+.immo-form { display: flex; flex-direction: column; gap: 12px; }
+.immo-verdict { display: flex; align-items: flex-start; gap: 10px; padding: 11px 13px; border-radius: 10px; font-size: 13px; line-height: 1.45; margin-bottom: 14px; }
+.immo-verdict svg { flex-shrink: 0; margin-top: 1px; }
+.immo-verdict.ok { background: color-mix(in srgb, var(--success) 10%, transparent); color: var(--text-primary); }
+.immo-verdict.ok svg { color: var(--success); }
+.immo-verdict.ko { background: color-mix(in srgb, var(--danger) 10%, transparent); color: var(--text-primary); }
+.immo-verdict.ko svg { color: var(--danger); }
+.cashflow-kpi-value.warning { color: var(--warning); }
+.immo-capacity { display: flex; align-items: flex-start; gap: 9px; margin: 16px 0; padding: 12px 14px; border-radius: 10px; background: var(--accent-soft); color: var(--text-primary); font-size: 13px; line-height: 1.5; }
+.immo-capacity svg { color: var(--accent); flex-shrink: 0; margin-top: 1px; }
+.immo-breakdown { display: flex; flex-direction: column; gap: 2px; }
+.immo-bd-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border-light); font-size: 13px; color: var(--text-secondary); }
+.immo-bd-row b { color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.immo-bd-row.total { border-bottom: none; border-top: 1px solid var(--border-strong); margin-top: 4px; padding-top: 12px; font-weight: 600; }
+.immo-bd-row.total span, .immo-bd-row.total b { color: var(--text-primary); font-size: 14px; }
+.immo-legend { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+.immo-legend-item { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-secondary); }
+.immo-legend-item b { margin-left: auto; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+
+/* ── Coffre-fort documents ───────────────────────────────────────────── */
+.vault-upload { margin-bottom: 16px; }
+.vault-upload-controls { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+.vault-field { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 160px; }
+.vault-field span { font-size: 12px; color: var(--text-tertiary); font-weight: 500; }
+.vault-field select { height: 36px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-elev); color: var(--ink); font-family: inherit; font-size: 13px; }
+.vault-hint { margin: 10px 0 0; font-size: 11.5px; color: var(--text-tertiary); }
+.vault-list { display: flex; flex-direction: column; gap: 6px; }
+.vault-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-elev); transition: border-color .15s, background .15s; }
+.vault-row:hover { border-color: var(--border-strong); background: var(--bg-sunk); }
+.vault-row-icon { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 8px; background: var(--accent-soft); color: var(--accent); flex-shrink: 0; }
+.vault-row-info { flex: 1; min-width: 0; }
+.vault-row-name { font-size: 14px; font-weight: 500; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vault-row-meta { font-size: 11.5px; color: var(--text-tertiary); margin-top: 2px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.vault-badge { display: inline-block; padding: 1px 7px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 10.5px; font-weight: 600; }
+.vault-row-actions { display: inline-flex; gap: 4px; flex-shrink: 0; }
+.immo-legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
 .cashflow-cats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 @media (max-width: 900px) { .cashflow-cats-grid { grid-template-columns: 1fr; } }
 .cashflow-cat-list { display: flex; flex-direction: column; gap: 4px; }
