@@ -34,6 +34,8 @@ import { BankMark } from './components/ui/BankMark.jsx';
 import { useIncomeShift } from './hooks/useIncomeShift.js';
 import { effectiveMonth } from './utils.js';
 import { getTransferType } from './utils.js';
+import { buildInsightsSnapshot } from './utils.js';
+import { AIInsights } from './components/AIInsights.jsx';
 import { AnimatedNumber } from './components/AnimatedNumber.jsx';
 import { SyncProgressBar } from './components/SyncProgressBar.jsx';
 import { PostSyncReviewModal } from './components/PostSyncReviewModal.jsx';
@@ -1227,6 +1229,19 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       projectedNet: projected.income - projected.expenses,
     };
   }, [thisMonthStats, currentMonth]);
+
+  // Snapshot pour le Coach IA (chiffres déterministes, cf buildInsightsSnapshot).
+  const insightsSnapshot = useMemo(() => buildInsightsSnapshot({
+    transactions: visibleTransactions,
+    categories,
+    currentMonth,
+    netWorth,
+    liquidWealth,
+    monthIncome: thisMonthStats.income,
+    monthExpenses: thisMonthStats.expenses,
+    monthSavings: thisMonthStats.savings,
+    currency: baseCurrency || 'EUR',
+  }), [visibleTransactions, categories, currentMonth, netWorth, liquidWealth, thisMonthStats, baseCurrency]);
 
   // ============================================================================
   // ACTIONS — all hit the API
@@ -2955,7 +2970,10 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
           )}
 
           <main ref={contentRef} className="content">
-        {view === 'dashboard' && (
+        {view === 'dashboard' && (<>
+          {onboarded && (visibleTransactions.length > 0 || netWorth !== 0) && (
+            <AIInsights snapshot={insightsSnapshot}/>
+          )}
           <Dashboard
             netWorth={netWorth} liquidWealth={liquidWealth} assetsValue={assetsValue} liabilitiesValue={liabilitiesValue}
             thisMonthStats={thisMonthStats} monthlyEvolution={monthlyEvolution}
@@ -2977,7 +2995,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             baseCurrency={baseCurrency} rates={rates}
             currentUser={currentUser}
           />
-        )}
+        </>)}
         {['monthly','cashflow'].includes(view) && (
           <div className="monthly-hub">
             {view === 'monthly' && (
