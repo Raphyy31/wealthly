@@ -1491,7 +1491,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .reg-caps-foot { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
 
 /* AccountDrawer — slide-in side panel */
-.drawer-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 999; animation: drawerBackdropIn .15s ease-out; }
+.drawer-backdrop { position: fixed; inset: 0; background: rgba(15,14,12,0.5); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); z-index: 999; animation: drawerBackdropIn .15s ease-out; }
 @keyframes drawerBackdropIn { from { opacity: 0; } to { opacity: 1; } }
 .drawer { position: fixed; top: 0; bottom: 0; width: min(440px, 95vw); background: var(--bg-card); z-index: 1000; box-shadow: -16px 0 48px rgba(0,0,0,0.45); display: flex; flex-direction: column; animation: drawerSlideIn .2s cubic-bezier(0.2, 0.8, 0.2, 1); }
 .drawer-right { right: 0; border-left: 1px solid var(--border-strong); }
@@ -2088,8 +2088,8 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .icon-btn-sm.is-on { background: var(--accent-soft); color: var(--accent); }
 
 /* MODAL */
-.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.62); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); animation: modalFadeIn .15s ease-out; }
-.modal { background: var(--bg-card); border-radius: 14px; max-width: 540px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-xl); border: 1px solid var(--border-strong); animation: modalSlideIn .18s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.modal-backdrop { position: fixed; inset: 0; background: rgba(15,14,12,0.55); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); animation: modalFadeIn .15s ease-out; }
+.modal { background: var(--bg-card); border-radius: 16px; max-width: 540px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-xl); border: 1px solid var(--border-strong); animation: modalSlideIn .18s cubic-bezier(0.2, 0.8, 0.2, 1); }
 @keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
 /* Modal entry refondue C11 — scale-only (no translateY) conforme direction visuelle */
 @keyframes modalSlideIn { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
