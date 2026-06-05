@@ -39,7 +39,7 @@ export function LiabilityPatchStyles() {
 
 export function RealEstatePatchStyles() {
   const css = String.raw`
-.re-finary-page { max-width: 880px; }
+.re-finary-page { max-width: 100%; }
 .re-finary-page .loan-finary-head { padding: 22px 26px 0; }
 .re-finary-page .loan-finary-body { padding: 20px 26px 24px; gap: 16px; }
 

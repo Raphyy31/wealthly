@@ -56,7 +56,7 @@ export function LiabilityDetail({ liability, assets, members, memberShare, fmt, 
   const endDate = schedule.length > 0 ? schedule[schedule.length - 1].date : null;
 
   return (
-    <ResponsiveModal open={true} onClose={onClose}>
+    <ResponsiveModal open={true} onClose={onClose} className="modal--detail">
         {/* Top bar — back arrow + name + actions */}
         <header className="loan-finary-topbar">
           <button className="loan-finary-back" onClick={onClose} aria-label="Fermer">

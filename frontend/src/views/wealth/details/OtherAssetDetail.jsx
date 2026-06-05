@@ -25,7 +25,7 @@ export function OtherAssetDetail({ asset, members = [], fmt, onEdit, onClose }) 
     : null;
 
   return (
-    <ResponsiveModal open={true} onClose={onClose}>
+    <ResponsiveModal open={true} onClose={onClose} className="modal--detail">
         <DetailV3Styles/>
 
         <div className="dv3-head">

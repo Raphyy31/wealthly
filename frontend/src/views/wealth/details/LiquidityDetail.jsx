@@ -104,7 +104,7 @@ export function LiquidityDetail({ item, accounts = [], accountBalances = {}, tra
     : 'Compte courant';
 
   return (
-    <ResponsiveModal open={true} onClose={onClose}>
+    <ResponsiveModal open={true} onClose={onClose} className="modal--detail">
         <DetailV3Styles/>
 
         <div className="dv3-head">
