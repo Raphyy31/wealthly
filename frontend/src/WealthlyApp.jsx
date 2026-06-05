@@ -2275,6 +2275,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   };
 
   const deletePlannedEvent = async (id) => {
+    if (!confirm(t('confirms.deletePlannedEvent'))) return;
     try {
       await api.plannedEvents.delete(id);
       setPlannedEvents(prev => prev.filter(p => p.id !== id));

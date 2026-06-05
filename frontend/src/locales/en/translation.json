@@ -70,6 +70,7 @@
     "deleteMember": "Delete this member? Linked accounts and assets will not be deleted.",
     "deleteGoal": "Delete this goal?",
     "deleteFixed": "Delete this fixed charge?",
+    "deletePlannedEvent": "Delete this planned event?",
     "deleteRule": "Delete this rule?",
     "deletePlan": "Delete \"{{name}}\"?",
     "import": "Importing this backup will add its data to your current household (duplicates are skipped). Continue?",

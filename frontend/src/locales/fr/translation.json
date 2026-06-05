@@ -70,6 +70,7 @@
     "deleteMember": "Supprimer ce membre ? Les comptes/actifs liés ne seront pas supprimés.",
     "deleteGoal": "Supprimer cet objectif ?",
     "deleteFixed": "Supprimer cette charge fixe ?",
+    "deletePlannedEvent": "Supprimer cet événement planifié ?",
     "deleteRule": "Supprimer cette règle ?",
     "deletePlan": "Supprimer \"{{name}}\" ?",
     "import": "Importer ce backup ajoutera ses données à votre foyer actuel (les doublons sont ignorés). Continuer ?",

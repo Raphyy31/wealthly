@@ -409,7 +409,10 @@ html, body {
 }
 .ds-btn.ghost { background: transparent; border-color: transparent; }
 .ds-btn.ghost:hover { background: var(--bg-hover); }
-.ds-btn.danger { background: var(--negative); color: #fff; border-color: transparent; }
+/* Danger aligné sur .danger-btn : teinte douce qui se remplit au hover */
+.ds-btn.danger { background: color-mix(in srgb, var(--negative) 12%, transparent); color: var(--negative); border-color: transparent; }
+.ds-btn.danger:hover { background: var(--negative); color: #fff; }
+.ds-btn:disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; box-shadow: none; }
 
 /* Icon button — taille visuelle 32px mais touch target étendu 44pt minimum
    via ::before transparent (sprint mobile 2026-05-19, skill rule §2 touch-target-size).
@@ -440,6 +443,8 @@ html, body {
   box-shadow: var(--focus-ring);
 }
 .ds-icon-btn:hover { background: var(--bg-hover); color: var(--ink); border-color: var(--border-strong); }
+.ds-icon-btn.sm { width: 28px; height: 28px; border-radius: 6px; }
+.ds-icon-btn:disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
 
 /* Inputs */
 .ds-input {
@@ -1720,15 +1725,9 @@ html, body {
   padding: 7px 12px;
   display: inline-flex; align-items: center; gap: 5px;
 }
-.danger-btn {
-  background: transparent;
-  color: var(--negative);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: background var(--t-fast), border-color var(--t-fast);
-}
-.danger-btn:hover { background: color-mix(in oklab, var(--negative) 8%, transparent); border-color: var(--negative); }
+/* .danger-btn — voir la définition unifiée dans Styles.jsx (système boutons).
+   On garde ici uniquement le tweak de rayon hérité du contexte acc-editor. */
+.danger-btn { border-radius: var(--radius-sm); }
 
 .acc-member-chip {
   display: inline-flex; align-items: center; gap: 4px;
@@ -2946,8 +2945,9 @@ html, body {
    FiftyThirtyTwenty modal
    ============================================================================ */
 .ftt-overlay {
-  position: fixed; inset: 0; z-index: 110;
+  position: fixed; inset: 0; z-index: 1000;
   background: rgba(15, 14, 12, 0.55);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
   display: flex; align-items: center; justify-content: center;
   padding: 24px;
 }
@@ -2960,7 +2960,8 @@ html, body {
   box-shadow: 0 20px 60px rgba(15,14,12,.25);
   animation: ftt-pop 200ms ease-out;
 }
-@keyframes ftt-pop { from { transform: translateY(8px) scale(.98); opacity: 0; } to { transform: none; opacity: 1; } }
+/* scale-only — conforme à la charte (pas de translateY sur les modales) */
+@keyframes ftt-pop { from { transform: scale(.97); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 .ftt-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 18px; }
 .ftt-head h2 { margin: 0 0 4px; font: 500 18px var(--font-sans); display: inline-flex; align-items: center; gap: 8px; }
 .ftt-target { margin: 8px 0 18px; }

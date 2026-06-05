@@ -106,50 +106,57 @@ export function Styles({ theme }) {
 .main-nav button.active svg { color: var(--primary); }
 .nav-alert-dot { display: inline-flex; align-items: center; justify-content: center; min-width: 16px; height: 16px; padding: 0 5px; margin-left: 4px; border-radius: 8px; background: var(--danger); color: white; font-size: 10px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
 .header-actions { display: flex; align-items: center; gap: 8px; }
-.icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 10px; background: var(--bg-subtle); border: 1px solid var(--border); color: var(--text-secondary); cursor: pointer; transition: all 0.15s; }
-.icon-btn:hover { background: var(--bg-card-hover); color: var(--text-primary); }
-.icon-btn-sm { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 6px; background: transparent; border: 1px solid transparent; color: var(--text-tertiary); cursor: pointer; transition: all 0.15s; }
-.icon-btn-sm:hover { background: var(--bg-subtle); color: var(--text-primary); }
+/* ============================================================================
+   SYSTÈME DE BOUTONS UNIFIÉ — papier-chaud + cobalt, "Option B" (primary ink).
+   Source de vérité unique. Les anciens noms de classes sont conservés pour que
+   les sélecteurs contextuels (.drawer-footer .primary-btn, etc.) continuent de
+   fonctionner — seules les définitions convergent. Focus-ring WCAG + disabled
+   sur toutes les variantes, tokens dark-aware, ombre cobalt correcte (#2540D9).
+   ============================================================================ */
+.icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 8px; background: var(--bg-elev); border: 1px solid var(--border); color: var(--ink-2); cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s; }
+.icon-btn:hover { background: var(--bg-sunk); color: var(--ink); border-color: var(--border-strong); }
+.icon-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-soft), 0 0 0 4px var(--accent); }
+.icon-btn:disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+.icon-btn-sm { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 6px; background: transparent; border: 1px solid transparent; color: var(--ink-3); cursor: pointer; transition: background 0.15s, color 0.15s; }
+.icon-btn-sm:hover { background: var(--bg-sunk); color: var(--ink); }
+.icon-btn-sm:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-soft), 0 0 0 4px var(--accent); }
+.icon-btn-sm:disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
 
-.primary-btn, .primary-btn-large, .secondary-btn, .danger-btn, .danger-btn-sm { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s; border: 1px solid transparent; font-family: inherit; letter-spacing: -0.005em; }
-.primary-btn {
-  background: linear-gradient(135deg, var(--primary-hover), var(--primary));
-  color: #ffffff;
-  height: 36px; padding: 0 16px;
-  box-shadow: 0 4px 14px rgba(59,111,224,0.30), inset 0 1px 0 rgba(255,255,255,0.15);
-  font-weight: 600;
+.primary-btn, .primary-btn-large, .secondary-btn, .danger-btn, .danger-btn-sm {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 36px; padding: 0 16px; border-radius: 8px;
+  font-family: inherit; font-size: 13px; font-weight: 600; letter-spacing: -0.005em;
+  border: 1px solid transparent; cursor: pointer; white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
 }
-.primary-btn:hover {
-  background: linear-gradient(135deg, var(--primary-hover), var(--primary-hover));
-  box-shadow: 0 6px 20px rgba(59,111,224,0.40), inset 0 1px 0 rgba(255,255,255,0.18);
+.primary-btn:focus-visible, .primary-btn-large:focus-visible, .secondary-btn:focus-visible,
+.danger-btn:focus-visible, .danger-btn-sm:focus-visible, .link-btn:focus-visible {
+  outline: none; box-shadow: 0 0 0 3px var(--accent-soft), 0 0 0 4px var(--accent);
 }
-.primary-btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
-.primary-btn-large {
-  background: linear-gradient(135deg, var(--primary-hover), var(--primary));
-  color: #ffffff;
-  height: 44px; padding: 0 22px;
-  font-size: 14px; font-weight: 600;
-  box-shadow: 0 4px 14px rgba(59,111,224,0.30), inset 0 1px 0 rgba(255,255,255,0.15);
+.primary-btn:disabled, .primary-btn-large:disabled, .secondary-btn:disabled,
+.danger-btn:disabled, .danger-btn-sm:disabled, .link-btn:disabled {
+  opacity: 0.5; cursor: not-allowed; pointer-events: none; box-shadow: none;
 }
-.primary-btn-large:hover {
-  box-shadow: 0 6px 20px rgba(59,111,224,0.40), inset 0 1px 0 rgba(255,255,255,0.18);
+/* Primary — Option B : encre, texte crème, fin halo cobalt */
+.primary-btn, .primary-btn-large {
+  background: var(--ink); color: var(--bg); border-color: transparent;
+  box-shadow: 0 1px 0 rgba(20,20,15,0.04), 0 4px 14px -4px rgba(37,64,217,0.25);
 }
-.secondary-btn {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  color: var(--text-primary);
-  height: 36px; padding: 0 16px;
-  font-weight: 500;
+.primary-btn:hover, .primary-btn-large:hover {
+  background: var(--ink-2);
+  box-shadow: 0 1px 0 rgba(20,20,15,0.04), 0 8px 22px -6px rgba(37,64,217,0.40);
 }
-.secondary-btn:hover {
-  background: var(--bg-card-hover);
-  border-color: var(--border-strong);
-}
-.danger-btn { background: var(--danger-soft); color: var(--danger-text); border: 1px solid transparent; height: 36px; padding: 0 14px; }
-.danger-btn:hover { background: var(--danger); color: white; }
-.danger-btn-sm { padding: 5px 9px; background: var(--danger-soft); color: var(--danger-text); font-size: 12px; border-radius: 6px; }
-.link-btn { background: transparent; border: none; color: var(--primary); font-size: 12px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; padding: 4px 8px; border-radius: 4px; }
-.link-btn:hover { background: var(--primary-soft); }
+.primary-btn-large { height: 44px; padding: 0 22px; font-size: 14px; }
+/* Secondary — discret, bordé */
+.secondary-btn { background: var(--bg-elev); border-color: var(--border); color: var(--ink); }
+.secondary-btn:hover { background: var(--bg-sunk); border-color: var(--border-strong); }
+/* Danger — teinte douce, se remplit au hover */
+.danger-btn { background: color-mix(in srgb, var(--negative) 12%, transparent); color: var(--negative); }
+.danger-btn:hover { background: var(--negative); color: #fff; }
+.danger-btn-sm { height: 30px; padding: 0 10px; font-size: 12px; border-radius: 6px; background: color-mix(in srgb, var(--negative) 12%, transparent); color: var(--negative); }
+.danger-btn-sm:hover { background: var(--negative); color: #fff; }
+/* .link-btn = lien texte souligné cobalt — défini plus bas (drawer-empty-inline).
+   Ici on n'ajoute que le focus-ring (groupe :focus-visible ci-dessus) + disabled. */
 
 .member-bar { padding: 14px 24px 0; background: var(--bg-page); border-bottom: 1px solid var(--border); }
 .member-tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
@@ -1484,7 +1491,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .reg-caps-foot { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
 
 /* AccountDrawer — slide-in side panel */
-.drawer-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 999; animation: drawerBackdropIn .15s ease-out; }
+.drawer-backdrop { position: fixed; inset: 0; background: rgba(15,14,12,0.5); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); z-index: 999; animation: drawerBackdropIn .15s ease-out; }
 @keyframes drawerBackdropIn { from { opacity: 0; } to { opacity: 1; } }
 .drawer { position: fixed; top: 0; bottom: 0; width: min(440px, 95vw); background: var(--bg-card); z-index: 1000; box-shadow: -16px 0 48px rgba(0,0,0,0.45); display: flex; flex-direction: column; animation: drawerSlideIn .2s cubic-bezier(0.2, 0.8, 0.2, 1); }
 .drawer-right { right: 0; border-left: 1px solid var(--border-strong); }
@@ -2081,8 +2088,8 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .icon-btn-sm.is-on { background: var(--accent-soft); color: var(--accent); }
 
 /* MODAL */
-.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.62); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); animation: modalFadeIn .15s ease-out; }
-.modal { background: var(--bg-card); border-radius: 14px; max-width: 540px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-xl); border: 1px solid var(--border-strong); animation: modalSlideIn .18s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.modal-backdrop { position: fixed; inset: 0; background: rgba(15,14,12,0.55); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); animation: modalFadeIn .15s ease-out; }
+.modal { background: var(--bg-card); border-radius: 16px; max-width: 540px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-xl); border: 1px solid var(--border-strong); animation: modalSlideIn .18s cubic-bezier(0.2, 0.8, 0.2, 1); }
 @keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
 /* Modal entry refondue C11 — scale-only (no translateY) conforme direction visuelle */
 @keyframes modalSlideIn { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
