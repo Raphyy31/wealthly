@@ -202,6 +202,14 @@ export function Projection({
 
   // --- Planned event editor state ---
   const [editor, setEditor] = useState(null); // null | {} (new) | {...event} (edit)
+  const [deletingId, setDeletingId] = useState(null);
+
+  const handleDelete = async (id) => {
+    if (deletingId) return;
+    setDeletingId(id);
+    try { await deletePlannedEvent(id); }
+    finally { setDeletingId(null); }
+  };
 
   const fmtShort = (v) => {
     try { return fmt(v); } catch { return `${Math.round(v)} €`; }
@@ -359,7 +367,7 @@ export function Projection({
                   </div>
                   <div className="projection-event-actions">
                     <button className="ds-icon-btn" onClick={() => setEditor(ev)} title="Modifier"><Pencil size={14}/></button>
-                    <button className="ds-icon-btn" onClick={() => deletePlannedEvent(ev.id)} title="Supprimer"><Trash2 size={14}/></button>
+                    <button className="ds-icon-btn" onClick={() => handleDelete(ev.id)} disabled={deletingId === ev.id} title="Supprimer"><Trash2 size={14}/></button>
                   </div>
                 </div>
               );
