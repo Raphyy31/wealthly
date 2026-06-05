@@ -356,6 +356,12 @@ export const formatCurrency = (amount, options = {}) => {
   }).format(amount);
 };
 
+// Élargit le séparateur de milliers pour les très grands nombres (titres hero).
+// Intl fr-FR utilise une espace fine insécable (U+202F) qui devient illisible à
+// 44px avec un letter-spacing serré ("29632,90"). On la remplace par une espace
+// insécable normale (U+00A0), plus large et fiable quelle que soit la police.
+export const wideThousands = (s) => String(s).replace(/\s/g, " ");
+
 // Format FR strict pour les pourcentages : "12,5 %" avec espace insécable
 // fine (U+202F) avant le %, cohérent avec ce que produit Intl.NumberFormat.
 // Options : { digits: 1, sign: false } — sign=true préfixe "+" si positif.

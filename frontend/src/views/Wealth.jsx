@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { ASSET_CLASS_MAP } from '../constants.js';
 import { AnimatedNumber } from '../components/AnimatedNumber.jsx';
+import { wideThousands } from '../utils.js';
 import { NetWorthChart } from '../components/NetWorthChart.jsx';
 import { useWealthItems } from '../hooks/useWealthItems.js';
 import { WealthItemDrawer } from '../components/WealthItemDrawer.jsx';
@@ -262,7 +263,7 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
             <div className="wealth-hero-row">
               <div className="wealth-hero-value-block">
                 <div className="wealth-hero-value num">
-                  <AnimatedNumber value={financialWealthLocal} format={(v) => fmt(v)}/>
+                  <AnimatedNumber value={financialWealthLocal} format={(v) => wideThousands(fmt(v))}/>
                 </div>
                 <div className="wealth-hero-meta">
                   Liquidités, investissements, cryptos · hors immobilier
@@ -308,7 +309,7 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
             <div className="wealth-hero-row">
               <div className="wealth-hero-value-block">
                 <div className={`wealth-hero-value num ${realEstateNetWealth < 0 ? 'neg' : ''}`}>
-                  <AnimatedNumber value={realEstateNetWealth} format={(v) => fmt(v)}/>
+                  <AnimatedNumber value={realEstateNetWealth} format={(v) => wideThousands(fmt(v))}/>
                 </div>
                 <div className="wealth-hero-meta">
                   Valorisation résidence − emprunt résidence
