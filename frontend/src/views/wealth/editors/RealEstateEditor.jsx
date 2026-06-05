@@ -93,7 +93,7 @@ export function RealEstateEditor({ asset, members, liabilities, onSave, onCancel
   })();
 
   return (
-    <ResponsiveModal open={true} onClose={onCancel}> e.stopPropagation()}>
+    <ResponsiveModal open={true} onClose={onCancel}>
         <div className="modal-header">
           <h2>{asset.id ? 'Modifier mon immobilier' : 'Ajouter mon immobilier'}</h2>
           <button className="icon-btn-sm" onClick={onCancel}><X size={16}/></button>

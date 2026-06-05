@@ -25,7 +25,7 @@ export function TotpDisableModal({ onClose }) {
   };
 
   return (
-    <ResponsiveModal open={true} onClose={onClose}> e.stopPropagation()} style={{ maxWidth: 440 }}>
+    <ResponsiveModal open={true} onClose={onClose}>
         <div className="modal-header">
           <h3>Désactiver la 2FA</h3>
           <button className="modal-close" onClick={onClose}>×</button>

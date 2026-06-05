@@ -26,7 +26,7 @@ export function SimpleAssetEditor({ asset, members, onSave, onCancel }) {
   };
   const type = ASSET_TYPES.find(t => t.id === draft.type);
   return (
-    <ResponsiveModal open={true} onClose={onCancel}> e.stopPropagation()}>
+    <ResponsiveModal open={true} onClose={onCancel}>
         <div className="modal-header">
           <h2>{asset.id ? 'Modifier' : 'Nouvel actif'}</h2>
           <button className="icon-btn-sm" onClick={onCancel}><X size={16}/></button>

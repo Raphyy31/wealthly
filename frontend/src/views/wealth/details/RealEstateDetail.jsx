@@ -49,7 +49,7 @@ export function RealEstateDetail({ asset, liabilities = [], members = [], member
   const owners = ownersList(asset.memberIds, members);
 
   return (
-    <ResponsiveModal open={true} onClose={onClose}> e.stopPropagation()}>
+    <ResponsiveModal open={true} onClose={onClose}>
         <div className="loan-finary-head">
           <button className="drawer-back" onClick={onClose}>
             <ChevronLeft size={14}/> Patrimoine · Immobilier

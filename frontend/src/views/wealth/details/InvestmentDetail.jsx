@@ -118,7 +118,7 @@ export function InvestmentDetail({ asset, assets = [], members = [], fmt, onEdit
   };
 
   return (
-    <ResponsiveModal open={true} onClose={onClose}> e.stopPropagation()}>
+    <ResponsiveModal open={true} onClose={onClose}>
         <InvestmentDetailStyles/>
 
         {/* Header */}

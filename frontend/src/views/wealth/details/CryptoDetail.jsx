@@ -56,7 +56,7 @@ export function CryptoDetail({ asset, members = [], fmt, onEdit, onClose, onSync
   };
 
   return (
-    <ResponsiveModal open={true} onClose={onClose}> e.stopPropagation()}>
+    <ResponsiveModal open={true} onClose={onClose}>
         <DetailV3Styles/>
 
         <div className="dv3-head">

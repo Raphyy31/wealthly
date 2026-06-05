@@ -15,7 +15,7 @@ export function CompletePatrimoinePicker({ onClose, onPickAsset, onPickLiability
   ];
   const filtered = items.filter(i => i.name.toLowerCase().includes(filter.toLowerCase()) || i.description.toLowerCase().includes(filter.toLowerCase()));
   return (
-    <ResponsiveModal open={true} onClose={onClose}> e.stopPropagation()}>
+    <ResponsiveModal open={true} onClose={onClose}>
         <div className="modal-header">
           <h2>Compléter mon patrimoine</h2>
           <button className="icon-btn-sm" onClick={onClose}><X size={16}/></button>

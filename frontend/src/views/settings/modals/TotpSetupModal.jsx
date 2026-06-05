@@ -52,7 +52,7 @@ export function TotpSetupModal({ onClose }) {
     : '';
 
   return (
-    <ResponsiveModal open={true} onClose={onClose}> e.stopPropagation()} style={{ maxWidth: 480 }}>
+    <ResponsiveModal open={true} onClose={onClose}>
         <div className="modal-header">
           <h3>Activer l'authentification à 2 facteurs</h3>
           <button className="modal-close" onClick={onClose}>×</button>

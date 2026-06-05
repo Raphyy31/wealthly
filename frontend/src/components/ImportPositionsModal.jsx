@@ -81,7 +81,7 @@ export function ImportPositionsModal({ parentAsset, fmt, onConfirm, onClose }) {
   };
 
   return (
-    <ResponsiveModal open={true} onClose={onClose}> e.stopPropagation()}>
+    <ResponsiveModal open={true} onClose={onClose}>
         <ImportPositionsStyles/>
 
         <div className="ipv3-head">

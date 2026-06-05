@@ -52,7 +52,7 @@ export function LiabilityEditor({ liability, members, assets = [], onSave, onCan
   };
 
   return (
-    <ResponsiveModal open={true} onClose={onCancel}> e.stopPropagation()}>
+    <ResponsiveModal open={true} onClose={onCancel}>
         <div className="modal-header">
           <h2>{liability.id ? 'Modifier l\'emprunt' : 'Ajouter un emprunt'}</h2>
           <button className="icon-btn-sm" onClick={onCancel}><X size={16}/></button>

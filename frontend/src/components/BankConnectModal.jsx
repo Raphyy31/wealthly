@@ -69,7 +69,7 @@ export function BankConnectModal({ onClose }) {
   );
 
   return (
-    <ResponsiveModal open={true} onClose={onClose}> e.stopPropagation()}>
+    <ResponsiveModal open={true} onClose={onClose}>
         <div className="modal-header">
           <h2>🏦 Connecter ma banque</h2>
           <button className="icon-btn-sm" onClick={onClose}><X size={16}/></button>
