@@ -409,7 +409,10 @@ html, body {
 }
 .ds-btn.ghost { background: transparent; border-color: transparent; }
 .ds-btn.ghost:hover { background: var(--bg-hover); }
-.ds-btn.danger { background: var(--negative); color: #fff; border-color: transparent; }
+/* Danger aligné sur .danger-btn : teinte douce qui se remplit au hover */
+.ds-btn.danger { background: color-mix(in srgb, var(--negative) 12%, transparent); color: var(--negative); border-color: transparent; }
+.ds-btn.danger:hover { background: var(--negative); color: #fff; }
+.ds-btn:disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; box-shadow: none; }
 
 /* Icon button — taille visuelle 32px mais touch target étendu 44pt minimum
    via ::before transparent (sprint mobile 2026-05-19, skill rule §2 touch-target-size).
@@ -440,6 +443,8 @@ html, body {
   box-shadow: var(--focus-ring);
 }
 .ds-icon-btn:hover { background: var(--bg-hover); color: var(--ink); border-color: var(--border-strong); }
+.ds-icon-btn.sm { width: 28px; height: 28px; border-radius: 6px; }
+.ds-icon-btn:disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
 
 /* Inputs */
 .ds-input {
@@ -1720,15 +1725,9 @@ html, body {
   padding: 7px 12px;
   display: inline-flex; align-items: center; gap: 5px;
 }
-.danger-btn {
-  background: transparent;
-  color: var(--negative);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: background var(--t-fast), border-color var(--t-fast);
-}
-.danger-btn:hover { background: color-mix(in oklab, var(--negative) 8%, transparent); border-color: var(--negative); }
+/* .danger-btn — voir la définition unifiée dans Styles.jsx (système boutons).
+   On garde ici uniquement le tweak de rayon hérité du contexte acc-editor. */
+.danger-btn { border-radius: var(--radius-sm); }
 
 .acc-member-chip {
   display: inline-flex; align-items: center; gap: 4px;
