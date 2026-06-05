@@ -27,7 +27,7 @@ logging.basicConfig(
 from app.config import settings
 from app.database import engine, Base
 from app.rate_limit import limiter, rate_limit_handler
-from app.routers import auth, members, accounts, transactions, wealth, other, categorize, banking, admin, quotes, fixed_charges, dca, ref_month, payees, totp, planned_events
+from app.routers import auth, members, accounts, transactions, wealth, other, categorize, banking, admin, quotes, fixed_charges, dca, ref_month, payees, totp, planned_events, documents
 
 logger = logging.getLogger("wealthly")
 
@@ -384,3 +384,4 @@ app.include_router(ref_month.router)
 app.include_router(payees.router)
 app.include_router(totp.router)
 app.include_router(planned_events.router)
+app.include_router(documents.router)

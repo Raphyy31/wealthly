@@ -49,6 +49,7 @@ import { ImportFlow } from './views/ImportFlow.jsx';
 import { DCAView } from './views/DCA.jsx';
 import { Projection } from './views/Projection.jsx';
 import { ImmoSimulator } from './views/ImmoSimulator.jsx';
+import { Vault } from './views/Vault.jsx';
 import { dcaApi } from './api.js';
 import { AccountDrawer } from './components/AccountDrawer.jsx';
 import { useTheme, ThemeToggle } from './components/ui/ThemeToggle.jsx';
@@ -195,6 +196,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   const [fixedCharges, setFixedCharges] = useState([]);
   const [dcaPlans, setDcaPlans] = useState([]);
   const [plannedEvents, setPlannedEvents] = useState([]);
+  const [documents, setDocuments] = useState([]);
   // Mois type est scoped par (foyer, membre). Map { scopeKey: refMonth }.
   // scopeKey = activeMemberId si adulte, sinon 'household' (Famille / compte joint).
   const [refMonthsByScope, setRefMonthsByScope] = useState({});
@@ -573,6 +575,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       setRefMonthsByScope({ household: d.refMonth || { version: 1, updated_at: null, lines: [] } });
       dcaApi.list().then(setDcaPlans).catch(() => {});
       api.plannedEvents.list().then(setPlannedEvents).catch(() => {});
+      setDocuments([]);
       return;
     }
     try {
@@ -618,6 +621,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       setDcaPlans(dcaList || []);
       setPlannedEvents(peList || []);
       setFixedCharges(fcList || []);
+      api.documents.list().then(setDocuments).catch(() => {});
       // rmData est le Mois type 'Famille' (member_id absent → ménage).
       // Les Mois types personnels des adultes se chargent à la demande quand
       // l'utilisateur switche sur leur onglet.
@@ -2781,6 +2785,11 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
                className={view === 'immo' ? 'on' : ''}>
               <Home size={16}/> <span>{t('nav.immo')}</span>
             </a>
+            <a href="#/vault"
+               onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('vault'); }}
+               className={view === 'vault' ? 'on' : ''}>
+              <Lock size={16}/> <span>{t('nav.vault')}</span>
+            </a>
 
             <div className="ws-nav-group ws-nav-group--with-cta">
               <span className="ws-nav-group-label">{t('nav.group_accounts')}</span>
@@ -3023,6 +3032,14 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             fmt={fmt}
             monthlyIncome={thisMonthStats?.income || 0}
             monthlyCharges={0}
+          />
+        )}
+        {view === 'vault' && (
+          <Vault
+            documents={documents} accounts={accounts}
+            onUploaded={(doc) => setDocuments(prev => [doc, ...prev])}
+            onDeleted={(id) => setDocuments(prev => prev.filter(d => d.id !== id))}
+            showToast={showToast}
           />
         )}
         {view === 'wealth' && (
