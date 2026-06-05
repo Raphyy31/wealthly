@@ -2428,6 +2428,29 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .vault-row-meta { font-size: 11.5px; color: var(--text-tertiary); margin-top: 2px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .vault-badge { display: inline-block; padding: 1px 7px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 10.5px; font-weight: 600; }
 .vault-row-actions { display: inline-flex; gap: 4px; flex-shrink: 0; }
+
+/* ── Coach IA + Alertes ──────────────────────────────────────────────── */
+.ai-insights { margin-bottom: 16px; background: linear-gradient(180deg, var(--accent-soft) 0%, var(--bg-elev) 60%); }
+.ai-insights-title { display: inline-flex; align-items: center; gap: 7px; }
+.ai-insights-title svg { color: var(--accent); }
+.ai-skeleton { display: flex; flex-direction: column; gap: 8px; padding: 6px 0; }
+.ai-skel-line { height: 12px; border-radius: 6px; background: linear-gradient(90deg, var(--bg-sunk) 25%, var(--border) 37%, var(--bg-sunk) 63%); background-size: 400% 100%; animation: aiShimmer 1.4s ease infinite; }
+.ai-skel-line.short { width: 60%; }
+@keyframes aiShimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+.ai-empty { font-size: 13px; color: var(--text-tertiary); margin: 6px 0; font-family: 'Newsreader', Georgia, serif; font-style: italic; }
+.ai-alerts { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.ai-alert { display: flex; align-items: flex-start; gap: 9px; padding: 10px 12px; border-radius: 8px; font-size: 13px; line-height: 1.4; }
+.ai-alert svg { flex-shrink: 0; margin-top: 1px; }
+.ai-alert.warn { background: color-mix(in srgb, var(--warning) 12%, transparent); color: var(--text-primary); }
+.ai-alert.warn svg { color: var(--warning); }
+.ai-alert.info { background: var(--bg-sunk); color: var(--text-secondary); }
+.ai-alert.info svg { color: var(--accent); }
+.ai-coach { display: flex; flex-direction: column; gap: 12px; }
+.ai-coach-item { display: flex; align-items: flex-start; gap: 10px; }
+.ai-coach-item svg { color: var(--accent); flex-shrink: 0; margin-top: 2px; }
+.ai-coach-item-title { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.ai-coach-item-body { font-size: 13px; color: var(--text-secondary); line-height: 1.45; margin-top: 1px; }
+.ai-foot { font-size: 11px; color: var(--text-tertiary); margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--border-light); }
 .immo-legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
 .cashflow-cats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 @media (max-width: 900px) { .cashflow-cats-grid { grid-template-columns: 1fr; } }

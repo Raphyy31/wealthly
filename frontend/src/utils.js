@@ -490,6 +490,80 @@ export const monthKey = (dateStr) => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 };
 
+// Construit le snapshot envoyé à /ai/insights. TOUS les chiffres sont calculés
+// ici (déterministe) — l'IA ne fait que la synthèse/formulation. Détecte aussi
+// les signaux d'alerte factuels (pics de dépense par catégorie, creux de tréso).
+export const buildInsightsSnapshot = ({
+  transactions = [], categories = [], currentMonth,
+  netWorth = null, liquidWealth = null,
+  monthIncome = 0, monthExpenses = 0, monthSavings = 0,
+  troughAmount = null, troughDate = null, currency = 'EUR',
+}) => {
+  const round = (v) => (v == null ? null : Math.round(v));
+  const fmtInt = (v) => `${Math.round(Math.abs(v))}`.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' €';
+  const catName = (id) => {
+    const c = categories.find(x => x.slug === id || x.id === id);
+    return c?.name || 'Autre';
+  };
+  const shiftMonth = (mk, delta) => {
+    const [y, m] = mk.split('-').map(Number);
+    const d = new Date(y, m - 1 + delta, 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  };
+  const prev3 = [1, 2, 3].map(k => shiftMonth(currentMonth, -k));
+
+  // Somme des dépenses par (catégorie, mois)
+  const byCat = {};
+  transactions.forEach(t => {
+    if (!t || t.amount >= 0) return; // dépenses uniquement
+    const mk = monthKey(t.date);
+    const cid = t.categoryId || 'uncategorized';
+    (byCat[cid] = byCat[cid] || {});
+    byCat[cid][mk] = (byCat[cid][mk] || 0) + Math.abs(t.amount);
+  });
+
+  const top = Object.entries(byCat).map(([cid, months]) => {
+    const cur = months[currentMonth] || 0;
+    const avg3 = prev3.reduce((s, m) => s + (months[m] || 0), 0) / 3;
+    return { name: catName(cid), amount: round(cur), avg3m: round(avg3) };
+  }).filter(c => c.amount > 0).sort((a, b) => b.amount - a.amount).slice(0, 5);
+
+  const alert_signals = [];
+  top.forEach(c => {
+    if (c.avg3m > 0 && c.amount > c.avg3m * 1.4 && (c.amount - c.avg3m) > 50) {
+      const pct = Math.round((c.amount / c.avg3m - 1) * 100);
+      alert_signals.push({
+        kind: 'category_spike', severity: 'warn',
+        label: `${c.name} : ${fmtInt(c.amount)} ce mois (+${pct} % vs ta moyenne)`,
+        amount: c.amount,
+      });
+    }
+  });
+  if (troughAmount != null && troughAmount < 0) {
+    alert_signals.push({
+      kind: 'low_runway', severity: 'warn',
+      label: `Trésorerie projetée sous zéro (${fmtInt(troughAmount)})${troughDate ? ` le ${troughDate}` : ''}`,
+      amount: round(troughAmount),
+    });
+  }
+
+  const savings_rate_pct = monthIncome > 0 ? Math.round((monthSavings / monthIncome) * 100) : null;
+
+  return {
+    currency,
+    net_worth: round(netWorth),
+    liquid_wealth: round(liquidWealth),
+    savings_rate_pct,
+    month_income: round(monthIncome),
+    month_expenses: round(monthExpenses),
+    month_savings: round(monthSavings),
+    top_categories: top,
+    alert_signals,
+    projection_trough_amount: round(troughAmount),
+    projection_trough_date: troughDate || null,
+  };
+};
+
 export const dayOfMonth = (dateStr) => {
   const d = new Date(dateStr);
   return d.getDate();

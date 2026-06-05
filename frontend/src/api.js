@@ -468,6 +468,24 @@ export const documents = {
 };
 
 // ============================================================================
+// AI INSIGHTS — coach patrimoine + alertes (Claude Haiku côté backend)
+// ============================================================================
+const DEMO_INSIGHTS = {
+  coach: [
+    { title: 'Épargne solide', body: 'Tu épargnes 24 % de tes revenus ce mois-ci — au-dessus du repère des 20 %.' },
+    { title: 'Patrimoine net', body: 'Ton patrimoine net progresse régulièrement sur les 12 derniers mois.' },
+  ],
+  alerts: [
+    { severity: 'warn', text: 'Restaurants : 320 € ce mois (+45 % vs ta moyenne).' },
+  ],
+  ai_used: false, ai_available: false,
+};
+
+export const insights = {
+  get: (snapshot) => isDemo() ? Promise.resolve(DEMO_INSIGHTS) : post('/ai/insights', snapshot),
+};
+
+// ============================================================================
 // REF MONTH (Mois type) — JSON budget template scoped per (household, member).
 // memberId = null/'all'/'household' → Famille (compte joint).
 // memberId = '<uuid>'              → Mois type personnel de cet adulte.
