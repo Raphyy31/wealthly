@@ -83,7 +83,7 @@ Il complète `CLAUDE.md` (contexte projet) et `docs/PLAN_2026-05-18.md`
 
 | ID | Titre | Effort | Statut |
 |---|---|---|---|
-| RLS-1 | **Row Level Security Postgres** sur toutes les tables — defense-in-depth si `DATABASE_URL` leakerait | L | ⏳ Planifié |
+| RLS-1 | **Row Level Security Postgres** sur toutes les tables — defense-in-depth si `DATABASE_URL` leakerait | L | ✅ **ACTIF en prod (2026-06-06)** — migration `0013_enable_rls` (ENABLE+FORCE RLS + policy RESTRICTIVE FOR ALL sur 20 tables) + middleware `set_config('app.current_household_id')` dans `get_current_user` + rôle Supabase `wealthly_app` (NOBYPASSRLS) sur `DATABASE_URL` Railway. Vérifié : 8 tables rls_active+rls_force=true, rôle bypassrls=false, app lit ses données. Procédure : `docs/RLS_ACTIVATION.md` |
 | H4 | **Invalidation JWT après changement de mot de passe** (champ `password_version` sur User) | M | ⏳ À faire |
 | H1 | **Validation X-Forwarded-For** contre liste de proxies Railway de confiance (sinon spoof IP bypass lockout) | S | ⏳ À faire |
 
