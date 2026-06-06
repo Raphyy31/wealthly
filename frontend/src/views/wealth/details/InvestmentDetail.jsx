@@ -4,13 +4,13 @@
 // telles quelles (styles inv-v3-* injectés dans le corps).
 // ============================================================================
 import React, { useState, useMemo } from 'react';
-import { BarChart3, RefreshCw, Upload } from 'lucide-react';
+import { BarChart3, RefreshCw, Upload, PieChart } from 'lucide-react';
 import { ownersList, positionColor, formatQty } from '../utils.js';
 import { InvestmentDetailStyles } from '../styles.jsx';
 import { LivePricesFooter } from '../components/LivePricesFooter.jsx';
 import { EditableNumCell } from '../components/EditableNumCell.jsx';
 import { useLiveQuotes, relTimeFromTs } from '../../../utils/marketPrices.js';
-import { DetailShell, DetailSection } from '../components/DetailShell.jsx';
+import { DetailShell, DetailSection, DetailInsight, DetailDonut } from '../components/DetailShell.jsx';
 
 export function InvestmentDetail({ asset, assets = [], members = [], fmt, onEdit, onClose, onSyncPositions, onImportCSV, onUpdatePosition }) {
   const positions = useMemo(
@@ -91,6 +91,13 @@ export function InvestmentDetail({ asset, assets = [], members = [], fmt, onEdit
     isPEA && { label: 'Plafond PEA', value: `${Math.round((invested / 150000) * 100)} %`, sub: 'de 150 000 €' },
   ].filter(Boolean);
 
+  const allocDonut = [
+    ...rows.map(r => ({ name: r.name, value: Math.round(r.value), color: r.color, meta: currentValue > 0 ? `${Math.round((r.value / currentValue) * 100)} %` : null })),
+    cashAvailable > 0 && { name: 'Liquidités', value: Math.round(cashAvailable), color: 'var(--d6)', meta: currentValue > 0 ? `${Math.round((cashAvailable / currentValue) * 100)} %` : null },
+  ].filter(Boolean);
+  const topPos = rows[0] || null;
+  const topWeight = topPos && currentValue > 0 ? (topPos.value / currentValue) * 100 : 0;
+
   return (
     <DetailShell
       breadcrumb="Patrimoine · Investissements"
@@ -117,6 +124,18 @@ export function InvestmentDetail({ asset, assets = [], members = [], fmt, onEdit
       </>}
     >
       <InvestmentDetailStyles/>
+      {hasPositions && topPos && (
+        <DetailInsight icon={<PieChart size={15}/>}>
+          {rows.length > 1
+            ? <><strong>{topPos.name}</strong> est ta plus grosse ligne : <strong>{Math.round(topWeight)} %</strong> du compte.</>
+            : <>Performance <strong>{plLatente >= 0 ? '+' : ''}{pct(plLatentePct)}</strong> ({plLatente >= 0 ? '+' : ''}{fmt(plLatente)}) sur ton investissement.</>}
+        </DetailInsight>
+      )}
+      {hasPositions && allocDonut.length > 1 && (
+        <DetailSection title="Allocation">
+          <DetailDonut data={allocDonut} fmt={fmt} centerLabel="Valorisation" centerValue={fmt(currentValue)}/>
+        </DetailSection>
+      )}
       {hasPositions ? (
         <DetailSection title="Positions" aside={onImportCSV ? <button className="ds-btn" onClick={() => onImportCSV(asset)} title="Importer un relevé (CSV / XLSX)">Importer</button> : null}>
           <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: -6, marginBottom: 10 }}>Triées par valorisation décroissante</div>

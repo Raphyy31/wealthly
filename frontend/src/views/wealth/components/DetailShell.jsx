@@ -16,7 +16,8 @@
 //   </DetailShell>
 // ============================================================================
 import React from 'react';
-import { ChevronLeft, X, Pencil } from 'lucide-react';
+import { ChevronLeft, X, Pencil, Sparkles } from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { ResponsiveModal } from '../../../components/ui/ResponsiveModal.jsx';
 
 export function DetailShell({
@@ -130,6 +131,72 @@ export function DetailProgress({ pct, label, accent = 'var(--accent)' }) {
     <div className="dsh-progress-wrap">
       <div className="dsh-progress"><div className="dsh-progress-fill" style={{ width: `${v}%`, background: accent }}/></div>
       {label && <div className="dsh-progress-legend">{label}</div>}
+    </div>
+  );
+}
+
+// Encart d'insight — UNE phrase contextuelle à valeur ajoutée (vision client).
+// tone: 'accent' (défaut) | 'positive' | 'warning'.
+export function DetailInsight({ icon, tone = 'accent', children }) {
+  return (
+    <div className={`dsh-insight ${tone}`}>
+      <span className="dsh-insight-icon">{icon || <Sparkles size={15}/>}</span>
+      <span>{children}</span>
+    </div>
+  );
+}
+
+// Donut + légende — pour les répartitions qui éclairent vraiment (allocation
+// d'un compte-titres, composition du coût d'un crédit…).
+export function DetailDonut({ data, fmt, centerLabel, centerValue }) {
+  const items = (data || []).filter(d => d && d.value > 0);
+  if (items.length === 0) return null;
+  return (
+    <div className="dsh-donut">
+      <div className="dsh-donut-chart">
+        <ResponsiveContainer width="100%" height={172}>
+          <PieChart>
+            <Pie data={items} dataKey="value" innerRadius={54} outerRadius={80} paddingAngle={2} stroke="none">
+              {items.map((d, i) => <Cell key={i} fill={d.color}/>)}
+            </Pie>
+          </PieChart>
+        </ResponsiveContainer>
+        {centerValue != null && (
+          <div className="dsh-donut-center">
+            <span className="dsh-donut-center-label">{centerLabel}</span>
+            <span className="dsh-donut-center-value w-num">{centerValue}</span>
+          </div>
+        )}
+      </div>
+      <div className="dsh-donut-legend">
+        {items.map((d, i) => (
+          <div key={i} className="dsh-donut-leg">
+            <span className="dsh-donut-dot" style={{ background: d.color }}/>
+            <span className="dsh-donut-leg-name">{d.name}</span>
+            {d.meta && <span className="dsh-donut-leg-meta">{d.meta}</span>}
+            <span className="dsh-donut-leg-val w-num">{fmt ? fmt(d.value) : d.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Barre "pont" prix d'achat → valeur actuelle (plus-value visualisée).
+export function DetailBridge({ base, gain, fmt, baseLabel = "Coût d'acquisition", gainLabel = 'Plus-value' }) {
+  const total = base + Math.max(0, gain);
+  const basePct = total > 0 ? (base / total) * 100 : 100;
+  const positive = gain >= 0;
+  return (
+    <div className="dsh-bridge">
+      <div className="dsh-bridge-bar">
+        <div className="dsh-bridge-base" style={{ width: `${positive ? basePct : 100}%` }}/>
+        {positive && gain > 0 && <div className="dsh-bridge-gain" style={{ width: `${100 - basePct}%` }}/>}
+      </div>
+      <div className="dsh-bridge-labels">
+        <span><span className="dsh-bridge-dot base"/>{baseLabel} <b className="w-num">{fmt(base)}</b></span>
+        <span className={positive ? 'pos' : 'neg'}><span className="dsh-bridge-dot gain"/>{gainLabel} <b className="w-num">{gain >= 0 ? '+' : ''}{fmt(gain)}</b></span>
+      </div>
     </div>
   );
 }
@@ -261,6 +328,43 @@ const DSH_CSS = String.raw`
 .dsh-list-amount.pos { color: var(--positive); }
 .dsh-list-amount.neg { color: var(--negative); }
 .dsh-chart-pad { margin: 0 -4px; }
+
+/* Insight — encart phrase à valeur ajoutée */
+.dsh-insight { display: flex; align-items: flex-start; gap: 10px; padding: 13px 15px; border-radius: 12px; font-size: 13.5px; line-height: 1.5; color: var(--text-primary); }
+.dsh-insight-icon { display: inline-flex; flex-shrink: 0; margin-top: 1px; }
+.dsh-insight strong, .dsh-insight b { font-weight: 600; }
+.dsh-insight.accent { background: var(--accent-soft); }
+.dsh-insight.accent .dsh-insight-icon { color: var(--accent); }
+.dsh-insight.positive { background: color-mix(in srgb, var(--positive) 11%, transparent); }
+.dsh-insight.positive .dsh-insight-icon { color: var(--positive); }
+.dsh-insight.warning { background: color-mix(in srgb, var(--warning) 13%, transparent); }
+.dsh-insight.warning .dsh-insight-icon { color: var(--warning); }
+
+/* Donut + légende */
+.dsh-donut { display: grid; grid-template-columns: 180px 1fr; gap: 20px; align-items: center; }
+@media (max-width: 560px) { .dsh-donut { grid-template-columns: 1fr; } }
+.dsh-donut-chart { position: relative; }
+.dsh-donut-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+.dsh-donut-center-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-tertiary); }
+.dsh-donut-center-value { font-size: 17px; font-weight: 600; color: var(--ink); margin-top: 2px; }
+.dsh-donut-legend { display: flex; flex-direction: column; gap: 9px; }
+.dsh-donut-leg { display: flex; align-items: center; gap: 9px; font-size: 13px; }
+.dsh-donut-dot { width: 9px; height: 9px; border-radius: 3px; flex-shrink: 0; }
+.dsh-donut-leg-name { color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dsh-donut-leg-meta { color: var(--text-tertiary); font-size: 11.5px; }
+.dsh-donut-leg-val { margin-left: auto; color: var(--ink); font-weight: 500; flex-shrink: 0; }
+
+/* Bridge — prix d'achat → valeur actuelle */
+.dsh-bridge-bar { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: var(--bg-subtle); }
+.dsh-bridge-base { background: var(--accent); }
+.dsh-bridge-gain { background: var(--positive); }
+.dsh-bridge-labels { display: flex; justify-content: space-between; gap: 16px; margin-top: 10px; font-size: 12.5px; color: var(--text-secondary); flex-wrap: wrap; }
+.dsh-bridge-labels b { color: var(--ink); }
+.dsh-bridge-labels .pos b { color: var(--positive); }
+.dsh-bridge-labels .neg b { color: var(--negative); }
+.dsh-bridge-dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; }
+.dsh-bridge-dot.base { background: var(--accent); }
+.dsh-bridge-dot.gain { background: var(--positive); }
 
 /* Footer */
 .dsh-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding-top: 4px; }

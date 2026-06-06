@@ -10,7 +10,8 @@ import {
 import { ChevronRight, Home, Users, BarChart3 } from 'lucide-react';
 import { formatCurrency, formatDate, buildAmortization } from '../../../utils.js';
 import { LiabilityPatchStyles } from '../styles.jsx';
-import { DetailShell } from '../components/DetailShell.jsx';
+import { DetailShell, DetailSection, DetailInsight, DetailDonut } from '../components/DetailShell.jsx';
+import { CalendarCheck } from 'lucide-react';
 
 export function LiabilityDetail({ liability, assets, members, memberShare, fmt, onEdit, onClose, onOpenLinkedAsset }) {
   const l = liability;
@@ -46,6 +47,19 @@ export function LiabilityDetail({ liability, assets, members, memberShare, fmt, 
   const breakdownTotal = breakdownCapital + breakdownInterest + breakdownInsurance;
   const endDate = schedule.length > 0 ? schedule[schedule.length - 1].date : null;
 
+  // Composition du coût sur toute la durée (pour l'insight + le donut).
+  const totalInterest = schedule.reduce((s, r) => s + r.interest, 0);
+  const totalInsurance = schedule.reduce((s, r) => s + r.insurance, 0);
+  const appFees = parseFloat(l.applicationFees) || 0;
+  const creditCost = totalInterest + totalInsurance + appFees;
+  const costPctOfPrincipal = principal > 0 ? (creditCost / principal) * 100 : 0;
+  const costDonut = [
+    { name: 'Capital emprunté', value: Math.round(principal), color: 'var(--d1)' },
+    { name: 'Intérêts', value: Math.round(totalInterest), color: 'var(--d3)' },
+    { name: 'Assurance', value: Math.round(totalInsurance), color: 'var(--d4)' },
+    { name: 'Frais de dossier', value: Math.round(appFees), color: 'var(--d6)' },
+  ];
+
   const kpis = [
     { label: "Taux d'intérêt", value: l.interestRate ? `${parseFloat(l.interestRate).toFixed(2)} %` : '—' },
     { label: 'Mensualité', value: fmt(monthlyPayment) },
@@ -76,6 +90,9 @@ export function LiabilityDetail({ liability, assets, members, memberShare, fmt, 
       <LiabilityPatchStyles/>
       {activeTab === 'synthese' && (
         <>
+          <DetailInsight icon={<CalendarCheck size={15}/>}>
+            Prêt soldé en <strong>{endDate ? formatDate(endDate, { format: 'monthLong' }) : '—'}</strong>. Coût total du crédit : <strong>{fmt(creditCost)}</strong> ({costPctOfPrincipal.toFixed(0)} % du capital emprunté), dont <strong>{fmt(totalInterest)}</strong> d'intérêts.
+          </DetailInsight>
           <div className="loan-finary-grid">
             <div className="loan-finary-chart">
               {schedule.length > 0 ? (
@@ -134,6 +151,12 @@ export function LiabilityDetail({ liability, assets, members, memberShare, fmt, 
               <div className="loan-cost-meta"><strong className="w-num">{(100 - pctRepaid).toFixed(0)} %</strong> du capital encore dû</div>
             </div>
           </div>
+
+          {creditCost > 0 && (
+            <DetailSection title="Composition du coût" aside={<span style={{ fontSize: 13, color: 'var(--text-tertiary)', fontWeight: 400 }}>sur toute la durée</span>}>
+              <DetailDonut data={costDonut} fmt={fmt} centerLabel="Total déboursé" centerValue={fmt(principal + creditCost)}/>
+            </DetailSection>
+          )}
 
           {linkedAsset && (
             <button className="loan-finary-linked" onClick={() => onOpenLinkedAsset && onOpenLinkedAsset(linkedAsset)} title={onOpenLinkedAsset ? "Voir le détail de l'actif" : ''} disabled={!onOpenLinkedAsset}>

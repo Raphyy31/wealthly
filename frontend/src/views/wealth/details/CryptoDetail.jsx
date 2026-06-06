@@ -2,12 +2,12 @@
 // CryptoDetail — fiche détail crypto-actif (cours live). Migré sur DetailShell.
 // ============================================================================
 import React, { useState } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, TrendingUp } from 'lucide-react';
 import { formatDate } from '../../../utils.js';
 import { ownersList, formatCryptoQty, cryptoColor } from '../utils.js';
 import { LivePricesFooter } from '../components/LivePricesFooter.jsx';
 import { useLiveQuotes, cryptoToYahoo, relTimeFromTs } from '../../../utils/marketPrices.js';
-import { DetailShell, DetailSection } from '../components/DetailShell.jsx';
+import { DetailShell, DetailSection, DetailInsight } from '../components/DetailShell.jsx';
 
 export function CryptoDetail({ asset, members = [], fmt, onEdit, onClose, onSync }) {
   const quantity = parseFloat(asset.quantity) || 0;
@@ -85,6 +85,11 @@ export function CryptoDetail({ asset, members = [], fmt, onEdit, onClose, onSync
         )}
       </>}
     >
+      {invested > 0 && (
+        <DetailInsight icon={<TrendingUp size={15}/>} tone={plLatente >= 0 ? 'positive' : 'warning'}>
+          Cours actuel <strong>{plLatente >= 0 ? '+' : ''}{pct(plLatentePct)}</strong> vs ton prix de revient — <strong>{fmt(unitPrice)}</strong> contre {fmt(purchasePrice)} l'unité.
+        </DetailInsight>
+      )}
       {asset.notes && (
         <DetailSection title="Notes">
           <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{asset.notes}</div>
