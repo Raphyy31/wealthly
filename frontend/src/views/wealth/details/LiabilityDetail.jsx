@@ -79,10 +79,13 @@ export function LiabilityDetail({ liability, assets, members, memberShare, fmt, 
       breadcrumb="Patrimoine · Crédits"
       onClose={onClose}
       onEdit={onEdit}
-      eyebrow="Crédit"
+      heroIcon={<Home size={32} strokeWidth={1.8}/>}
+      eyebrow={linkedAsset ? 'Crédit immobilier' : 'Crédit'}
       title={l.name}
-      subtitle={owners ? <><Users size={12} style={{ verticalAlign: '-1px' }}/> {owners}</> : null}
+      subtitle={owners ? <><Users size={13} style={{ verticalAlign: '-2px' }}/> {owners}</> : null}
+      valueLabel="Capital restant dû"
       value={fmt(remainingCapital)}
+      valueSub={principal > 0 ? `sur ${fmt(principal)} empruntés` : null}
       delta={{ text: `${pctRepaid.toFixed(0)} % remboursé`, positive: true }}
       kpis={kpis}
       headerExtra={tabs}

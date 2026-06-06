@@ -38,11 +38,13 @@ export function OtherAssetDetail({ asset, members = [], fmt, onEdit, onClose }) 
       breadcrumb="Patrimoine · Autres actifs"
       onClose={onClose}
       onEdit={onEdit ? () => onEdit() : undefined}
-      icon={<Sparkles size={13}/>}
+      heroIcon={<Sparkles size={32} strokeWidth={1.8}/>}
       eyebrow={subtypeLabel}
       title={<>{first} {rest.length ? <em>{rest.join(' ')}.</em> : null}</>}
       subtitle={<><span className="dv3-badge">Manuel</span>{owners && <span>· {owners}</span>}</>}
+      valueLabel="Valeur estimée"
       value={fmt(currentValue)}
+      valueSub={asset.purchaseDate ? `Acquis le ${formatDate(asset.purchaseDate)}` : null}
       delta={purchasePrice > 0 ? { text: `${plLatente >= 0 ? '+' : ''}${fmt(plLatente)} · ${pct(plLatentePct)}`, positive: plLatente >= 0 } : null}
       kpis={kpis}
     >

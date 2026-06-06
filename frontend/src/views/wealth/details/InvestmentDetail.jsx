@@ -4,7 +4,7 @@
 // telles quelles (styles inv-v3-* injectés dans le corps).
 // ============================================================================
 import React, { useState, useMemo } from 'react';
-import { BarChart3, RefreshCw, Upload, PieChart } from 'lucide-react';
+import { BarChart3, RefreshCw, Upload, PieChart, TrendingUp } from 'lucide-react';
 import { ownersList, positionColor, formatQty } from '../utils.js';
 import { InvestmentDetailStyles } from '../styles.jsx';
 import { LivePricesFooter } from '../components/LivePricesFooter.jsx';
@@ -103,6 +103,7 @@ export function InvestmentDetail({ asset, assets = [], members = [], fmt, onEdit
       breadcrumb="Patrimoine · Investissements"
       onClose={onClose}
       onEdit={onEdit ? () => onEdit() : undefined}
+      heroIcon={<TrendingUp size={32} strokeWidth={1.8}/>}
       eyebrow={subtypeLabel}
       title={<>{first} <em>{rest.join(' ') || ''}.</em></>}
       subtitle={<>
@@ -111,7 +112,9 @@ export function InvestmentDetail({ asset, assets = [], members = [], fmt, onEdit
         {owners && <span>· {owners}</span>}
         {lastFetchedAt && <span>· maj il y a {relTimeFromTs(lastFetchedAt)}</span>}
       </>}
+      valueLabel="Valorisation totale"
       value={fmt(currentValue)}
+      valueSub={invested > 0 ? `${fmt(invested)} investis` : null}
       delta={invested > 0 ? { text: `${plLatente >= 0 ? '+' : ''}${fmt(plLatente)} · ${pct(plLatentePct)}`, positive: plLatente >= 0 } : null}
       kpis={kpis}
       footer={<>

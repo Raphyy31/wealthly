@@ -22,7 +22,8 @@ import { ResponsiveModal } from '../../../components/ui/ResponsiveModal.jsx';
 
 export function DetailShell({
   open = true, onClose, breadcrumb, onEdit, editLabel = 'Modifier',
-  icon, eyebrow, title, subtitle, value, delta, kpis = [],
+  icon, heroIcon, eyebrow, title, subtitle, value, valueLabel, valueSub, delta,
+  heroExtra, kpis = [],
   headerExtra, footer, children,
 }) {
   return (
@@ -46,8 +47,9 @@ export function DetailShell({
           </div>
         </div>
 
-        {/* Hero */}
+        {/* Hero affirmé : pastille XL + GROS titre + bloc valeur ou visuel libre */}
         <div className="dsh-hero">
+          {heroIcon && <div className="dsh-hero-icon">{heroIcon}</div>}
           <div className="dsh-hero-left">
             {(icon || eyebrow) && (
               <div className="dsh-eyebrow">
@@ -58,16 +60,18 @@ export function DetailShell({
             <h2 className="dsh-title">{title}</h2>
             {subtitle && <div className="dsh-sub">{subtitle}</div>}
           </div>
-          {(value != null) && (
+          {heroExtra ? heroExtra : (value != null && (
             <div className="dsh-hero-right">
+              {valueLabel && <div className="dsh-eyebrow-r">{valueLabel}</div>}
               <div className="dsh-value w-num">{value}</div>
+              {valueSub && <div className="dsh-sub" style={{ justifyContent: 'flex-end', marginTop: 6 }}>{valueSub}</div>}
               {delta && (
                 <div className={`dsh-delta ${delta.positive ? 'pos' : 'neg'}`}>
                   {delta.text}
                 </div>
               )}
             </div>
-          )}
+          ))}
         </div>
 
         {/* Bande de KPI */}
@@ -244,54 +248,79 @@ const DSH_CSS = String.raw`
 }
 .dsh-close:hover { background: var(--bg-subtle); color: var(--text-primary); }
 
-/* Hero */
+/* HERO AFFIRMÉ — fond papier-chaud légèrement teinté cobalt, titre 42px */
 .dsh-hero {
-  display: grid; grid-template-columns: 1fr auto; gap: 28px; align-items: end;
-  padding: 26px 28px 22px;
+  position: relative;
+  display: grid; grid-template-columns: auto 1fr auto; gap: 24px; align-items: center;
+  padding: 32px 32px 28px;
+  background:
+    radial-gradient(ellipse at top right, rgba(37,64,217,0.06), transparent 50%),
+    linear-gradient(180deg, #FBFAF6 0%, var(--bg-card) 100%);
+  border-bottom: 1px solid var(--border);
 }
-@media (max-width: 640px) { .dsh-hero { grid-template-columns: 1fr; gap: 14px; align-items: start; } }
+@media (max-width: 720px) { .dsh-hero { grid-template-columns: 1fr; gap: 16px; padding: 24px 22px 20px; } }
 .dsh-hero-left { min-width: 0; }
+.dsh-hero-icon {
+  width: 64px; height: 64px; border-radius: 16px;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+  color: #fff;
+  display: inline-flex; align-items: center; justify-content: center;
+  box-shadow: 0 8px 24px -8px rgba(37,64,217,0.5), inset 0 1px 0 rgba(255,255,255,0.2);
+  flex-shrink: 0;
+}
+@media (max-width: 720px) { .dsh-hero-icon { width: 48px; height: 48px; border-radius: 12px; } }
 .dsh-eyebrow {
   display: inline-flex; align-items: center; gap: 6px;
-  font-size: 11px; font-weight: 500; color: var(--accent);
-  background: var(--accent-soft); padding: 3px 10px; border-radius: 999px;
+  font-size: 11px; font-weight: 600; color: var(--accent);
+  background: var(--accent-soft); padding: 4px 11px; border-radius: 999px;
+  letter-spacing: 0.02em;
 }
 .dsh-eyebrow-icon { display: inline-flex; }
 .dsh-title {
-  margin: 12px 0 0; font-family: var(--font-sans); font-weight: 500;
-  font-size: 26px; line-height: 1.12; letter-spacing: -0.02em; color: var(--ink);
+  margin: 10px 0 4px; font-family: var(--font-sans); font-weight: 600;
+  font-size: 42px; line-height: 1.05; letter-spacing: -0.03em; color: var(--ink);
 }
-.dsh-title em { font-family: 'Newsreader', Georgia, serif; font-style: italic; font-weight: 400; }
-.dsh-sub { margin-top: 6px; font-size: 13px; color: var(--text-tertiary); display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+@media (max-width: 720px) { .dsh-title { font-size: 30px; } }
+.dsh-title em { font-family: 'Newsreader', Georgia, serif; font-style: italic; font-weight: 500; color: var(--ink); }
+.dsh-sub { margin-top: 6px; font-size: 13.5px; color: var(--text-secondary); display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .dsh-hero-right { text-align: right; }
-@media (max-width: 640px) { .dsh-hero-right { text-align: left; } }
+@media (max-width: 720px) { .dsh-hero-right { text-align: left; } }
+.dsh-eyebrow-r { font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--text-tertiary); font-weight: 600; }
 .dsh-value {
-  font-family: var(--font-sans); font-weight: 500; font-size: 34px; line-height: 1.05;
-  letter-spacing: -0.025em; color: var(--ink); word-spacing: 0.05em;
+  font-family: 'Newsreader', Georgia, serif; font-style: italic; font-weight: 500;
+  font-size: 48px; line-height: 1; letter-spacing: -0.02em; color: var(--ink);
+  margin-top: 8px; font-variant-numeric: tabular-nums;
 }
+@media (max-width: 720px) { .dsh-value { font-size: 36px; } }
 .dsh-delta {
-  display: inline-flex; margin-top: 8px; padding: 4px 10px; border-radius: 999px;
+  display: inline-flex; margin-top: 10px; padding: 5px 12px; border-radius: 999px;
   font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums;
 }
 .dsh-delta.pos { background: color-mix(in srgb, var(--positive) 14%, transparent); color: var(--positive); }
 .dsh-delta.neg { background: color-mix(in srgb, var(--negative) 14%, transparent); color: var(--negative); }
 
-/* Bande de KPI */
+/* BAND DE KPI COLORÉS (cartes avec barre verticale, pas plats) */
 .dsh-kpis {
-  display: grid; grid-template-columns: repeat(var(--dsh-kpi-count, 4), 1fr);
-  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
-  margin: 0 28px;
+  display: grid; grid-template-columns: repeat(var(--dsh-kpi-count, 4), 1fr); gap: 12px;
+  padding: 18px 32px; background: var(--bg-sunk); border-bottom: 1px solid var(--border);
+  margin: 0;
 }
-@media (max-width: 720px) { .dsh-kpis { grid-template-columns: repeat(2, 1fr); } }
-.dsh-kpi { padding: 14px 18px; border-left: 1px solid var(--border); }
-.dsh-kpi:first-child { padding-left: 0; border-left: none; }
-@media (max-width: 720px) {
-  .dsh-kpi { border-left: none; padding: 12px 0; border-top: 1px solid var(--border); }
-  .dsh-kpi:first-child, .dsh-kpi:nth-child(2) { border-top: none; }
+@media (max-width: 720px) { .dsh-kpis { grid-template-columns: repeat(2, 1fr); padding: 14px 22px; } }
+.dsh-kpi {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+  padding: 14px 16px; position: relative; overflow: hidden;
 }
-.dsh-kpi-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-tertiary); font-weight: 500; }
-.dsh-kpi-value { font-size: 18px; font-weight: 500; color: var(--ink); margin-top: 6px; letter-spacing: -0.01em; }
-.dsh-kpi-sub { font-size: 11.5px; color: var(--text-tertiary); margin-top: 3px; }
+.dsh-kpi::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: var(--accent);
+}
+.dsh-kpi:nth-child(2)::before { background: var(--positive); }
+.dsh-kpi:nth-child(3)::before { background: var(--warning); }
+.dsh-kpi:nth-child(4)::before { background: var(--ink-2); }
+.dsh-kpi:nth-child(5)::before { background: var(--accent); }
+.dsh-kpi-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-tertiary); font-weight: 600; }
+.dsh-kpi-value { font-size: 22px; font-weight: 600; color: var(--ink); margin-top: 6px; letter-spacing: -0.015em; line-height: 1.1; }
+.dsh-kpi-sub { font-size: 11.5px; color: var(--text-tertiary); margin-top: 4px; }
 
 /* Corps */
 .dsh-body { padding: 22px 28px 26px; display: flex; flex-direction: column; gap: 16px; }
@@ -329,16 +358,35 @@ const DSH_CSS = String.raw`
 .dsh-list-amount.neg { color: var(--negative); }
 .dsh-chart-pad { margin: 0 -4px; }
 
-/* Insight — encart phrase à valeur ajoutée */
-.dsh-insight { display: flex; align-items: flex-start; gap: 10px; padding: 13px 15px; border-radius: 12px; font-size: 13.5px; line-height: 1.5; color: var(--text-primary); }
-.dsh-insight-icon { display: inline-flex; flex-shrink: 0; margin-top: 1px; }
-.dsh-insight strong, .dsh-insight b { font-weight: 600; }
-.dsh-insight.accent { background: var(--accent-soft); }
-.dsh-insight.accent .dsh-insight-icon { color: var(--accent); }
-.dsh-insight.positive { background: color-mix(in srgb, var(--positive) 11%, transparent); }
-.dsh-insight.positive .dsh-insight-icon { color: var(--positive); }
-.dsh-insight.warning { background: color-mix(in srgb, var(--warning) 13%, transparent); }
-.dsh-insight.warning .dsh-insight-icon { color: var(--warning); }
+/* Insight — encart phrase à valeur ajoutée, icône XL en pastille */
+.dsh-insight {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 16px 18px; border-radius: 12px;
+  font-size: 14px; line-height: 1.55; color: var(--text-primary);
+  border: 1px solid transparent;
+}
+.dsh-insight-icon {
+  width: 34px; height: 34px; flex-shrink: 0; border-radius: 10px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: #fff;
+  box-shadow: 0 4px 12px -4px currentColor;
+}
+.dsh-insight strong, .dsh-insight b { font-weight: 600; color: var(--ink); }
+.dsh-insight.accent {
+  background: linear-gradient(135deg, var(--accent-soft) 0%, rgba(231,235,255,0.4) 100%);
+  border-color: rgba(37,64,217,0.18);
+}
+.dsh-insight.accent .dsh-insight-icon { background: var(--accent); }
+.dsh-insight.positive {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--positive) 13%, transparent) 0%, color-mix(in srgb, var(--positive) 5%, transparent) 100%);
+  border-color: color-mix(in srgb, var(--positive) 22%, transparent);
+}
+.dsh-insight.positive .dsh-insight-icon { background: var(--positive); }
+.dsh-insight.warning {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--warning) 14%, transparent) 0%, color-mix(in srgb, var(--warning) 5%, transparent) 100%);
+  border-color: color-mix(in srgb, var(--warning) 22%, transparent);
+}
+.dsh-insight.warning .dsh-insight-icon { background: var(--warning); }
 
 /* Donut + légende */
 .dsh-donut { display: grid; grid-template-columns: 180px 1fr; gap: 20px; align-items: center; }

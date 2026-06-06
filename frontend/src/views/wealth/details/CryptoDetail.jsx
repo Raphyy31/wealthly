@@ -45,8 +45,9 @@ export function CryptoDetail({ asset, members = [], fmt, onEdit, onClose, onSync
   };
 
   const [first, ...rest] = (asset.name || '').split(' ');
-  const logo = (
-    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, borderRadius: 999, background: cryptoColor(ticker || asset.name), color: '#fff', fontSize: 9, fontWeight: 700 }}>
+  const cryptoColorBg = cryptoColor(ticker || asset.name);
+  const logoXL = (
+    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 64, height: 64, borderRadius: 16, background: cryptoColorBg, color: '#fff', fontSize: 16, fontWeight: 700, letterSpacing: '0.02em' }}>
       {(ticker || asset.name || '?').slice(0, 3)}
     </span>
   );
@@ -64,7 +65,7 @@ export function CryptoDetail({ asset, members = [], fmt, onEdit, onClose, onSync
       breadcrumb="Patrimoine · Cryptos"
       onClose={onClose}
       onEdit={onEdit ? () => onEdit() : undefined}
-      icon={logo}
+      heroIcon={logoXL}
       eyebrow="Crypto-actif"
       title={<>{first} <em>{rest.join(' ') || ticker || ''}.</em></>}
       subtitle={<>
@@ -73,7 +74,9 @@ export function CryptoDetail({ asset, members = [], fmt, onEdit, onClose, onSync
         {owners && <span>· {owners}</span>}
         {liveQuote?.fetchedAt && <span>· maj il y a {relTimeFromTs(liveQuote.fetchedAt)}</span>}
       </>}
+      valueLabel="Valorisation actuelle"
       value={fmt(currentValue)}
+      valueSub={quantity > 0 ? `${formatCryptoQty(quantity)} ${ticker || ''}` : null}
       delta={invested > 0 ? { text: `${plLatente >= 0 ? '+' : ''}${fmt(plLatente)} · ${pct(plLatentePct)}`, positive: plLatente >= 0 } : null}
       kpis={kpis}
       footer={<>

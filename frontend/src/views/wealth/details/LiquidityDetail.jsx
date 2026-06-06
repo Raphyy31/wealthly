@@ -5,7 +5,7 @@ import React, { useMemo } from 'react';
 import {
   AreaChart, Area, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts';
-import { BarChart3 } from 'lucide-react';
+import { BarChart3, PiggyBank, Wallet } from 'lucide-react';
 import { formatCurrency, formatDate } from '../../../utils.js';
 import { ownersList, splitTitle, DV3_TOOLTIP } from '../utils.js';
 import { DetailShell, DetailSection, DetailProgress, DetailInsight } from '../components/DetailShell.jsx';
@@ -91,10 +91,13 @@ export function LiquidityDetail({ item, accounts = [], accountBalances = {}, tra
       breadcrumb="Patrimoine · Liquidités"
       onClose={onClose}
       onEdit={onEdit ? () => onEdit() : undefined}
+      heroIcon={isLivret ? <PiggyBank size={32} strokeWidth={1.8}/> : <Wallet size={32} strokeWidth={1.8}/>}
       eyebrow={`${typeLabel}${bank ? ` · ${bank}` : ''}`}
       title={<>{st.head} <em>{st.tail}.</em></>}
       subtitle={<><span className={`dv3-badge ${syncMode === 'synced' ? 'pos' : ''}`}>{syncMode === 'synced' ? '⚡ Synchronisé' : 'Manuel'}</span>{owners && <span>· {owners}</span>}</>}
+      valueLabel="Solde actuel"
       value={fmt(balance)}
+      valueSub={isLivret ? `Plafond ${livretLabel} : ${fmt(livretCap)}` : null}
       delta={isAccount && last30.length > 0 ? { text: `${net30 >= 0 ? '+' : ''}${fmt(net30)} · 30 j`, positive: net30 >= 0 } : null}
       kpis={kpis}
     >

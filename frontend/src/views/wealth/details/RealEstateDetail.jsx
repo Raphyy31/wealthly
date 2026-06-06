@@ -54,11 +54,13 @@ export function RealEstateDetail({ asset, liabilities = [], members = [], member
       breadcrumb="Patrimoine · Immobilier"
       onClose={onClose}
       onEdit={onEdit ? () => onEdit(asset) : undefined}
-      icon={<Home size={13}/>}
+      heroIcon={<Home size={32} strokeWidth={1.8}/>}
       eyebrow={subtypeLabel}
       title={asset.name}
-      subtitle={<>{asset.address && <span>{asset.address}</span>}{owners && <span>· <Users size={12} style={{ verticalAlign: '-1px' }}/> {owners}</span>}</>}
+      subtitle={<>{asset.address && <span>{asset.address}</span>}{owners && <span>· <Users size={13} style={{ verticalAlign: '-2px' }}/> {owners}</span>}</>}
+      valueLabel="Valeur estimée"
       value={fmt(currentValue)}
+      valueSub={surface > 0 && pricePerM2 > 0 ? `${fmt(pricePerM2)} / m²` : null}
       delta={totalAcquisitionCost > 0 ? { text: `${plLatente >= 0 ? '+' : ''}${fmt(plLatente)} · ${pct(plLatentePct)}`, positive: plLatente >= 0 } : null}
       kpis={kpis}
     >
