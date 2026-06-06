@@ -482,7 +482,8 @@ const DEMO_INSIGHTS = {
 };
 
 export const insights = {
-  get: (snapshot) => isDemo() ? Promise.resolve(DEMO_INSIGHTS) : post('/ai/insights', snapshot),
+  // force=true (bouton rafraîchir) → ignore le cache serveur 24h (compte au plafond).
+  get: (snapshot, force = false) => isDemo() ? Promise.resolve(DEMO_INSIGHTS) : post('/ai/insights', { ...snapshot, force }),
 };
 
 // ============================================================================

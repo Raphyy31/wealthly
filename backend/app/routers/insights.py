@@ -26,6 +26,7 @@ from app.auth import get_current_user
 from app.models import User
 from app.config import settings
 from app.rate_limit import limiter
+from app.services.ai_budget import under_cap, record_use, coach_cache_get, coach_cache_set
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
@@ -57,6 +58,7 @@ class InsightsRequest(BaseModel):
     alert_signals: list[AlertSignal] = Field(default_factory=list)
     projection_trough_amount: Optional[float] = None
     projection_trough_date: Optional[str] = None
+    force: bool = False  # true = bouton "rafraîchir" → ignore le cache (compte au plafond)
 
 
 class CoachItem(BaseModel):
@@ -122,8 +124,33 @@ def ai_insights(
     if not ai_available:
         return _deterministic_fallback(payload)
 
+    hh = current_user.household_id
+
+    # 1) Cache 24h (sauf si l'utilisateur force via le bouton rafraîchir).
+    if not payload.force:
+        cached = coach_cache_get(db, hh)
+        if cached:
+            return InsightsResponse(
+                coach=[CoachItem(**c) for c in cached.get("coach", [])],
+                alerts=[AlertItem(**a) for a in cached.get("alerts", [])],
+                ai_used=True, ai_available=True,
+            )
+
+    # 2) Plafond mensuel atteint → fallback déterministe.
+    if not under_cap(db, hh):
+        fb = _deterministic_fallback(payload)
+        fb.ai_available = True
+        return fb
+
+    # 3) Appel réel (Sonnet), on compte + on met en cache.
     try:
-        return _insights_with_claude(payload)
+        res = _insights_with_claude(payload)
+        record_use(db, hh)
+        coach_cache_set(db, hh, {
+            "coach": [c.model_dump() for c in res.coach],
+            "alerts": [a.model_dump() for a in res.alerts],
+        })
+        return res
     except Exception:
         # Jamais d'erreur 500 au client pour un panneau secondaire — fallback.
         fb = _deterministic_fallback(payload)
@@ -180,7 +207,7 @@ Réponds UNIQUEMENT avec un objet JSON valide de cette forme, sans texte autour 
 }}"""
 
     message = client.messages.create(
-        model="claude-haiku-4-5-20251001",
+        model=settings.AI_MODEL_COACH,
         max_tokens=1024,
         messages=[{"role": "user", "content": prompt}],
     )

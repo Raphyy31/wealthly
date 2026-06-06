@@ -140,12 +140,14 @@ def categorize(
     ai_used = False
     ai_available = bool(settings.ANTHROPIC_API_KEY)
 
-    # Pass 2: Claude Haiku for unmatched
-    if unmatched and settings.ANTHROPIC_API_KEY:
+    # Pass 2: Claude Haiku for unmatched — bloqué si plafond mensuel atteint.
+    from app.services.ai_budget import under_cap, record_use
+    if unmatched and settings.ANTHROPIC_API_KEY and under_cap(db, current_user.household_id):
         try:
             ai_results = _categorize_with_claude(unmatched, list(valid_slugs))
             results.update(ai_results)
             ai_used = True
+            record_use(db, current_user.household_id)
         except Exception:
             # Fallback: mark remaining as uncategorized
             for tx in unmatched:
@@ -216,7 +218,7 @@ Exemple : {{"SOHO PIZZA": "restaurants", "SNCF INTERNET": "transport"}}
 Ne fournis aucune explication, uniquement le JSON."""
 
     message = client.messages.create(
-        model="claude-haiku-4-5-20251001",
+        model=settings.AI_MODEL_CATEGORIZE,
         max_tokens=1024,
         messages=[{"role": "user", "content": prompt}],
     )
