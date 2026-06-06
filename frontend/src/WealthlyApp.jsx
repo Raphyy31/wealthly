@@ -1454,7 +1454,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
         candidates.map(t => ({ label: t.label, amount: t.amount }))
       );
       if (!res || !res.ai_used) {
-        showToast("Catégorisation IA indisponible — clé API manquante ou plafond mensuel atteint.", 'warning');
+        showToast("IA serveur indisponible (clé manquante ou plafond atteint). Utilise « Sans clé » pour la méthode gratuite.", 'warning');
         return;
       }
       const updates = [];
@@ -3146,6 +3146,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             onConsumeInitialFilter={() => setTxInitialAccountFilter(null)}
             onCategorizeAI={categorizeViaServerAI}
             aiCatRunning={aiCatRunning}
+            onOpenAiPrompt={() => setShowAiPromptModal(true)}
             onAfterSync={handleAfterSync}
           />
         )}

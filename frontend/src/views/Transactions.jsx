@@ -8,7 +8,7 @@
 import { useState, useMemo, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { Search, ArrowUpDown, Repeat, Trash2, Filter, X, RotateCcw, Sparkles, Plus, Download, ArrowLeftRight, PiggyBank, CreditCard, Inbox, FilterX } from 'lucide-react';
+import { Search, ArrowUpDown, Repeat, Trash2, Filter, X, RotateCcw, Sparkles, Plus, Download, ArrowLeftRight, PiggyBank, CreditCard, Inbox, FilterX, Copy } from 'lucide-react';
 import { formatDate, getTransferType, getTransferDestAccountId, buildTransferDestTag, ACCOUNT_ROLES } from '../utils.js';
 import { gsap } from '../utils/gsapSetup.js';
 import { AnimatedNumber } from '../components/AnimatedNumber.jsx';
@@ -294,7 +294,7 @@ function TxFilterPanel({ children, onClose }) {
   );
 }
 
-export function Transactions({ transactions, accounts, categories, members = [], recurringIds, toggleRecurring, transferIds = new Set(), setTransferOverride, updateCategory, updateTags, deleteTransaction, createTransaction, fmt, initialAccountFilter, onConsumeInitialFilter, onCategorizeAI, aiCatRunning = false, onAfterSync }) {
+export function Transactions({ transactions, accounts, categories, members = [], recurringIds, toggleRecurring, transferIds = new Set(), setTransferOverride, updateCategory, updateTags, deleteTransaction, createTransaction, fmt, initialAccountFilter, onConsumeInitialFilter, onCategorizeAI, aiCatRunning = false, onOpenAiPrompt, onAfterSync }) {
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
   // Seed the account filter on mount if the parent passed one (e.g. coming
@@ -529,19 +529,33 @@ export function Transactions({ transactions, accounts, categories, members = [],
           <button className="ds-btn ghost tx-hdr-btn" onClick={exportCsv} title={`Exporter les ${filtered.length} transactions visibles en CSV`}>
             <Download size={14}/> <span className="tx-hdr-label">Export CSV</span>
           </button>
-          {onCategorizeAI && (() => {
+          {(onCategorizeAI || onOpenAiPrompt) && (() => {
             const uncatCount = transactions.filter(tx => (!tx.categoryId || tx.categoryId === 'uncategorized') && !transferIds.has(tx.id) && (tx.label || '').trim()).length;
             return (
-              <button
-                className={`ds-btn tx-hdr-btn ${uncatCount > 0 ? 'primary' : 'ghost'}`}
-                onClick={onCategorizeAI}
-                title="Catégorise automatiquement les transactions non catégorisées (IA serveur, quota maîtrisé)"
-                disabled={uncatCount === 0 || aiCatRunning}
-              >
-                <Sparkles size={14} className={aiCatRunning ? 'spin' : ''}/>
-                <span className="tx-hdr-label">{aiCatRunning ? 'Catégorisation…' : 'Catégoriser via IA'}</span>
-                {uncatCount > 0 && !aiCatRunning && <span className="ds-btn-badge">{uncatCount}</span>}
-              </button>
+              <>
+                {onCategorizeAI && (
+                  <button
+                    className={`ds-btn tx-hdr-btn ${uncatCount > 0 ? 'primary' : 'ghost'}`}
+                    onClick={onCategorizeAI}
+                    title="Catégorise automatiquement en un clic (IA serveur, quota maîtrisé). Nécessite la clé API."
+                    disabled={uncatCount === 0 || aiCatRunning}
+                  >
+                    <Sparkles size={14} className={aiCatRunning ? 'spin' : ''}/>
+                    <span className="tx-hdr-label">{aiCatRunning ? 'Catégorisation…' : 'Catégoriser via IA'}</span>
+                    {uncatCount > 0 && !aiCatRunning && <span className="ds-btn-badge">{uncatCount}</span>}
+                  </button>
+                )}
+                {onOpenAiPrompt && (
+                  <button
+                    className="ds-btn ghost tx-hdr-btn"
+                    onClick={onOpenAiPrompt}
+                    title="Méthode gratuite, sans clé API : génère un prompt à coller dans ton Claude.ai / ChatGPT, puis recolle la réponse."
+                    disabled={uncatCount === 0 || aiCatRunning}
+                  >
+                    <Copy size={14}/> <span className="tx-hdr-label">Sans clé</span>
+                  </button>
+                )}
+              </>
             );
           })()}
         </div>
