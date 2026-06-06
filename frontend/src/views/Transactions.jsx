@@ -294,7 +294,7 @@ function TxFilterPanel({ children, onClose }) {
   );
 }
 
-export function Transactions({ transactions, accounts, categories, members = [], recurringIds, toggleRecurring, transferIds = new Set(), setTransferOverride, updateCategory, updateTags, deleteTransaction, createTransaction, fmt, initialAccountFilter, onConsumeInitialFilter, onOpenAiPrompt, onAfterSync }) {
+export function Transactions({ transactions, accounts, categories, members = [], recurringIds, toggleRecurring, transferIds = new Set(), setTransferOverride, updateCategory, updateTags, deleteTransaction, createTransaction, fmt, initialAccountFilter, onConsumeInitialFilter, onCategorizeAI, aiCatRunning = false, onAfterSync }) {
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
   // Seed the account filter on mount if the parent passed one (e.g. coming
@@ -529,17 +529,18 @@ export function Transactions({ transactions, accounts, categories, members = [],
           <button className="ds-btn ghost tx-hdr-btn" onClick={exportCsv} title={`Exporter les ${filtered.length} transactions visibles en CSV`}>
             <Download size={14}/> <span className="tx-hdr-label">Export CSV</span>
           </button>
-          {onOpenAiPrompt && (() => {
+          {onCategorizeAI && (() => {
             const uncatCount = transactions.filter(tx => (!tx.categoryId || tx.categoryId === 'uncategorized') && !transferIds.has(tx.id) && (tx.label || '').trim()).length;
             return (
               <button
                 className={`ds-btn tx-hdr-btn ${uncatCount > 0 ? 'primary' : 'ghost'}`}
-                onClick={onOpenAiPrompt}
-                title="Génère un prompt à coller dans Claude/ChatGPT pour catégoriser en lot (sans clé API)"
-                disabled={uncatCount === 0}
+                onClick={onCategorizeAI}
+                title="Catégorise automatiquement les transactions non catégorisées (IA serveur, quota maîtrisé)"
+                disabled={uncatCount === 0 || aiCatRunning}
               >
-                <Sparkles size={14}/> <span className="tx-hdr-label">Catégoriser via IA</span>
-                {uncatCount > 0 && <span className="ds-btn-badge">{uncatCount}</span>}
+                <Sparkles size={14} className={aiCatRunning ? 'spin' : ''}/>
+                <span className="tx-hdr-label">{aiCatRunning ? 'Catégorisation…' : 'Catégoriser via IA'}</span>
+                {uncatCount > 0 && !aiCatRunning && <span className="ds-btn-badge">{uncatCount}</span>}
               </button>
             );
           })()}

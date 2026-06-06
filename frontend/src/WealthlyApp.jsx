@@ -1433,6 +1433,54 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     showToast(`${updates.length} transaction${updates.length > 1 ? 's' : ''} catégorisée${updates.length > 1 ? 's' : ''} via IA externe.`, 'success');
   };
 
+  // One-click server-side AI categorization (Haiku, quota-capped via ai_budget).
+  // Replaces the legacy manual copy-paste prompt flow now that we run on a
+  // server key. Operates on the currently visible uncategorized transactions.
+  const [aiCatRunning, setAiCatRunning] = useState(false);
+  const categorizeViaServerAI = async () => {
+    if (aiCatRunning) return;
+    const candidates = visibleTransactions.filter(tx =>
+      (!tx.categoryId || tx.categoryId === 'uncategorized') &&
+      !transferIds.has(tx.id) &&
+      (tx.label || '').trim().length > 0
+    ).slice(0, 100);
+    if (candidates.length === 0) {
+      showToast('Aucune transaction à catégoriser.', 'info');
+      return;
+    }
+    setAiCatRunning(true);
+    try {
+      const res = await api.categorizeAI.categorize(
+        candidates.map(t => ({ label: t.label, amount: t.amount }))
+      );
+      if (!res || !res.ai_used) {
+        showToast("Catégorisation IA indisponible — clé API manquante ou plafond mensuel atteint.", 'warning');
+        return;
+      }
+      const updates = [];
+      candidates.forEach(t => {
+        const slug = res.results?.[t.label];
+        if (slug && slug !== 'uncategorized') updates.push({ txId: t.id, slug });
+      });
+      if (updates.length === 0) {
+        showToast("L'IA n'a pas pu catégoriser ces transactions avec certitude.", 'info');
+        return;
+      }
+      await Promise.allSettled(updates.map(u =>
+        api.transactions.update(u.txId, { category_slug: u.slug })
+      ));
+      setTransactions(prev => prev.map(tx => {
+        const u = updates.find(x => x.txId === tx.id);
+        return u ? { ...tx, categoryId: u.slug, aiCategorized: true } : tx;
+      }));
+      showToast(`${updates.length} transaction${updates.length > 1 ? 's' : ''} catégorisée${updates.length > 1 ? 's' : ''} par l'IA.`, 'success');
+    } catch (err) {
+      showToast("Échec de la catégorisation IA. Réessaie dans un instant.", 'error');
+    } finally {
+      setAiCatRunning(false);
+    }
+  };
+
   const updateTransactionCategory = async (txId, categoryId) => {
     // 'transfer' is not a real category — it triggers the transfer-override flag instead.
     if (categoryId === 'transfer') { setTransferOverride(txId, true); return; }
@@ -3096,7 +3144,8 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             updateCategory={updateTransactionCategory} updateTags={updateTransactionTags} deleteTransaction={deleteTransaction} createTransaction={createTransaction} fmt={fmt}
             initialAccountFilter={txInitialAccountFilter}
             onConsumeInitialFilter={() => setTxInitialAccountFilter(null)}
-            onOpenAiPrompt={() => setShowAiPromptModal(true)}
+            onCategorizeAI={categorizeViaServerAI}
+            aiCatRunning={aiCatRunning}
             onAfterSync={handleAfterSync}
           />
         )}
