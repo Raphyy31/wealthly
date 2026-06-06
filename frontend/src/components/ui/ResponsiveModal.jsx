@@ -32,6 +32,7 @@
 // footer restent identiques — le CSS existant prend le relais.
 // ============================================================================
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import { Drawer as VaulDrawer } from 'vaul';
 import { useIsNarrow } from '../../hooks/useIsNarrow.js';
 
@@ -67,13 +68,21 @@ export function ResponsiveModal({ open, onClose, children, className = '' }) {
     );
   }
 
-  // ── Desktop : markup ORIGINAL preserve a la lettre ─────────────────
-  return (
+  // ── Desktop : portal vers document.body ────────────────────────────
+  // Sans portal, la modale etait rendue en place dans l'arbre. Si un ancetre
+  // a un `transform` (GSAP / Framer / will-change), il devient le bloc
+  // conteneur du `position: fixed` -> le backdrop n'est plus relatif au
+  // viewport et la modale s'ouvre decalee/coupee quand la page est scrollee
+  // (bug "je clique en bas de page, ca s'envoie en haut coupe"). Le portal
+  // vers body garantit que `fixed` vise toujours le viewport. Markup interne
+  // .modal-backdrop / .modal preserve a la lettre.
+  return createPortal(
     <div className="modal-backdrop" onClick={onClose}>
       <div className={`modal ${className}`} onClick={(e) => e.stopPropagation()}>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
