@@ -2098,6 +2098,19 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 }
 .modal--wizard { max-width: 720px; }
 .modal--detail { max-width: 1100px; }
+/* En-tête de fiche détail : reste collé en haut pendant le scroll (pattern
+   haut de gamme — le titre + bouton fermer suivent, seul le corps défile).
+   Le conteneur .modal clippe déjà ses coins arrondis via overflow, donc pas
+   de coins carrés qui dépassent. Couvre les 4 systèmes d'en-tête existants. */
+.modal--detail .loan-finary-topbar,
+.modal--detail .loan-finary-head,
+.modal--detail .inv-v3-head,
+.modal--detail .dv3-head {
+  position: sticky;
+  top: 0;
+  z-index: 12;
+  background: var(--bg-card);
+}
 
 /* Wizard layout */
 .wizard-body { display: grid; grid-template-columns: 220px 1fr; min-height: 360px; }
