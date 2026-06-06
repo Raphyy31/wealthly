@@ -134,11 +134,11 @@ export function DetailProgress({ pct, label, accent = 'var(--accent)' }) {
   );
 }
 
-// ── Styles (injectés une fois ; une seule fiche ouverte à la fois) ──────────
-let _dshInjected = false;
+// ── Styles — rendus avec la fiche (une seule ouverte à la fois, comme les
+//    autres injecteurs PatchStyles). Pas de garde module : sinon la 2e fiche
+//    ouverte dans la session serait sans style (le <style> est démonté à la
+//    fermeture de la 1re). ────────────────────────────────────────────────
 function DetailShellStyles() {
-  if (_dshInjected) return null;
-  _dshInjected = true;
   return <style dangerouslySetInnerHTML={{ __html: DSH_CSS }}/>;
 }
 
