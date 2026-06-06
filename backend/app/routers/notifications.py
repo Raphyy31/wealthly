@@ -69,7 +69,7 @@ def refresh_notifications(db: Session = Depends(get_db), user: User = Depends(ge
     return _list(db, user.household_id)
 
 
-@router.patch("/{notif_id}/read", response_model=NotificationOut)
+@router.put("/{notif_id}/read", response_model=NotificationOut)
 def mark_read(notif_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     n = db.query(Notification).filter(
         Notification.id == notif_id, Notification.household_id == user.household_id,
