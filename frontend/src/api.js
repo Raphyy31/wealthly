@@ -486,6 +486,22 @@ export const insights = {
 };
 
 // ============================================================================
+// NOTIFICATIONS — alertes intelligentes (cloche)
+// ============================================================================
+const DEMO_NOTIFICATIONS = [
+  { id: 'demo-n1', kind: 'budget_overrun', severity: 'warn', title: 'Budget Restaurants dépassé', body: '320 € dépensés ce mois-ci sur un budget de 250 €.', data: {}, link: 'monthly', status: 'unread', created_at: '2026-06-05T09:00:00' },
+  { id: 'demo-n2', kind: 'subscription_hike', severity: 'info', title: 'Abonnement en hausse', body: '« NETFLIX » est passé de ~13 € à 18 € (+38 %).', data: {}, link: 'transactions', status: 'unread', created_at: '2026-06-03T09:00:00' },
+];
+
+export const notifications = {
+  list:    ()   => isDemo() ? Promise.resolve(DEMO_NOTIFICATIONS) : get('/notifications'),
+  refresh: ()   => isDemo() ? Promise.resolve(DEMO_NOTIFICATIONS) : post('/notifications/refresh'),
+  read:    (id) => isDemo() ? Promise.resolve() : put(`/notifications/${id}/read`),
+  readAll: ()   => isDemo() ? Promise.resolve() : post('/notifications/read-all'),
+  dismiss: (id) => isDemo() ? Promise.resolve() : del(`/notifications/${id}`),
+};
+
+// ============================================================================
 // REF MONTH (Mois type) — JSON budget template scoped per (household, member).
 // memberId = null/'all'/'household' → Famille (compte joint).
 // memberId = '<uuid>'              → Mois type personnel de cet adulte.

@@ -51,6 +51,7 @@ import { ImportFlow } from './views/ImportFlow.jsx';
 import { DCAView } from './views/DCA.jsx';
 import { Projection } from './views/Projection.jsx';
 import { ImmoSimulator } from './views/ImmoSimulator.jsx';
+import { NotificationBell } from './components/NotificationBell.jsx';
 import { Vault } from './views/Vault.jsx';
 import { dcaApi } from './api.js';
 import { AccountDrawer } from './components/AccountDrawer.jsx';
@@ -2872,6 +2873,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
 
           <div className="ws-foot">
             <div className="ws-foot-actions">
+              <NotificationBell onNavigate={setView}/>
               <ThemeToggle/>
               <LangButton/>
               <CurrencyButton baseCurrency={baseCurrency} setBaseCurrency={setBaseCurrency}/>
@@ -2937,6 +2939,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
               <Logo size={22} wordmark wordmarkSize={14} />
             </div>
             <div className="header-actions">
+              <NotificationBell onNavigate={setView}/>
               <button className="icon-btn" onClick={() => setHideAmounts(!hideAmounts)} title="Masquer/afficher">
                 {hideAmounts ? <EyeOff size={16}/> : <Eye size={16}/>}
               </button>
