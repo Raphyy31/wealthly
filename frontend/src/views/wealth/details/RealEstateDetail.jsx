@@ -2,9 +2,9 @@
 // RealEstateDetail — fiche détail bien immobilier. Migré sur DetailShell.
 // ============================================================================
 import React from 'react';
-import { Home, Users } from 'lucide-react';
+import { Home, Users, TrendingUp } from 'lucide-react';
 import { ownersList } from '../utils.js';
-import { DetailShell, DetailSection, DetailKVList, DetailProgress } from '../components/DetailShell.jsx';
+import { DetailShell, DetailSection, DetailKVList, DetailProgress, DetailInsight, DetailBridge } from '../components/DetailShell.jsx';
 
 export function RealEstateDetail({ asset, liabilities = [], members = [], memberShare, fmt, onEdit, onClose }) {
   const subtypeLabel = {
@@ -42,6 +42,7 @@ export function RealEstateDetail({ asset, liabilities = [], members = [], member
     surface > 0 && { label: 'Surface', value: `${surface} m²` },
     pricePerM2 > 0 && { label: 'Prix au m²', value: fmt(pricePerM2), sub: purchasePricePerM2 > 0 ? `vs ${fmt(purchasePricePerM2)} à l'achat` : null },
     asset.purchaseDate && { label: 'Acquis en', value: `${new Date(asset.purchaseDate).getFullYear()}`, sub: yearsSincePurchase >= 1 ? `il y a ${Math.round(yearsSincePurchase)} ans` : null },
+    linkedLoan && currentValue > 0 && { label: 'Financé · LTV', value: `${Math.round((remainingCapital / currentValue) * 100)} %`, sub: 'du bien' },
     ownershipPct !== 100 && { label: 'Quote-part', value: `${ownershipPct} %` },
     asset.constructionYear && { label: 'Construction', value: `${asset.constructionYear}` },
   ].filter(Boolean);
@@ -53,14 +54,22 @@ export function RealEstateDetail({ asset, liabilities = [], members = [], member
       breadcrumb="Patrimoine · Immobilier"
       onClose={onClose}
       onEdit={onEdit ? () => onEdit(asset) : undefined}
-      icon={<Home size={13}/>}
+      heroIcon={<Home size={32} strokeWidth={1.8}/>}
       eyebrow={subtypeLabel}
       title={asset.name}
-      subtitle={<>{asset.address && <span>{asset.address}</span>}{owners && <span>· <Users size={12} style={{ verticalAlign: '-1px' }}/> {owners}</span>}</>}
+      subtitle={<>{asset.address && <span>{asset.address}</span>}{owners && <span>· <Users size={13} style={{ verticalAlign: '-2px' }}/> {owners}</span>}</>}
+      valueLabel="Valeur estimée"
       value={fmt(currentValue)}
+      valueSub={surface > 0 && pricePerM2 > 0 ? `${fmt(pricePerM2)} / m²` : null}
       delta={totalAcquisitionCost > 0 ? { text: `${plLatente >= 0 ? '+' : ''}${fmt(plLatente)} · ${pct(plLatentePct)}`, positive: plLatente >= 0 } : null}
       kpis={kpis}
     >
+      {totalAcquisitionCost > 0 && (
+        <DetailInsight icon={<TrendingUp size={15}/>} tone={plLatente >= 0 ? 'positive' : 'warning'}>
+          {plLatente >= 0 ? 'Valorisé' : 'En recul de'} <strong>{plLatente >= 0 ? '+' : ''}{pct(plLatentePct)}</strong> (<strong>{plLatente >= 0 ? '+' : ''}{fmt(plLatente)}</strong>) depuis l'acquisition{yearsSincePurchase >= 1 ? ` il y a ${Math.round(yearsSincePurchase)} ans` : ''}.
+        </DetailInsight>
+      )}
+
       <DetailSection title="Coût d'acquisition" aside={fmt(totalAcquisitionCost)}>
         <DetailKVList rows={[
           { label: "Prix d'achat", value: fmt(purchasePrice) },
@@ -69,6 +78,11 @@ export function RealEstateDetail({ asset, liabilities = [], members = [], member
           worksFees > 0 && { label: 'Travaux', value: fmt(worksFees) },
           furnitureFees > 0 && { label: 'Mobilier', value: fmt(furnitureFees) },
         ].filter(Boolean)}/>
+        {totalAcquisitionCost > 0 && currentValue > 0 && (
+          <div style={{ marginTop: 16 }}>
+            <DetailBridge base={totalAcquisitionCost} gain={plLatente} fmt={fmt} baseLabel="Investi" gainLabel="Plus-value latente"/>
+          </div>
+        )}
       </DetailSection>
 
       {linkedLoan && (

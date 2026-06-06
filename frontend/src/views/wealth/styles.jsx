@@ -8,31 +8,30 @@ export function LiabilityPatchStyles() {
 .loan-cost-band {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 0;
-  background: var(--bg-elev);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  gap: 12px;
   margin-top: 16px;
-  overflow: hidden;
 }
 @media (max-width: 720px) { .loan-cost-band { grid-template-columns: 1fr; } }
-.loan-cost-item { padding: 16px 20px; border-right: 1px solid var(--border); }
-.loan-cost-item:last-child { border-right: none; }
-@media (max-width: 720px) {
-  .loan-cost-item { border-right: none; border-bottom: 1px solid var(--border); }
-  .loan-cost-item:last-child { border-bottom: none; }
+.loan-cost-item {
+  padding: 18px 20px; border-radius: 12px; border: 1px solid var(--border);
+  position: relative; overflow: hidden;
 }
+.loan-cost-item:nth-child(1) { background: linear-gradient(135deg, var(--accent-soft) 0%, rgba(231,235,255,0.3) 100%); }
+.loan-cost-item:nth-child(2) { background: linear-gradient(135deg, color-mix(in srgb, var(--positive) 14%, transparent) 0%, color-mix(in srgb, var(--positive) 5%, transparent) 100%); }
+.loan-cost-item:nth-child(3) { background: linear-gradient(135deg, var(--bg-sunk) 0%, var(--bg-subtle) 100%); }
 .loan-cost-val {
   font-family: var(--font-serif);
-  font-weight: 400;
-  font-size: 22px;
+  font-style: italic;
+  font-weight: 500;
+  font-size: 26px;
   line-height: 1.1;
   color: var(--ink);
-  margin-top: 4px;
+  margin-top: 6px;
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
-.loan-cost-meta { color: var(--ink-3); font-size: 12px; margin-top: 6px; line-height: 1.4; }
-.loan-cost-meta .w-num { color: var(--ink); font-weight: 500; }
+.loan-cost-meta { color: var(--text-secondary); font-size: 12.5px; margin-top: 8px; line-height: 1.45; }
+.loan-cost-meta .w-num, .loan-cost-meta strong { color: var(--ink); font-weight: 600; }
 `;
   return <style dangerouslySetInnerHTML={{ __html: css }}/>;
 }

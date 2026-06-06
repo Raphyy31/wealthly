@@ -2,12 +2,12 @@
 // CryptoDetail — fiche détail crypto-actif (cours live). Migré sur DetailShell.
 // ============================================================================
 import React, { useState } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, TrendingUp } from 'lucide-react';
 import { formatDate } from '../../../utils.js';
 import { ownersList, formatCryptoQty, cryptoColor } from '../utils.js';
 import { LivePricesFooter } from '../components/LivePricesFooter.jsx';
 import { useLiveQuotes, cryptoToYahoo, relTimeFromTs } from '../../../utils/marketPrices.js';
-import { DetailShell, DetailSection } from '../components/DetailShell.jsx';
+import { DetailShell, DetailSection, DetailInsight } from '../components/DetailShell.jsx';
 
 export function CryptoDetail({ asset, members = [], fmt, onEdit, onClose, onSync }) {
   const quantity = parseFloat(asset.quantity) || 0;
@@ -45,8 +45,9 @@ export function CryptoDetail({ asset, members = [], fmt, onEdit, onClose, onSync
   };
 
   const [first, ...rest] = (asset.name || '').split(' ');
-  const logo = (
-    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, borderRadius: 999, background: cryptoColor(ticker || asset.name), color: '#fff', fontSize: 9, fontWeight: 700 }}>
+  const cryptoColorBg = cryptoColor(ticker || asset.name);
+  const logoXL = (
+    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 64, height: 64, borderRadius: 16, background: cryptoColorBg, color: '#fff', fontSize: 16, fontWeight: 700, letterSpacing: '0.02em' }}>
       {(ticker || asset.name || '?').slice(0, 3)}
     </span>
   );
@@ -64,7 +65,7 @@ export function CryptoDetail({ asset, members = [], fmt, onEdit, onClose, onSync
       breadcrumb="Patrimoine · Cryptos"
       onClose={onClose}
       onEdit={onEdit ? () => onEdit() : undefined}
-      icon={logo}
+      heroIcon={logoXL}
       eyebrow="Crypto-actif"
       title={<>{first} <em>{rest.join(' ') || ticker || ''}.</em></>}
       subtitle={<>
@@ -73,7 +74,9 @@ export function CryptoDetail({ asset, members = [], fmt, onEdit, onClose, onSync
         {owners && <span>· {owners}</span>}
         {liveQuote?.fetchedAt && <span>· maj il y a {relTimeFromTs(liveQuote.fetchedAt)}</span>}
       </>}
+      valueLabel="Valorisation actuelle"
       value={fmt(currentValue)}
+      valueSub={quantity > 0 ? `${formatCryptoQty(quantity)} ${ticker || ''}` : null}
       delta={invested > 0 ? { text: `${plLatente >= 0 ? '+' : ''}${fmt(plLatente)} · ${pct(plLatentePct)}`, positive: plLatente >= 0 } : null}
       kpis={kpis}
       footer={<>
@@ -85,6 +88,11 @@ export function CryptoDetail({ asset, members = [], fmt, onEdit, onClose, onSync
         )}
       </>}
     >
+      {invested > 0 && (
+        <DetailInsight icon={<TrendingUp size={15}/>} tone={plLatente >= 0 ? 'positive' : 'warning'}>
+          Cours actuel <strong>{plLatente >= 0 ? '+' : ''}{pct(plLatentePct)}</strong> vs ton prix de revient — <strong>{fmt(unitPrice)}</strong> contre {fmt(purchasePrice)} l'unité.
+        </DetailInsight>
+      )}
       {asset.notes && (
         <DetailSection title="Notes">
           <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{asset.notes}</div>

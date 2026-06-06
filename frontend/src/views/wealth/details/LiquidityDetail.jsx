@@ -5,10 +5,10 @@ import React, { useMemo } from 'react';
 import {
   AreaChart, Area, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts';
-import { BarChart3 } from 'lucide-react';
+import { BarChart3, PiggyBank, Wallet } from 'lucide-react';
 import { formatCurrency, formatDate } from '../../../utils.js';
 import { ownersList, splitTitle, DV3_TOOLTIP } from '../utils.js';
-import { DetailShell, DetailSection, DetailProgress } from '../components/DetailShell.jsx';
+import { DetailShell, DetailSection, DetailProgress, DetailInsight } from '../components/DetailShell.jsx';
 
 export function LiquidityDetail({ item, accounts = [], accountBalances = {}, transactions = [], members = [], fmt, onEdit, onClose }) {
   const isAccount = !!item.isAccount;
@@ -91,13 +91,25 @@ export function LiquidityDetail({ item, accounts = [], accountBalances = {}, tra
       breadcrumb="Patrimoine · Liquidités"
       onClose={onClose}
       onEdit={onEdit ? () => onEdit() : undefined}
+      heroIcon={isLivret ? <PiggyBank size={32} strokeWidth={1.8}/> : <Wallet size={32} strokeWidth={1.8}/>}
       eyebrow={`${typeLabel}${bank ? ` · ${bank}` : ''}`}
       title={<>{st.head} <em>{st.tail}.</em></>}
       subtitle={<><span className={`dv3-badge ${syncMode === 'synced' ? 'pos' : ''}`}>{syncMode === 'synced' ? '⚡ Synchronisé' : 'Manuel'}</span>{owners && <span>· {owners}</span>}</>}
+      valueLabel="Solde actuel"
       value={fmt(balance)}
+      valueSub={isLivret ? `Plafond ${livretLabel} : ${fmt(livretCap)}` : null}
       delta={isAccount && last30.length > 0 ? { text: `${net30 >= 0 ? '+' : ''}${fmt(net30)} · 30 j`, positive: net30 >= 0 } : null}
       kpis={kpis}
     >
+      {isLivret ? (
+        <DetailInsight tone="positive">
+          À {(livretRate * 100).toFixed(2).replace('.', ',')} %, ce {livretLabel} rapporte ~<strong>{fmt(interests)}/an</strong> net d'impôt.{livretMargin > 0 ? <> Il te reste <strong>{fmt(livretMargin)}</strong> avant le plafond.</> : ' Plafond atteint.'}
+        </DetailInsight>
+      ) : (isAccount && sixMonthAvg !== null && (
+        <DetailInsight>
+          Sur 6 mois, le solde {sixMonthAvg >= 0 ? 'progresse' : 'baisse'} de ~<strong>{sixMonthAvg >= 0 ? '+' : ''}{fmt(sixMonthAvg)}/mois</strong> en moyenne.
+        </DetailInsight>
+      ))}
       {chartData.length >= 2 && (
         <DetailSection title="Évolution du solde">
           <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: -6, marginBottom: 8 }}>90 derniers jours · {accountTx.length} transactions au total</div>

@@ -3,10 +3,10 @@
 // Migré sur DetailShell (châssis unifié des fiches détail).
 // ============================================================================
 import React from 'react';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, TrendingUp } from 'lucide-react';
 import { formatDate } from '../../../utils.js';
 import { ownersList } from '../utils.js';
-import { DetailShell, DetailSection, DetailKVList } from '../components/DetailShell.jsx';
+import { DetailShell, DetailSection, DetailKVList, DetailInsight } from '../components/DetailShell.jsx';
 
 export function OtherAssetDetail({ asset, members = [], fmt, onEdit, onClose }) {
   const currentValue = parseFloat(asset.currentValue) || 0;
@@ -38,14 +38,21 @@ export function OtherAssetDetail({ asset, members = [], fmt, onEdit, onClose }) 
       breadcrumb="Patrimoine · Autres actifs"
       onClose={onClose}
       onEdit={onEdit ? () => onEdit() : undefined}
-      icon={<Sparkles size={13}/>}
+      heroIcon={<Sparkles size={32} strokeWidth={1.8}/>}
       eyebrow={subtypeLabel}
       title={<>{first} {rest.length ? <em>{rest.join(' ')}.</em> : null}</>}
       subtitle={<><span className="dv3-badge">Manuel</span>{owners && <span>· {owners}</span>}</>}
+      valueLabel="Valeur estimée"
       value={fmt(currentValue)}
+      valueSub={asset.purchaseDate ? `Acquis le ${formatDate(asset.purchaseDate)}` : null}
       delta={purchasePrice > 0 ? { text: `${plLatente >= 0 ? '+' : ''}${fmt(plLatente)} · ${pct(plLatentePct)}`, positive: plLatente >= 0 } : null}
       kpis={kpis}
     >
+      {purchasePrice > 0 && (
+        <DetailInsight icon={<TrendingUp size={15}/>} tone={plLatente >= 0 ? 'positive' : 'warning'}>
+          {plLatente >= 0 ? 'Valorisé' : 'En recul de'} <strong>{plLatente >= 0 ? '+' : ''}{pct(plLatentePct)}</strong> (<strong>{plLatente >= 0 ? '+' : ''}{fmt(plLatente)}</strong>) depuis l'acquisition{yearsSincePurchase >= 1 ? ` il y a ${Math.round(yearsSincePurchase)} ans` : ''}.
+        </DetailInsight>
+      )}
       <DetailSection title="Détail de l'actif">
         <DetailKVList rows={[
           asset.subtype && { label: 'Catégorie', value: subtypeLabel },
