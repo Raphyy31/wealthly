@@ -685,10 +685,10 @@ export function Dashboard({
             className="ds-btn"
             title={t('dashboard.pdfTitle')}
             onClick={async () => {
-              const { generateBilanPdf } = await import('../pdfReport.js');
-              generateBilanPdf({
+              const { generateBilanHtmlReport } = await import('../reportHtml.js');
+              generateBilanHtmlReport({
                 netWorth, liquidWealth, assetsValue, liabilitiesValue,
-                thisMonthStats, monthlyEvolution,
+                thisMonthStats, monthlyEvolution, wealthHistory,
                 visibleAccounts, accountBalances, visibleAssets, visibleLiabilities,
                 members, activeMemberId,
                 recurringGroups, categoryAnalysis, categories,
