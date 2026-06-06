@@ -3,9 +3,9 @@
  *
  * Multi-page A4 report:
  *   1. Cover                — wordmark, big title, date, foyer, page count
- *   2. Synthèse             — net worth hero, KPIs, allocation horizontal bar
+ *   2. Synthèse             — net worth hero, KPIs, composition donut + breakdown
  *   3. Évolution            — table of monthly snapshots with sparkline
- *   4. Trésorerie du mois   — revenus/dépenses/épargne, top 5 cat, charges fixes
+ *   4. Trésorerie du mois   — cashflow KPIs, Sankey des flux, top 5 cat, charges fixes
  *   5. Détail               — comptes, actifs (avec PV latente), dettes
  *
  * Pure function. Pass props in, get a downloaded file out.
@@ -292,6 +292,201 @@ function drawAllocBar(doc, y, segments) {
   });
   const rows = Math.ceil(segments.length / 2);
   return legendY + rows * 14 + 8;
+}
+
+// ---------- donut (triangle-fan + center hole) ----------
+// Reliable donut in jsPDF: fill each segment as a fan of thin triangles from
+// the center, then punch a paper-colored hole. Mirrors the DetailDonut look.
+function drawDonut(doc, cx, cy, rOut, rIn, segments) {
+  const total = segments.reduce((s, seg) => s + (seg.value || 0), 0) || 1;
+  let ang = -Math.PI / 2; // start at top
+  segments.forEach((seg, i) => {
+    const sweep = (seg.value / total) * Math.PI * 2;
+    if (sweep <= 0) return;
+    doc.setFillColor(...(seg.color || C.pieClasses[i % C.pieClasses.length]));
+    const steps = Math.max(2, Math.ceil(sweep / (Math.PI / 60))); // ~3°
+    const step = sweep / steps;
+    for (let s = 0; s < steps; s++) {
+      const a0 = ang + s * step, a1 = ang + (s + 1) * step;
+      doc.triangle(
+        cx, cy,
+        cx + Math.cos(a0) * rOut, cy + Math.sin(a0) * rOut,
+        cx + Math.cos(a1) * rOut, cy + Math.sin(a1) * rOut,
+        'F'
+      );
+    }
+    ang += sweep;
+  });
+  // punch hole (paper) + subtle inner hairline
+  doc.setFillColor(...C.paper);
+  doc.circle(cx, cy, rIn, 'F');
+}
+
+// Composition donut + breakdown rows (replaces the flat stacked bar). Returns y.
+function drawAllocDonut(doc, y, segments) {
+  const w = doc.internal.pageSize.getWidth();
+  const total = segments.reduce((s, seg) => s + (seg.value || 0), 0) || 1;
+  const rOut = 50, rIn = 31;
+  const cx = PAGE_M + rOut, cy = y + rOut;
+  drawDonut(doc, cx, cy, rOut, rIn, segments);
+  // center text
+  doc.setFont(SERIF, 'italic'); doc.setFontSize(19); doc.setTextColor(...C.ink);
+  doc.text(fmtEUR(total, { compact: true }), cx, cy + 1, { align: 'center', baseline: 'middle' });
+  doc.setFont(FONT, 'bold'); doc.setFontSize(6.5); doc.setTextColor(...C.faint);
+  doc.text('RÉPARTI', cx, cy + 14, { align: 'center', baseline: 'middle' });
+
+  // rows
+  const rowsX = PAGE_M + rOut * 2 + 30;
+  const rowH = 26;
+  let ry = y + 8;
+  segments.forEach((seg, i) => {
+    const color = seg.color || C.pieClasses[i % C.pieClasses.length];
+    const pct = (seg.value / total) * 100;
+    // color dot
+    doc.setFillColor(...color);
+    doc.roundedRect(rowsX, ry - 6, 7, 7, 1.5, 1.5, 'F');
+    // name
+    doc.setFont(FONT, 'normal'); doc.setFontSize(9.5); doc.setTextColor(...C.ink);
+    doc.text(seg.name, rowsX + 13, ry, { baseline: 'alphabetic' });
+    // amount (right) + pct (left of amount)
+    doc.setFont(FONT, 'bold'); doc.setFontSize(9.5); doc.setTextColor(...C.ink);
+    const amtStr = fmtEUR(seg.value);
+    doc.text(amtStr, w - PAGE_M, ry, { align: 'right' });
+    const amtW = doc.getTextWidth(amtStr);
+    doc.setFont(FONT, 'normal'); doc.setFontSize(8); doc.setTextColor(...C.faint);
+    doc.text(`${pct.toFixed(0)} %`, w - PAGE_M - amtW - 8, ry, { align: 'right' });
+    // track + fill
+    const trackY = ry + 5, trackW = (w - PAGE_M) - rowsX;
+    doc.setFillColor(...C.cardSunk);
+    doc.roundedRect(rowsX, trackY, trackW, 5, 2.5, 2.5, 'F');
+    doc.setFillColor(...color);
+    doc.roundedRect(rowsX, trackY, Math.max(4, (pct / 100) * trackW), 5, 2.5, 2.5, 'F');
+    ry += rowH;
+  });
+
+  const donutBottom = cy + rOut;
+  const rowsBottom = (y + 8) + segments.length * rowH;
+  return Math.max(donutBottom, rowsBottom) + 12;
+}
+
+// ---------- Sankey (flux du mois) ----------
+// Filled bezier "ribbons" via doc.lines (relative cubic curves). Left = income
+// node(s) -> central "Disponible" hub -> right = expense categories + savings.
+function drawRibbon(doc, xL, yLtop, yLbot, xR, yRtop, yRbot, color, opacity) {
+  const cx = (xL + xR) / 2;
+  doc.setFillColor(...color);
+  let gs = null;
+  try { gs = new doc.GState({ opacity }); doc.setGState(gs); } catch { /* opacity unsupported */ }
+  doc.lines(
+    [
+      [cx - xL, 0, cx - xL, yRtop - yLtop, xR - xL, yRtop - yLtop], // top edge L->R (bezier)
+      [0, yRbot - yRtop],                                          // right edge down
+      [cx - xR, 0, cx - xR, yLbot - yRbot, xL - xR, yLbot - yRbot], // bottom edge R->L (bezier)
+    ],
+    xL, yLtop, [1, 1], 'F', true
+  );
+  try { doc.setGState(new doc.GState({ opacity: 1 })); } catch { /* noop */ }
+}
+
+// incomes / outflows: [{ name, value, color, savings? }]. Returns next y.
+function drawSankey(doc, y, incomes, outflows) {
+  const w = doc.internal.pageSize.getWidth();
+  const x = PAGE_M, cardW = w - PAGE_M * 2;
+  const totalIn = incomes.reduce((s, d) => s + d.value, 0);
+  const totalOut = outflows.reduce((s, d) => s + d.value, 0);
+  const total = Math.max(totalIn, totalOut, 1);
+
+  // card
+  const cardPadX = 20, cardPadY = 18;
+  const H = 150; // flow height
+  const cardH = H + cardPadY * 2 + 26; // + footer band
+  doc.setFillColor(...C.cream);
+  doc.setDrawColor(...C.hairline); doc.setLineWidth(0.7);
+  doc.roundedRect(x, y, cardW, cardH, 12, 12, 'FD');
+
+  const innerX = x + cardPadX;
+  const innerW = cardW - cardPadX * 2;
+  const top = y + cardPadY + 8;
+  const leftLabelW = 58, rightLabelW = 96;
+  const barW = 6, hubW = 9;
+  const xInBar = innerX + leftLabelW;
+  const xHub = innerX + leftLabelW + 64;
+  const xOutBar = innerX + innerW - rightLabelW - barW;
+  const bandH = (v) => (v / total) * H;
+
+  // ribbons income -> hub
+  let cL = top, cHubIn = top;
+  incomes.forEach((d) => {
+    const h = bandH(d.value);
+    drawRibbon(doc, xInBar + barW, cL, cL + h, xHub, cHubIn, cHubIn + h, d.color || C.accent, 0.22);
+    cL += h; cHubIn += h;
+  });
+  // ribbons hub -> outflows
+  let cHubOut = top, cR = top;
+  outflows.forEach((d) => {
+    const h = bandH(d.value);
+    drawRibbon(doc, xHub + hubW, cHubOut, cHubOut + h, xOutBar, cR, cR + h, d.color || C.muted, 0.30);
+    cHubOut += h; cR += h;
+  });
+
+  // income nodes + labels
+  cL = top;
+  incomes.forEach((d, i) => {
+    const h = bandH(d.value);
+    doc.setFillColor(...(d.color || C.accent));
+    doc.roundedRect(xInBar, cL, barW, Math.max(h, 1.5), 1.5, 1.5, 'F');
+    doc.setFont(FONT, 'normal'); doc.setFontSize(8); doc.setTextColor(...C.ink);
+    doc.text(d.name, xInBar - 6, cL + h / 2, { align: 'right', baseline: 'middle' });
+    if (i === 0 && h > 14) {
+      doc.setFont(FONT, 'normal'); doc.setFontSize(7); doc.setTextColor(...C.faint);
+      doc.text(fmtEUR(d.value), xInBar - 6, cL + h / 2 + 9, { align: 'right', baseline: 'middle' });
+    }
+    cL += h;
+  });
+
+  // hub
+  doc.setFillColor(...C.ink);
+  doc.roundedRect(xHub, top, hubW, H, 3, 3, 'F');
+  doc.setFont(FONT, 'bold'); doc.setFontSize(7); doc.setTextColor(...C.faint);
+  doc.text('DISPONIBLE', xHub + hubW / 2, top - 7, { align: 'center' });
+
+  // outflow nodes + labels
+  cR = top;
+  outflows.forEach((d) => {
+    const h = bandH(d.value);
+    doc.setFillColor(...(d.color || C.muted));
+    doc.roundedRect(xOutBar, cR, barW, Math.max(h, 1.5), 1.5, 1.5, 'F');
+    doc.setFont(FONT, d.savings ? 'bold' : 'normal'); doc.setFontSize(8);
+    doc.setTextColor(...(d.savings ? C.sage : C.ink));
+    doc.text(d.name, xOutBar + barW + 6, cR + h / 2, { align: 'left', baseline: 'middle' });
+    if ((d.savings || h > 18)) {
+      doc.setFont(FONT, 'normal'); doc.setFontSize(7); doc.setTextColor(...C.faint);
+      doc.text(fmtEUR(d.value), xOutBar + barW + 6, cR + h / 2 + 9, { align: 'left', baseline: 'middle' });
+    }
+    cR += h;
+  });
+
+  // footer band (totals)
+  const fy = top + H + 16;
+  doc.setDrawColor(...C.cardSunk); doc.setLineWidth(0.5);
+  doc.line(innerX, fy - 8, innerX + innerW, fy - 8);
+  const savings = outflows.find((d) => d.savings)?.value || 0;
+  const rate = totalIn > 0 ? (savings / totalIn) * 100 : 0;
+  doc.setFontSize(9);
+  doc.setFont(FONT, 'normal'); doc.setTextColor(...C.body);
+  doc.text('Entrées', innerX, fy);
+  doc.setFont(FONT, 'bold'); doc.setTextColor(...C.sage);
+  doc.text(fmtEUR(totalIn, { sign: true }), innerX + 42, fy);
+  doc.setFont(FONT, 'normal'); doc.setTextColor(...C.body);
+  doc.text('Sorties', innerX + 150, fy);
+  doc.setFont(FONT, 'bold'); doc.setTextColor(...C.terracotta);
+  doc.text(fmtEUR(-(totalIn - savings)), innerX + 192, fy);
+  doc.setFont(FONT, 'normal'); doc.setTextColor(...C.body);
+  doc.text('Épargne', innerX + 300, fy);
+  doc.setFont(FONT, 'bold'); doc.setTextColor(...C.sage);
+  doc.text(`${fmtEUR(savings, { sign: true })}  (${rate.toFixed(0)} %)`, innerX + 346, fy);
+
+  return y + cardH + 14;
 }
 
 // Vertical bars chart: each bar = one row's value, plus an optional horizontal
@@ -732,7 +927,7 @@ export function generateBilanPdf({
 
   // Allocation
   y += 6;
-  drawSection(doc, y, 'Allocation par classe', 'II'); y += 16;
+  drawSection(doc, y, 'Composition du patrimoine', 'II'); y += 16;
   const allocClasses = {};
   if (liquidWealth > 0) allocClasses['Liquidités'] = liquidWealth;
   visibleAssets.forEach((a) => {
@@ -745,7 +940,7 @@ export function generateBilanPdf({
     .sort((a, b) => b[1] - a[1])
     .map(([name, value], i) => ({ name, value, color: C.pieClasses[i % C.pieClasses.length] }));
   if (allocSegments.length > 0) {
-    y = drawAllocBar(doc, y, allocSegments);
+    y = drawAllocDonut(doc, y, allocSegments);
   } else {
     doc.setFont(FONT, 'normal'); doc.setFontSize(9); doc.setTextColor(...C.faint);
     doc.text('Aucun actif renseigné.', PAGE_M, y + 10); y += 24;
@@ -806,40 +1001,30 @@ export function generateBilanPdf({
     { label: "Taux d'épargne", value: fmtPct(savingsRate, 0), color: savingsRate == null ? C.muted : savingsRate >= 20 ? C.sage : savingsRate >= 10 ? C.amber : C.terracotta, hint: 'sur revenus du mois' },
   ]);
 
-  // Monthly income vs expense grouped bars (last 6 months)
+  // Flux du mois — Sankey : Revenus -> Disponible -> Dépenses + Épargne
   y += 6;
-  drawSection(doc, y, 'Évolution revenus / dépenses — 6 mois', 'II'); y += 16;
-  const last6 = sorted.slice(-6);
-  if (last6.length >= 2) {
-    const w = doc.internal.pageSize.getWidth();
-    const chartW = w - PAGE_M * 2;
-    const chartH = 72;
-    const barGroupW = chartW / last6.length;
-    const barW = (barGroupW - 8) / 2;
-    const maxVal = Math.max(...last6.map(m => Math.max(m.income || 0, m.expenses || 0)), 1);
-    last6.forEach((m, i) => {
-      const gx = PAGE_M + i * barGroupW + 4;
-      const incH = ((m.income || 0) / maxVal) * chartH;
-      const expH = ((m.expenses || 0) / maxVal) * chartH;
-      doc.setFillColor(...C.sage);
-      doc.rect(gx, y + chartH - incH, barW, incH, 'F');
-      doc.setFillColor(...C.terracotta);
-      doc.rect(gx + barW + 2, y + chartH - expH, barW, expH, 'F');
-      doc.setFont(FONT, 'normal'); doc.setFontSize(7); doc.setTextColor(...C.faint);
-      doc.text(monthShort(m.month), gx + barW / 2, y + chartH + 10, { align: 'center' });
-    });
-    // Legend
-    doc.setFillColor(...C.sage);
-    doc.rect(PAGE_M, y + chartH + 18, 8, 5, 'F');
-    doc.setFont(FONT, 'normal'); doc.setFontSize(8); doc.setTextColor(...C.body);
-    doc.text('Revenus', PAGE_M + 12, y + chartH + 22);
-    doc.setFillColor(...C.terracotta);
-    doc.rect(PAGE_M + 70, y + chartH + 18, 8, 5, 'F');
-    doc.text('Dépenses', PAGE_M + 82, y + chartH + 22);
-    y += chartH + 36;
+  drawSection(doc, y, 'Flux du mois — entrées → disponible → sorties', 'II'); y += 16;
+  const skIncome = thisMonthStats?.income || 0;
+  const skExpenses = thisMonthStats?.expenses || 0;
+  const skNet = thisMonthStats?.net || 0;
+  if (skIncome > 0 || skExpenses > 0) {
+    // expense categories (top 5 + autres)
+    const expCats = Object.entries(categoryAnalysis || {})
+      .filter(([, d]) => d.current > 0)
+      .map(([catId, data]) => ({ name: categories.find((c) => c.id === catId)?.name || catId, value: data.current }))
+      .sort((a, b) => b.value - a.value);
+    const expColors = [C.pieClasses[2], C.pieClasses[4], C.pieClasses[3], C.pieClasses[6], C.amber];
+    const top5 = expCats.slice(0, 5).map((c, i) => ({ ...c, color: expColors[i % expColors.length] }));
+    const otherExp = Math.max(0, skExpenses - top5.reduce((s, c) => s + c.value, 0));
+    const outflows = [...top5];
+    if (otherExp > 1) outflows.push({ name: 'Autres dépenses', value: otherExp, color: C.pieClasses[5] });
+    if (skNet > 0) outflows.push({ name: 'Épargne', value: skNet, color: C.sage, savings: true });
+    if (outflows.length === 0) outflows.push({ name: 'Dépenses', value: skExpenses || 1, color: C.terracotta });
+    const incomes = [{ name: 'Revenus', value: skIncome || skExpenses, color: C.accent }];
+    y = drawSankey(doc, y, incomes, outflows);
   } else {
     doc.setFont(FONT, 'normal'); doc.setFontSize(9); doc.setTextColor(...C.faint);
-    doc.text('Pas encore assez d\'historique.', PAGE_M, y + 10); y += 24;
+    doc.text('Pas de mouvements ce mois-ci.', PAGE_M, y + 10); y += 24;
   }
 
   y += 4;
