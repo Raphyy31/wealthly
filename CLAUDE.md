@@ -9,6 +9,48 @@ Notes for Claude (and any future AI tooling) picking the project back up.
 
 ---
 
+## Session 2026-06-06 — Raphyy31 + Claude (Opus 4.7/4.8) — features P5, refonte fiches détail, RLS activé, IA contrôlée
+
+Grosse série de sessions. **État repreneur : tout est sur `main`, déployé en prod.** Résumé de ce qui a changé depuis le 2026-05-19 :
+
+### Nouvelles features (toutes live)
+| Feature | Où | Détail |
+|---|---|---|
+| **Projection** (anticipateur de trésorerie liquide) | `views/Projection.jsx` | Courbe solde projeté 3/6/12M, marqueur du creux, sélecteur comptes liquides, CRUD d'événements ponctuels futurs. Modèle `PlannedEvent` + router `/planned-events` (mig `0011`). Phases calendrier + what-if **reportées**. |
+| **Simulateur immo** | `views/ImmoSimulator.jsx` | Capacité d'emprunt HCSF 35%, mensualité (réutilise `buildAmortization`), notaire, reste-à-vivre, prix max. 100% frontend. |
+| **Coffre-fort documents** | `views/Vault.jsx` | Upload/aperçu/suppression. Modèle `Document` + router `/documents` (mig `0012`). **Stockage = Postgres LargeBinary** (v1, plafond 8 Mo) — Supabase Storage = v2 possible. Pas de chiffrement applicatif. |
+| **Coach IA + insights** | `components/AIInsights.jsx` (Dashboard) | Endpoint `/ai/insights` (POST snapshot → coach + alertes). **N'envoie que des agrégats, jamais les transactions brutes.** Voir "IA" plus bas. |
+| **Moteur d'alertes** | `services/alerts.py` + `routers/notifications.py` + `components/NotificationBell.jsx` | Modèle `Notification` (dedup_key → scan idempotent, mig `0014`). 6 détecteurs déterministes à seuils conservateurs (découvert, budget dépassé, charge fixe non débitée, doublon, dépense inhabituelle, abonnement en hausse). Cloche + centre déroulant. **Pilier "Wealthly veille pour toi" 1/3** (reste : emails + rapport PDF). |
+
+### Refonte UI — fiches détail patrimoine unifiées
+`views/wealth/components/DetailShell.jsx` = châssis commun des **6 fiches détail** (RealEstate/Investment/Crypto/Liquidity/Liability/OtherAsset). Hero (pastille XL d'identité + titre 42px + valeur 48px Newsreader italique + badge delta), bande KPI colorée, sections, insight (`DetailInsight`), donut (`DetailDonut`), bridge (`DetailBridge`). `modal--detail` = 1100px. Header **sticky**. Système de **boutons unifié** "Option B" (primary = encre + halo cobalt) — défini dans `index.css`/`Styles.jsx`, anciennes classes legacy convergées.
+
+### Système de boutons & modales
+Boutons : un seul système, `.ds-btn` + classes legacy alignées (focus-ring WCAG partout, dark mode OK). Modales : scrim encre chaude, radius 16, anim scale-only, `ResponsiveModal` partout (desktop `.modal` + mobile vaul). **Piège passé** : une migration ResponsiveModal avait laissé un fragment texte `e.stopPropagation()}>` qui s'affichait dans ~14 modales (corrigé).
+
+### 🔒 RLS Postgres — ACTIF EN PROD (lire avant toute requête DB)
+- Mig `0013_enable_rls` : `ENABLE`+`FORCE RLS` + policy `RESTRICTIVE FOR ALL` sur **20 tables scoped foyer** (exclues : users, households, auth_events, password_reset_tokens). Mêmes policies ajoutées sur `notifications` (0014) et `ai_state` (0015).
+- `auth.py:get_current_user` pose `SELECT set_config('app.current_household_id', <hid>, true)` à chaque requête. **`true` = LOCAL (transaction)**.
+- **Rôle DB** : `DATABASE_URL` (Railway) utilise un rôle **`wealthly_app`** (Supabase, `NOBYPASSRLS`, peut faire du DDL → migrations OK). Le rôle `postgres` (BYPASSRLS) ne sert plus à l'app. Procédure complète : **`docs/RLS_ACTIVATION.md`**.
+- ⚠️ **GOTCHA CRITIQUE** : `set_config(..., true)` est reset à **chaque COMMIT**. Tout service qui **commit plusieurs fois** dans une requête perd la variable → les requêtes RLS suivantes renvoient 0 ligne / WITH CHECK échoue. **Parade** : ré-affirmer `set_config(..., true)` au début de chaque accès (voir `services/ai_budget.py:_ensure_ctx`). Les endpoints à 1 seul commit ne sont pas concernés.
+- Vérifier RLS via le catalogue (le SQL Editor Supabase n'est pas superuser → `SET ROLE` échoue 42501) : `SELECT relrowsecurity, relforcerowsecurity FROM pg_class WHERE relname='accounts';`
+
+### IA — coût maîtrisé (clé serveur unique, pas de BYOK)
+- Clé : `ANTHROPIC_API_KEY` (Railway). **Coach = Sonnet** (`AI_MODEL_COACH`, défaut `claude-sonnet-4-5-20250929`), **catégorisation = Haiku** (`AI_MODEL_CATEGORIZE`).
+- Garde-fous (`services/ai_budget.py` + table `ai_state`, 1 ligne/foyer, mig `0015`) : **cache Coach 24h** (`AI_COACH_CACHE_HOURS`, ~1 appel Sonnet/jour/foyer ; bouton rafraîchir = `force=true` ignore le cache) + **plafond mensuel** (`AI_MONTHLY_CAP`, défaut 300) → au-delà, fallback déterministe. Coût réel ~0,50 €/mois/foyer.
+- Les **alertes sont 100% déterministes** (zéro token).
+
+### Migrations Alembic : 0001 → **0015**
+`0011_planned_events`, `0012_documents`, `0013_enable_rls`, `0014_notifications`, `0015_ai_state`. **Note** : `create_all()` + alembic tournent au boot (les migrations RLS s'appliquent au déploiement). ORM ≈ **23 tables** désormais (pas 14).
+
+### Emails (en cours — pilier 2/3)
+DCA reminders **déjà en place** (`DcaPlan.reminder_email_enabled` + cron Railway + Resend). **À faire** : bilan mensuel auto opt-in (toggle Réglages → cron le 1er du mois → `email_service.send_email`). Maquette validée (style email papier-chaud). Le digest hebdo a été **écarté** (jugé inutile par le user). Puis pilier 3 = **rapport PDF** (bilan sobre + "année en revue") en montant `pdfReport.js`.
+
+### Renommage envisagé
+Le user veut renommer l'app. Candidat retenu **"Cossu"** (FR = aisé/opulent, libre web). À valider domaine + INPI avant de basculer (~10 endroits : Logo, manifest, titre, emails, README).
+
+---
+
 ## Session 2026-05-19 — Raphyy31 + Claude (Opus 4.7) — découpe + audit sécu expert + dark adouci
 
 Suite directe de la session 2026-05-18. Plus calme côté UI, focus refactor +
