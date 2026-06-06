@@ -14,11 +14,11 @@ export function AIInsights({ snapshot }) {
   const [error, setError] = useState(false);
   const fetchedRef = useRef(false);
 
-  const load = async () => {
+  const load = async (force = false) => {
     if (!snapshot) return;
     setLoading(true); setError(false);
     try {
-      const res = await api.insights.get(snapshot);
+      const res = await api.insights.get(snapshot, force);
       setData(res || null);
     } catch {
       setError(true);
@@ -27,11 +27,11 @@ export function AIInsights({ snapshot }) {
     }
   };
 
-  // Charge une seule fois quand le snapshot est prêt. Le bouton force un refresh.
+  // Au montage : cache serveur (force=false). Le bouton force une analyse fraîche.
   useEffect(() => {
     if (fetchedRef.current || !snapshot) return;
     fetchedRef.current = true;
-    load();
+    load(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshot]);
 
@@ -43,8 +43,8 @@ export function AIInsights({ snapshot }) {
       <div className="card-header">
         <h3 className="ai-insights-title"><Sparkles size={15}/> Coach patrimoine</h3>
         <button
-          className="icon-btn-sm" onClick={load} disabled={loading}
-          title="Rafraîchir l'analyse" aria-label="Rafraîchir l'analyse"
+          className="icon-btn-sm" onClick={() => load(true)} disabled={loading}
+          title="Rafraîchir l'analyse (nouvelle requête IA)" aria-label="Rafraîchir l'analyse"
         >
           <RefreshCw size={14} className={loading ? 'spin' : ''}/>
         </button>

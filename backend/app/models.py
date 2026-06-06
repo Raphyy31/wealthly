@@ -812,3 +812,24 @@ class Notification(Base):
     updated_at   = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     household    = relationship("Household")
+
+
+class AiState(Base):
+    """État IA par foyer (1 ligne/foyer) : cache du Coach + compteur mensuel.
+
+    - `coach_cache` / `coach_cached_at` : dernier résultat du Coach (Sonnet),
+      réutilisé pendant AI_COACH_CACHE_HOURS → au plus 1 appel/jour/foyer.
+    - `period` (YYYY-MM) + `month_count` : nombre d'appels IA réels ce mois →
+      plafonné par AI_MONTHLY_CAP (au-delà = fallback déterministe).
+    Garde-fou anti token-burn, le tout sur la clé serveur unique.
+    """
+    __tablename__ = "ai_state"
+
+    household_id   = Column(String, ForeignKey("households.id", ondelete="CASCADE"), primary_key=True)
+    period         = Column(String, nullable=True)        # 'YYYY-MM'
+    month_count    = Column(Integer, nullable=False, default=0)
+    coach_cache    = Column(JSON, nullable=True)
+    coach_cached_at = Column(DateTime, nullable=True)
+    updated_at     = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    household      = relationship("Household")

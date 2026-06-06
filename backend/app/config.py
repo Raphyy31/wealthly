@@ -85,6 +85,14 @@ class Settings:
 
     # Anthropic (optional — enables AI categorization)
     ANTHROPIC_API_KEY: str | None = os.getenv("ANTHROPIC_API_KEY")
+    # Modèles par usage (override env possible sans toucher au code).
+    # Coach = Sonnet (analyses plus fines), catégorisation = Haiku (pas cher).
+    AI_MODEL_COACH: str = os.getenv("AI_MODEL_COACH", "claude-sonnet-4-5-20250929")
+    AI_MODEL_CATEGORIZE: str = os.getenv("AI_MODEL_CATEGORIZE", "claude-haiku-4-5-20251001")
+    # Plafond mensuel d'appels IA par foyer (filet anti token-burn). Au-delà →
+    # fallback déterministe. Le cache du Coach (24h) limite déjà fortement.
+    AI_MONTHLY_CAP: int = int(os.getenv("AI_MONTHLY_CAP", "300"))
+    AI_COACH_CACHE_HOURS: int = int(os.getenv("AI_COACH_CACHE_HOURS", "24"))
 
     # Email service (Resend) — utilisé par forgot-password + admin reset.
     # Empty fallback → email_service.py retourne False silencieusement.
