@@ -144,6 +144,19 @@ def get_current_user(
     user = db.query(User).filter(User.id == user_id, User.is_active == True).first()
     if not user:
         raise HTTPException(status_code=401, detail="User not found or inactive")
+
+    # ── RLS context (defense-in-depth) ──────────────────────────────────────
+    # Toutes les requêtes ORM qui s'exécutent ensuite dans le SAME transaction
+    # block ne verront que les lignes du foyer du user. set_config(..., true)
+    # = équivalent SET LOCAL : la variable est reset à la fin de la
+    # transaction, donc pas de fuite entre requêtes / users sur le même pool.
+    # Sur SQLite (tests), set_config n'existe pas → on swallow l'erreur.
+    if db.bind and db.bind.dialect.name == 'postgresql':
+        from sqlalchemy import text
+        db.execute(
+            text("SELECT set_config('app.current_household_id', :hid, true)"),
+            {"hid": user.household_id},
+        )
     return user
 
 
