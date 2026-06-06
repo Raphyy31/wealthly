@@ -70,6 +70,9 @@ class Household(Base):
     # ne crée plus de règle apprise automatiquement (l'user gère tout à
     # la main). Par défaut activé — l'app apprend en silence.
     auto_learning_enabled = Column(Boolean, nullable=False, default=True)
+    # Email bilan mensuel automatique (opt-in dans Réglages). Si True, le cron
+    # mensuel envoie le bilan du mois écoulé au 1er utilisateur du foyer.
+    monthly_report_enabled = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     users = relationship("User", back_populates="household", cascade="all, delete-orphan")

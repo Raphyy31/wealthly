@@ -22,6 +22,7 @@ import { PayeesSection }        from './settings/sections/PayeesSection.jsx';
 import { CustomRulesSection }   from './settings/sections/CustomRulesSection.jsx';
 import { TransferRulesSection } from './settings/sections/TransferRulesSection.jsx';
 import { LearningToggle }       from './settings/sections/LearningToggle.jsx';
+import { MonthlyReportToggle }  from './settings/sections/MonthlyReportToggle.jsx';
 import { MemberEditor }         from './settings/modals/MemberEditor.jsx';
 
 // ============================================================================
@@ -96,11 +97,14 @@ export function SettingsView({ members, accounts, accountBalances, saveMember, d
 
         <div className="settings-panel">
           {activeSection === 'profil' && (
-            <ProfilSection
-              currentUser={currentUser}
-              baseCurrency={baseCurrency}
-              setBaseCurrency={setBaseCurrency}
-            />
+            <>
+              <ProfilSection
+                currentUser={currentUser}
+                baseCurrency={baseCurrency}
+                setBaseCurrency={setBaseCurrency}
+              />
+              <MonthlyReportToggle showToast={showToast} />
+            </>
           )}
 
           {activeSection === 'foyer' && (

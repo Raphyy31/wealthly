@@ -359,6 +359,15 @@ export const categorizeAI = {
 };
 
 // ============================================================================
+// BILAN MENSUEL PAR EMAIL
+// ============================================================================
+export const reports = {
+  getSettings: () => isDemo() ? Promise.resolve({ monthly_report_enabled: false }) : get('/reports/settings'),
+  setSettings: (enabled) => put('/reports/settings', { monthly_report_enabled: enabled }),
+  sendTest: () => post('/reports/test', {}),
+};
+
+// ============================================================================
 // LIVE QUOTES (Yahoo Finance — stocks, ETFs, crypto)
 // ============================================================================
 export const quotes = {

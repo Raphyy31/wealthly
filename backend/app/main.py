@@ -27,7 +27,7 @@ logging.basicConfig(
 from app.config import settings
 from app.database import engine, Base
 from app.rate_limit import limiter, rate_limit_handler
-from app.routers import auth, members, accounts, transactions, wealth, other, categorize, banking, admin, quotes, fixed_charges, dca, ref_month, payees, totp, planned_events, documents, insights, notifications
+from app.routers import auth, members, accounts, transactions, wealth, other, categorize, banking, admin, quotes, fixed_charges, dca, ref_month, payees, totp, planned_events, documents, insights, notifications, reports
 
 logger = logging.getLogger("wealthly")
 
@@ -219,6 +219,8 @@ def _run_lightweight_migrations() -> None:
             "END $$;",
             # Toggle Category Learning auto par foyer (2026-05-16)
             "ALTER TABLE households ADD COLUMN IF NOT EXISTS auto_learning_enabled BOOLEAN DEFAULT TRUE NOT NULL",
+            # Opt-in email bilan mensuel (2026-06-06)
+            "ALTER TABLE households ADD COLUMN IF NOT EXISTS monthly_report_enabled BOOLEAN DEFAULT FALSE NOT NULL",
             # Suppression mortgage_interest (2026-05-18) — remplacé par loan_mortgage.
             # Reclasse les transactions existantes + les règles de catégorisation.
             "UPDATE transactions SET category_slug = 'loan_mortgage' WHERE category_slug = 'mortgage_interest'",
@@ -375,6 +377,7 @@ app.include_router(transactions.router)
 app.include_router(wealth.router)
 app.include_router(other.router)
 app.include_router(categorize.router)
+app.include_router(reports.router)
 app.include_router(banking.router)
 app.include_router(admin.router)
 app.include_router(quotes.router)
