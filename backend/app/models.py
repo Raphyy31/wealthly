@@ -775,3 +775,40 @@ class Document(Base):
     created_at    = Column(DateTime, default=datetime.utcnow)
 
     household     = relationship("Household")
+
+
+class Notification(Base):
+    """Alerte intelligente générée par le moteur de détection.
+
+    Le moteur tourne de façon idempotente (sur sync + refresh à l'ouverture) :
+    chaque alerte a une `dedup_key` stable par foyer pour ne JAMAIS créer de
+    doublon quand on re-scanne (ex: 'budget_overrun:restaurants:2026-06').
+
+    `kind` (catalogue) : unusual_debit | subscription_hike | duplicate_charge |
+                         budget_overrun | fixed_charge_unpaid | low_balance |
+                         income_missing | savings_goal
+    `severity` : info | warn | critical
+    `status`   : unread | read | dismissed
+    `data`     : payload JSON (montants, période…) pour le rendu front + email.
+    `link`     : vue cible au clic (ex: 'transactions', 'monthly', 'projection').
+    """
+    __tablename__ = "notifications"
+    __table_args__ = (
+        UniqueConstraint("household_id", "dedup_key", name="uq_notif_dedup"),
+        Index("ix_notif_household_status", "household_id", "status"),
+    )
+
+    id           = Column(String, primary_key=True, default=_uuid)
+    household_id = Column(String, ForeignKey("households.id", ondelete="CASCADE"), nullable=False, index=True)
+    dedup_key    = Column(String, nullable=False)
+    kind         = Column(String, nullable=False)
+    severity     = Column(String, nullable=False, default="info")
+    title        = Column(String, nullable=False)
+    body         = Column(Text, nullable=False, default="")
+    data         = Column(JSON, nullable=False, default=dict)
+    link         = Column(String, nullable=True)
+    status       = Column(String, nullable=False, default="unread", index=True)
+    created_at   = Column(DateTime, default=datetime.utcnow)
+    updated_at   = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    household    = relationship("Household")
