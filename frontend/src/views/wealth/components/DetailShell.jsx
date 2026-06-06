@@ -250,6 +250,18 @@ const DSH_CSS = String.raw`
 .dsh-progress-fill { height: 100%; border-radius: 4px; transition: width .4s ease; }
 .dsh-progress-legend { margin-top: 8px; font-size: 12px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
 
+/* Liste générique (transactions, lignes) */
+.dsh-list { display: flex; flex-direction: column; }
+.dsh-list-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border-light, var(--border)); }
+.dsh-list-row:last-child { border-bottom: none; }
+.dsh-list-main { min-width: 0; }
+.dsh-list-label { font-size: 13px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dsh-list-meta { font-size: 11.5px; color: var(--text-tertiary); margin-top: 1px; }
+.dsh-list-amount { font-size: 13px; font-weight: 500; color: var(--text-secondary); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.dsh-list-amount.pos { color: var(--positive); }
+.dsh-list-amount.neg { color: var(--negative); }
+.dsh-chart-pad { margin: 0 -4px; }
+
 /* Footer */
 .dsh-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding-top: 4px; }
 .dsh-foot-owners { font-size: 12.5px; color: var(--text-tertiary); display: inline-flex; align-items: center; gap: 6px; }
