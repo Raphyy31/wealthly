@@ -81,8 +81,14 @@ export function AIInsights({ snapshot }) {
                 </div>
               ))}
             </div>
-          ) : (alerts.length === 0 && data && (
-            <p className="ai-empty">Rien à signaler ce mois-ci — tout est sous contrôle.</p>
+          ) : (alerts.length === 0 && (
+            // Jamais de carte totalement vide : si data est arrivé null/échoué
+            // sans lever d'erreur, on affiche quand même un message neutre.
+            <p className="ai-empty">
+              {data
+                ? 'Rien à signaler ce mois-ci — tout est sous contrôle.'
+                : "Analyse indisponible pour le moment. Vérifie que l'IA est bien configurée, ou réessaie."}
+            </p>
           ))}
 
           {data && !data.ai_used && (coach.length > 0 || alerts.length > 0) && (
