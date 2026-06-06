@@ -1,9 +1,11 @@
 // ============================================================================
 // NotificationBell — cloche + centre d'alertes intelligentes.
-// Refresh (= détection) une fois au montage, badge non-lus, panneau déroulant,
-// clic → marque lu + navigue vers la vue concernée, dismiss, tout marquer lu.
+// Refresh (= détection) une fois au montage, badge non-lus, panneau déroulant
+// positionné intelligemment (portal + flip haut/bas selon la place dispo),
+// clic → marque lu + navigue, dismiss, tout marquer lu.
 // ============================================================================
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Bell, AlertTriangle, AlertCircle, Info, X, Check } from 'lucide-react';
 import * as api from '../api.js';
 
@@ -21,8 +23,10 @@ function timeAgo(iso) {
 export function NotificationBell({ onNavigate }) {
   const [items, setItems] = useState([]);
   const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState(null);
   const fetchedRef = useRef(false);
-  const wrapRef = useRef(null);
+  const btnRef = useRef(null);
+  const panelRef = useRef(null);
 
   const load = useCallback(async (detect) => {
     try {
@@ -31,20 +35,47 @@ export function NotificationBell({ onNavigate }) {
     } catch { /* silencieux — cloche secondaire */ }
   }, []);
 
-  // Détection une fois par session, au montage.
   useEffect(() => {
     if (fetchedRef.current) return;
     fetchedRef.current = true;
     load(true);
   }, [load]);
 
-  // Fermer au clic extérieur.
+  // Calcule la position du panneau (fixed) : flip haut/bas + clamp viewport.
+  const computePos = useCallback(() => {
+    const el = btnRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const panelW = Math.min(380, vw - 24);
+    let left = Math.max(12, Math.min(r.left, vw - panelW - 12));
+    const openUp = r.top > vh / 2; // cloche dans la moitié basse → ouvre vers le haut
+    setPos({
+      width: panelW,
+      left,
+      ...(openUp ? { bottom: Math.round(vh - r.top + 8) } : { top: Math.round(r.bottom + 8) }),
+      maxHeight: openUp ? Math.round(r.top - 24) : Math.round(vh - r.bottom - 24),
+    });
+  }, []);
+
+  const toggle = () => {
+    if (!open) computePos();
+    setOpen(o => !o);
+  };
+
+  // Fermer au clic extérieur (cloche OU panneau) + recalcul au resize/scroll.
   useEffect(() => {
     if (!open) return;
-    const h = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); };
+    const h = (e) => {
+      if (btnRef.current?.contains(e.target)) return;
+      if (panelRef.current?.contains(e.target)) return;
+      setOpen(false);
+    };
+    const re = () => computePos();
     document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, [open]);
+    window.addEventListener('resize', re);
+    return () => { document.removeEventListener('mousedown', h); window.removeEventListener('resize', re); };
+  }, [open, computePos]);
 
   const unread = items.filter(n => n.status === 'unread').length;
 
@@ -67,71 +98,72 @@ export function NotificationBell({ onNavigate }) {
     api.notifications.readAll().catch(() => {});
   };
 
-  return (
-    <div className="notif-wrap" ref={wrapRef}>
-      <NotifStyles/>
-      <button className="notif-bell" onClick={() => setOpen(o => !o)} aria-label="Alertes" title="Alertes">
-        <Bell size={18}/>
-        {unread > 0 && <span className="notif-badge">{unread > 9 ? '9+' : unread}</span>}
-      </button>
+  const panel = open && pos && (
+    <div
+      ref={panelRef}
+      className="notif-panel"
+      style={{ position: 'fixed', left: pos.left, width: pos.width, top: pos.top, bottom: pos.bottom, maxHeight: pos.maxHeight }}
+    >
+      <div className="notif-head">
+        <span className="notif-head-title">Alertes</span>
+        {unread > 0 && <button className="notif-readall" onClick={onReadAll}><Check size={13}/> Tout marquer lu</button>}
+      </div>
 
-      {open && (
-        <div className="notif-panel">
-          <div className="notif-head">
-            <span className="notif-head-title">Alertes</span>
-            {unread > 0 && <button className="notif-readall" onClick={onReadAll}><Check size={13}/> Tout marquer lu</button>}
-          </div>
-
-          {items.length === 0 ? (
-            <div className="notif-empty">
-              <Bell size={22}/>
-              <p>Rien à signaler — tout est sous contrôle. 👌</p>
-            </div>
-          ) : (
-            <div className="notif-list">
-              {items.map(n => {
-                const Icon = ICONS[n.severity] || Info;
-                return (
-                  <div key={n.id} className={`notif-item ${n.status === 'unread' ? 'unread' : ''}`} onClick={() => onClickItem(n)}>
-                    <span className={`notif-ic ${n.severity}`}><Icon size={15}/></span>
-                    <div className="notif-body">
-                      <div className="notif-title">{n.title}</div>
-                      <div className="notif-text">{n.body}</div>
-                      <div className="notif-time">{timeAgo(n.created_at)}</div>
-                    </div>
-                    <button className="notif-dismiss" onClick={(e) => onDismiss(e, n.id)} aria-label="Écarter"><X size={14}/></button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+      {items.length === 0 ? (
+        <div className="notif-empty">
+          <Bell size={22}/>
+          <p>Rien à signaler — tout est sous contrôle. 👌</p>
+        </div>
+      ) : (
+        <div className="notif-list">
+          {items.map(n => {
+            const Icon = ICONS[n.severity] || Info;
+            return (
+              <div key={n.id} className={`notif-item ${n.status === 'unread' ? 'unread' : ''}`} onClick={() => onClickItem(n)}>
+                <span className={`notif-ic ${n.severity}`}><Icon size={15}/></span>
+                <div className="notif-body">
+                  <div className="notif-title">{n.title}</div>
+                  <div className="notif-text">{n.body}</div>
+                  <div className="notif-time">{timeAgo(n.created_at)}</div>
+                </div>
+                <button className="notif-dismiss" onClick={(e) => onDismiss(e, n.id)} aria-label="Écarter"><X size={14}/></button>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
+  );
+
+  return (
+    <>
+      <NotifStyles/>
+      <button ref={btnRef} className="notif-bell" onClick={toggle} aria-label="Alertes" title="Alertes">
+        <Bell size={18}/>
+        {unread > 0 && <span className="notif-badge">{unread > 9 ? '9+' : unread}</span>}
+      </button>
+      {typeof document !== 'undefined' && panel ? createPortal(panel, document.body) : null}
+    </>
   );
 }
 
 let _notifCss = false;
 function NotifStyles() {
-  if (_notifCss) return null;
-  // injecté dans le <head> (persiste — pas démonté avec la cloche)
-  if (typeof document !== 'undefined') {
-    _notifCss = true;
-    const s = document.createElement('style');
-    s.dataset.notif = '1';
-    s.textContent = NOTIF_CSS;
-    document.head.appendChild(s);
-  }
+  if (_notifCss || typeof document === 'undefined') return null;
+  _notifCss = true;
+  const s = document.createElement('style');
+  s.dataset.notif = '1';
+  s.textContent = NOTIF_CSS;
+  document.head.appendChild(s);
   return null;
 }
 
 const NOTIF_CSS = `
-.notif-wrap { position: relative; display: inline-flex; }
 .notif-bell { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 8px; background: var(--bg-elev); border: 1px solid var(--border); color: var(--ink-2); cursor: pointer; transition: background .15s, color .15s, border-color .15s; }
 .notif-bell:hover { background: var(--bg-sunk); color: var(--ink); border-color: var(--border-strong); }
 .notif-badge { position: absolute; top: -5px; right: -5px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: var(--negative); color: #fff; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px var(--bg-card, var(--bg-elev)); }
-.notif-panel { position: absolute; top: 44px; right: 0; width: min(380px, 92vw); max-height: 70vh; overflow-y: auto; background: var(--bg-card, var(--bg-elev)); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 20px 50px -12px rgba(15,14,12,.28); z-index: 1500; animation: notifIn .14s ease-out; }
-@keyframes notifIn { from { opacity: 0; transform: scale(.97) translateY(-4px); } to { opacity: 1; transform: none; } }
+.notif-panel { overflow-y: auto; background: var(--bg-card, var(--bg-elev)); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 20px 50px -12px rgba(15,14,12,.28); z-index: 9999; animation: notifIn .14s ease-out; }
+@keyframes notifIn { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: none; } }
 .notif-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg-card, var(--bg-elev)); }
 .notif-head-title { font-size: 14px; font-weight: 600; color: var(--ink); }
 .notif-readall { display: inline-flex; align-items: center; gap: 4px; background: none; border: none; color: var(--accent); font-size: 12px; font-weight: 500; cursor: pointer; padding: 2px 4px; border-radius: 6px; }
@@ -139,10 +171,10 @@ const NOTIF_CSS = `
 .notif-empty { text-align: center; padding: 32px 20px; color: var(--text-tertiary); }
 .notif-empty p { margin: 10px 0 0; font-size: 13px; font-family: 'Newsreader', Georgia, serif; font-style: italic; }
 .notif-list { display: flex; flex-direction: column; }
-.notif-item { display: flex; gap: 11px; padding: 13px 16px; border-bottom: 1px solid var(--border-light, var(--border)); cursor: pointer; transition: background .12s; position: relative; }
+.notif-item { display: flex; gap: 11px; padding: 13px 16px 13px 18px; border-bottom: 1px solid var(--border-light, var(--border)); cursor: pointer; transition: background .12s; position: relative; }
 .notif-item:hover { background: var(--bg-subtle); }
 .notif-item.unread { background: color-mix(in srgb, var(--accent) 4%, transparent); }
-.notif-item.unread::before { content: ''; position: absolute; left: 6px; top: 50%; transform: translateY(-50%); width: 5px; height: 5px; border-radius: 999px; background: var(--accent); }
+.notif-item.unread::before { content: ''; position: absolute; left: 7px; top: 50%; transform: translateY(-50%); width: 5px; height: 5px; border-radius: 999px; background: var(--accent); }
 .notif-ic { flex-shrink: 0; width: 30px; height: 30px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; }
 .notif-ic.critical { background: color-mix(in srgb, var(--negative) 14%, transparent); color: var(--negative); }
 .notif-ic.warn { background: color-mix(in srgb, var(--warning) 16%, transparent); color: var(--warning); }
@@ -154,4 +186,5 @@ const NOTIF_CSS = `
 .notif-dismiss { flex-shrink: 0; background: none; border: none; color: var(--text-tertiary); cursor: pointer; padding: 2px; border-radius: 6px; height: fit-content; opacity: 0; transition: opacity .12s, color .12s, background .12s; }
 .notif-item:hover .notif-dismiss { opacity: 1; }
 .notif-dismiss:hover { background: var(--bg-hover); color: var(--ink); }
+@media (max-width: 640px) { .notif-dismiss { opacity: 1; } }
 `;
