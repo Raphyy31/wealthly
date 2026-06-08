@@ -1,27 +1,33 @@
 /**
  * Wealthly — bilan patrimonial PDF (HTML/CSS → impression navigateur).
  *
- * Direction graphique « banque privée » (ui-ux-pro-max : Banking/Luxury) :
- *   - Palette  : navy profond #0F172A + OR #A16207 sur blanc, accents sobres.
- *   - Typo     : Playfair Display (titres + chiffres hero) / Inter (corps).
- *   - Signature: filet OR sous le bandeau, petites capitales espacées, donut
- *                en dégradé navy→or→bronze (pas d'arc-en-ciel).
+ * CHARTE = celle de l'app (tokens index.css, vérifiés) :
+ *   - Fond papier chaud #F7F6F2, surfaces #FFFFFF, bordures #E4E1D8.
+ *   - Encre #16150F, accent cobalt #2540D9, sage #136D3E, terracotta #B0392B.
+ *   - Dataviz d1–d7 (cobalt, sage, terracotta, mauve, rose, graphite, ocre).
+ *   - Police Geist (sans) + Newsreader (serif italique pour les gros chiffres
+ *     et les accents de titre en cobalt, comme le site).
+ *   - Radii 12/16, cartes blanches sur fond papier.
  *
- * 2 pages : p1 = synthèse exécutive, p2 = détail des avoirs & emprunts
- * (niveau synthèse, sans échéancier). Calculs repris de l'app (inchangés).
+ * 2 pages : p1 = synthèse exécutive ; p2 = détail en CARTES par classe d'actif
+ * (icône, total, part du patrimoine, barre de poids, badge +/- value).
+ * Calculs repris de l'app (chiffres inchangés).
  */
 import { computeHealthScore } from './components/HealthScore.jsx';
 
-const DISPLAY = "'Playfair Display', Georgia, 'Times New Roman', serif";
-const SANS = "'Inter', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif";
+const SANS = "'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif";
+const SERIF = "'Newsreader', Georgia, 'Times New Roman', serif";
+const MONO = "'Geist Mono', ui-monospace, 'SF Mono', monospace";
 const C = {
-  ink: '#0F172A', body: '#334155', muted: '#64748B', faint: '#94A3B8',
-  gold: '#A16207', goldDeep: '#854D0E', goldSoft: '#F6EFE0',
-  navy: '#1E3A8A', pos: '#15803D', neg: '#B91C1C',
-  border: '#E2E5EA', hair: '#EEF0F3', panel: '#FBFAF7',
+  bg: '#F7F6F2', surface: '#FFFFFF', sunk: '#EFEDE6', hover: '#F1EFE8',
+  border: '#E4E1D8', borderStrong: '#D2CEC0',
+  ink: '#16150F', ink2: '#56544A', ink3: '#8C8979',
+  accent: '#2540D9', accent2: '#1A2FA8', accentSoft: '#E7EBFF', accentLine: '#BFC8FF',
+  pos: '#136D3E', posSoft: '#DBEDE2', neg: '#B0392B', negSoft: '#F4E2DE',
+  warn: '#8E641A', warnSoft: '#F2E7CE',
 };
-// Donut / dataviz — luxe sobre : navy, or, bleu profond, bronze, ardoise…
-const DV = ['#0F172A', '#A16207', '#1E3A8A', '#B08D57', '#5B6675', '#475569', '#CA8A04'];
+// dataviz d1–d7
+const DV = ['#2540D9', '#1F8E6E', '#C2733B', '#7B57C6', '#B85D7A', '#4D4D4D', '#E0B23E'];
 
 const nf = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
 const eur = (v, sign = false) => {
@@ -38,7 +44,7 @@ const monthLong = (mk) => { if (!mk) return ''; const [y, m] = mk.split('-'); re
 const monthShort = (mk) => { if (!mk) return ''; const [y, m] = mk.split('-'); return new Date(+y, +m - 1, 1).toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' }); };
 
 // ── donut ──
-function donutSvg(segments, sw = 16, r = 60) {
+function donutSvg(segments, sw = 17, r = 58) {
   const total = segments.reduce((s, x) => s + x.value, 0) || 1;
   const Circ = 2 * Math.PI * r; let off = 0;
   const size = (r + sw / 2 + 2) * 2; const c = size / 2;
@@ -47,13 +53,13 @@ function donutSvg(segments, sw = 16, r = 60) {
     const a = `<circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="${s.color}" stroke-width="${sw}" stroke-dasharray="${dash.toFixed(2)} ${(Circ - dash).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}"/>`;
     off += dash; return a;
   }).join('');
-  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="transform:rotate(-90deg)"><circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="${C.hair}" stroke-width="${sw}"/>${arcs}</svg>`;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="transform:rotate(-90deg)"><circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="${C.sunk}" stroke-width="${sw}"/>${arcs}</svg>`;
 }
 
 // ── courbe d'aire ──
 function areaChartSvg(series) {
-  if (!series || series.length < 2) return '<p class="muted-note">Historique insuffisant.</p>';
-  const W = 700, H = 150, padL = 2, padR = 2, padT = 18, padB = 22;
+  if (!series || series.length < 2) return '<p class="empty">Historique insuffisant.</p>';
+  const W = 700, H = 152, padL = 2, padR = 2, padT = 18, padB = 22;
   const vals = series.map((s) => s.value);
   const min = Math.min(...vals), max = Math.max(...vals), range = (max - min) || 1;
   const n = series.length;
@@ -63,19 +69,47 @@ function areaChartSvg(series) {
   const area = `${padL},${(H - padB).toFixed(1)} ${line} ${(W - padR).toFixed(1)},${(H - padB).toFixed(1)}`;
   const last = series[n - 1];
   return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">
-    <defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${C.navy}" stop-opacity="0.13"/><stop offset="1" stop-color="${C.navy}" stop-opacity="0"/></linearGradient></defs>
+    <defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${C.accent}" stop-opacity="0.15"/><stop offset="1" stop-color="${C.accent}" stop-opacity="0"/></linearGradient></defs>
     <polygon points="${area}" fill="url(#ag)"/>
-    <polyline points="${line}" fill="none" stroke="${C.navy}" stroke-width="2" stroke-linejoin="round"/>
-    <circle cx="${x(n - 1).toFixed(1)}" cy="${y(last.value).toFixed(1)}" r="3.6" fill="${C.gold}"/>
-    <text x="${padL}" y="${H - 6}" style="font:400 9px ${SANS};fill:${C.faint};letter-spacing:.04em">${esc(series[0].label)}</text>
-    <text x="${W - padR}" y="${H - 6}" text-anchor="end" style="font:400 9px ${SANS};fill:${C.faint};letter-spacing:.04em">${esc(last.label)}</text>
+    <polyline points="${line}" fill="none" stroke="${C.accent}" stroke-width="2" stroke-linejoin="round"/>
+    <circle cx="${x(n - 1).toFixed(1)}" cy="${y(last.value).toFixed(1)}" r="3.6" fill="${C.accent}"/>
+    <text x="${padL}" y="${H - 6}" style="font:400 9px ${MONO};fill:${C.ink3}">${esc(series[0].label)}</text>
+    <text x="${W - padR}" y="${H - 6}" text-anchor="end" style="font:400 9px ${MONO};fill:${C.ink3}">${esc(last.label)}</text>
     <text x="${(x(n - 1) - 5).toFixed(1)}" y="${(y(last.value) - 9).toFixed(1)}" text-anchor="end" style="font:600 10px ${SANS};fill:${C.ink}">${eur(last.value)}</text>
   </svg>`;
 }
 
-// ── briques ──
-const holding = (name, sub, value, meta = '', metaColor = '') => `<div class="hold"><div class="hold-l"><div class="hold-n">${esc(name)}</div>${sub ? `<div class="hold-s">${esc(sub)}</div>` : ''}</div><div class="hold-r"><div class="hold-v">${value}</div>${meta ? `<div class="hold-m"${metaColor ? ` style="color:${metaColor}"` : ''}>${meta}</div>` : ''}</div></div>`;
-const groupHead = (title, total) => `<div class="grp-head"><span class="grp-t">${esc(title)}</span>${total != null ? `<span class="grp-tot">${eur(total)}</span>` : ''}</div>`;
+// ── icônes par classe ──
+const _ic = 'width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"';
+const ICONS = {
+  Immobilier: `<svg ${_ic}><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9.5 21v-6h5v6"/></svg>`,
+  Placements: `<svg ${_ic}><path d="M3 17l5.5-5.5 3.5 3.5L21 6"/><path d="M15 6h6v6"/></svg>`,
+  Crypto: `<svg ${_ic}><circle cx="12" cy="12" r="9"/><path d="M9.5 8h4a2.2 2.2 0 0 1 0 4.4h-4zM9.5 12.4h4.6a2.2 2.2 0 0 1 0 4.4H9.5zM9.5 6.5v11"/></svg>`,
+  Liquidités: `<svg ${_ic}><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/></svg>`,
+  Emprunts: `<svg ${_ic}><rect x="2.5" y="5" width="19" height="14" rx="2.2"/><path d="M2.5 9.5h19"/></svg>`,
+  Divers: `<svg ${_ic}><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>`,
+};
+const iconFor = (cls) => ICONS[cls] || ICONS.Divers;
+const plPill = (pv, pvp) => { if (pv == null) return ''; const up = pv >= 0; return `<span class="pill" style="background:${up ? C.posSoft : C.negSoft};color:${up ? C.pos : C.neg}">${eur(pv, true)} · ${up ? '+' : ''}${pvp.toFixed(1)} %</span>`; };
+const flatPill = (txt) => `<span class="pill" style="background:${C.sunk};color:${C.ink2}">${txt}</span>`;
+
+function card(title, color, total, pctW, body, sub = '') {
+  return `<div class="card">
+    <div class="card-h">
+      <span class="card-ic" style="background:${color}">${iconFor(title)}</span>
+      <div class="card-tt"><div class="card-t">${esc(title)}</div>${sub ? `<div class="card-st">${esc(sub)}</div>` : ''}</div>
+      <div class="card-meta"><div class="card-tot">${eur(total)}</div>${pctW != null ? `<div class="card-pctw">${pctW.toFixed(0)} % du patrimoine</div>` : ''}</div>
+    </div>
+    <div class="card-share"><i style="width:${Math.max(2, pctW || 0).toFixed(1)}%;background:${color}"></i></div>
+    <div class="card-body">${body}</div>
+  </div>`;
+}
+function cardRow(name, sub, value, pill, weightPct, color) {
+  return `<div class="ci">
+    <div class="ci-top"><div class="ci-l"><div class="ci-n">${esc(name)}</div>${sub ? `<div class="ci-s">${esc(sub)}</div>` : ''}</div><div class="ci-r"><div class="ci-v">${value}</div>${pill || ''}</div></div>
+    <div class="ci-w"><i style="width:${Math.max(2, weightPct || 0).toFixed(1)}%;background:${color}"></i></div>
+  </div>`;
+}
 
 export function generateBilanHtmlReport(data) {
   const {
@@ -89,7 +123,6 @@ export function generateBilanHtmlReport(data) {
   const activeMember = members.find((m) => m.id === activeMemberId);
   const ownerName = activeMember ? activeMember.name : 'Votre foyer';
 
-  // ── calculs ──
   const actifsTotal = liquidWealth + assetsValue;
   const immoAssets = visibleAssets.reduce((s, a) => (ASSET_CLASS_MAP?.[a.type]?.class === 'Immobilier' ? s + (parseFloat(a.currentValue) || 0) * memberShare(a) : s), 0);
   const mortgageDebt = visibleLiabilities.reduce((s, l) => (l.type === 'mortgage' ? s + (parseFloat(l.remainingCapital ?? l.remaining_capital ?? 0) || 0) * memberShare(l) : s), 0);
@@ -118,10 +151,12 @@ export function generateBilanHtmlReport(data) {
   });
   const allocSegments = Object.entries(allocClasses).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).map(([name, value], i) => ({ name, value, color: DV[i % DV.length] }));
   const allocTotal = allocSegments.reduce((s, x) => s + x.value, 0) || 1;
+  const classColor = {}; allocSegments.forEach((s) => { classColor[s.name] = s.color; });
+  const colorFor = (cls) => classColor[cls] || C.accent;
 
   const score = computeHealthScore({ monthlyEvolution, liquidWealth, assetsValue, liabilitiesValue, visibleAssets, budgets, categoryAnalysis });
 
-  // détail page 2
+  // ── détail page 2 ──
   const topAssets = visibleAssets.filter((a) => !a.parentAssetId && !a.parent_asset_id);
   const byClass = {};
   topAssets.forEach((a) => { const cls = ASSET_CLASS_MAP?.[a.type]?.class || 'Divers'; (byClass[cls] = byClass[cls] || []).push(a); });
@@ -130,28 +165,42 @@ export function generateBilanHtmlReport(data) {
     mortgage: 'Crédit immobilier', auto: 'Crédit auto', consumer: 'Crédit conso', personal: 'Prêt personnel',
     student: 'Prêt étudiant', revolving: 'Crédit renouvelable', loan: 'Prêt',
   })[t] || t || '';
-  function assetGroup(cls, list) {
-    const rows = list.slice().sort((a, b) => (parseFloat(b.currentValue) || 0) * memberShare(b) - (parseFloat(a.currentValue) || 0) * memberShare(a)).map((a) => {
+
+  function assetCard(cls, list) {
+    const color = colorFor(cls);
+    const tot = list.reduce((s, a) => s + (parseFloat(a.currentValue) || 0) * memberShare(a), 0);
+    const pctW = actifsTotal > 0 ? (tot / actifsTotal) * 100 : 0;
+    const body = list.slice().sort((a, b) => (parseFloat(b.currentValue) || 0) * memberShare(b) - (parseFloat(a.currentValue) || 0) * memberShare(a)).map((a) => {
       const sh = memberShare(a); const cur = (parseFloat(a.currentValue) || 0) * sh; const cost = (parseFloat(a.purchasePrice) || 0) * sh;
       const pv = cost > 0 ? cur - cost : null; const pvp = cost > 0 ? (pv / cost) * 100 : null;
-      const meta = pv == null ? '' : `${eur(pv, true)} · ${pvp >= 0 ? '+' : ''}${pvp.toFixed(1)} %`;
       const lab = subtypeLabel(a.type); const sub = (lab && lab !== cls) ? lab : '';
-      return holding(a.name || '—', sub, eur(cur), meta, pv == null ? '' : (pv >= 0 ? C.pos : C.neg));
+      const w = tot > 0 ? (cur / tot) * 100 : 0;
+      return cardRow(a.name || '—', sub, eur(cur), plPill(pv, pvp), w, color);
     }).join('');
-    const tot = list.reduce((s, a) => s + (parseFloat(a.currentValue) || 0) * memberShare(a), 0);
-    return groupHead(cls, tot) + rows;
+    return card(cls, color, tot, pctW, body);
   }
-  const liqRows = visibleAccounts.map((a) => ({ a, bal: (accountBalances?.[a.id] || 0) * memberShare(a) })).sort((x, y) => y.bal - x.bal).map(({ a, bal }) => holding(a.name, a.bank || '—', eur(bal))).join('');
-  const loanRows = visibleLiabilities.slice().sort((a, b) => (parseFloat(b.remainingCapital ?? b.remaining_capital ?? 0) || 0) - (parseFloat(a.remainingCapital ?? a.remaining_capital ?? 0) || 0)).map((l) => {
+
+  const assetCardsHtml = Object.entries(byClass)
+    .sort((a, b) => b[1].reduce((s, x) => s + (parseFloat(x.currentValue) || 0) * memberShare(x), 0) - a[1].reduce((s, x) => s + (parseFloat(x.currentValue) || 0) * memberShare(x), 0))
+    .map(([cls, list]) => assetCard(cls, list)).join('');
+
+  const liqColor = colorFor('Liquidités');
+  const liqBody = visibleAccounts.map((a) => ({ a, bal: (accountBalances?.[a.id] || 0) * memberShare(a) })).sort((x, y) => y.bal - x.bal)
+    .map(({ a, bal }) => cardRow(a.name, a.bank || '—', eur(bal), '', liquidWealth > 0 ? (bal / liquidWealth) * 100 : 0, liqColor)).join('');
+  const liqCardHtml = visibleAccounts.length ? card('Liquidités', liqColor, liquidWealth, actifsTotal > 0 ? (liquidWealth / actifsTotal) * 100 : 0, liqBody) : '';
+
+  const loanTotal = visibleLiabilities.reduce((s, l) => s + (parseFloat(l.remainingCapital ?? l.remaining_capital ?? 0) || 0) * memberShare(l), 0);
+  const loanBody = visibleLiabilities.slice().sort((a, b) => (parseFloat(b.remainingCapital ?? b.remaining_capital ?? 0) || 0) - (parseFloat(a.remainingCapital ?? a.remaining_capital ?? 0) || 0)).map((l) => {
     const sh = memberShare(l);
     const rem = (parseFloat(l.remainingCapital ?? l.remaining_capital ?? 0) || 0) * sh;
     const mon = (parseFloat(l.monthlyPayment ?? l.monthly_payment ?? 0) || 0) * sh;
     const rate = l.interestRate ? `${parseFloat(l.interestRate).toFixed(2)} %` : '—';
-    return holding(l.name || '—', `${subtypeLabel(l.type) || 'Crédit'} · taux ${rate}`, eur(rem), mon > 0 ? `${eur(mon)} / mois` : '', C.muted);
+    const w = loanTotal > 0 ? (rem / loanTotal) * 100 : 0;
+    return cardRow(l.name || '—', `${subtypeLabel(l.type) || 'Crédit'} · taux ${rate}`, eur(rem), mon > 0 ? flatPill(`${eur(mon)} / mois`) : '', w, C.neg);
   }).join('');
-  const loanTotal = visibleLiabilities.reduce((s, l) => s + (parseFloat(l.remainingCapital ?? l.remaining_capital ?? 0) || 0) * memberShare(l), 0);
+  const loanCardHtml = visibleLiabilities.length ? card('Emprunts', C.neg, loanTotal, null, loanBody, 'Capital restant dû') : '';
 
-  // synthèse
+  // synthèse éditoriale
   const sp = [];
   if (nwDeltaPct != null) sp.push(`votre patrimoine net ${nwDeltaPct >= 0 ? 'progresse' : 'recule'} de <b>${pctStr(nwDeltaPct)}</b> et s'établit à <b>${eur(netWorth)}</b>`);
   else sp.push(`votre patrimoine net s'établit à <b>${eur(netWorth)}</b>`);
@@ -160,103 +209,117 @@ export function generateBilanHtmlReport(data) {
   const synthesis = `Ce mois-ci, ${sp.join(', ')}. La santé patrimoniale est notée <b>${score.total} sur 100</b>.`;
 
   let deltaChip = '';
-  if (nwDelta != null) { const pos = nwDelta >= 0; deltaChip = `<span class="chip" style="color:${pos ? C.pos : C.neg};border-color:${pos ? C.pos : C.neg}">${eur(nwDelta, true)}${nwDeltaPct != null ? ` · ${pctStr(nwDeltaPct)}` : ''} sur le mois</span>`; }
+  if (nwDelta != null) { const pos = nwDelta >= 0; deltaChip = `<span class="chip" style="background:${pos ? C.posSoft : C.negSoft};color:${pos ? C.pos : C.neg}">${eur(nwDelta, true)}${nwDeltaPct != null ? ` · ${pctStr(nwDeltaPct)}` : ''} sur le mois</span>`; }
 
   const allocLegend = allocSegments.map((s) => { const p = (s.value / allocTotal) * 100; return `<div class="lg"><span class="lg-dot" style="background:${s.color}"></span><span class="lg-name">${esc(s.name)}</span><span class="lg-val">${eur(s.value)}</span><span class="lg-pct">${p.toFixed(0)} %</span></div>`; }).join('');
   const scoreItems = (score.items || []).map((it) => { const w = it.max > 0 ? Math.round((it.pts / it.max) * 100) : 0; return `<div class="sc"><div class="sc-top"><span>${esc(it.label)}</span><span class="sc-v">${esc(it.value)}</span></div><div class="sc-bar"><i style="width:${w}%"></i></div></div>`; }).join('');
-
   const cell = (l, v) => `<div class="cell"><div class="cell-l">${esc(l)}</div><div class="cell-v">${v}</div></div>`;
 
   const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Wealthly — Bilan patrimonial</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Newsreader:ital,wght@1,400;1,500;1,600&display=swap" rel="stylesheet">
 <style>
-  @page { size:A4; margin:17mm 16mm; }
+  @page { size:A4; margin:16mm 15mm; }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
-  body{font-family:${SANS};color:${C.ink};background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;font-size:12px;line-height:1.5;}
-  .disp{font-family:${DISPLAY};}
-  .muted-note{color:${C.faint};font-size:12px;}
+  body{font-family:${SANS};color:${C.ink};background:${C.bg};-webkit-print-color-adjust:exact;print-color-adjust:exact;font-size:12px;line-height:1.5;}
+  .serif{font-family:${SERIF};font-style:italic;}
+  .empty{font-size:12px;color:${C.ink3};padding:10px 0;}
   b{font-weight:600;}
 
-  .run-foot{position:fixed;bottom:8mm;left:16mm;right:16mm;display:flex;justify-content:space-between;font-size:8px;letter-spacing:.14em;color:${C.faint};text-transform:uppercase;}
+  .run-foot{position:fixed;bottom:7mm;left:15mm;right:15mm;display:flex;justify-content:space-between;font-size:8px;letter-spacing:.1em;color:${C.ink3};text-transform:uppercase;}
 
   .page1{page-break-after:always;}
 
-  /* bandeau + filet or */
-  .mast{display:flex;align-items:center;justify-content:space-between;padding-bottom:13px;border-bottom:2px solid ${C.gold};}
-  .mast-brand{display:flex;align-items:center;gap:11px;}
-  .mast-mark{width:32px;height:32px;border-radius:7px;background:${C.ink};color:#fff;font-family:${DISPLAY};font-weight:700;font-size:18px;display:flex;align-items:center;justify-content:center;}
-  .mast-brand b{font-size:16px;letter-spacing:.01em;font-weight:600;}
-  .mast-r{font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:${C.gold};font-weight:600;}
+  .mast{display:flex;align-items:center;justify-content:space-between;padding-bottom:13px;border-bottom:1px solid ${C.border};}
+  .mast-brand{display:flex;align-items:center;gap:10px;}
+  .mast-mark{width:30px;height:30px;border-radius:7px;background:${C.ink};color:${C.bg};font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:center;}
+  .mast-brand b{font-size:15px;letter-spacing:-.01em;font-weight:600;}
+  .mast-r{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:${C.ink3};font-weight:600;}
 
   .lead{margin:26px 0 0;}
-  .eyebrow{font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:${C.gold};font-weight:600;}
-  .lead h1{font-family:${DISPLAY};font-weight:600;font-size:36px;letter-spacing:-.01em;margin:10px 0 0;color:${C.ink};line-height:1.05;}
-  .lead h1 .it{font-style:italic;font-weight:500;}
-  .lead-sub{font-size:12px;color:${C.muted};margin-top:11px;}
-  .lead-sub b{color:${C.body};}
+  .eyebrow{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:${C.accent};font-weight:600;}
+  .lead h1{font-weight:600;font-size:34px;letter-spacing:-.02em;margin:9px 0 0;color:${C.ink};line-height:1.06;}
+  .lead h1 .serif{font-weight:500;color:${C.accent};}
+  .lead-sub{font-size:12px;color:${C.ink2};margin-top:10px;}
+  .lead-sub b{color:${C.ink};font-weight:600;}
 
-  /* hero */
-  .hero{margin:26px 0 0;}
-  .h-lab{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:${C.gold};font-weight:600;}
-  .h-val{font-family:${DISPLAY};font-weight:600;font-size:62px;line-height:1;margin:8px 0 14px;color:${C.ink};letter-spacing:-.01em;}
-  .chip{display:inline-block;padding:4px 13px;border:1px solid;border-radius:999px;font-size:11.5px;font-weight:600;letter-spacing:.01em;}
+  .hero{margin:24px 0 0;}
+  .h-lab{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:${C.ink3};font-weight:600;}
+  .h-val{font-family:${SERIF};font-style:italic;font-weight:500;font-size:62px;line-height:1;margin:6px 0 14px;color:${C.ink};letter-spacing:-.005em;}
+  .chip{display:inline-block;padding:5px 13px;border-radius:999px;font-size:12px;font-weight:600;}
 
-  .strip{display:grid;grid-template-columns:repeat(4,1fr);margin:22px 0 0;border-top:1px solid ${C.border};border-bottom:1px solid ${C.border};}
-  .cell{padding:14px 16px 14px 0;border-right:1px solid ${C.hair};}
-  .cell:last-child{border-right:none;padding-right:0;}
-  .cell-l{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:${C.muted};font-weight:600;}
+  .strip{display:grid;grid-template-columns:repeat(4,1fr);margin:22px 0 0;background:${C.surface};border:1px solid ${C.border};border-radius:14px;overflow:hidden;}
+  .cell{padding:14px 16px;border-right:1px solid ${C.border};}
+  .cell:last-child{border-right:none;}
+  .cell-l{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:${C.ink3};font-weight:600;}
   .cell-v{font-size:20px;font-weight:600;margin-top:6px;letter-spacing:-.01em;font-variant-numeric:tabular-nums;color:${C.ink};}
 
-  .synth{font-size:13px;line-height:1.75;color:${C.body};margin:22px 0 0;}
+  .synth{font-size:13px;line-height:1.75;color:${C.ink2};margin:22px 0 0;}
   .synth b{color:${C.ink};font-weight:600;}
 
-  .cols{display:flex;gap:38px;margin-top:28px;align-items:flex-start;}
-  .col{flex:1;}
-  .sec-h{font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:${C.gold};font-weight:600;margin:0 0 14px;padding-bottom:8px;border-bottom:1px solid ${C.hair};}
+  .cols{display:flex;gap:16px;margin-top:24px;align-items:stretch;}
+  .panel{flex:1;background:${C.surface};border:1px solid ${C.border};border-radius:16px;padding:18px 20px;}
+  .sec-h{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:${C.ink3};font-weight:600;margin:0 0 14px;}
 
-  /* composition */
-  .comp{display:flex;gap:22px;align-items:center;}
-  .lg{display:flex;align-items:center;gap:9px;font-size:12px;padding:7px 0;border-bottom:1px solid ${C.hair};}
+  .comp{display:flex;gap:18px;align-items:center;}
+  .lg{display:flex;align-items:center;gap:9px;font-size:12px;padding:6px 0;border-bottom:1px solid ${C.sunk};}
   .lg:last-child{border-bottom:none;}
   .lg-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
-  .lg-name{flex:1;color:${C.body};}
+  .lg-name{flex:1;color:${C.ink2};}
   .lg-val{font-variant-numeric:tabular-nums;font-weight:600;color:${C.ink};}
-  .lg-pct{width:42px;text-align:right;color:${C.muted};font-variant-numeric:tabular-nums;}
+  .lg-pct{width:40px;text-align:right;color:${C.ink3};font-variant-numeric:tabular-nums;}
 
-  /* score */
-  .score-head{display:flex;align-items:baseline;gap:11px;margin-bottom:14px;}
-  .score-num{font-family:${DISPLAY};font-weight:600;font-size:44px;line-height:1;color:${C.ink};}
-  .score-num span{font-size:15px;color:${C.faint};font-family:${SANS};}
-  .score-cap{font-size:11px;color:${C.muted};line-height:1.4;}
+  .score-head{display:flex;align-items:baseline;gap:10px;margin-bottom:14px;}
+  .score-num{font-family:${SERIF};font-style:italic;font-weight:500;font-size:44px;line-height:1;color:${C.accent};}
+  .score-num span{font-size:15px;color:${C.ink3};font-family:${SANS};font-style:normal;}
+  .score-cap{font-size:11px;color:${C.ink2};line-height:1.4;}
   .sc{margin-bottom:10px;}
   .sc-top{display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:5px;}
-  .sc-top span:first-child{color:${C.body};}
-  .sc-v{color:${C.muted};font-variant-numeric:tabular-nums;}
-  .sc-bar{height:4px;border-radius:3px;background:${C.hair};overflow:hidden;}
-  .sc-bar>i{display:block;height:100%;border-radius:3px;background:${C.gold};}
+  .sc-top span:first-child{color:${C.ink2};}
+  .sc-v{color:${C.ink3};font-variant-numeric:tabular-nums;}
+  .sc-bar{height:4px;border-radius:3px;background:${C.sunk};overflow:hidden;}
+  .sc-bar>i{display:block;height:100%;border-radius:3px;background:${C.accent};}
 
-  .chart-wrap{border:1px solid ${C.border};border-radius:10px;padding:14px 18px 4px;background:${C.panel};}
-  .sec{margin-top:26px;}
+  .sec{margin-top:18px;}
+  .chart-panel{background:${C.surface};border:1px solid ${C.border};border-radius:16px;padding:16px 20px 6px;}
 
   /* page 2 */
-  .p2-lead{margin:24px 0 0;}
-  .p2-lead h2{font-family:${DISPLAY};font-weight:600;font-size:26px;letter-spacing:-.01em;margin:0;color:${C.ink};}
-  .p2-lead h2 .it{font-style:italic;font-weight:500;}
-  .p2-sub{font-size:11px;letter-spacing:.04em;color:${C.muted};margin-top:6px;}
-  .grp{margin-top:24px;break-inside:avoid;}
-  .grp-head{display:flex;justify-content:space-between;align-items:baseline;border-bottom:2px solid ${C.ink};padding-bottom:7px;margin-bottom:2px;}
-  .grp-t{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:${C.ink};font-weight:700;}
-  .grp-tot{font-family:${DISPLAY};font-weight:600;font-size:15px;font-variant-numeric:tabular-nums;color:${C.ink};}
-  .hold{display:flex;justify-content:space-between;align-items:baseline;padding:12px 0;border-bottom:1px solid ${C.hair};break-inside:avoid;}
-  .hold:last-child{border-bottom:none;}
-  .hold-n{font-size:13px;font-weight:500;color:${C.ink};}
-  .hold-s{font-size:10.5px;color:${C.muted};margin-top:3px;letter-spacing:.02em;}
-  .hold-r{text-align:right;}
-  .hold-v{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;color:${C.ink};}
-  .hold-m{font-size:10.5px;margin-top:3px;font-variant-numeric:tabular-nums;}
-  .empty{font-size:12px;color:${C.faint};padding:10px 0;}
+  .p2-lead{margin:24px 0 6px;}
+  .p2-lead h2{font-weight:600;font-size:25px;letter-spacing:-.02em;margin:0;color:${C.ink};}
+  .p2-lead h2 .serif{font-weight:500;color:${C.accent};}
+  .p2-sub{font-size:11px;letter-spacing:.04em;color:${C.ink3};margin-top:6px;}
+
+  .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0 4px;}
+  .tile{background:${C.surface};border:1px solid ${C.border};border-radius:14px;padding:14px 16px;}
+  .tile.hero-tile{background:${C.ink};border-color:${C.ink};}
+  .tile .t-l{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:${C.ink3};font-weight:600;}
+  .tile .t-v{font-family:${SERIF};font-style:italic;font-weight:500;font-size:24px;margin-top:4px;color:${C.ink};font-variant-numeric:tabular-nums;}
+  .tile.hero-tile .t-l{color:${C.accentLine};}
+  .tile.hero-tile .t-v{color:#fff;}
+
+  .card{background:${C.surface};border:1px solid ${C.border};border-radius:16px;overflow:hidden;margin-top:14px;break-inside:avoid;}
+  .card-h{display:flex;align-items:center;gap:12px;padding:13px 16px 12px;}
+  .card-ic{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0;}
+  .card-tt{flex:1;}
+  .card-t{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:${C.ink};font-weight:700;}
+  .card-st{font-size:10px;color:${C.ink3};margin-top:2px;letter-spacing:.02em;}
+  .card-meta{text-align:right;}
+  .card-tot{font-size:16px;font-weight:600;font-variant-numeric:tabular-nums;color:${C.ink};letter-spacing:-.01em;}
+  .card-pctw{font-size:9.5px;color:${C.ink3};margin-top:2px;}
+  .card-share{height:4px;background:${C.sunk};}
+  .card-share>i{display:block;height:100%;}
+  .card-body{padding:2px 16px 8px;}
+  .ci{padding:11px 0 8px;border-bottom:1px solid ${C.sunk};}
+  .ci:last-child{border-bottom:none;}
+  .ci-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px;}
+  .ci-n{font-size:13px;font-weight:500;color:${C.ink};}
+  .ci-s{font-size:10.5px;color:${C.ink3};margin-top:2px;letter-spacing:.02em;}
+  .ci-r{text-align:right;}
+  .ci-v{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;color:${C.ink};}
+  .pill{display:inline-block;margin-top:5px;padding:2px 9px;border-radius:999px;font-size:10px;font-weight:600;font-variant-numeric:tabular-nums;}
+  .ci-w{height:3px;border-radius:2px;background:${C.sunk};overflow:hidden;}
+  .ci-w>i{display:block;height:100%;opacity:.55;}
 </style></head>
 <body>
   <div class="run-foot"><span>Wealthly — Bilan patrimonial</span><span>${esc(ownerName)} · ${todayLong()} · Confidentiel</span></div>
@@ -270,13 +333,13 @@ export function generateBilanHtmlReport(data) {
 
     <div class="lead">
       <div class="eyebrow">Gestion privée</div>
-      <h1>Synthèse de <span class="it">votre patrimoine</span></h1>
+      <h1>Synthèse de <span class="serif">votre patrimoine.</span></h1>
       <div class="lead-sub">Préparé pour <b>${esc(ownerName)}</b> · ${todayLong()}</div>
     </div>
 
     <div class="hero">
       <div class="h-lab">Patrimoine net consolidé</div>
-      <div class="h-val disp">${eur(netWorth)}</div>
+      <div class="h-val">${eur(netWorth)}</div>
       ${deltaChip}
     </div>
     <div class="strip">
@@ -289,20 +352,22 @@ export function generateBilanHtmlReport(data) {
     <div class="synth">${synthesis}</div>
 
     <div class="cols">
-      <div class="col">
+      <div class="panel">
         <div class="sec-h">Composition du patrimoine</div>
         ${allocSegments.length ? `<div class="comp"><div style="flex-shrink:0">${donutSvg(allocSegments)}</div><div style="flex:1">${allocLegend}</div></div>` : '<p class="empty">Aucun actif renseigné.</p>'}
       </div>
-      <div class="col">
+      <div class="panel">
         <div class="sec-h">Santé patrimoniale</div>
-        <div class="score-head"><span class="score-num disp">${score.total}<span> / 100</span></span><span class="score-cap">${score.total < 40 ? 'À consolider' : score.total < 70 ? 'Équilibré' : 'Solide'}<br>moyenne sur ${score.monthsCovered || 0} mois</span></div>
+        <div class="score-head"><span class="score-num">${score.total}<span> / 100</span></span><span class="score-cap">${score.total < 40 ? 'À consolider' : score.total < 70 ? 'Équilibré' : 'Solide'}<br>moyenne sur ${score.monthsCovered || 0} mois</span></div>
         ${scoreItems}
       </div>
     </div>
 
     <div class="sec">
-      <div class="sec-h">Évolution du patrimoine net${nwSeries.length >= 2 ? ` · ${nwSeries.length} mois` : ''}</div>
-      <div class="chart-wrap">${areaChartSvg(nwSeries)}</div>
+      <div class="chart-panel">
+        <div class="sec-h">Évolution du patrimoine net${nwSeries.length >= 2 ? ` · ${nwSeries.length} mois` : ''}</div>
+        ${areaChartSvg(nwSeries)}
+      </div>
     </div>
   </div>
 
@@ -313,16 +378,20 @@ export function generateBilanHtmlReport(data) {
       <div class="mast-r">Détail du patrimoine</div>
     </div>
     <div class="p2-lead">
-      <h2>Vos <span class="it">avoirs & engagements</span></h2>
+      <h2>Vos <span class="serif">avoirs & engagements.</span></h2>
       <div class="p2-sub">Au ${todayLong()}</div>
     </div>
 
-    ${Object.keys(byClass).length
-      ? Object.entries(byClass).sort((a, b) => b[1].reduce((s, x) => s + (parseFloat(x.currentValue) || 0) * memberShare(x), 0) - a[1].reduce((s, x) => s + (parseFloat(x.currentValue) || 0) * memberShare(x), 0)).map(([cls, list]) => `<div class="grp">${assetGroup(cls, list)}</div>`).join('')
-      : ''}
-    ${visibleAccounts.length ? `<div class="grp">${groupHead('Liquidités', liquidWealth)}${liqRows}</div>` : ''}
-    ${visibleLiabilities.length ? `<div class="grp">${groupHead('Emprunts · capital restant dû', loanTotal)}${loanRows}</div>` : ''}
-    ${(!Object.keys(byClass).length && !visibleAccounts.length && !visibleLiabilities.length) ? '<p class="empty">Aucun avoir ni engagement renseigné.</p>' : ''}
+    <div class="tiles">
+      <div class="tile"><div class="t-l">Total des avoirs</div><div class="t-v">${eur(actifsTotal)}</div></div>
+      <div class="tile"><div class="t-l">Total des dettes</div><div class="t-v">${eur(liabilitiesValue)}</div></div>
+      <div class="tile hero-tile"><div class="t-l">Patrimoine net</div><div class="t-v">${eur(netWorth)}</div></div>
+    </div>
+
+    ${assetCardsHtml}
+    ${liqCardHtml}
+    ${loanCardHtml}
+    ${(!assetCardsHtml && !liqCardHtml && !loanCardHtml) ? '<p class="empty">Aucun avoir ni engagement renseigné.</p>' : ''}
   </div>
 
   <script>
