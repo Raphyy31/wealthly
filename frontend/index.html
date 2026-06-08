@@ -19,10 +19,12 @@
     <script>
       (function() {
         try {
+          // Défaut = clair (papier chaud, la charte). On NE suit plus la
+          // préférence système : sur mobile en mode sombre, l'app tombait sur
+          // l'ancien thème dark (hors charte). Le dark reste dispo si l'user
+          // l'a explicitement choisi (stocké en localStorage).
           var t = localStorage.getItem('wealthly-theme');
-          if (!t) {
-            t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-          }
+          if (t !== 'light' && t !== 'dark') t = 'light';
           document.documentElement.setAttribute('data-theme', t);
         } catch (e) {
           document.documentElement.setAttribute('data-theme', 'light');

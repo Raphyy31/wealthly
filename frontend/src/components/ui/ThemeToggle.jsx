@@ -11,7 +11,11 @@ function readTheme() {
     const stored = localStorage.getItem(KEY);
     if (stored === 'light' || stored === 'dark') return stored;
   } catch {}
-  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  // Défaut = clair (papier chaud, la charte). On NE suit PAS la préférence
+  // système : un téléphone en mode sombre tombait sur l'ancien thème dark
+  // (non aligné sur la charte) → rendu "immonde". Le dark reste dispo via le
+  // toggle pour qui le choisit explicitement.
+  return 'light';
 }
 
 export function useTheme() {
