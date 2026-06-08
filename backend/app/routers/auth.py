@@ -95,6 +95,22 @@ def register(request: Request, response: Response, payload: UserCreate, db: Sess
     db.add(household)
     db.flush()
 
+    # RLS : la table `categories` est ENABLE+FORCE row-level security avec une
+    # policy WITH CHECK sur current_setting('app.current_household_id'). À
+    # l'inscription, aucun utilisateur n'est encore authentifié, donc la
+    # variable n'est pas posée → l'INSERT des catégories par défaut viole la
+    # policy et fait planter le commit (500). On pose le contexte sur le foyer
+    # qu'on vient de créer (transaction-scoped, true) avant d'insérer.
+    # No-op sur SQLite (tests) où set_config n'existe pas → on swallow.
+    try:
+        from sqlalchemy import text
+        db.execute(
+            text("SELECT set_config('app.current_household_id', :hid, true)"),
+            {"hid": str(household.id)},
+        )
+    except Exception:
+        pass
+
     user = User(
         email=payload.email,
         hashed_password=hash_password(payload.password),
