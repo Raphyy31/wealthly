@@ -6,7 +6,7 @@ import { ChipSelect } from '../components/ChipSelect.jsx';
 import { MagneticButton } from '../components/MagneticButton.jsx';
 import {
   Check, Users, Sparkles, Activity, Landmark, Play, X, Plus, Lightbulb,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, Loader2,
 } from 'lucide-react';
 import { MEMBER_PALETTE } from '../constants.js';
 import { generateId } from '../utils.js';
@@ -23,11 +23,19 @@ export function Onboarding({ onComplete }) {
   };
   const removeMember = (id) => setMembers(members.filter(m => m.id !== id));
 
-  const finish = () => {
-    if (members.length === 0) {
-      onComplete({ members: [{ id: generateId(), name: 'Moi', role: 'adult', color: MEMBER_PALETTE[0] }] });
-    } else {
-      onComplete({ members });
+  const [completing, setCompleting] = useState(false);
+  const finish = async () => {
+    if (completing) return;
+    setCompleting(true);
+    const payload = members.length === 0
+      ? { members: [{ id: generateId(), name: 'Moi', role: 'adult', color: MEMBER_PALETTE[0] }] }
+      : { members };
+    try {
+      await onComplete(payload);
+    } finally {
+      // onComplete bascule normalement vers l'app ; si on est toujours là
+      // (ex. erreur), on réactive le bouton pour réessayer.
+      setCompleting(false);
     }
   };
 
@@ -185,8 +193,8 @@ export function Onboarding({ onComplete }) {
 
             <div className="onboarding-actions">
               <button className="ds-btn" onClick={() => setStep(1)}><ChevronLeft size={14}/> Retour</button>
-              <MagneticButton className="ds-btn primary lg" onClick={finish}>
-                <Sparkles size={16}/> Entrer dans Wealthly
+              <MagneticButton className="ds-btn primary lg" onClick={finish} disabled={completing}>
+                {completing ? <><Loader2 size={16} className="spin"/> Entrée…</> : <><Sparkles size={16}/> Entrer dans Wealthly</>}
               </MagneticButton>
             </div>
           </div>

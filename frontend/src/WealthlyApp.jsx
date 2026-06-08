@@ -1258,17 +1258,30 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   // ACTIONS — all hit the API
   // ============================================================================
   const completeOnboarding = async (data) => {
+    // Robuste : on ne doit JAMAIS rester bloqué sur l'onboarding. Chaque étape
+    // est best-effort et, quoi qu'il arrive, on entre dans l'app (finally).
+    let createdOk = true;
     try {
-      // Create members on the server
       for (const m of data.members) {
-        await api.members.create({ name: m.name, role: m.role, color: m.color });
+        try {
+          await api.members.create({ name: m.name, role: m.role, color: m.color });
+        } catch (e) {
+          createdOk = false;
+          console.warn('[onboarding] member create failed', e);
+        }
       }
-      await reloadAll();
-      setOnboarded(true);
-      showToast(t('toasts.householdSet'), 'success');
-    } catch (err) {
-      showToast(t('toasts.genericError', { message: err.message }), 'error');
+      try {
+        await reloadAll();
+      } catch (e) {
+        console.warn('[onboarding] reloadAll failed', e);
+      }
+    } finally {
+      setOnboarded(true); // toujours entrer dans l'app
     }
+    showToast(
+      createdOk ? t('toasts.householdSet') : "Bienvenue ! Certaines données se chargeront à la prochaine synchro.",
+      createdOk ? 'success' : 'info'
+    );
   };
 
   const handleFileUpload = async (e) => {
