@@ -221,6 +221,9 @@ def _run_lightweight_migrations() -> None:
             "ALTER TABLE households ADD COLUMN IF NOT EXISTS auto_learning_enabled BOOLEAN DEFAULT TRUE NOT NULL",
             # Opt-in email bilan mensuel (2026-06-06)
             "ALTER TABLE households ADD COLUMN IF NOT EXISTS monthly_report_enabled BOOLEAN DEFAULT FALSE NOT NULL",
+            # Plan du foyer (drift de schéma : présent dans l'ORM mais absent en
+            # base prod → l'INSERT à l'inscription échouait. 2026-06-08)
+            "ALTER TABLE households ADD COLUMN IF NOT EXISTS plan VARCHAR DEFAULT 'solo' NOT NULL",
             # Suppression mortgage_interest (2026-05-18) — remplacé par loan_mortgage.
             # Reclasse les transactions existantes + les règles de catégorisation.
             "UPDATE transactions SET category_slug = 'loan_mortgage' WHERE category_slug = 'mortgage_interest'",

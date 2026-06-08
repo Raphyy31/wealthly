@@ -91,43 +91,38 @@ def register(request: Request, response: Response, payload: UserCreate, db: Sess
                           email=payload.email, detail=err or "weak_password")
         raise HTTPException(status_code=400, detail=err)
 
-    # DIAG TEMPORAIRE (large) : tout le flux DB sous try, erreur réelle renvoyée
-    # via 422 (non masqué par le handler 500 global). À retirer après diagnostic.
+    household = Household(name=payload.household_name or "Mon foyer")
+    db.add(household)
+    db.flush()  # household INSERT
+
+    # RLS : la table `categories` est ENABLE+FORCE row-level security avec une
+    # policy WITH CHECK sur current_setting('app.current_household_id'). À
+    # l'inscription, aucun utilisateur n'est encore authentifié → on pose le
+    # contexte sur le foyer qu'on vient de créer (transaction-scoped) avant
+    # d'insérer les catégories par défaut. No-op sur SQLite (tests).
     try:
         from sqlalchemy import text
-        _diag = "start"
-        household = Household(name=payload.household_name or "Mon foyer")
-        db.add(household)
-        db.flush()  # household INSERT
-        _diag = "after_household_flush"
-
-        # RLS : poser le contexte du foyer avant d'insérer les catégories
-        # (table categories en ENABLE+FORCE RLS, WITH CHECK sur app.current_household_id).
         db.execute(
             text("SELECT set_config('app.current_household_id', :hid, true)"),
             {"hid": str(household.id)},
         )
-        _diag = "after_set_config"
+    except Exception:
+        pass
 
-        user = User(
-            email=payload.email,
-            hashed_password=hash_password(payload.password),
-            full_name=payload.full_name,
-            is_admin=False,
-            household_id=household.id,
-        )
-        db.add(user)
-        for cat in DEFAULT_CATEGORIES:
-            db.add(Category(household_id=household.id, **cat))
-        _diag = "before_commit"
-        db.commit()
-        db.refresh(user)
-    except Exception as _e:
-        try:
-            db.rollback()
-        except Exception:
-            pass
-        raise HTTPException(status_code=422, detail=f"DIAG[{_diag}] {type(_e).__name__}: {str(_e)[:350]}")
+    user = User(
+        email=payload.email,
+        hashed_password=hash_password(payload.password),
+        full_name=payload.full_name,
+        is_admin=False,  # platform admin must be set manually via seed_admins script
+        household_id=household.id,
+    )
+    db.add(user)
+
+    for cat in DEFAULT_CATEGORIES:
+        db.add(Category(household_id=household.id, **cat))
+
+    db.commit()
+    db.refresh(user)
 
     token = create_access_token(user.id, household.id)
     set_auth_cookie(response, token)
