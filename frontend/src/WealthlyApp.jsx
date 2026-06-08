@@ -206,6 +206,16 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   const [currentUser, setCurrentUser] = useState(() => {
     try { return JSON.parse(localStorage.getItem('w2:current_user') || 'null'); } catch { return null; }
   });
+  // 2FA reportée par l'utilisateur ("Configurer plus tard") — on mémorise le
+  // choix pour ne pas re-bloquer l'accès à chaque visite. Réactivable depuis
+  // Réglages → Sécurité.
+  const [twoFASkipped, setTwoFASkipped] = useState(() => {
+    try { return localStorage.getItem('wealthly:2fa_skipped') === '1'; } catch { return false; }
+  });
+  const skip2FA = () => {
+    try { localStorage.setItem('wealthly:2fa_skipped', '1'); } catch {}
+    setTwoFASkipped(true);
+  };
   const [hideAmounts, setHideAmounts] = useState(false);
   useEffect(() => {
     if (hideAmounts) document.documentElement.setAttribute('data-hide-amounts', '1');
@@ -2553,12 +2563,13 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
 
   const activeMember = members.find(m => m.id === activeMemberId);
 
-  // 2FA obligatoire (cyber expert request 2026-05-19) : tout utilisateur
-  // sans totp_enabled doit configurer la 2FA avant d'accéder à l'app.
-  // Le mode démo et l'admin sont exemptés (admin déjà sensibilisé).
+  // 2FA proposée à l'inscription (fortement recommandée) mais NON bloquante :
+  // l'utilisateur peut "Configurer plus tard" et l'activer depuis Réglages →
+  // Sécurité. On ne ré-impose pas l'overlay s'il a déjà reporté.
   const requires2FA = !demoMode
     && currentUser
-    && currentUser.totp_enabled === false;
+    && currentUser.totp_enabled === false
+    && !twoFASkipped;
 
   return (
     <CurrencyContext.Provider value={{ baseCurrency, rates }}>
@@ -2618,6 +2629,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
               if (me) setCurrentUser(me);
             } catch {}
           }}
+          onSkip={skip2FA}
           onLogoutEscape={() => { logout(); }}
         />
       )}

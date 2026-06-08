@@ -13,7 +13,7 @@ import { useState, useEffect } from 'react';
 import { Shield, Loader2 } from 'lucide-react';
 import * as api from '../api.js';
 
-export function Mandatory2FAOverlay({ onComplete, onLogoutEscape }) {
+export function Mandatory2FAOverlay({ onComplete, onSkip, onLogoutEscape }) {
   const [step, setStep] = useState('loading');   // loading | scan | done | error
   const [secret, setSecret] = useState('');
   const [uri, setUri] = useState('');
@@ -76,12 +76,12 @@ export function Mandatory2FAOverlay({ onComplete, onLogoutEscape }) {
         <div className="mandatory-2fa-header">
           <div className="mandatory-2fa-icon"><Shield size={28}/></div>
           <h2 className="mandatory-2fa-title">
-            Authentification à 2 facteurs <em>requise</em>
+            Sécurisez votre compte en <em>2 minutes</em>
           </h2>
           <p className="mandatory-2fa-lead">
-            Pour la sécurité de vos données financières, l'activation de
-            l'authentification à 2 facteurs est <strong>obligatoire</strong>
-            pour accéder à Wealthly.
+            Pour protéger vos données financières, nous vous recommandons
+            vivement d'activer l'<strong>authentification à 2 facteurs</strong>.
+            Vous pouvez aussi le faire plus tard depuis Réglages → Sécurité.
           </p>
         </div>
 
@@ -136,14 +136,18 @@ export function Mandatory2FAOverlay({ onComplete, onLogoutEscape }) {
                 </button>
               </form>
 
-              {onLogoutEscape && (
-                <div className="mandatory-2fa-escape">
-                  Vous préférez ne pas activer la 2FA maintenant ?{' '}
+              <div className="mandatory-2fa-escape">
+                {onSkip && (
+                  <button type="button" className="mandatory-2fa-later" onClick={onSkip}>
+                    Configurer plus tard
+                  </button>
+                )}
+                {onLogoutEscape && (
                   <button type="button" className="mandatory-2fa-escape-link" onClick={onLogoutEscape}>
                     Déconnexion
                   </button>
-                </div>
-              )}
+                )}
+              </div>
             </>
           )}
 
@@ -165,6 +169,11 @@ export function Mandatory2FAOverlay({ onComplete, onLogoutEscape }) {
               <button type="button" className="mandatory-2fa-submit" onClick={() => window.location.reload()}>
                 Recharger
               </button>
+              {onSkip && (
+                <button type="button" className="mandatory-2fa-later" onClick={onSkip} style={{ marginTop: 10 }}>
+                  Continuer sans 2FA pour l'instant
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -327,12 +336,27 @@ const CSS = `
 }
 
 .mandatory-2fa-escape {
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
   font: 400 11.5px/1.4 'Geist', sans-serif;
   color: var(--ink-3);
-  padding-top: 10px;
+  padding-top: 14px;
+  margin-top: 4px;
   border-top: 1px dotted var(--border);
 }
+.mandatory-2fa-later {
+  width: 100%;
+  padding: 11px 16px;
+  background: var(--bg-sunk, #EFEDE6);
+  color: var(--ink, #16150F);
+  border: 1px solid var(--border, #E4E1D8);
+  border-radius: 10px;
+  font: 600 13px/1 'Geist', sans-serif;
+  cursor: pointer;
+}
+.mandatory-2fa-later:hover { background: var(--bg-hover, #F1EFE8); border-color: var(--border-strong, #D2CEC0); }
 .mandatory-2fa-escape-link {
   background: none;
   border: none;
