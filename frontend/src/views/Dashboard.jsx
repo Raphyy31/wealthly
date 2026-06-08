@@ -688,7 +688,7 @@ export function Dashboard({
               const { generateBilanHtmlReport } = await import('../reportHtml.js');
               generateBilanHtmlReport({
                 netWorth, liquidWealth, assetsValue, liabilitiesValue,
-                thisMonthStats, monthlyEvolution, wealthHistory,
+                thisMonthStats, monthlyEvolution, wealthHistory, budgets,
                 visibleAccounts, accountBalances, visibleAssets, visibleLiabilities,
                 members, activeMemberId,
                 recurringGroups, categoryAnalysis, categories,
