@@ -123,7 +123,14 @@ def register(request: Request, response: Response, payload: UserCreate, db: Sess
     for cat in DEFAULT_CATEGORIES:
         db.add(Category(household_id=household.id, **cat))
 
-    db.commit()
+    # DIAG TEMPORAIRE : surfacer l'erreur réelle (à retirer après diagnostic).
+    try:
+        db.commit()
+    except Exception as _e:
+        db.rollback()
+        import traceback as _tb, logging as _lg
+        _lg.getLogger("wealthly.auth").error("REGISTER_FAIL %s: %s\n%s", type(_e).__name__, _e, _tb.format_exc())
+        raise HTTPException(status_code=500, detail=f"DIAG {type(_e).__name__}: {str(_e)[:300]}")
     db.refresh(user)
 
     token = create_access_token(user.id, household.id)
