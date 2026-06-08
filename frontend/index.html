@@ -22,8 +22,16 @@
           // Défaut = clair (papier chaud, la charte). On NE suit plus la
           // préférence système : sur mobile en mode sombre, l'app tombait sur
           // l'ancien thème dark (hors charte). Le dark reste dispo si l'user
-          // l'a explicitement choisi (stocké en localStorage).
+          // le choisit explicitement via le toggle.
+          var RESET = 'wealthly-theme-default-light-v1';
           var t = localStorage.getItem('wealthly-theme');
+          // Migration unique : l'ancien code mémorisait 'dark' auto-détecté
+          // depuis le système → on repasse tout le monde en clair une fois.
+          if (!localStorage.getItem(RESET)) {
+            t = 'light';
+            localStorage.setItem('wealthly-theme', 'light');
+            localStorage.setItem(RESET, '1');
+          }
           if (t !== 'light' && t !== 'dark') t = 'light';
           document.documentElement.setAttribute('data-theme', t);
         } catch (e) {
