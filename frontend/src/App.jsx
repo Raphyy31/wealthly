@@ -1,5 +1,5 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
-import { auth } from './api.js';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import { auth, subscribeSessionExpired } from './api.js';
 import AuthScreen from './AuthScreen.jsx';
 import WealthlyApp from './WealthlyApp.jsx';
 import { isDemoMode, disableDemoMode, enableDemoMode } from './demoData.js';
@@ -21,6 +21,26 @@ export default function App() {
   const [unauthedView, setUnauthedView] = useState('landing'); // landing | auth
   const [authInitialMode, setAuthInitialMode] = useState('login');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [sessionExpired, setSessionExpired] = useState(false);
+
+  // Session expirée en cours d'usage : un 401 sur un endpoint authentifié
+  // signale que le cookie a expiré. On bascule proprement sur l'écran de
+  // connexion (ce qui démonte WealthlyApp → purge les données en cache) avec
+  // un bandeau explicite, au lieu de laisser l'utilisateur sur des données
+  // mortes dont chaque action échoue.
+  const authStateRef = useRef(authState);
+  useEffect(() => { authStateRef.current = authState; }, [authState]);
+  useEffect(() => {
+    const unsub = subscribeSessionExpired(() => {
+      if (authStateRef.current !== 'authed') return; // déjà déconnecté / en démo
+      try { localStorage.removeItem('w2:current_user'); } catch {}
+      setSessionExpired(true);
+      setAuthInitialMode('login');
+      setUnauthedView('auth');
+      setAuthState('unauthed');
+    });
+    return unsub;
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -156,8 +176,9 @@ export default function App() {
     return (
       <AuthScreen
         initialMode={authInitialMode}
-        onBackToLanding={() => setUnauthedView('landing')}
-        onAuth={() => setAuthState('authed')}
+        notice={sessionExpired ? 'Votre session a expiré. Reconnectez-vous pour continuer.' : null}
+        onBackToLanding={() => { setSessionExpired(false); setUnauthedView('landing'); }}
+        onAuth={() => { setSessionExpired(false); setAuthState('authed'); }}
         onTryDemo={() => setAuthState('demo')}
       />
     );

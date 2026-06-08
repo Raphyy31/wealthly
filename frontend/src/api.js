@@ -117,6 +117,20 @@ const markBackendOnline = () => {
   }
 };
 
+// ── Session expirée : signal global ────────────────────────────────────────
+// Quand une requête authentifiée renvoie 401 (cookie expiré), on prévient l'app
+// pour qu'elle bascule proprement sur l'écran de connexion au lieu de laisser
+// l'utilisateur sur des données mortes. Les endpoints /auth/* sont exclus (un
+// 401 y est normal : mauvais identifiants, /auth/me non connecté, etc.).
+const __sessionListeners = new Set();
+export const subscribeSessionExpired = (fn) => {
+  __sessionListeners.add(fn);
+  return () => __sessionListeners.delete(fn);
+};
+const notifySessionExpired = () => {
+  __sessionListeners.forEach((fn) => { try { fn(); } catch { /* noop */ } });
+};
+
 // Retry manuel déclenché par le banner ("Réessayer maintenant")
 export const retryBackendNow = () => {
   if (__backendRetryTimer) { clearTimeout(__backendRetryTimer); __backendRetryTimer = null; }
@@ -168,6 +182,10 @@ async function request(method, path, body = null) {
     if (isMutation) endMutation();
     let errMsg = 'Session expirée';
     try { const d = await response.clone().json(); errMsg = d?.detail || errMsg; } catch {}
+    // Signal global de session expirée — sauf pour les endpoints d'auth
+    // eux-mêmes (login/register/me/reset : un 401 y est attendu, pas une
+    // expiration de session en cours d'usage).
+    if (!path.startsWith('/auth/')) notifySessionExpired();
     throw new Error(errMsg);
   }
 

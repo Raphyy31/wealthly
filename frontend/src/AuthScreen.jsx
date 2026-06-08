@@ -23,7 +23,7 @@ function readResetTokenFromUrl() {
   return params.get('reset_token');
 }
 
-export default function AuthScreen({ onAuth, onTryDemo, onBackToLanding, initialMode = 'login' }) {
+export default function AuthScreen({ onAuth, onTryDemo, onBackToLanding, initialMode = 'login', notice = null }) {
   const { t } = useTranslation();
   const initialResetToken = readResetTokenFromUrl();
   const [mode, setMode] = useState(initialResetToken ? 'reset' : initialMode);
@@ -163,6 +163,12 @@ export default function AuthScreen({ onAuth, onTryDemo, onBackToLanding, initial
             <button type="button" onClick={() => switchMode('login')} className="auth-back-link">
               <ArrowLeft size={12}/> {t('auth.backToLogin')}
             </button>
+          )}
+
+          {notice && mode === 'login' && (
+            <div className="auth-info" style={{ background: '#2E2410', color: '#E0B23E', marginBottom: 14 }} role="status">
+              <AlertCircle size={14}/> {notice}
+            </div>
           )}
 
           <form onSubmit={submit} className="auth-form">
