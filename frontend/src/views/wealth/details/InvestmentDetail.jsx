@@ -11,6 +11,7 @@ import { LivePricesFooter } from '../components/LivePricesFooter.jsx';
 import { EditableNumCell } from '../components/EditableNumCell.jsx';
 import { useLiveQuotes, relTimeFromTs } from '../../../utils/marketPrices.js';
 import { DetailShell, DetailSection, DetailInsight, DetailDonut } from '../components/DetailShell.jsx';
+import { exportInvestmentPositionsXlsx } from '../../../xlsExport.js';
 
 export function InvestmentDetail({ asset, assets = [], members = [], fmt, onEdit, onClose, onSyncPositions, onImportCSV, onUpdatePosition }) {
   const positions = useMemo(
@@ -103,6 +104,10 @@ export function InvestmentDetail({ asset, assets = [], members = [], fmt, onEdit
       breadcrumb="Patrimoine · Investissements"
       onClose={onClose}
       onEdit={onEdit ? () => onEdit() : undefined}
+      onExport={() => exportInvestmentPositionsXlsx(
+        rows.length > 0 ? rows : [{ name: asset.name, isin: '', qty: 0, cours: 0, invested, value: currentValue, pl: plLatente, plPct: plLatentePct }],
+        { accountName: asset.name }
+      )}
       heroIcon={<TrendingUp size={32} strokeWidth={1.8}/>}
       eyebrow={subtypeLabel}
       title={<>{first} <em>{rest.join(' ') || ''}.</em></>}

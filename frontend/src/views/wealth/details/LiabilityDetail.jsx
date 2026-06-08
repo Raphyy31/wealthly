@@ -11,6 +11,7 @@ import { ChevronRight, Home, Users, BarChart3 } from 'lucide-react';
 import { formatCurrency, formatDate, buildAmortization } from '../../../utils.js';
 import { LiabilityPatchStyles } from '../styles.jsx';
 import { DetailShell, DetailSection, DetailInsight, DetailDonut } from '../components/DetailShell.jsx';
+import { exportLoanScheduleXlsx } from '../../../xlsExport.js';
 import { CalendarCheck } from 'lucide-react';
 
 export function LiabilityDetail({ liability, assets, members, memberShare, fmt, onEdit, onClose, onOpenLinkedAsset }) {
@@ -79,6 +80,8 @@ export function LiabilityDetail({ liability, assets, members, memberShare, fmt, 
       breadcrumb="Patrimoine · Crédits"
       onClose={onClose}
       onEdit={onEdit}
+      onExport={schedule.length > 0 ? () => exportLoanScheduleXlsx(l) : undefined}
+      exportLabel="Échéancier"
       heroIcon={<Home size={32} strokeWidth={1.8}/>}
       eyebrow={linkedAsset ? 'Crédit immobilier' : 'Crédit'}
       title={l.name}

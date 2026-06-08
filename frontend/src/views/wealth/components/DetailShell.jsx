@@ -16,12 +16,13 @@
 //   </DetailShell>
 // ============================================================================
 import React from 'react';
-import { ChevronLeft, X, Pencil, Sparkles } from 'lucide-react';
+import { ChevronLeft, X, Pencil, Sparkles, Download } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { ResponsiveModal } from '../../../components/ui/ResponsiveModal.jsx';
 
 export function DetailShell({
   open = true, onClose, breadcrumb, onEdit, editLabel = 'Modifier',
+  onExport, exportLabel = 'Excel',
   icon, heroIcon, eyebrow, title, subtitle, value, valueLabel, valueSub, delta,
   heroExtra, kpis = [],
   headerExtra, footer, children,
@@ -36,6 +37,11 @@ export function DetailShell({
             <ChevronLeft size={15}/> <span>{breadcrumb}</span>
           </button>
           <div className="dsh-bar-actions">
+            {onExport && (
+              <button className="dsh-edit" onClick={onExport} title="Exporter en Excel (.xlsx)">
+                <Download size={13}/> {exportLabel}
+              </button>
+            )}
             {onEdit && (
               <button className="dsh-edit" onClick={onEdit}>
                 <Pencil size={13}/> {editLabel}
