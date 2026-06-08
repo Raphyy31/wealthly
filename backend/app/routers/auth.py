@@ -91,47 +91,43 @@ def register(request: Request, response: Response, payload: UserCreate, db: Sess
                           email=payload.email, detail=err or "weak_password")
         raise HTTPException(status_code=400, detail=err)
 
-    household = Household(name=payload.household_name or "Mon foyer")
-    db.add(household)
-    db.flush()
-
-    # RLS : la table `categories` est ENABLE+FORCE row-level security avec une
-    # policy WITH CHECK sur current_setting('app.current_household_id'). À
-    # l'inscription, aucun utilisateur n'est encore authentifié, donc la
-    # variable n'est pas posée → l'INSERT des catégories par défaut viole la
-    # policy et fait planter le commit (500). On pose le contexte sur le foyer
-    # qu'on vient de créer (transaction-scoped, true) avant d'insérer.
-    # No-op sur SQLite (tests) où set_config n'existe pas → on swallow.
+    # DIAG TEMPORAIRE (large) : tout le flux DB sous try, erreur réelle renvoyée
+    # via 422 (non masqué par le handler 500 global). À retirer après diagnostic.
     try:
         from sqlalchemy import text
+        _diag = "start"
+        household = Household(name=payload.household_name or "Mon foyer")
+        db.add(household)
+        db.flush()  # household INSERT
+        _diag = "after_household_flush"
+
+        # RLS : poser le contexte du foyer avant d'insérer les catégories
+        # (table categories en ENABLE+FORCE RLS, WITH CHECK sur app.current_household_id).
         db.execute(
             text("SELECT set_config('app.current_household_id', :hid, true)"),
             {"hid": str(household.id)},
         )
-    except Exception:
-        pass
+        _diag = "after_set_config"
 
-    user = User(
-        email=payload.email,
-        hashed_password=hash_password(payload.password),
-        full_name=payload.full_name,
-        is_admin=False,  # platform admin must be set manually via seed_admins script
-        household_id=household.id,
-    )
-    db.add(user)
-
-    for cat in DEFAULT_CATEGORIES:
-        db.add(Category(household_id=household.id, **cat))
-
-    # DIAG TEMPORAIRE : surfacer l'erreur réelle (à retirer après diagnostic).
-    try:
+        user = User(
+            email=payload.email,
+            hashed_password=hash_password(payload.password),
+            full_name=payload.full_name,
+            is_admin=False,
+            household_id=household.id,
+        )
+        db.add(user)
+        for cat in DEFAULT_CATEGORIES:
+            db.add(Category(household_id=household.id, **cat))
+        _diag = "before_commit"
         db.commit()
+        db.refresh(user)
     except Exception as _e:
-        db.rollback()
-        import traceback as _tb, logging as _lg
-        _lg.getLogger("wealthly.auth").error("REGISTER_FAIL %s: %s\n%s", type(_e).__name__, _e, _tb.format_exc())
-        raise HTTPException(status_code=500, detail=f"DIAG {type(_e).__name__}: {str(_e)[:300]}")
-    db.refresh(user)
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        raise HTTPException(status_code=422, detail=f"DIAG[{_diag}] {type(_e).__name__}: {str(_e)[:350]}")
 
     token = create_access_token(user.id, household.id)
     set_auth_cookie(response, token)
