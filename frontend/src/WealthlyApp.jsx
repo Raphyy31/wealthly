@@ -1718,10 +1718,8 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   // as fake "income".
   const [transferRecatResult, setTransferRecatResult] = useState(null);
   const recategorizeTransfers = async () => {
-    console.log('[recategorizeTransfers] click — démarrage…');
     try {
       const res = await api.transactions.recategorizeTransfers();
-      console.log('[recategorizeTransfers] réponse backend :', res);
       const flagged = res?.flagged ?? 0;
       if (flagged > 0) {
         // Reload tx so the frontend Set transferIds includes the new flags
@@ -1737,7 +1735,6 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
         details: res?.details ?? [],
       });
     } catch (e) {
-      console.error('[recategorizeTransfers] erreur :', e);
       showToast(e.message || 'Erreur lors de la détection des virements internes.', 'error');
     }
   };
