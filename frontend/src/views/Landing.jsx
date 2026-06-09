@@ -16,10 +16,10 @@ import Cinematic from './landing/Cinematic.jsx';
 import Details from './landing/Details.jsx';
 
 export default function Landing({ onSignIn, onSignUp, onTryDemo, onPresent }) {
-  // onTryDemo / onPresent : conservés dans la signature pour compat App.jsx,
-  // mais la v4 cinematic ne les expose pas explicitement (les CTAs renvoient
-  // tous vers Sign-up ou Sign-in). À recâbler si on rajoute un "Mode démo".
-  void onTryDemo; void onPresent;
+  // onPresent : conservé pour compat App.jsx (mode présentation auto-tour),
+  // non exposé en v4. onTryDemo est désormais recâblé sur un bouton « Voir la
+  // démo » du Cinematic (entrée mode démo interactif, données synthétiques).
+  void onPresent;
 
   const [view, setView] = useState('cinematic'); // 'cinematic' | 'details'
 
@@ -65,6 +65,7 @@ export default function Landing({ onSignIn, onSignUp, onTryDemo, onPresent }) {
       onSignIn={onSignIn}
       onSignUp={onSignUp}
       onShowDetails={() => setView('details')}
+      onTryDemo={onTryDemo}
     />
   );
 }

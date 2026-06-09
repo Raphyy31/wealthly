@@ -6,7 +6,7 @@ import DemoLoopCinematic from './DemoLoopCinematic.jsx';
 import './styles.css';
 import './cinematic.css';
 
-export default function Cinematic({ onSignIn, onSignUp, onShowDetails }) {
+export default function Cinematic({ onSignIn, onSignUp, onShowDetails, onTryDemo }) {
   const [completed, setCompleted] = useState(false);
   const [replayToken, setReplayToken] = useState(0);
   const ctaLayerRef = useRef(null);
@@ -95,7 +95,18 @@ export default function Cinematic({ onSignIn, onSignUp, onShowDetails }) {
           <div className="cin-mark-glyph">w</div>
           <div className="cin-mark-word">wealthly</div>
         </div>
-        <button className="cin-signin" onClick={onSignIn}>Se connecter</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {onTryDemo && (
+            <button
+              className="cin-signin"
+              onClick={onTryDemo}
+              style={{ border: '1px solid rgba(255,255,255,.28)', borderRadius: 999, padding: '7px 16px' }}
+            >
+              Voir la démo
+            </button>
+          )}
+          <button className="cin-signin" onClick={onSignIn}>Se connecter</button>
+        </div>
       </header>
 
       <button className="cin-skip" onClick={onShowDetails}>
@@ -130,6 +141,11 @@ export default function Cinematic({ onSignIn, onSignUp, onShowDetails }) {
           <a className="cin-cta cin-cta-ghost" href="#" onClick={(e) => { e.preventDefault(); onShowDetails?.(); }}>
             Découvrir Wealthly
           </a>
+          {onTryDemo && (
+            <a className="cin-cta cin-cta-ghost" href="#" onClick={(e) => { e.preventDefault(); onTryDemo(); }}>
+              Voir la démo
+            </a>
+          )}
         </div>
 
         <button className="cin-replay" onClick={handleReplay} ref={replayRef} style={{ opacity: 0 }}>
