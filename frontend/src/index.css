@@ -1968,7 +1968,7 @@ html, body {
   inset: 0;
   background: color-mix(in oklab, var(--ink) 40%, transparent);
   backdrop-filter: blur(6px);
-  z-index: 950;
+  z-index: 2100;
   display: flex;
   align-items: center;
   justify-content: center;

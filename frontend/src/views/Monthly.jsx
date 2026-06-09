@@ -1474,8 +1474,19 @@ function SankeyFullscreenModal({ kind, data, totals, label, eyebrow, fmt, onClos
     };
   }, [onClose]);
 
-  const leafCount = data.nodes.filter(n => n.level === 2).length;
+  // Garde anti-crash : si data malformé, on ferme proprement plutôt que de
+  // planter le rendu (Recharts <Sankey> jette si nodes/links absents).
+  const nodes = Array.isArray(data?.nodes) ? data.nodes : [];
+  const links = Array.isArray(data?.links) ? data.links : [];
+  const hasData = nodes.length > 0 && links.length > 0;
+  const leafCount = nodes.filter(n => n.level === 2).length;
   const sankeyHeight = Math.max(560, leafCount * 38 + 120);
+  // Marges responsives : les marges fixes (240/180) rendaient la zone de
+  // dessin NÉGATIVE sur mobile → Sankey vide / cassé. On adapte à la largeur.
+  const vw = (typeof window !== 'undefined' && window.innerWidth) || 1024;
+  const skMargin = vw < 700
+    ? { top: 20, right: 96, bottom: 20, left: 70 }
+    : { top: 30, right: 240, bottom: 30, left: 180 };
 
   const content = (
     <div className="sankey-fullscreen-overlay" onClick={onClose}>
@@ -1510,23 +1521,27 @@ function SankeyFullscreenModal({ kind, data, totals, label, eyebrow, fmt, onClos
             <X size={20}/>
           </button>
         </header>
-        <div className="sankey-fullscreen-body" style={{ height: sankeyHeight }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <Sankey
-              data={data}
-              nodePadding={32}
-              nodeWidth={18}
-              iterations={64}
-              margin={{ top: 30, right: 240, bottom: 30, left: 180 }}
-              node={<SankeyNode fmt={fmt} teaser={false} compact={false}/>}
-              link={<SankeyLink/>}
-            >
-              <Tooltip
-                formatter={(v) => fmt(v)}
-                contentStyle={{ background: 'var(--bg-elev)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, boxShadow: '0 8px 24px -8px rgba(0,0,0,.18)' }}
-              />
-            </Sankey>
-          </ResponsiveContainer>
+        <div className="sankey-fullscreen-body" style={{ height: hasData ? sankeyHeight : 'auto' }}>
+          {hasData ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <Sankey
+                data={data}
+                nodePadding={32}
+                nodeWidth={18}
+                iterations={64}
+                margin={skMargin}
+                node={<SankeyNode fmt={fmt} teaser={false} compact={false}/>}
+                link={<SankeyLink/>}
+              >
+                <Tooltip
+                  formatter={(v) => fmt(v)}
+                  contentStyle={{ background: 'var(--bg-elev)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, boxShadow: '0 8px 24px -8px rgba(0,0,0,.18)' }}
+                />
+              </Sankey>
+            </ResponsiveContainer>
+          ) : (
+            <p style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--ink-3)' }}>Aucun flux à afficher pour cette période.</p>
+          )}
         </div>
       </div>
     </div>
