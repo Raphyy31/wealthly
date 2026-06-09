@@ -133,21 +133,48 @@ function posRow(name, meta, value, pill) {
   return `<div class="pos"><div class="pos-l"><span class="pos-n">${esc(name)}</span>${meta ? `<span class="pos-m">${esc(meta)}</span>` : ''}</div><div class="pos-r"><span class="pos-v">${value}</span>${pill || ''}</div></div>`;
 }
 
-export async function generateBilanHtmlReport(data) {
-  // Ouvre la fenêtre tout de suite (anti popup-blocker) avec un placeholder.
-  const w = window.open('', '_blank');
-  if (!w) { alert("Le navigateur a bloqué l'ouverture du bilan. Autorise les pop-ups pour ce site puis réessaie."); return; }
-  w.document.open();
-  w.document.write(`<!doctype html><meta charset="utf-8"><title>Bilan…</title><body style="margin:0;height:100vh;display:flex;align-items:center;justify-content:center;background:#F7F6F2;color:#56544A;font:500 14px 'Geist',system-ui,sans-serif"><div>Génération de votre bilan patrimonial…</div></body>`);
-  w.document.close();
+// Impression via iframe caché — chemin mobile-safe (les pop-ups `window.open`
+// sont bloquées par défaut sur mobile, ce qui rendait le bouton « Bilan PDF »
+// inopérant). On écrit le document dans un iframe et on imprime son contenu.
+function printViaIframe(html) {
+  const cleaned = html.replace(/<script>[\s\S]*?<\/script>/g, ''); // on pilote l'impression nous-mêmes
+  const iframe = document.createElement('iframe');
+  iframe.setAttribute('aria-hidden', 'true');
+  iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:1px;height:1px;border:0;opacity:0;';
+  document.body.appendChild(iframe);
+  const doc = iframe.contentWindow.document;
+  doc.open(); doc.write(cleaned); doc.close();
+  let done = false;
+  const fire = () => {
+    if (done) return; done = true;
+    try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } catch { /* noop */ }
+    setTimeout(() => { try { iframe.remove(); } catch { /* noop */ } }, 3000);
+  };
+  // Laisse le temps aux polices/SVG de se peindre.
+  setTimeout(fire, 800);
+}
 
-  try {
-    const html = await buildReportHtml(data);
-    w.document.open(); w.document.write(html); w.document.close();
-  } catch (e) {
+export async function generateBilanHtmlReport(data) {
+  // Desktop : nouvelle fenêtre (aperçu + impression). Mobile : les pop-ups
+  // sont bloquées → window.open renvoie null → on bascule sur l'iframe.
+  const w = window.open('', '_blank');
+  if (w) {
     w.document.open();
-    w.document.write(`<!doctype html><meta charset="utf-8"><body style="font-family:sans-serif;padding:40px;color:#B0392B">Erreur lors de la génération du bilan : ${esc(e?.message || e)}</body>`);
+    w.document.write(`<!doctype html><meta charset="utf-8"><title>Bilan…</title><body style="margin:0;height:100vh;display:flex;align-items:center;justify-content:center;background:#F7F6F2;color:#56544A;font:500 14px 'Geist',system-ui,sans-serif"><div>Génération de votre bilan patrimonial…</div></body>`);
     w.document.close();
+  }
+  let html;
+  try {
+    html = await buildReportHtml(data);
+  } catch (e) {
+    if (w) { w.document.open(); w.document.write(`<!doctype html><meta charset="utf-8"><body style="font-family:sans-serif;padding:40px;color:#B0392B">Erreur lors de la génération du bilan : ${esc(e?.message || e)}</body>`); w.document.close(); }
+    else alert("Erreur lors de la génération du bilan. Réessaie.");
+    return;
+  }
+  if (w) {
+    w.document.open(); w.document.write(html); w.document.close();
+  } else {
+    printViaIframe(html);
   }
 }
 

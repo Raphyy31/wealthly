@@ -2652,6 +2652,8 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .flow-actions { display: flex; justify-content: space-between; gap: 12px; }
 
 /* TOAST */
+.toast-stack { position: fixed; top: 20px; right: 20px; z-index: 2000; display: flex; flex-direction: column; gap: 10px; max-width: 380px; pointer-events: none; }
+.toast-stack .toast { position: static; top: auto; right: auto; z-index: auto; max-width: 100%; pointer-events: auto; }
 .toast { position: fixed; top: 20px; right: 20px; z-index: 2000; padding: 14px 18px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 18px 48px -16px rgba(0, 0, 0, 0.28), 0 6px 18px -6px rgba(0, 0, 0, 0.14); animation: slideIn 0.48s cubic-bezier(0.16, 1, 0.3, 1); max-width: 380px; }
 .toast-success { border-color: var(--success); }
 .toast-warning { border-color: var(--warning); }

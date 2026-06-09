@@ -238,7 +238,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       }
     } catch {}
   }, []);
-  const [toast, setToast] = useState(null);
+  const [toasts, setToasts] = useState([]);
   // Reglage decalage salaire fin de mois — partage avec Monthly.jsx via
   // localStorage. Utilise ici pour que monthlyEvolution / thisMonthStats /
   // Dashboard reflechissent le shift (sinon Dashboard affiche "0 entrees
@@ -591,54 +591,67 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       setDocuments([]);
       return;
     }
+    // Résilient : Promise.allSettled + application TRANCHE PAR TRANCHE. Un
+    // endpoint qui échoue (ex. cold-start Railway 500) n'efface plus tout le
+    // state — on garde l'existant pour cette tranche et on signale sans bloquer.
     try {
-      const [memList, accList, txList, astList, liaList, catList, budList, goalList, achList, ruleList, connList, dcaList, rmData, peList, fcList] = await Promise.all([
-        api.members.list(),
-        api.accounts.list(),
-        api.transactions.list(),
-        api.assets.list(),
-        api.liabilities.list(),
-        api.categories.list(),
-        api.budgets.list(),
-        api.goals.list(),
-        api.achievements.list().catch(() => []),
-        api.rules.list(),
-        api.banking.listConnections().catch(() => []),
-        dcaApi.list().catch(() => []),
-        api.refMonth.get().catch(() => ({ version: 1, updated_at: null, lines: [] })),
-        api.plannedEvents.list().catch(() => []),
-        api.fixedCharges.list().catch(() => []),
-      ]);
-      const mappedAccounts = accList.map(accountFromApi);
-      const mappedTx = txList.map(txFromApi);
-      const mappedAssets = astList.map(assetFromApi);
-      const mappedLia = liaList.map(liaFromApi);
-      const cats = (catList || []).map(categoryFromApi);
-      const finalCats = cats.length > 0 ? cats : DEFAULT_CATEGORIES;
-      const budDict = {};
-      (budList || []).forEach(b => { budDict[b.category_slug] = b.amount; });
-      const mappedGoals = (goalList || []).map(goalFromApi);
-      const mappedRules = (ruleList || []).map(r => ({ pattern: r.pattern, categoryId: r.category_slug, source: r.source, _id: r.id }));
-      setMembers(memList);
-      setAccounts(mappedAccounts);
-      setTransactions(mappedTx);
-      setAssets(mappedAssets);
-      setLiabilities(mappedLia);
-      setCategories(finalCats);
-      setBudgets(budDict);
-      setGoals((goalList || []).map(goalFromApi));
-      setAchievements((achList || []).map(a => a.achievement_slug));
-      // Custom rules
-      setCustomRules((ruleList || []).map(r => ({ pattern: r.pattern, categoryId: r.category_slug, source: r.source, _id: r.id })));
-      setBankConnections(connList || []);
-      setDcaPlans(dcaList || []);
-      setPlannedEvents(peList || []);
-      setFixedCharges(fcList || []);
+      const calls = {
+        members: api.members.list(),
+        accounts: api.accounts.list(),
+        transactions: api.transactions.list(),
+        assets: api.assets.list(),
+        liabilities: api.liabilities.list(),
+        categories: api.categories.list(),
+        budgets: api.budgets.list(),
+        goals: api.goals.list(),
+        achievements: api.achievements.list(),
+        rules: api.rules.list(),
+        connections: api.banking.listConnections(),
+        dca: dcaApi.list(),
+        refMonth: api.refMonth.get(),
+        plannedEvents: api.plannedEvents.list(),
+        fixedCharges: api.fixedCharges.list(),
+      };
+      const keys = Object.keys(calls);
+      const settled = await Promise.allSettled(Object.values(calls));
+      const out = {};
+      const failedKeys = [];
+      keys.forEach((k, i) => {
+        if (settled[i].status === 'fulfilled') out[k] = settled[i].value;
+        else failedKeys.push(k);
+      });
+      const has = (k) => Object.prototype.hasOwnProperty.call(out, k);
+
+      if (has('members')) setMembers(out.members || []);
+      if (has('accounts')) setAccounts((out.accounts || []).map(accountFromApi));
+      if (has('transactions')) setTransactions((out.transactions || []).map(txFromApi));
+      if (has('assets')) setAssets((out.assets || []).map(assetFromApi));
+      if (has('liabilities')) setLiabilities((out.liabilities || []).map(liaFromApi));
+      if (has('categories')) {
+        const cats = (out.categories || []).map(categoryFromApi);
+        setCategories(cats.length > 0 ? cats : DEFAULT_CATEGORIES);
+      }
+      if (has('budgets')) {
+        const budDict = {};
+        (out.budgets || []).forEach(b => { budDict[b.category_slug] = b.amount; });
+        setBudgets(budDict);
+      }
+      if (has('goals')) setGoals((out.goals || []).map(goalFromApi));
+      if (has('achievements')) setAchievements((out.achievements || []).map(a => a.achievement_slug));
+      if (has('rules')) setCustomRules((out.rules || []).map(r => ({ pattern: r.pattern, categoryId: r.category_slug, source: r.source, _id: r.id })));
+      if (has('connections')) setBankConnections(out.connections || []);
+      if (has('dca')) setDcaPlans(out.dca || []);
+      if (has('plannedEvents')) setPlannedEvents(out.plannedEvents || []);
+      if (has('fixedCharges')) setFixedCharges(out.fixedCharges || []);
+      if (has('refMonth')) setRefMonthsByScope({ household: out.refMonth || { version: 1, updated_at: null, lines: [] } });
       api.documents.list().then(setDocuments).catch(() => {});
-      // rmData est le Mois type 'Famille' (member_id absent → ménage).
-      // Les Mois types personnels des adultes se chargent à la demande quand
-      // l'utilisateur switche sur leur onglet.
-      setRefMonthsByScope({ household: rmData || { version: 1, updated_at: null, lines: [] } });
+
+      // Tranches "core" en échec → on prévient (non bloquant). Les tranches
+      // secondaires (achievements/connections/dca/…) échouent en silence.
+      const coreFailed = failedKeys.filter(k => ['members', 'accounts', 'transactions', 'assets', 'liabilities', 'categories'].includes(k));
+      if (coreFailed.length > 0) {
+        showToast("Certaines données n'ont pas pu être rechargées — réessaie ou synchronise.", 'warning');
+      }
     } catch (err) {
       showToast(t('toasts.loadError', { message: err.message }), 'error');
     }
@@ -751,9 +764,12 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   useEffect(() => { if (!loading) persist(STORAGE_KEYS.ACTIVE_MEMBER, activeMemberId); }, [activeMemberId, loading, persist]);
 
   // Toast helper
+  // File de toasts : chaque toast a son id + son propre timer, donc des
+  // messages rapprochés (sync, catégorisation IA en lot…) ne se mangent plus.
   const showToast = (message, type = 'info') => {
-    setToast({ message, type, id: Date.now() });
-    setTimeout(() => setToast(null), 3500);
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    setToasts((prev) => [...prev, { id, message, type }].slice(-4)); // cap à 4 visibles
+    setTimeout(() => setToasts((prev) => prev.filter((x) => x.id !== id)), 4000);
   };
 
 
@@ -2633,7 +2649,11 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
           <span className="backend-status-title">Connexion rétablie</span>
         </div>
       )}
-      {toast && <Toast message={toast.message} type={toast.type}/>}
+      {toasts.length > 0 && (
+        <div className="toast-stack">
+          {toasts.map((tt) => <Toast key={tt.id} message={tt.message} type={tt.type}/>)}
+        </div>
+      )}
       {requires2FA && (
         <Mandatory2FAOverlay
           onComplete={async () => {
