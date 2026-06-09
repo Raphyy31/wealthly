@@ -369,6 +369,10 @@ async function buildReportHtml(data) {
   .panel{flex:1;background:${C.surface};border:1px solid ${C.border};border-radius:16px;padding:18px 20px;}
   .sec-h{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:${C.ink3};font-weight:600;margin:0 0 14px;}
   .comp{display:flex;gap:18px;align-items:center;}
+  .donut-wrap{position:relative;display:inline-flex;flex-shrink:0;}
+  .donut-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+  .donut-center .dc-v{font-family:${SERIF};font-style:italic;font-weight:500;font-size:17px;line-height:1;color:${C.ink};}
+  .donut-center .dc-l{font-size:7.5px;letter-spacing:.14em;text-transform:uppercase;color:${C.ink3};font-weight:600;margin-top:3px;}
   .lg{display:flex;align-items:center;gap:9px;font-size:12px;padding:6px 0;border-bottom:1px solid ${C.sunk};}
   .lg:last-child{border-bottom:none;}
   .lg-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
@@ -453,7 +457,7 @@ async function buildReportHtml(data) {
     <div class="cols">
       <div class="panel">
         <div class="sec-h">Composition du patrimoine</div>
-        ${allocSegments.length ? `<div class="comp"><div style="flex-shrink:0">${donutSvg(allocSegments)}</div><div style="flex:1">${allocLegend}</div></div>` : '<p class="empty">Aucun actif renseigné.</p>'}
+        ${allocSegments.length ? `<div class="comp"><div class="donut-wrap">${donutSvg(allocSegments)}<div class="donut-center"><div class="dc-v">${eur(allocTotal)}</div><div class="dc-l">réparti</div></div></div><div style="flex:1">${allocLegend}</div></div>` : '<p class="empty">Aucun actif renseigné.</p>'}
       </div>
       <div class="panel">
         <div class="sec-h">Santé patrimoniale</div>
