@@ -9,6 +9,34 @@ Notes for Claude (and any future AI tooling) picking the project back up.
 
 ---
 
+## Session 2026-06-08 — Raphyy31 + Claude (Opus 4.8) — correctifs prod critiques + bilan PDF + export Excel
+
+**Tout sur `main`, déployé.** Série de fixes prod (signalés par l'user en live) + finition bilan PDF + export Excel.
+
+### 🔴 Correctifs critiques prod
+- **Inscription cassée (500)** : la table `households` en prod n'avait pas la colonne `plan` (dérive de schéma — l'ORM la déclare mais `create_all` n'ajoute pas les colonnes manquantes). `INSERT INTO households` plantait. **Fix** : `ALTER TABLE households ADD COLUMN IF NOT EXISTS plan VARCHAR DEFAULT 'solo' NOT NULL` ajouté aux migrations légères de démarrage (`main.py:_run_lightweight_migrations`). Vérifié prod → register 201. ⚠️ **Diag** : le handler global `@app.exception_handler(Exception)` (main.py) masque le détail des 500 → pour diagnostiquer, lever temporairement une `HTTPException(422, detail=...)` (non masquée) plutôt que lire les logs.
+- **Inscription + RLS** : `register` insère les `DEFAULT_CATEGORIES` (table `categories` en FORCE RLS) alors qu'aucun user n'est encore authentifié → `set_config('app.current_household_id', household.id, true)` posé juste après le flush du foyer, avant l'insert des catégories.
+- **Onboarding bloquant** : `completeOnboarding` faisait `reloadAll()` (15 endpoints en //) après création du membre ; un seul échec (cold-start Railway) bloquait l'écran « Entrer dans Wealthly ». **Fix** : tout best-effort + `setOnboarded(true)` dans `finally` (on entre toujours) + état loading sur le bouton.
+- **Session expirée** : un 401 laissait l'user sur des données mortes. **Fix** : `api.js` émet un signal global (`subscribeSessionExpired`) sur tout 401 hors `/auth/*` → `App.jsx` déconnecte proprement + bandeau « session expirée » sur AuthScreen + purge cache.
+- **2FA bloquante** : l'overlay 2FA obligatoire (sans échappatoire) bloquait tout nouveau compte. **Fix** : rendue **optionnelle** — bouton « Configurer plus tard » (`onSkip`), choix mémorisé (`localStorage wealthly:2fa_skipped`). Activable depuis Réglages → Sécurité. Backend 2FA OK (`/auth/totp/setup` testé 200).
+- **Thème mobile « immonde »** : l'app suivait `prefers-color-scheme: dark` → ancien thème dark hors charte sur mobile. **Fix** : défaut **clair** partout (script no-flash `index.html` + `useTheme`) + **migration unique** (`wealthly-theme-default-light-v1`) qui reset les users déjà passés en dark. Dark dispo via toggle explicite.
+
+### Bilan PDF — refait sur la VRAIE charte + logique correcte (`frontend/src/reportHtml.js`)
+⚠️ **Leçon** : ne PAS inventer une charte (j'avais sorti du navy+or générique d'un plugin → rejet « immonde »). La charte = tokens `index.css` : papier chaud `#F7F6F2`, cobalt `#2540D9`, sage/terracotta, dataviz d1–d7, **Geist + Newsreader** (serif italique cobalt pour titres/gros chiffres). Génère un **HTML** imprimé par le navigateur (WYSIWYG, pas jsPDF — l'ancien `pdfReport.js` jsPDF est abandonné, plus branché). **Toujours vérifier le rendu** via headless Edge (`msedge --headless --screenshot`/`--print-to-pdf`) avant de livrer. **Logique** : comptes d'investissement (PEA/CTO/AV) valorisés depuis leurs **positions** (`parent_asset_id`) + cash, cours **live** via `api.quotes` ; immobilier **net du prêt lié** (`liability.linked_asset_id`). 2 pages : synthèse (hero net worth, KPI, donut, score, courbe aire) + détail en cartes par classe. Déclencheur : bouton « Bilan PDF » du Dashboard.
+
+### Export Excel (`frontend/src/xlsExport.js`, SheetJS déjà installé)
+Boutons dans les fiches détail (via `DetailShell.onExport`) : Investissements (positions) + Emprunts (échéancier `buildAmortization`). `exportLoansXlsx` (multi-prêts) dispo pour un bouton global futur.
+
+### Email bilan mensuel (pilier 2/3 — shipped, voir aussi bloc 2026-06-06)
+`Household.monthly_report_enabled` + `services/monthly_report.py` + `routers/reports.py` (settings / test / cron `X-Cron-Secret`). Toggle Réglages → Profil. **À FAIRE Railway** : cron mensuel POST `/reports/cron/send-monthly`.
+
+### Restant / à faire
+- Bouton **« agrandir » Sankey** (Monthly) : fix défensif posé (marges responsives mobile + garde data + z-index 2100) ; cause exacte desktop non confirmée (pas eu la console).
+- **Comptes de test** créés en prod pendant les diagnostics (`wealthly.%@example.com`) → à purger : `DELETE FROM households WHERE id IN (SELECT household_id FROM users WHERE email LIKE 'wealthly.%@example.com');`
+- `ANTHROPIC_API_KEY` **non posée** sur Railway (Coach + catégorisation 1-clic en fallback ; option « Sans clé » manuelle dispo).
+
+---
+
 ## Session 2026-06-06 — Raphyy31 + Claude (Opus 4.7/4.8) — features P5, refonte fiches détail, RLS activé, IA contrôlée
 
 Grosse série de sessions. **État repreneur : tout est sur `main`, déployé en prod.** Résumé de ce qui a changé depuis le 2026-05-19 :
