@@ -62,6 +62,11 @@ class Settings:
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "10080"))  # 7 days
 
+    # Nombre de proxies de confiance devant l'app (Railway = 1). Le vrai IP
+    # client est juste avant ces N derniers hops du X-Forwarded-For ; tout ce
+    # que le client peut injecter est à gauche → non spoofable si N est correct.
+    TRUSTED_PROXY_HOPS: int = int(os.getenv("TRUSTED_PROXY_HOPS", "1"))
+
     # CORS — comma-separated list of allowed origins (exact match)
     CORS_ORIGINS: list[str] = os.getenv(
         "CORS_ORIGINS",

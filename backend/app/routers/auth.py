@@ -64,13 +64,32 @@ def _client_ip(request: Request) -> str | None:
 
     sec-audit 2026-05-19: changed from [0] (spoofable) to [-2] or [-1].
     """
+    import ipaddress
+    direct = request.client.host if request.client else None
+    candidate = None
     xff = request.headers.get("x-forwarded-for")
     if xff:
         hops = [h.strip() for h in xff.split(",") if h.strip()]
-        if len(hops) >= 2:
-            return hops[-2]   # penultimate = client IP when behind 1 proxy
-        return hops[-1]       # only one entry → trust it (direct or single proxy)
-    return request.client.host if request.client else None
+        # On fait confiance aux N derniers hops (proxies Railway). Le vrai client
+        # est juste avant : index len-1-N. Ce qu'un attaquant injecte est à
+        # gauche de cette position → non spoofable si TRUSTED_PROXY_HOPS est juste.
+        n = max(0, int(getattr(settings, "TRUSTED_PROXY_HOPS", 1) or 1))
+        idx = len(hops) - 1 - n
+        if 0 <= idx < len(hops):
+            candidate = hops[idx]
+        elif hops:
+            candidate = hops[-1]
+    # Valide : si ce n'est pas une IP plausible (injection), on retombe sur l'IP
+    # de la connexion directe (le proxy) — non spoofable.
+    for val in (candidate, direct):
+        if not val:
+            continue
+        try:
+            ipaddress.ip_address(val)
+            return val
+        except ValueError:
+            continue
+    return direct
 
 
 @router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
