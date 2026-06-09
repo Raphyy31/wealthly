@@ -434,6 +434,16 @@ async def _sync_one_connection(
     if conn.status != "authorized" or not conn.accounts_data:
         raise HTTPException(status_code=400, detail="Connexion non autorisée")
 
+    # RLS : poser le contexte du foyer (transaction-scoped). INDISPENSABLE pour
+    # le cron nightly `cron_sync_all` (aucun user authentifié → variable non
+    # posée → sous FORCE RLS la sync ne voit/écrit aucune ligne). Aussi robuste
+    # pour l'appel user-facing. À réasserter à chaque connexion du cron.
+    try:
+        from sqlalchemy import text
+        db.execute(text("SELECT set_config('app.current_household_id', :h, true)"), {"h": str(household_id)})
+    except Exception:
+        pass
+
     date_from = (datetime.utcnow() - timedelta(days=days_back)).date().isoformat()
     total_new = 0
     total_updated = 0
@@ -709,28 +719,37 @@ async def cron_sync_all(
     if not provided or not hmac.compare_digest(provided, expected):
         raise HTTPException(status_code=403, detail="Header X-Cron-Secret invalide")
 
-    connections = db.query(BankConnection).filter(
-        BankConnection.status == "authorized",
-    ).all()
+    # RLS : `bank_connections` est RLS-protégée → une requête globale sans
+    # contexte renvoie 0 ligne. On itère les FOYERS (table `households` hors
+    # RLS), on pose le contexte par foyer, puis on liste/sync ses connexions.
+    from sqlalchemy import text as _text
+    from app.models import Household
     total_imported = 0
     total_updated = 0
     total_skipped = 0
     failures: list[dict] = []
     results: list[dict] = []
-    for conn in connections:
+    households = db.query(Household).all()
+    for hh in households:
         try:
-            res = await _sync_one_connection(conn, conn.household_id, days_back, db)
-            total_imported += res.get("imported", 0)
-            total_updated += res.get("updated", 0)
-            total_skipped += res.get("skipped", 0)
-            results.append({
-                "connection_id": conn.id, "household_id": conn.household_id,
-                "imported": res.get("imported", 0), "updated": res.get("updated", 0),
-                "errors": res.get("errors", []),
-            })
-        except Exception as e:
-            logger.error("[cron-sync] connection %s failed: %s", conn.id, e)
-            failures.append({"connection_id": conn.id, "household_id": conn.household_id, "error": str(e)[:200]})
+            db.execute(_text("SELECT set_config('app.current_household_id', :h, true)"), {"h": str(hh.id)})
+        except Exception:
+            pass
+        conns = db.query(BankConnection).filter(BankConnection.status == "authorized").all()
+        for conn in conns:
+            try:
+                res = await _sync_one_connection(conn, hh.id, days_back, db)
+                total_imported += res.get("imported", 0)
+                total_updated += res.get("updated", 0)
+                total_skipped += res.get("skipped", 0)
+                results.append({
+                    "connection_id": conn.id, "household_id": hh.id,
+                    "imported": res.get("imported", 0), "updated": res.get("updated", 0),
+                    "errors": res.get("errors", []),
+                })
+            except Exception as e:
+                logger.error("[cron-sync] connection %s failed: %s", conn.id, e)
+                failures.append({"connection_id": conn.id, "household_id": hh.id, "error": str(e)[:200]})
 
     return {
         "connections_synced": len(results),
