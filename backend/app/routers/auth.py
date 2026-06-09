@@ -185,7 +185,7 @@ def login(request: Request, response: Response, payload: UserLogin, db: Session 
         except Exception:
             raise HTTPException(status_code=500, detail="Erreur vérification 2FA")
 
-    token = create_access_token(user.id, user.household_id)
+    token = create_access_token(user.id, user.household_id, user.token_version)
     set_auth_cookie(response, token)
     record_auth_event(db, kind="login_success", success=True, request=request,
                       user_id=user.id, email=user.email)
@@ -287,11 +287,12 @@ def reset_password(request: Request, response: Response, payload: ResetPasswordR
         raise HTTPException(status_code=400, detail="Utilisateur introuvable.")
 
     user.hashed_password = hash_password(payload.new_password)
+    user.token_version = (user.token_version or 0) + 1  # révoque les anciens tokens
     record.used_at = datetime.utcnow()
     db.commit()
     db.refresh(user)
 
-    token = create_access_token(user.id, user.household_id)
+    token = create_access_token(user.id, user.household_id, user.token_version)
     set_auth_cookie(response, token)
     record_auth_event(db, kind="password_reset_success", success=True, request=request,
                       user_id=user.id, email=user.email)
@@ -327,13 +328,14 @@ def change_password(
     if not ok:
         raise HTTPException(status_code=400, detail=reason or "Mot de passe trop faible.")
 
-    # 4. Hash + commit
+    # 4. Hash + commit + révocation des anciens tokens
     user.hashed_password = hash_password(payload.new_password)
+    user.token_version = (user.token_version or 0) + 1
     db.commit()
 
-    # 5. Re-issue un cookie auth frais (l'ancien reste valide jusqu'à
-    # expiration mais on rafraîchit pour rotater).
-    token = create_access_token(user.id, user.household_id)
+    # 5. Re-issue un cookie auth frais avec le nouveau token_version (les
+    # autres sessions/anciens tokens deviennent invalides immédiatement).
+    token = create_access_token(user.id, user.household_id, user.token_version)
     set_auth_cookie(response, token)
     record_auth_event(db, kind="password_change_success", success=True, request=request,
                       user_id=user.id, email=user.email)

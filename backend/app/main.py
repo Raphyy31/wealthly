@@ -175,6 +175,8 @@ def _run_lightweight_migrations() -> None:
             # 2FA TOTP (C19 2026-05-18) — secret base32 + enabled flag.
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_secret VARCHAR",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_enabled BOOLEAN NOT NULL DEFAULT FALSE",
+            # Révocation de session (token_version) — 2026-06-08
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 0",
             # TOTP replay prevention (sec-audit 2026-05-19) — timestamp of last
             # accepted code; reject any code from the same 30s window.
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_last_otp_at TIMESTAMP WITHOUT TIME ZONE",

@@ -100,6 +100,10 @@ class User(Base):
     full_name = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, default=False)  # admin can manage household settings
+    # Versionne les JWT : incrémenté à chaque changement/réinit de mot de passe
+    # et désactivation 2FA → les anciens tokens (cookie 7j) deviennent invalides
+    # (révocation de session). Vérifié dans get_current_user via le claim "tv".
+    token_version = Column(Integer, nullable=False, default=0, server_default="0")
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # "Mois type" — JSON budget template the user defines once and compares each

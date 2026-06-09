@@ -45,12 +45,15 @@ def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
 
 
-def create_access_token(user_id: str, household_id: str) -> str:
-    """Create a signed JWT containing user_id and household_id."""
+def create_access_token(user_id: str, household_id: str, token_version: int = 0) -> str:
+    """Create a signed JWT containing user_id, household_id and token_version.
+    `tv` permet de révoquer les anciens tokens après un changement de mot de
+    passe / désactivation 2FA (cf. get_current_user)."""
     expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     payload = {
         "sub": user_id,
         "hh": household_id,
+        "tv": int(token_version or 0),
         "exp": expire,
     }
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
@@ -144,6 +147,12 @@ def get_current_user(
     user = db.query(User).filter(User.id == user_id, User.is_active == True).first()
     if not user:
         raise HTTPException(status_code=401, detail="User not found or inactive")
+
+    # Révocation de session : si le token_version du JWT ne correspond plus à
+    # celui du user (mot de passe changé/réinitialisé, 2FA désactivée), le token
+    # est obsolète → 401. Les tokens émis avant l'ajout du claim ont tv=0.
+    if int(payload.get("tv", 0) or 0) != int(getattr(user, "token_version", 0) or 0):
+        raise HTTPException(status_code=401, detail="Session révoquée, reconnectez-vous")
 
     # ── RLS context (defense-in-depth) ──────────────────────────────────────
     # Toutes les requêtes ORM qui s'exécutent ensuite dans le SAME transaction
