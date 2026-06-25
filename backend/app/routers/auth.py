@@ -151,7 +151,7 @@ def register(request: Request, response: Response, payload: UserCreate, db: Sess
 
 
 @router.post("/login", response_model=Token)
-@limiter.limit("10/minute")
+@limiter.limit("30/minute")
 def login(request: Request, response: Response, payload: UserLogin, db: Session = Depends(get_db)):
     """Authenticate and return a JWT (also sets an HttpOnly cookie)."""
     ip = _client_ip(request)
@@ -247,7 +247,7 @@ def me(request: Request, current_user: User = Depends(get_current_user)):
 
 
 @router.post("/forgot-password", response_model=MessageOut)
-@limiter.limit("5/minute")
+@limiter.limit("15/minute")
 def forgot_password(request: Request, payload: ForgotPasswordRequest, db: Session = Depends(get_db)):
     """Generate a single-use reset token and email it to the user.
 
