@@ -98,7 +98,7 @@ export function PostSyncReviewModal({
     <ResponsiveModal open={open} onClose={onClose} className="post-sync-review-modal">
       <div className="modal-header">
         <h2 style={{ flex: 1, margin: 0, fontSize: 17, fontWeight: 600, letterSpacing: '-0.01em' }}>
-          {transactions.length} <em style={{ fontStyle: 'italic', fontFamily: 'Newsreader, serif', fontWeight: 400 }}>
+          {transactions.length} <em style={{ fontStyle: 'italic', fontFamily: 'Geist, system-ui, sans-serif', fontWeight: 400 }}>
             nouvelle{transactions.length > 1 ? 's' : ''} transaction{transactions.length > 1 ? 's' : ''}.
           </em>
         </h2>

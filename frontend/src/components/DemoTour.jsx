@@ -342,7 +342,7 @@ export function DemoTour({ active, onExit, setView }) {
           </div>
           {/* Tagline */}
           <div className="dt-intro-tagline" style={{
-            fontFamily: 'Newsreader, Georgia, serif',
+            fontFamily: 'Geist, system-ui, sans-serif',
             fontStyle: 'italic',
             fontSize: 'clamp(28px, 4vw, 44px)',
             fontWeight: 400,
@@ -384,7 +384,7 @@ export function DemoTour({ active, onExit, setView }) {
             <Logo size={56} wordmark wordmarkSize={32}/>
           </div>
           <div className="dt-outro-msg" style={{
-            fontFamily: 'Newsreader, Georgia, serif',
+            fontFamily: 'Geist, system-ui, sans-serif',
             fontStyle: 'italic',
             fontSize: 'clamp(32px, 5vw, 52px)',
             fontWeight: 400,
@@ -561,7 +561,7 @@ export function DemoTour({ active, onExit, setView }) {
           <h2
             ref={titleRef}
             style={{
-              margin: 0, fontFamily: 'Newsreader, Georgia, serif',
+              margin: 0, fontFamily: 'Geist, system-ui, sans-serif',
               fontWeight: 400, fontSize: 30, lineHeight: 1.14,
               letterSpacing: '-0.025em', color: 'var(--ink)',
             }}

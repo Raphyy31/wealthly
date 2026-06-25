@@ -62,63 +62,63 @@
    1. Tokens — Light mode (par défaut)
    ───────────────────────────────────────────────────────────────────────── */
 :root {
-  /* Surfaces — papier chaud */
-  --bg:           #F7F6F2;
+  /* Surfaces — tech neutral (gris froid quasi-blanc, net) — refonte 2026-06-25 */
+  --bg:           #FBFBFC;
   --bg-elev:      #FFFFFF;
-  --bg-sunk:      #EFEDE6;
-  --bg-hover:     #F1EFE8;
-  --border:       #E4E1D8;
-  --border-strong:#D2CEC0;
+  --bg-sunk:      #F3F4F6;
+  --bg-hover:     #EEF0F3;
+  --border:       #E7E8EC;
+  --border-strong:#D6D8DE;
 
-  /* Ink */
-  --ink:        #16150F;
-  --ink-2:      #56544A;
-  --ink-3:      #8C8979;
-  --ink-mute:   #B5B2A4;
+  /* Ink — quasi-noir froid */
+  --ink:        #0C0D10;
+  --ink-2:      #555A64;
+  --ink-3:      #868B95;
+  --ink-mute:   #B4B8C0;
 
-  /* Accent — cobalt (rare, interactif et data principale) */
-  --accent:       #2540D9;
-  --accent-2:     #1A2FA8;
-  --accent-soft:  #E7EBFF;
-  --accent-line:  #BFC8FF;
+  /* Accent — bleu électrique (CTA, data principale, liens) */
+  --accent:       #2E5BFF;
+  --accent-2:     #1E40DB;
+  --accent-soft:  #E9EEFF;
+  --accent-line:  #C3D0FF;
 
   /* Sémantique */
-  --positive:      #136D3E;
-  --positive-soft: #DBEDE2;
-  --negative:      #B0392B;
-  --negative-soft: #F4E2DE;
-  --warning:       #8E641A;
-  --warning-soft:  #F2E7CE;
-  --neutral-soft:  #ECE9DF;
+  --positive:      #0B8A5A;
+  --positive-soft: #DFF3EB;
+  --negative:      #E5484D;
+  --negative-soft: #FBE4E5;
+  --warning:       #B7791F;
+  --warning-soft:  #F6ECD6;
+  --neutral-soft:  #EEF0F3;
 
-  /* Dataviz — 9 séries stables (ordre figé pour cohérence inter-vues) */
-  --d1: #2540D9; /* cobalt — principale */
-  --d2: #1F8E6E; /* sage */
-  --d3: #C2733B; /* terracotta */
-  --d4: #7B57C6; /* mauve */
-  --d5: #B85D7A; /* rose */
-  --d6: #4D4D4D; /* graphite */
-  --d7: #E0B23E; /* ocre */
-  --d8: #2A7FA4; /* teal-bleu (extension C1) */
-  --d9: #8A8051; /* olive (extension C1) */
+  /* Dataviz — palette tech, 9 séries stables (ordre figé inter-vues) */
+  --d1: #2E5BFF; /* electric blue — principale */
+  --d2: #12B5A6; /* teal */
+  --d3: #8B5CF6; /* violet */
+  --d4: #F59E0B; /* amber */
+  --d5: #EC4899; /* pink */
+  --d6: #64748B; /* slate */
+  --d7: #06B6D4; /* cyan */
+  --d8: #84CC16; /* lime */
+  --d9: #F43F5E; /* rose */
 
-  /* Dataviz softs — fonds discrets pour hover/active/badge (C1) */
-  --d1-soft: #BFC8FF;
-  --d2-soft: #B9DCC8;
-  --d3-soft: #ECCFB6;
-  --d4-soft: #D5C7EF;
-  --d5-soft: #ECC7D2;
-  --d6-soft: #C9C9C9;
-  --d7-soft: #F1DE9C;
-  --d8-soft: #BBDAE4;
-  --d9-soft: #DCD6BC;
+  /* Dataviz softs — fonds discrets (hover/active/badge) */
+  --d1-soft: #D9E1FF;
+  --d2-soft: #C7EFEB;
+  --d3-soft: #E6DCFB;
+  --d4-soft: #FBEBCB;
+  --d5-soft: #FBD9EB;
+  --d6-soft: #D9DEE6;
+  --d7-soft: #CDEFF7;
+  --d8-soft: #E2F3C8;
+  --d9-soft: #FBD5DC;
 
-  /* Radii */
+  /* Radii — net/serré (tech) */
   --radius-xs: 4px;
   --radius-sm: 6px;
   --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
 
   /* Spacing — 4 px scale */
   --space-1:  4px;
@@ -133,10 +133,10 @@
   --space-16: 64px;
   --space-20: 80px;
 
-  /* Shadows */
-  --shadow-sm:  0 1px 0 rgba(20,20,15,.04), 0 1px 2px rgba(20,20,15,.04);
-  --shadow-md:  0 1px 0 rgba(20,20,15,.04), 0 4px 12px -2px rgba(20,20,15,.06);
-  --shadow-pop: 0 1px 0 rgba(20,20,15,.06), 0 12px 32px -8px rgba(20,20,15,.12);
+  /* Shadows — subtiles, froides (tech) */
+  --shadow-sm:  0 1px 2px rgba(12,13,16,.05);
+  --shadow-md:  0 2px 6px -1px rgba(12,13,16,.08), 0 1px 2px rgba(12,13,16,.05);
+  --shadow-pop: 0 16px 40px -12px rgba(12,13,16,.22), 0 4px 10px -4px rgba(12,13,16,.10);
 
   /* Transitions */
   --t-fast: 120ms cubic-bezier(.2,.6,.2,1);
@@ -170,7 +170,11 @@
   /* Fonts */
   --font-sans:  'Geist', system-ui, -apple-system, sans-serif;
   --font-mono:  'Geist Mono', ui-monospace, 'SF Mono', monospace;
-  --font-serif: 'Newsreader', Georgia, serif;
+  /* Refonte tech 2026-06-25 : on abandonne le serif éditorial (Newsreader) qui
+     faisait "old school". Le token garde son nom (consommé partout) mais pointe
+     désormais sur Geist → tous les titres-accent se dé-serifent d'un coup. Les
+     gros chiffres hero basculent eux sur --font-mono (tabulaire) au cas par cas. */
+  --font-serif: 'Geist', system-ui, -apple-system, sans-serif;
 
   /* ── Alias hérités (mappent l'ancien système sur le nouveau) ── */
   --bg-page:         var(--bg);
@@ -237,61 +241,60 @@
    2. Dark mode
    ───────────────────────────────────────────────────────────────────────── */
 :root[data-theme="dark"] {
-  /* Dark Espresso doux 2026-05-19 — itération suite feedback user
-     (toujours "très sombre" avec #16140F). Variante B ui-ux-pro-max :
-     bg = ex-bg-elev (lifted), elev encore plus chaud, sunk = ex-bg.
-     Reste papier-chaud nocturne, hiérarchie 3 niveaux mieux lisible. */
-  --bg:           #1F1C16;
-  --bg-elev:      #2A2620;
-  --bg-sunk:      #15130F;
-  --bg-hover:     #312D26;
-  --surface-hero: #2F2A22;   /* léger lift papier nocturne pour le bandeau hero (était #FBFAF6 codé en dur → titre blanc invisible) */
-  --on-accent:    #16140F;   /* en dark l'accent est un périwinkle clair → texte FONCÉ sur les boutons cobalt (contraste AA) */
-  --border:       #3E3A31;
-  --border-strong:#4D483D;
+  /* Dark "tech" — refonte 2026-06-25. Quasi-noir froid (façon Linear/Vercel),
+     fini le papier-chaud espresso. Élévation par bordures fines + surfaces qui
+     se détachent, pas par ombres. Accent bleu électrique relevé. */
+  --bg:           #0A0A0C;
+  --bg-elev:      #141518;
+  --bg-sunk:      #060607;
+  --bg-hover:     #1C1D21;
+  --surface-hero: #17181C;   /* léger lift au-dessus de bg-elev pour le bandeau hero des fiches */
+  --on-accent:    #0A0A0C;   /* texte foncé sur l'accent périwinkle clair du dark (contraste AA) */
+  --border:       #232428;
+  --border-strong:#303137;
 
-  --ink:        #F1EEE4;
-  --ink-2:      #A29E91;
-  --ink-3:      #75716A;
-  --ink-mute:   #4D4A45;
+  --ink:        #F2F3F5;
+  --ink-2:      #9AA0AC;
+  --ink-3:      #6A6F7B;
+  --ink-mute:   #44484F;
 
-  --accent:       #7E92FF;
-  --accent-2:     #A6B4FF;
-  --accent-soft:  #1B214A;
-  --accent-line:  #2E3A7A;
+  --accent:       #5B7CFF;
+  --accent-2:     #88A0FF;
+  --accent-soft:  #182142;
+  --accent-line:  #2A3566;
 
-  --positive:      #4FB57A;
-  --positive-soft: #15301F;
-  --negative:      #E07A6E;
-  --negative-soft: #341B17;
-  --warning:       #D4A74C;
-  --warning-soft:  #2A2316;
-  --neutral-soft:  #1F1D17;
+  --positive:      #2DD4A0;
+  --positive-soft: #0E2A22;
+  --negative:      #FF5C61;
+  --negative-soft: #2E1416;
+  --warning:       #E0A93C;
+  --warning-soft:  #2A2212;
+  --neutral-soft:  #16171C;
 
-  --d1: #7E92FF;
-  --d2: #4FB57A;
-  --d3: #E0975A;
-  --d4: #B69BF2;
-  --d5: #DA8AA1;
-  --d6: #9C988B;
-  --d7: #E5C75E;
-  --d8: #6FB0CC; /* teal-bleu dark (C1) */
-  --d9: #B5AB78; /* olive dark (C1) */
+  --d1: #5B7CFF; /* electric blue */
+  --d2: #2DD4BF; /* teal */
+  --d3: #A78BFA; /* violet */
+  --d4: #FBBF24; /* amber */
+  --d5: #F472B6; /* pink */
+  --d6: #94A3B8; /* slate */
+  --d7: #22D3EE; /* cyan */
+  --d8: #A3E635; /* lime */
+  --d9: #FB7185; /* rose */
 
-  /* Dataviz softs dark (fonds discrets, basés sur l'inversion brand) */
-  --d1-soft: #1B214A;
-  --d2-soft: #15301F;
-  --d3-soft: #3A2615;
-  --d4-soft: #2E2244;
-  --d5-soft: #3A2127;
-  --d6-soft: #232220;
-  --d7-soft: #2F2716;
-  --d8-soft: #1A2A33;
-  --d9-soft: #25231A;
+  /* Dataviz softs dark (fonds discrets) */
+  --d1-soft: #182142;
+  --d2-soft: #0E2A26;
+  --d3-soft: #221C3A;
+  --d4-soft: #2A2212;
+  --d5-soft: #2C1622;
+  --d6-soft: #1B1E24;
+  --d7-soft: #0E2630;
+  --d8-soft: #1E2A12;
+  --d9-soft: #2C151B;
 
-  --shadow-sm:  0 1px 0 rgba(0,0,0,.3), 0 1px 2px rgba(0,0,0,.3);
-  --shadow-md:  0 1px 0 rgba(0,0,0,.3), 0 4px 12px -2px rgba(0,0,0,.4);
-  --shadow-pop: 0 1px 0 rgba(0,0,0,.4), 0 12px 32px -8px rgba(0,0,0,.6);
+  --shadow-sm:  0 1px 2px rgba(0,0,0,.5);
+  --shadow-md:  0 2px 8px -2px rgba(0,0,0,.6), 0 1px 2px rgba(0,0,0,.5);
+  --shadow-pop: 0 18px 44px -12px rgba(0,0,0,.75), 0 4px 10px -4px rgba(0,0,0,.5);
 
   /* Press feedback dark (C1) — légèrement éclairer au lieu d'assombrir */
   --press-feedback: brightness(1.06);
@@ -598,11 +601,13 @@ html, body {
 .ds-chip:hover { background: var(--bg-hover); }
 .ds-chip.on { background: var(--accent-soft); color: var(--accent-2); border-color: transparent; }
 
-/* Hero number (Newsreader) */
+/* Hero number — Geist Mono tabulaire (tech, terminal-like) */
 .ds-hero-num {
-  font-family: var(--font-serif);
-  font-weight: 400;
-  font-size: 64px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+  font-size: 60px;
   line-height: 1;
   letter-spacing: -0.04em;
   color: var(--ink);
@@ -970,11 +975,11 @@ html, body {
   margin: 0 0 6px;
 }
 .subview-header h1 em {
-  font-family: 'Newsreader', Georgia, serif;
-  font-style: italic;
-  font-weight: 400;
-  letter-spacing: -0.035em;
-  color: var(--ink-2);
+  font-family: 'Geist', system-ui, sans-serif;
+  font-style: normal;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--accent);
 }
 .subview-header p {
   font-size: 14px;

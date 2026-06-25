@@ -445,9 +445,9 @@ export function Styles({ theme }) {
   color: var(--text-primary);
 }
 .page-header h1 em, .page-title em {
-  font-family: 'Newsreader', Georgia, serif;
-  font-style: italic; font-weight: 400; color: var(--text-secondary);
-  letter-spacing: -0.035em;
+  font-family: 'Geist', system-ui, sans-serif;
+  font-style: normal; font-weight: 600; color: var(--accent);
+  letter-spacing: -0.02em;
 }
 .page-header p, .page-subtitle { font-size: 13px; color: var(--text-tertiary); margin: 0; max-width: 580px; line-height: 1.5; }
 @media (max-width: 760px) { .page-header h1, .page-title { font-size: 24px; letter-spacing: -0.022em; } }
@@ -472,9 +472,9 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .progress-step.done .progress-dot { background: var(--primary-soft); color: var(--primary); border-color: var(--primary); }
 .progress-line { flex: 1; height: 2px; background: var(--border); border-radius: 1px; }
 .onboarding-step-content h1 { font-family: 'Geist', system-ui, sans-serif; font-size: 38px; font-weight: 500; margin: 0 0 10px; letter-spacing: -0.025em; line-height: 1.05; color: var(--text-primary); }
-.onboarding-step-content h1 em { font-family: 'Newsreader', Georgia, serif; font-style: italic; color: var(--text-secondary); font-weight: 400; letter-spacing: -0.035em; }
+.onboarding-step-content h1 em { font-family: 'Geist', system-ui, sans-serif; font-style: italic; color: var(--text-secondary); font-weight: 400; letter-spacing: -0.035em; }
 .onboarding-step-content h2 { font-family: 'Geist', system-ui, sans-serif; font-size: 28px; font-weight: 500; margin: 0 0 8px; letter-spacing: -0.025em; line-height: 1.1; color: var(--text-primary); }
-.onboarding-step-content h2 em { font-family: 'Newsreader', Georgia, serif; font-style: italic; color: var(--text-secondary); font-weight: 400; letter-spacing: -0.035em; }
+.onboarding-step-content h2 em { font-family: 'Geist', system-ui, sans-serif; font-style: italic; color: var(--text-secondary); font-weight: 400; letter-spacing: -0.035em; }
 .onboarding-lead { font-size: 15px; color: var(--text-secondary); margin: 0 0 28px; line-height: 1.6; max-width: 460px; letter-spacing: -0.005em; }
 .onboarding-hero { text-align: center; margin-bottom: 32px; }
 .ob-mark-large { width: 64px; height: 64px; border-radius: 8px; background: var(--primary-soft); border: 1px solid ${dark ? 'rgba(91,141,239,0.32)' : 'rgba(40,85,200,0.18)'}; display: inline-flex; align-items: center; justify-content: center; color: var(--primary); margin-bottom: 20px; }
@@ -518,7 +518,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .empty-lead { font-size: 14px; color: var(--text-secondary); margin: 0 0 28px; line-height: 1.6; max-width: 440px; }
 .empty-actions { display: flex; gap: 12px; flex-wrap: wrap; }
 .empty-mini { padding: 36px 24px; text-align: center; color: var(--text-tertiary); display: flex; flex-direction: column; align-items: center; gap: 12px; }
-.empty-mini p { margin: 0; font-family: 'Newsreader', Georgia, serif; font-style: italic; font-size: 14px; max-width: 360px; line-height: 1.55; color: var(--text-secondary); letter-spacing: -0.005em; }
+.empty-mini p { margin: 0; font-family: 'Geist', system-ui, sans-serif; font-style: italic; font-size: 14px; max-width: 360px; line-height: 1.55; color: var(--text-secondary); letter-spacing: -0.005em; }
 .empty-mini svg { color: var(--primary); opacity: 0.55; }
 
 /* DASHBOARD */
@@ -558,7 +558,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .card-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 0 0 16px; padding-bottom: 12px; border-bottom: 1px dotted var(--border); flex-wrap: wrap; }
 .card-header h3 { font-size: 10.5px; font-weight: 600; margin: 0; display: flex; align-items: center; gap: 7px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--primary); }
 .card-header h3 svg { color: var(--primary); opacity: 0.75; }
-.card-header .card-meta { font-family: 'Newsreader', Georgia, serif; font-style: italic; font-size: 13px; color: var(--text-tertiary); letter-spacing: 0; text-transform: none; }
+.card-header .card-meta { font-family: 'Geist', system-ui, sans-serif; font-style: italic; font-size: 13px; color: var(--text-tertiary); letter-spacing: 0; text-transform: none; }
 
 /* HealthScore card — gauge on the left, breakdown on the right. */
 .health-score-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px; transition: border-color .2s; }
@@ -588,7 +588,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 }
 .card-meta { font-size: 11px; color: var(--text-tertiary); font-weight: 400; }
 .chart-card { padding: 22px 16px 16px 8px; }
-.chart-empty { padding: 60px 20px; text-align: center; color: var(--text-secondary); display: flex; flex-direction: column; align-items: center; gap: 12px; font-family: 'Newsreader', Georgia, serif; font-style: italic; font-size: 14px; letter-spacing: -0.005em; }
+.chart-empty { padding: 60px 20px; text-align: center; color: var(--text-secondary); display: flex; flex-direction: column; align-items: center; gap: 12px; font-family: 'Geist', system-ui, sans-serif; font-style: italic; font-size: 14px; letter-spacing: -0.005em; }
 .chart-empty svg { color: var(--primary); opacity: 0.5; }
 .alert-card { border-color: var(--warning); border-left: 2px solid var(--warning); background: ${dark ? 'rgba(212, 165, 84, 0.04)' : 'rgba(181, 135, 44, 0.04)'}; }
 .anomalies-list { display: flex; flex-direction: column; gap: 8px; }
@@ -1996,7 +1996,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
   margin: 14px 0 0;
   padding-top: 12px;
   border-top: 1px dotted var(--border);
-  font-family: 'Newsreader', Georgia, serif;
+  font-family: 'Geist', system-ui, sans-serif;
   font-style: italic;
   font-size: 13px;
   line-height: 1.6;
@@ -2033,7 +2033,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 /* État actuel + projection — two columns separated by a dotted vertical rule */
 .dca-state-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 24px; padding: 4px 0 18px; border-bottom: 1px dotted var(--border); margin-bottom: 14px; }
 .dca-state-block + .dca-state-block { border-left: 1px dotted var(--border); padding-left: 24px; }
-.dca-state-eyebrow { font-family: 'Newsreader', Georgia, serif; font-style: italic; font-size: 12.5px; color: var(--text-tertiary); margin-bottom: 12px; letter-spacing: -0.005em; }
+.dca-state-eyebrow { font-family: 'Geist', system-ui, sans-serif; font-style: italic; font-size: 12.5px; color: var(--text-tertiary); margin-bottom: 12px; letter-spacing: -0.005em; }
 .dca-state-row { display: flex; flex-wrap: wrap; gap: 24px; }
 .dca-state-kpi { min-width: 0; }
 .dca-state-kpi-label { font-size: 10.5px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 5px; white-space: nowrap; }
@@ -2236,7 +2236,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 /* Loan — Mensualité panel (right side of synth grid) */
 .loan-monthly-panel { display: flex; flex-direction: column; gap: 10px; padding: 22px 22px 20px; background: var(--bg-card, var(--bg-elev)); border: 1px solid var(--border); border-radius: 16px; }
 .loan-monthly-eyebrow { font-size: 10px; text-transform: uppercase; letter-spacing: 0.18em; color: var(--text-tertiary); font-weight: 500; }
-.loan-monthly-amount { font-family: 'Newsreader', Georgia, serif; font-style: italic; font-weight: 400; font-size: 38px; line-height: 1.05; letter-spacing: -0.02em; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.loan-monthly-amount { font-family: 'Geist', system-ui, sans-serif; font-style: italic; font-weight: 400; font-size: 38px; line-height: 1.05; letter-spacing: -0.02em; color: var(--text-primary); font-variant-numeric: tabular-nums; }
 .loan-monthly-amount em { font-style: italic; }
 .loan-monthly-sub { font-size: 12px; color: var(--text-tertiary); margin-top: -4px; }
 
@@ -2252,7 +2252,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .loan-monthly-stat-value { font-size: 13px; color: var(--text-primary); font-weight: 500; font-variant-numeric: tabular-nums; text-transform: capitalize; }
 
 .loan-progress-text { margin: 14px 0 0; padding-top: 14px; border-top: 1px solid var(--border-light); font-size: 13.5px; color: var(--text-secondary); line-height: 1.5; }
-.loan-progress-text em { font-family: 'Newsreader', Georgia, serif; font-style: italic; color: var(--text-secondary); }
+.loan-progress-text em { font-family: 'Geist', system-ui, sans-serif; font-style: italic; color: var(--text-secondary); }
 .loan-progress-text strong { color: var(--accent); font-weight: 600; font-variant-numeric: tabular-nums; }
 
 /* Loan — 3 synth cards horizontaux */
@@ -2452,7 +2452,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .ai-skel-line { height: 12px; border-radius: 6px; background: linear-gradient(90deg, var(--bg-sunk) 25%, var(--border) 37%, var(--bg-sunk) 63%); background-size: 400% 100%; animation: aiShimmer 1.4s ease infinite; }
 .ai-skel-line.short { width: 60%; }
 @keyframes aiShimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
-.ai-empty { font-size: 13px; color: var(--text-tertiary); margin: 6px 0; font-family: 'Newsreader', Georgia, serif; font-style: italic; }
+.ai-empty { font-size: 13px; color: var(--text-tertiary); margin: 6px 0; font-family: 'Geist', system-ui, sans-serif; font-style: italic; }
 .ai-alerts { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
 .ai-alert { display: flex; align-items: flex-start; gap: 9px; padding: 10px 12px; border-radius: 8px; font-size: 13px; line-height: 1.4; }
 .ai-alert svg { flex-shrink: 0; margin-top: 1px; }
@@ -2613,7 +2613,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 /* IMPORT */
 .import-flow { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 28px; box-shadow: var(--shadow-sm); }
 .import-header { margin-bottom: 24px; }
-.import-header h2 { font-family: 'Newsreader', Georgia, serif; font-style: italic; font-size: 28px; font-weight: 400; margin: 12px 0 4px; letter-spacing: -0.018em; line-height: 1.1; }
+.import-header h2 { font-family: 'Geist', system-ui, sans-serif; font-style: italic; font-size: 28px; font-weight: 400; margin: 12px 0 4px; letter-spacing: -0.018em; line-height: 1.1; }
 .import-header h2 em { font-style: italic; color: var(--primary); font-weight: 400; }
 .import-header p { font-size: 13px; color: var(--text-tertiary); margin: 0; }
 .import-progress { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
@@ -3001,7 +3001,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
   margin: 0 0 14px;
 }
 .wealth-empty-state p em {
-  font-family: 'Newsreader', Georgia, serif;
+  font-family: 'Geist', system-ui, sans-serif;
   font-style: italic;
   font-weight: 400;
   color: var(--ink);
@@ -3091,7 +3091,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
   border-radius: 10px; font-size: 12.5px; line-height: 1.5;
 }
 .form-hint-banner strong { font-weight: 600; }
-.form-hint-banner em { font-family: 'Newsreader', Georgia, serif; font-style: italic; font-weight: 400; }
+.form-hint-banner em { font-family: 'Geist', system-ui, sans-serif; font-style: italic; font-weight: 400; }
 .form-error {
   margin: 4px 0 12px;
   padding: 10px 14px;
@@ -3145,14 +3145,14 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
   margin: 0; color: var(--ink);
 }
 .drawer-title em {
-  font-family: 'Newsreader', Georgia, serif;
+  font-family: 'Geist', system-ui, sans-serif;
   font-style: italic; font-weight: 400;
 }
 .drawer-meta { font-size: 12px; color: var(--ink-3); margin-top: 4px; }
 .drawer-meta-muted { color: var(--ink-3); }
 .drawer-total { text-align: right; }
 .drawer-total-val {
-  font-family: 'Newsreader', Georgia, serif;
+  font-family: 'Geist', system-ui, sans-serif;
   font-style: italic; font-size: 26px; color: var(--ink);
 }
 .drawer-total-delta { font-size: 12px; margin-top: 2px; }
@@ -3172,7 +3172,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
   letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3);
 }
 .drawer-kpi-val {
-  font-family: 'Newsreader', Georgia, serif; font-style: italic;
+  font-family: 'Geist', system-ui, sans-serif; font-style: italic;
   font-size: 20px; margin-top: 2px; color: var(--ink);
 }
 .drawer-kpi-val.up   { color: var(--positive); }
@@ -3194,7 +3194,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
   font-size: 15px; margin: 2px 0 0;
 }
 .drawer-section-title em {
-  font-family: 'Newsreader', Georgia, serif;
+  font-family: 'Geist', system-ui, sans-serif;
   font-style: italic; font-weight: 400;
 }
 .drawer-section-meta { font-size: 12px; color: var(--ink-3); }
@@ -3230,7 +3230,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 }
 .link-btn:disabled { color: var(--ink-3); cursor: not-allowed; text-decoration: none; }
 .csv-link-disabled {
-  font-family: 'Newsreader', Georgia, serif; font-style: italic;
+  font-family: 'Geist', system-ui, sans-serif; font-style: italic;
   font-size: 13px; color: var(--ink-3);
 }
 .csv-drop {
@@ -3279,7 +3279,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
   display: flex; justify-content: space-between; font-size: 13px;
 }
 .fiscal-note {
-  font-family: 'Newsreader', Georgia, serif; font-style: italic;
+  font-family: 'Geist', system-ui, sans-serif; font-style: italic;
   font-size: 12.5px; color: var(--ink-2); margin: 8px 0 0;
 }
 
@@ -3309,7 +3309,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
   margin: 10px 0 6px; font-size: 14px; font-weight: 600; color: var(--ink);
 }
 .merge-card p {
-  font-family: 'Newsreader', Georgia, serif; font-style: italic;
+  font-family: 'Geist', system-ui, sans-serif; font-style: italic;
   font-size: 20px; margin: 0 0 12px; color: var(--ink);
 }
 .merge-card .primary-btn { width: 100%; }
@@ -3359,7 +3359,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
   margin: 0 0 4px; color: var(--ink); letter-spacing: -0.01em;
 }
 .settings-panel h2 em {
-  font-family: 'Newsreader', Georgia, serif; font-style: italic; font-weight: 400;
+  font-family: 'Geist', system-ui, sans-serif; font-style: italic; font-weight: 400;
 }
 .settings-panel-intro {
   font-size: 13px; color: var(--ink-2); margin: 0 0 4px; line-height: 1.55;

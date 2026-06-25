@@ -287,14 +287,14 @@ const DSH_CSS = String.raw`
   font-size: 42px; line-height: 1.05; letter-spacing: -0.03em; color: var(--ink);
 }
 @media (max-width: 720px) { .dsh-title { font-size: 30px; } }
-.dsh-title em { font-family: 'Newsreader', Georgia, serif; font-style: italic; font-weight: 500; color: var(--ink); }
+.dsh-title em { font-family: 'Geist', system-ui, sans-serif; font-style: normal; font-weight: 600; letter-spacing: -0.02em; color: var(--accent); }
 .dsh-sub { margin-top: 6px; font-size: 13.5px; color: var(--text-secondary); display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .dsh-hero-right { text-align: right; }
 @media (max-width: 720px) { .dsh-hero-right { text-align: left; } }
 .dsh-eyebrow-r { font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--text-tertiary); font-weight: 600; }
 .dsh-value {
-  font-family: 'Newsreader', Georgia, serif; font-style: italic; font-weight: 500;
-  font-size: 48px; line-height: 1; letter-spacing: -0.02em; color: var(--ink);
+  font-family: var(--font-mono); font-style: normal; font-weight: 600;
+  font-size: 44px; line-height: 1; letter-spacing: -0.03em; color: var(--ink);
   margin-top: 8px; font-variant-numeric: tabular-nums;
 }
 @media (max-width: 720px) { .dsh-value { font-size: 36px; } }

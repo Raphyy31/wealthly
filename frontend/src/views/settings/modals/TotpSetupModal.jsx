@@ -105,7 +105,7 @@ export function TotpSetupModal({ onClose }) {
           {step === 'done' && (
             <div style={{ textAlign: 'center', padding: 20 }}>
               <p style={{
-                fontFamily: 'Newsreader,Georgia,serif', fontStyle: 'italic',
+                fontFamily: 'Geist, system-ui, sans-serif', fontStyle: 'italic',
                 fontSize: 16, color: 'var(--positive)', marginBottom: 16,
               }}>
                 2FA activée avec succès.

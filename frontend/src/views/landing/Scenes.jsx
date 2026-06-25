@@ -37,7 +37,7 @@ const Scene1Dashboard = () => (
     <g data-spot="hero-card">
       <rect x="296" y="64" width="852" height="356" rx="14" fill="#1F1C16" stroke="#2A2823"/>
       <text x="320" y="106" fill="#75716A" fontFamily="Geist Mono, monospace" fontSize="11" letterSpacing="1.6">PATRIMOINE NET TOTAL · 21 MAI 2026</text>
-      <text x="320" y="196" fill="#F1EEE4" fontFamily="Newsreader, Georgia, serif" fontSize="86" fontWeight="400" letterSpacing="-3.4">487 320,40 €</text>
+      <text x="320" y="196" fill="#F1EEE4" fontFamily="Geist, system-ui, sans-serif" fontSize="86" fontWeight="400" letterSpacing="-3.4">487 320,40 €</text>
       <rect x="320" y="222" width="164" height="32" rx="16" fill="#15301F"/>
       <text x="344" y="244" fill="#4FB57A" fontFamily="Geist, sans-serif" fontSize="13" fontWeight="500">↑ +6 240 € · +1,29 %</text>
       <text x="500" y="244" fill="#A29E91" fontFamily="Geist, sans-serif" fontSize="13">vs 30 jours</text>
@@ -93,7 +93,7 @@ const Scene1Dashboard = () => (
       <g key={k.l}>
         <rect x={296+i*316} y="444" width="296" height="192" rx="14" fill="#1F1C16" stroke="#2A2823"/>
         <text x={320+i*316} y="486" fill="#75716A" fontFamily="Geist Mono, monospace" fontSize="10.5" letterSpacing="1.6">{k.l.toUpperCase()}</text>
-        <text x={320+i*316} y="552" fill="#F1EEE4" fontFamily="Newsreader, Georgia, serif" fontSize="36" letterSpacing="-1.4">{k.v}</text>
+        <text x={320+i*316} y="552" fill="#F1EEE4" fontFamily="Geist, system-ui, sans-serif" fontSize="36" letterSpacing="-1.4">{k.v}</text>
         <text x={320+i*316} y="596" fill={k.dc} fontFamily="Geist, sans-serif" fontSize="12.5" fontWeight="500">{k.d} <tspan fill="#75716A">· 30 j</tspan></text>
       </g>
     ))}
@@ -143,7 +143,7 @@ const Scene2Sankey = () => (
 
     {/* Page title — top-left of canvas */}
     <text x="96" y="100" fill="#75716A" fontFamily="Geist Mono, monospace" fontSize="13" letterSpacing="2">FLUX MENSUELS · MAI 2026</text>
-    <text x="96" y="170" fill="#F1EEE4" fontFamily="Newsreader, Georgia, serif" fontSize="58" letterSpacing="-2" fontStyle="italic">Chaque euro, à sa place.</text>
+    <text x="96" y="170" fill="#F1EEE4" fontFamily="Geist, system-ui, sans-serif" fontSize="58" letterSpacing="-2" fontStyle="italic">Chaque euro, à sa place.</text>
 
     {/* Sankey — bigger, takes most of viewport */}
     <g data-spot="sankey">
@@ -221,7 +221,7 @@ const Scene3Loan = () => (
     <rect x="0" y="0" width="1600" height="900" fill="#0F0E0C"/>
 
     <text x="96" y="100" fill="#75716A" fontFamily="Geist Mono, monospace" fontSize="13" letterSpacing="2">CRÉDIT IMMOBILIER · BNP PARIBAS</text>
-    <text x="96" y="170" fill="#F1EEE4" fontFamily="Newsreader, Georgia, serif" fontSize="58" letterSpacing="-2" fontStyle="italic">Votre crédit, démystifié.</text>
+    <text x="96" y="170" fill="#F1EEE4" fontFamily="Geist, system-ui, sans-serif" fontSize="58" letterSpacing="-2" fontStyle="italic">Votre crédit, démystifié.</text>
 
     <g data-spot="loan">
       {/* Main card */}
@@ -325,7 +325,7 @@ const Scene4Pea = () => (
     <rect x="0" y="0" width="1600" height="900" fill="#0F0E0C"/>
 
     <text x="96" y="100" fill="#75716A" fontFamily="Geist Mono, monospace" fontSize="13" letterSpacing="2">PEA · BOURSORAMA · 14 LIGNES</text>
-    <text x="96" y="170" fill="#F1EEE4" fontFamily="Newsreader, Georgia, serif" fontSize="58" letterSpacing="-2" fontStyle="italic">Vos placements, en direct.</text>
+    <text x="96" y="170" fill="#F1EEE4" fontFamily="Geist, system-ui, sans-serif" fontSize="58" letterSpacing="-2" fontStyle="italic">Vos placements, en direct.</text>
 
     <g data-spot="pea">
       {/* Big card */}
@@ -333,7 +333,7 @@ const Scene4Pea = () => (
 
       {/* Left — hero number */}
       <text x="140" y="280" fill="#75716A" fontFamily="Geist Mono, monospace" fontSize="11" letterSpacing="1.6">VALEUR ACQUISE</text>
-      <text x="140" y="368" fill="#F1EEE4" fontFamily="Newsreader, Georgia, serif" fontSize="74" letterSpacing="-2.8">82 480 €</text>
+      <text x="140" y="368" fill="#F1EEE4" fontFamily="Geist, system-ui, sans-serif" fontSize="74" letterSpacing="-2.8">82 480 €</text>
       <rect x="140" y="390" width="180" height="32" rx="16" fill="#15301F"/>
       <text x="164" y="412" fill="#4FB57A" fontFamily="Geist, sans-serif" fontSize="13" fontWeight="500">↑ +12 240 € · +17,4 %</text>
 
@@ -410,7 +410,7 @@ const Scene5Categorize = () => {
       <rect x="0" y="0" width="1600" height="900" fill="#0F0E0C"/>
 
       <text x="96" y="100" fill="#75716A" fontFamily="Geist Mono, monospace" fontSize="13" letterSpacing="2">CATÉGORISATION · INTELLIGENTE</text>
-      <text x="96" y="170" fill="#F1EEE4" fontFamily="Newsreader, Georgia, serif" fontSize="58" letterSpacing="-2" fontStyle="italic">Triées pour vous.</text>
+      <text x="96" y="170" fill="#F1EEE4" fontFamily="Geist, system-ui, sans-serif" fontSize="58" letterSpacing="-2" fontStyle="italic">Triées pour vous.</text>
 
       <g data-spot="categorize">
         {/* Left card — raw transactions arriving */}

@@ -1604,7 +1604,7 @@ function EvolutionModal({ monthlyEvolution, fmt, onClose }) {
         ) : (
           <div className="mon-empty">
             <BarChart3 size={28}/>
-            <em style={{ fontFamily: 'Newsreader,Georgia,serif', fontStyle: 'italic', color: 'var(--ink-2)', fontSize: 14 }}>
+            <em style={{ fontFamily: 'Geist, system-ui, sans-serif', fontStyle: 'italic', color: 'var(--ink-2)', fontSize: 14 }}>
               Pas encore de données.
             </em>
           </div>

@@ -37,13 +37,13 @@ export function ChangePasswordModal({ onClose }) {
     <ResponsiveModal open={true} onClose={onClose}>
         <div className="modal-header">
           <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600 }}>
-            {t('settings.security.changeTitle')} <em style={{ fontFamily: "'Newsreader', serif", fontStyle: 'italic', fontWeight: 400 }}>{t('settings.security.changeTitleAccent')}</em>
+            {t('settings.security.changeTitle')} <em style={{ fontFamily: "'Geist', system-ui, sans-serif", fontStyle: 'italic', fontWeight: 400 }}>{t('settings.security.changeTitleAccent')}</em>
           </h2>
           <button className="icon-btn" onClick={onClose}><X size={18}/></button>
         </div>
         {success ? (
           <div className="modal-body" style={{ textAlign: 'center', padding: '32px 24px' }}>
-            <p style={{ fontFamily: "'Newsreader', serif", fontStyle: 'italic', fontSize: 22, color: 'var(--positive)', margin: '0 0 12px' }}>
+            <p style={{ fontFamily: "'Geist', system-ui, sans-serif", fontStyle: 'italic', fontSize: 22, color: 'var(--positive)', margin: '0 0 12px' }}>
               {t('settings.security.updated')}
             </p>
           </div>

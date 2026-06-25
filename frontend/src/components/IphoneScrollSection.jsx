@@ -238,7 +238,7 @@ function MiniScreen({ kind }) {
         <circle cx="360" cy="30" r="3" fill="#F1EEE4"/>
         {/* Header */}
         <text x="24" y="86" fill="#75716A" fontFamily="Geist, sans-serif" fontSize="10" letterSpacing="1.3">PATRIMOINE NET</text>
-        <text x="24" y="138" fill="#F1EEE4" fontFamily="Newsreader, Georgia, serif" fontSize="44" fontWeight="400" letterSpacing="-1.5">184 720 €</text>
+        <text x="24" y="138" fill="#F1EEE4" fontFamily="Geist, system-ui, sans-serif" fontSize="44" fontWeight="400" letterSpacing="-1.5">184 720 €</text>
         <rect x="24" y="158" width="100" height="22" rx="11" fill="#15301F"/>
         <text x="40" y="173" fill="#4FB57A" fontFamily="Geist, sans-serif" fontSize="10" fontWeight="500">↑ +1,28 %</text>
         {/* Chart */}
@@ -268,7 +268,7 @@ function MiniScreen({ kind }) {
           <circle r="80" fill="none" stroke="#A29475" strokeWidth="14" strokeDasharray="120 502" strokeDashoffset="-220" transform="rotate(-90)"/>
           <circle r="80" fill="none" stroke="#75A289" strokeWidth="14" strokeDasharray="80 502" strokeDashoffset="-340" transform="rotate(-90)"/>
           <text x="0" y="-4" fill="#F1EEE4" fontFamily="Geist, sans-serif" fontSize="11" textAnchor="middle">Total</text>
-          <text x="0" y="20" fill="#F1EEE4" fontFamily="Newsreader, Georgia, serif" fontSize="22" textAnchor="middle">796 k€</text>
+          <text x="0" y="20" fill="#F1EEE4" fontFamily="Geist, system-ui, sans-serif" fontSize="22" textAnchor="middle">796 k€</text>
         </g>
         {/* Categories */}
         {[
@@ -300,7 +300,7 @@ function MiniScreen({ kind }) {
         <rect x="0" y="0" width="380" height="780" fill="#0F0E0C"/>
         <text x="24" y="34" fill="#F1EEE4" fontFamily="Geist, sans-serif" fontSize="11" fontWeight="500">9:41</text>
         <text x="24" y="86" fill="#75716A" fontFamily="Geist, sans-serif" fontSize="10" letterSpacing="1.3">VOS TRANSACTIONS</text>
-        <text x="24" y="130" fill="#F1EEE4" fontFamily="Newsreader, Georgia, serif" fontSize="28" fontWeight="400">114 ce mois</text>
+        <text x="24" y="130" fill="#F1EEE4" fontFamily="Geist, system-ui, sans-serif" fontSize="28" fontWeight="400">114 ce mois</text>
         {/* Filter chips */}
         {['Tout', 'Dépenses', 'Revenus'].map((c, i) => (
           <g key={c}>
@@ -329,7 +329,7 @@ function MiniScreen({ kind }) {
       <rect x="0" y="0" width="380" height="780" fill="#0F0E0C"/>
       <text x="24" y="34" fill="#F1EEE4" fontFamily="Geist, sans-serif" fontSize="11" fontWeight="500">9:41</text>
       <text x="24" y="86" fill="#75716A" fontFamily="Geist, sans-serif" fontSize="10" letterSpacing="1.3">RÉEL VS MOIS TYPE — MAI</text>
-      <text x="24" y="130" fill="#F1EEE4" fontFamily="Newsreader, Georgia, serif" fontSize="28" fontWeight="400">Reste 1 240 €</text>
+      <text x="24" y="130" fill="#F1EEE4" fontFamily="Geist, system-ui, sans-serif" fontSize="28" fontWeight="400">Reste 1 240 €</text>
       <text x="24" y="156" fill="#75716A" fontFamily="Geist, sans-serif" fontSize="11">sur 6 850 € prévus</text>
       {/* Progress bar */}
       <rect x="24" y="180" width="332" height="6" rx="3" fill="#181714"/>
@@ -426,7 +426,7 @@ function IphoneStyles() {
   margin: 0;
 }
 .lc-iphone-step-title em {
-  font-family: 'Newsreader', Georgia, serif;
+  font-family: 'Geist', system-ui, sans-serif;
   font-style: italic;
   font-weight: 400;
   letter-spacing: -0.04em;

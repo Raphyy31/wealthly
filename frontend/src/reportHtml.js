@@ -21,7 +21,7 @@ import { quotes as quotesApi } from './api.js';
 import { cryptoToYahoo } from './utils/marketPrices.js';
 
 const SANS = "'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif";
-const SERIF = "'Newsreader', Georgia, 'Times New Roman', serif";
+const SERIF = "'Geist', system-ui, sans-serif";
 const MONO = "'Geist Mono', ui-monospace, 'SF Mono', monospace";
 const C = {
   bg: '#F7F6F2', surface: '#FFFFFF', sunk: '#EFEDE6',

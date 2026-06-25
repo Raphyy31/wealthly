@@ -226,7 +226,7 @@ const CSS = `
   margin: 0 0 10px;
 }
 .mandatory-2fa-title em {
-  font-family: 'Newsreader', Georgia, serif;
+  font-family: 'Geist', system-ui, sans-serif;
   font-style: italic;
   font-weight: 400;
   color: var(--accent);
@@ -373,7 +373,7 @@ const CSS = `
   padding: 30px 10px;
 }
 .mandatory-2fa-done-lead {
-  font: 400 18px/1.4 'Newsreader', Georgia, serif;
+  font: 400 18px/1.4 'Geist', system-ui, sans-serif;
   font-style: italic;
   color: var(--positive);
   margin: 0 0 12px;

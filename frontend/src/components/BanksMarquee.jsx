@@ -127,7 +127,7 @@ function BMStyles() {
   margin: 0 0 12px;
 }
 .bm-title em {
-  font-family: 'Newsreader', Georgia, serif;
+  font-family: 'Geist', system-ui, sans-serif;
   font-style: italic;
   font-weight: 400;
   letter-spacing: -0.04em;

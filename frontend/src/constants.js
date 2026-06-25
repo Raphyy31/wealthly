@@ -305,35 +305,39 @@ export const BANK_PROFILES = {
   },
 };
 
+// Refonte tech 2026-06-25 : couleurs sur les tokens dataviz (--d1..d9) → palette
+// cohérente, theme-aware (s'adapte light/dark) au lieu de l'arc-en-ciel Tailwind.
 export const ASSET_TYPES = [
-  { id: 'checking_account', name: 'Compte courant', icon: Wallet, color: '#3b82f6', description: 'Compte chèque, dépôts à vue' },
-  { id: 'savings_account', name: 'Livret épargne', icon: PiggyBank, color: '#0891b2', description: 'Livret A, LDDS, LEP, PEL' },
-  { id: 'real_estate', name: 'Immobilier', icon: Home, color: '#f97316', description: 'Résidence principale, locatif' },
-  { id: 'life_insurance', name: 'Assurance vie', icon: Heart, color: '#ec4899', description: 'Contrats AV (multi-supports, fonds €)' },
-  { id: 'pea', name: 'PEA', icon: BarChart3, color: '#10b981', description: 'Plan Épargne Actions (max 150k€)' },
-  { id: 'per', name: 'PER', icon: Target, color: '#06b6d4', description: 'Plan Épargne Retraite' },
-  { id: 'crypto', name: 'Cryptomonnaies', icon: Bitcoin, color: '#f59e0b', description: 'BTC, ETH, autres' },
-  { id: 'stocks', name: 'Titres / CTO', icon: Landmark, color: '#3b82f6', description: 'Compte-titres ordinaire' },
-  { id: 'other_asset', name: 'Autre actif', icon: Coins, color: '#6b7280', description: 'Or, art, parts SCPI…' },
+  { id: 'checking_account', name: 'Compte courant', icon: Wallet, color: 'var(--d1)', description: 'Compte chèque, dépôts à vue' },
+  { id: 'savings_account', name: 'Livret épargne', icon: PiggyBank, color: 'var(--d2)', description: 'Livret A, LDDS, LEP, PEL' },
+  { id: 'real_estate', name: 'Immobilier', icon: Home, color: 'var(--d4)', description: 'Résidence principale, locatif' },
+  { id: 'life_insurance', name: 'Assurance vie', icon: Heart, color: 'var(--d5)', description: 'Contrats AV (multi-supports, fonds €)' },
+  { id: 'pea', name: 'PEA', icon: BarChart3, color: 'var(--d3)', description: 'Plan Épargne Actions (max 150k€)' },
+  { id: 'per', name: 'PER', icon: Target, color: 'var(--d7)', description: 'Plan Épargne Retraite' },
+  { id: 'crypto', name: 'Cryptomonnaies', icon: Bitcoin, color: 'var(--d8)', description: 'BTC, ETH, autres' },
+  { id: 'stocks', name: 'Titres / CTO', icon: Landmark, color: 'var(--d3)', description: 'Compte-titres ordinaire' },
+  { id: 'other_asset', name: 'Autre actif', icon: Coins, color: 'var(--d6)', description: 'Or, art, parts SCPI…' },
 ];
 
 export const ASSET_CLASS_MAP = {
-  checking_account:{ class: 'Liquidités',   color: '#3b82f6' },
-  real_estate:     { class: 'Immobilier',   color: '#f97316' },
-  life_insurance:  { class: 'Épargne',      color: '#ec4899' },
-  pea:             { class: 'Placements',   color: '#10b981' },
-  per:             { class: 'Retraite',     color: '#06b6d4' },
-  savings_account: { class: 'Épargne',      color: '#0891b2' },
-  crypto:          { class: 'Alternatifs',  color: '#f59e0b' },
-  stocks:          { class: 'Placements',   color: '#3b82f6' },
-  other_asset:     { class: 'Divers',       color: '#6b7280' },
+  checking_account:{ class: 'Liquidités',   color: 'var(--d1)' },
+  real_estate:     { class: 'Immobilier',   color: 'var(--d4)' },
+  life_insurance:  { class: 'Épargne',      color: 'var(--d2)' },
+  pea:             { class: 'Placements',   color: 'var(--d3)' },
+  per:             { class: 'Retraite',     color: 'var(--d7)' },
+  savings_account: { class: 'Épargne',      color: 'var(--d2)' },
+  crypto:          { class: 'Alternatifs',  color: 'var(--d8)' },
+  stocks:          { class: 'Placements',   color: 'var(--d3)' },
+  other_asset:     { class: 'Divers',       color: 'var(--d6)' },
 };
 
 export const LIABILITY_TYPES = [
-  { id: 'mortgage', name: 'Crédit immobilier', icon: Home, color: '#7c2d12' },
-  { id: 'consumer_loan', name: 'Crédit conso', icon: CreditCard, color: '#dc2626' },
-  { id: 'auto_loan', name: 'Crédit auto', icon: CreditCard, color: '#ea580c' },
-  { id: 'other_loan', name: 'Autre prêt', icon: Banknote, color: '#6b7280' },
+  { id: 'mortgage', name: 'Crédit immobilier', icon: Home, color: 'var(--d6)' },
+  { id: 'consumer_loan', name: 'Crédit conso', icon: CreditCard, color: 'var(--d9)' },
+  { id: 'auto_loan', name: 'Crédit auto', icon: CreditCard, color: 'var(--d5)' },
+  { id: 'other_loan', name: 'Autre prêt', icon: Banknote, color: 'var(--ink-3)' },
 ];
 
-export const MEMBER_PALETTE = ['#3b6fe0', '#a78bfa', '#34d399', '#fbbf24', '#ec5a13', '#f472b6', '#06b6d4', '#94a3b8'];
+// Palette membres — hex fixes assez foncés pour des initiales BLANCHES lisibles
+// (identité stable inter-thèmes, comme les avatars Slack/Linear).
+export const MEMBER_PALETTE = ['#2E5BFF', '#7C3AED', '#0E9F6E', '#0E7490', '#DB2777', '#475569', '#B45309', '#BE185D'];

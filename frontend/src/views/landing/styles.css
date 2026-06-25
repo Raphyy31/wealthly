@@ -30,7 +30,7 @@
 
   --font-sans: 'Geist', system-ui, -apple-system, sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, monospace;
-  --font-serif: 'Newsreader', Georgia, serif;
+  --font-serif: 'Geist', system-ui, sans-serif;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }

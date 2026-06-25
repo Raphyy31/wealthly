@@ -146,7 +146,7 @@ function ensureEmptyStateCss() {
       color: var(--ink);
     }
     .empty-state-title em {
-      font-family: 'Newsreader', Georgia, serif;
+      font-family: 'Geist', system-ui, sans-serif;
       font-style: italic;
       font-weight: 400;
       color: var(--es-em, var(--accent));

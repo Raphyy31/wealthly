@@ -495,7 +495,7 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
             </div>
             {filteredItems.length === 0 ? (
               <div className="wealth-empty-state">
-                <p style={{ fontFamily: 'Newsreader,Georgia,serif', fontStyle: 'italic', color: 'var(--ink-2)', fontSize: 15, lineHeight: 1.5 }}>
+                <p style={{ fontFamily: 'Geist, system-ui, sans-serif', fontStyle: 'italic', color: 'var(--ink-2)', fontSize: 15, lineHeight: 1.5 }}>
                   {t('wealth.emptyCategory', { category: t(currentSub.labelKey).toLowerCase() })}
                 </p>
                 <button className="ds-btn primary" onClick={handleAdd}>

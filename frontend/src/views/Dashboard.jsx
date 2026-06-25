@@ -117,7 +117,7 @@ function AllocationCard({ allocationData, allocationTotal, formatEUR, hidden, on
             Total actifs
           </div>
           <div style={{
-            fontFamily: 'Newsreader, Georgia, serif', fontStyle: 'italic',
+            fontFamily: 'Geist, system-ui, sans-serif', fontStyle: 'italic',
             fontSize: 22, fontWeight: 400, color: 'var(--ink)',
             letterSpacing: '-0.015em',
             fontVariantNumeric: 'tabular-nums',
@@ -1393,7 +1393,7 @@ function DashStyles() {
 /* Header */
 .dash-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 4px; flex-wrap: wrap; }
 .dash-h1 { font: 500 26px/1.15 var(--font-sans); letter-spacing: -0.02em; margin: 0 0 6px; color: var(--ink); }
-.dash-h1-em { font-family: var(--font-serif); font-style: italic; font-weight: 400; letter-spacing: -0.03em; color: var(--ink); }
+.dash-h1-em { font-family: var(--font-sans); font-style: normal; font-weight: 600; letter-spacing: -0.02em; color: var(--accent); }
 .dash-sub { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-3); }
 .dash-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 @media (max-width: 640px) {
@@ -1584,7 +1584,7 @@ function DashStyles() {
 .kpi-cell { padding: 16px 20px; border-right: 1px solid var(--border); display: flex; flex-direction: column; gap: 4px; }
 .kpi-cell:last-child { border-right: none; }
 .kpi-val { font-size: 22px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
-.kpi-sub { font: 400 11px/1.3 'Newsreader', Georgia, serif; font-style: italic; color: var(--ink-3); margin-top: -2px; }
+.kpi-sub { font: 400 11px/1.3 'Geist', system-ui, sans-serif; font-style: italic; color: var(--ink-3); margin-top: -2px; }
 .kpi-delta { font-size: 11px; }
 .kpi-delta.pos { color: var(--positive); }
 .kpi-delta.neg { color: var(--negative); }

@@ -169,7 +169,7 @@ const NOTIF_CSS = `
 .notif-readall { display: inline-flex; align-items: center; gap: 4px; background: none; border: none; color: var(--accent); font-size: 12px; font-weight: 500; cursor: pointer; padding: 2px 4px; border-radius: 6px; }
 .notif-readall:hover { background: var(--accent-soft); }
 .notif-empty { text-align: center; padding: 32px 20px; color: var(--text-tertiary); }
-.notif-empty p { margin: 10px 0 0; font-size: 13px; font-family: 'Newsreader', Georgia, serif; font-style: italic; }
+.notif-empty p { margin: 10px 0 0; font-size: 13px; font-family: 'Geist', system-ui, sans-serif; font-style: italic; }
 .notif-list { display: flex; flex-direction: column; }
 .notif-item { display: flex; gap: 11px; padding: 13px 16px 13px 18px; border-bottom: 1px solid var(--border-light, var(--border)); cursor: pointer; transition: background .12s; position: relative; }
 .notif-item:hover { background: var(--bg-subtle); }

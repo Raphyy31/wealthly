@@ -248,7 +248,7 @@ export function BankConnectionsSection() {
                     </ul>
                   )}
                   {diagResult.recommendation && (
-                    <div style={{ marginTop: 8, fontStyle: 'italic', fontFamily: 'Newsreader,Georgia,serif' }}>
+                    <div style={{ marginTop: 8, fontStyle: 'italic', fontFamily: 'Geist, system-ui, sans-serif' }}>
                       → {diagResult.recommendation}
                     </div>
                   )}

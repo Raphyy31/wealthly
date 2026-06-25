@@ -198,7 +198,7 @@ export function BilanModal({
               Bilan patrimonial · {today}
             </div>
             <h2 style={{
-              margin: 0, fontFamily: 'Newsreader, Georgia, serif', fontWeight: 400,
+              margin: 0, fontFamily: 'Geist, system-ui, sans-serif', fontWeight: 400,
               fontSize: 28, lineHeight: 1.1, letterSpacing: '-0.025em',
               color: 'var(--ink)',
             }}>
@@ -291,7 +291,7 @@ export function BilanModal({
               </div>
             </div>
             <div style={{
-              fontFamily: 'Newsreader, Georgia, serif',
+              fontFamily: 'Geist, system-ui, sans-serif',
               fontSize: 36, fontWeight: 400, fontStyle: 'italic',
               color: netTotal >= 0 ? 'var(--ink)' : 'var(--negative)',
               fontVariantNumeric: 'tabular-nums',
@@ -427,7 +427,7 @@ function BilanSection({ title, sections, total, totalLabel, formatEUR, hidden, n
           {totalLabel}
         </span>
         <span style={{
-          fontFamily: 'Newsreader, Georgia, serif',
+          fontFamily: 'Geist, system-ui, sans-serif',
           fontStyle: 'italic',
           fontSize: 20, fontWeight: 400,
           color: negative ? 'var(--negative)' : 'var(--ink)',
