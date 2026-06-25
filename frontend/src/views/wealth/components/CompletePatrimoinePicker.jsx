@@ -31,7 +31,7 @@ export function CompletePatrimoinePicker({ onClose, onPickAsset, onPickLiability
               const onClick = () => it.kind === 'asset' ? onPickAsset(it.id) : onPickLiability();
               return (
                 <button key={i} className="patrimoine-picker-card" onClick={onClick}>
-                  <div className="ppc-icon" style={{ background: it.color + '22', color: it.color }}><Icon size={20}/></div>
+                  <div className="ppc-icon" style={{ background: `color-mix(in srgb, ${it.color} 14%, transparent)`, color: it.color }}><Icon size={20}/></div>
                   <div className="ppc-text">
                     <div className="ppc-name">{it.name}</div>
                     <div className="ppc-desc">{it.description}</div>

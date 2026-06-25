@@ -185,7 +185,7 @@ function AllocationCard({ allocationData, allocationTotal, formatEUR, hidden, on
                     width: '0%',
                     background: d.color,
                     borderRadius: 2,
-                    boxShadow: `0 0 8px ${d.color}40`,
+                    boxShadow: `0 0 8px color-mix(in srgb, ${d.color} 40%, transparent)`,
                   }}
                 />
               </div>
