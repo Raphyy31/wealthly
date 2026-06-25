@@ -34,7 +34,38 @@ logger = logging.getLogger("wealthly")
 # Create tables on startup. New tables are picked up automatically; ALTER TABLE
 # for new columns on existing tables must be run manually below — SQLAlchemy's
 # create_all does not migrate existing schemas.
-Base.metadata.create_all(bind=engine)
+#
+# Resilience (2026-06-25): probe the DB with ONE lightweight connection before
+# any schema bootstrap. If it's unreachable (bad creds, Supabase pooler
+# circuit-breaker, outage…), log and skip create_all / migrations instead of
+# letting an unhandled exception kill the process. A boot crash makes Railway
+# restart the container every ~3s, and each restart re-opens dozens of failing
+# connections — which keeps the Supabase pooler's auth circuit-breaker tripped
+# forever. Booting "DB-less" breaks that loop: the app stays up, stops
+# hammering, the breaker resets, and DB errors surface per-request instead of
+# being hidden behind a boot crash.
+def _db_reachable() -> bool:
+    if settings.DATABASE_URL.startswith("sqlite"):
+        return True
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return True
+    except Exception as e:
+        logger.error(
+            "[startup] DB unreachable — skipping schema bootstrap; the app will "
+            "still boot but DB-backed routes will fail until this clears: %s", e
+        )
+        return False
+
+
+_DB_OK = _db_reachable()
+
+if _DB_OK:
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        logger.error("[startup] create_all failed (non-fatal): %s", e)
 
 
 def _run_lightweight_migrations() -> None:
@@ -242,7 +273,8 @@ def _run_lightweight_migrations() -> None:
             logger.warning("[migrate] skipped statement (%s): %s", stmt[:80], e)
 
 
-_run_lightweight_migrations()
+if _DB_OK:
+    _run_lightweight_migrations()
 
 
 def _alembic_sync() -> None:
@@ -291,7 +323,8 @@ def _alembic_sync() -> None:
         logger.warning("[alembic] sync failed (non-fatal): %s", e)
 
 
-_alembic_sync()
+if _DB_OK:
+    _alembic_sync()
 
 # Surface GoCardless config status at startup so Railway logs make it
 # obvious whether the env vars are loaded in the container.
