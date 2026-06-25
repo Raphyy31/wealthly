@@ -501,7 +501,7 @@ export function Dashboard({
     },
     {
       label: t('dashboard.savingsMonth'),
-      sub: 'Revenus − dépenses',
+      sub: 'Mis de côté ce mois',
       value: monthSaving,
       // Bug fix 2026-05-19 : avant on calculait (monthSaving / income) * 100
       // ce qui donnait -59 423 % quand income était un petit remboursement
