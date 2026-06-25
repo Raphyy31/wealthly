@@ -20,6 +20,7 @@ from typing import Optional
 from fastapi import Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
+import bcrypt as _bcrypt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
@@ -36,13 +37,28 @@ COOKIE_NAME = "trove_session"
 
 
 def hash_password(password: str) -> str:
-    """Hash a plain password using bcrypt."""
-    return pwd_context.hash(password)
+    """Hash a plain password using bcrypt (via la lib `bcrypt` directe).
+
+    On n'utilise plus passlib ici : la combo passlib 1.7.4 + bcrypt 4.x casse
+    la vérification de certains hashes — notamment les `$2a$` générés par
+    pgcrypto (`crypt(..., gen_salt('bf'))`), alors que `bcrypt.checkpw` gère
+    `$2a$`/`$2b$`/`$2y$` de façon uniforme. bcrypt lève un ValueError au-delà
+    de 72 octets → on tronque explicitement (passlib tronquait silencieusement).
+    """
+    pw = password.encode("utf-8")[:72]
+    return _bcrypt.hashpw(pw, _bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    """Verify a plain password against its bcrypt hash."""
-    return pwd_context.verify(plain, hashed)
+    """Verify a plain password against its bcrypt hash (bcrypt lib directe).
+
+    Compatible avec les hashes existants (`$2b$` posés par passlib) ET les
+    `$2a$` de pgcrypto. Tout hash mal formé renvoie False au lieu de lever.
+    """
+    try:
+        return _bcrypt.checkpw(plain.encode("utf-8")[:72], hashed.encode("utf-8"))
+    except (ValueError, TypeError):
+        return False
 
 
 def create_access_token(user_id: str, household_id: str, token_version: int = 0) -> str:
