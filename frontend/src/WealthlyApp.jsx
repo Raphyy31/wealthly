@@ -596,6 +596,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     // state — on garde l'existant pour cette tranche et on signale sans bloquer.
     try {
       const calls = {
+        me: api.auth.me(),
         members: api.members.list(),
         accounts: api.accounts.list(),
         transactions: api.transactions.list(),
@@ -622,7 +623,18 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       });
       const has = (k) => Object.prototype.hasOwnProperty.call(out, k);
 
-      if (has('members')) setMembers(out.members || []);
+      if (has('me') && out.me) {
+        setCurrentUser(out.me);
+        try { localStorage.setItem('w2:current_user', JSON.stringify(out.me)); } catch {}
+      }
+      if (has('members')) {
+        setMembers(out.members || []);
+        // onboarded dérivé des membres déjà chargés ici → évite un 2e
+        // api.members.list() séquentiel après reloadAll (fix lenteur login).
+        const hasMembers = (out.members || []).length > 0;
+        setOnboarded(hasMembers);
+        try { localStorage.setItem(STORAGE_KEYS.ONBOARDED, hasMembers ? '1' : '0'); } catch {}
+      }
       if (has('accounts')) setAccounts((out.accounts || []).map(accountFromApi));
       if (has('transactions')) setTransactions((out.transactions || []).map(txFromApi));
       if (has('assets')) setAssets((out.assets || []).map(assetFromApi));
@@ -723,22 +735,11 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
         // hard-refresh.
         setLoading(false);
 
-        // Refresh from API in the background.
-        reloadAll().then(async () => {
-          try {
-            const me = await api.auth.me();
-            if (me) {
-              setCurrentUser(me);
-              try { localStorage.setItem('w2:current_user', JSON.stringify(me)); } catch {}
-            }
-            const memList = await api.members.list();
-            const hasMembers = memList && memList.length > 0;
-            setOnboarded(hasMembers);
-            try { localStorage.setItem(STORAGE_KEYS.ONBOARDED, hasMembers ? '1' : '0'); } catch {}
-            // Note : la synchro bancaire GoCardless se déclenche manuellement
-            // depuis Settings ou via le bouton Synchroniser du Dashboard.
-          } catch {}
-        }).catch(() => {}).finally(() => {
+        // Refresh from API in the background. currentUser + onboarded sont
+        // désormais dérivés DANS reloadAll (me & members sont dans le batch
+        // parallèle) → plus de 2e round-trip séquentiel api.auth.me() +
+        // api.members.list() après coup (fix lenteur login 2026-06-25).
+        reloadAll().catch(() => {}).finally(() => {
           setInitialSyncing(false);
           initialSyncDoneRef.current = true;
         });
@@ -814,7 +815,13 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     };
   }), [assets, liveQuotes]);
 
-  const visibleAssets = useMemo(() => activeMemberId === 'all' ? livePricedAssets : livePricedAssets.filter(a => (a.memberIds || []).includes(activeMemberId)), [livePricedAssets, activeMemberId]);
+  // `visibleAssetsAll` garde les positions filles (parentAssetId set) — utile
+  // au PDF qui détaille les lignes d'un PEA/CTO. `visibleAssets` (la liste
+  // utilisée PARTOUT ailleurs) EXCLUT les filles : leur valeur est déjà portée
+  // par le compte parent, donc les recompter gonflait TOUS les totaux dérivés
+  // dans les vues (bug PEA : +32 k€ sur Wealth/Dashboard/Bilan).
+  const visibleAssetsAll = useMemo(() => activeMemberId === 'all' ? livePricedAssets : livePricedAssets.filter(a => (a.memberIds || []).includes(activeMemberId)), [livePricedAssets, activeMemberId]);
+  const visibleAssets = useMemo(() => visibleAssetsAll.filter(a => !a.parentAssetId), [visibleAssetsAll]);
   const visibleLiabilities = useMemo(() => activeMemberId === 'all' ? liabilities : liabilities.filter(l => (l.memberIds || []).includes(activeMemberId)), [liabilities, activeMemberId]);
 
   const memberShare = useCallback((item) => {
@@ -920,8 +927,10 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     [visibleAssets, memberShare]
   );
   const mortgageDebt = useMemo(
-    () => visibleLiabilities.filter(l => l.type === 'mortgage').reduce((s, l) => s + (parseFloat(l.remainingCapital) || 0) * memberShare(l), 0),
-    [visibleLiabilities, memberShare]
+    // Un emprunt est solidaire (chaque co-emprunteur doit le total) → liabilityShare
+    // (binaire 1/0), pas memberShare (1/N). Aligne sur Dashboard.realEstateNet.
+    () => visibleLiabilities.filter(l => l.type === 'mortgage').reduce((s, l) => s + (parseFloat(l.remainingCapital) || 0) * liabilityShare(l), 0),
+    [visibleLiabilities, liabilityShare]
   );
   const financialWealth = liquidWealth + (assetsValue - realEstateValue) - (liabilitiesValue - mortgageDebt);
 
@@ -954,7 +963,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     const financialAssetsValue = liquidWealth + (assetsValue - realEstateValue);
     const mortgageDebt = visibleLiabilities
       .filter(l => l.type === 'mortgage')
-      .reduce((s, l) => s + (parseFloat(l.remainingCapital) || 0) * memberShare(l), 0);
+      .reduce((s, l) => s + (parseFloat(l.remainingCapital) || 0) * liabilityShare(l), 0);
     const otherDebt = liabilitiesValue - mortgageDebt;
     // Round to 1 â‚¬ so micro-fluctuations don't trigger noisy POSTs.
     const key = `${month}|${Math.round(netWorth)}|${Math.round(liquidWealth)}|${Math.round(assetsValue)}|${Math.round(liabilitiesValue)}|${Math.round(realEstateValue)}|${Math.round(mortgageDebt)}`;
@@ -979,7 +988,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       }).catch(() => {});
     }, 1500); // debounce — wait for any settling re-renders before posting
     return () => clearTimeout(handle);
-  }, [netWorth, liquidWealth, assetsValue, liabilitiesValue, visibleAssets, visibleLiabilities, memberShare]);
+  }, [netWorth, liquidWealth, assetsValue, liabilitiesValue, visibleAssets, visibleLiabilities, memberShare, liabilityShare]);
 
   const recurringData = useMemo(() => detectRecurring(visibleTransactions, recurringOverrides), [visibleTransactions, recurringOverrides]);
   const recurringIds = recurringData.recurringIds;
@@ -3078,7 +3087,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             thisMonthStats={thisMonthStats} monthlyEvolution={monthlyEvolution}
             accounts={accounts}
             visibleAccounts={visibleAccounts} accountBalances={accountBalances}
-            visibleAssets={visibleAssets} visibleLiabilities={visibleLiabilities}
+            visibleAssets={visibleAssets} visibleAssetsAll={visibleAssetsAll} visibleLiabilities={visibleLiabilities}
             members={members} activeMemberId={activeMemberId}
             transactions={visibleTransactions} categories={categories} fmt={fmt}
             memberShare={memberShare} liabilityShare={liabilityShare} categoryAnalysis={categoryAnalysis}
@@ -3117,7 +3126,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             {view === 'cashflow' && (
               <Cashflow
                 transactions={visibleTransactions} categories={categories} accounts={accounts}
-                memberShare={memberShare} fmt={fmt} currentMonth={currentMonth}
+                memberShare={memberShare} fmt={fmt} currentMonth={currentMonth} transferIds={transferIds}
               />
             )}
           </div>

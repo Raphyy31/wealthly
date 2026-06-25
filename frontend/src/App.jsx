@@ -61,23 +61,32 @@ export default function App() {
         return;
       }
 
-      // Cookie-based auth: we can't read the cookie from JS (HttpOnly), so the
-      // only way to know if the user is logged in is to ask /auth/me. We do
-      // a fast best-effort check; if it succeeds we're authed, otherwise
-      // we land on the landing/auth flow.
+      // Cookie-based auth (HttpOnly → illisible en JS) : on confirme la session
+      // via /auth/me. Optimisation perçue (2026-06-25) : un visiteur SANS user
+      // en cache (`w2:current_user`) est quasi certainement déconnecté → on
+      // affiche le landing/auth IMMÉDIATEMENT au lieu d'un spinner aveugle qui
+      // pouvait durer jusqu'à 5 s (cold start Railway). On vérifie quand même en
+      // tâche de fond pour le cas rare « cookie valide mais cache vidé ».
+      let hadSession = false;
+      try { hadSession = !!localStorage.getItem('w2:current_user'); } catch {}
+      if (!hadSession) {
+        setAuthState('unauthed');
+        auth.me().then((me) => { if (me && me.id) setAuthState('authed'); }).catch(() => {});
+        return;
+      }
+      // Utilisateur déjà connu : on confirme, course courte (2,5 s) pour ne pas
+      // rester bloqué si le backend redémarre.
       try {
-        // Race auth.me() against a 5s timeout — if backend is slow/redeploying
-        // we still land on the landing page rather than spinning forever.
         const me = await Promise.race([
           auth.me(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000)),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2500)),
         ]);
         if (me && me.id) {
           setAuthState('authed');
           return;
         }
       } catch (e) {
-        // 401 / network error / timeout → unauthed
+        // 401 / réseau / timeout → unauthed
       }
       setAuthState('unauthed');
     })();

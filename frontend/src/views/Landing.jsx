@@ -26,11 +26,14 @@ export default function Landing({ onSignIn, onSignUp, onTryDemo, onPresent }) {
   // Force dark theme on landing, restore on unmount (papier-chaud nocturne).
   useEffect(() => {
     const root = document.documentElement;
-    const prev = root.getAttribute('data-theme');
     root.setAttribute('data-theme', 'dark');
     return () => {
-      if (prev) root.setAttribute('data-theme', prev);
-      else root.removeAttribute('data-theme');
+      // Restaure la préférence RÉELLE de l'utilisateur (localStorage), pas un
+      // attribut transitoire : sinon le dark forcé "fuitait" dans la démo /
+      // l'app → "pas de mode clair" en démo (défaut = clair).
+      let stored = 'light';
+      try { const s = localStorage.getItem('wealthly-theme'); if (s === 'light' || s === 'dark') stored = s; } catch {}
+      root.setAttribute('data-theme', stored);
     };
   }, []);
 

@@ -7,10 +7,10 @@ import {
   PieChart, Pie, Cell,
 } from 'recharts';
 import { Activity, ChevronLeft, ChevronRight } from 'lucide-react';
-import { formatDate, monthKey, formatCurrency } from '../utils.js';
+import { formatDate, monthKey, formatCurrency, accountCountsAsIncome, accountCountsAsExpense, getTransferType } from '../utils.js';
 import { useIsNarrow } from '../hooks/useIsNarrow.js';
 
-export function Cashflow({ transactions, categories, accounts, memberShare, fmt, currentMonth }) {
+export function Cashflow({ transactions, categories, accounts, memberShare, fmt, currentMonth, transferIds = new Set() }) {
   const [period, setPeriod] = useState('1M'); // 1M | 3M | 1A
   const [anchor, setAnchor] = useState(currentMonth); // YYYY-MM the period ends on (inclusive)
   const isNarrow = useIsNarrow(760);
@@ -38,14 +38,33 @@ export function Cashflow({ transactions, categories, accounts, memberShare, fmt,
     });
   }, [transactions, startKey, endKey, accounts, memberShare]);
 
-  // Group by category
+  // Group by category — on REPRODUIT exactement la logique de monthlyEvolution
+  // (WealthlyApp) pour que Cashflow donne les MÊMES Entrées/Sorties que le
+  // Dashboard et le Mensuel. Avant, Cashflow bucketait par simple signe sans
+  // connaître les virements internes : un virement courant→Livret comptait
+  // +1000 en entrée ET 1000 en sortie (double-comptage), gonflant les deux
+  // totaux et faussant le « disponible ».
   const incomeByCat = {};
   const expenseByCat = {};
   filtered.forEach(t => {
     const slug = t.categoryId || 'uncategorized';
+    const acc = accounts.find(a => a.id === t.accountId);
+    const role = acc?.role || 'principal';
+    const cat = categories.find(c => c.slug === slug || c.id === slug);
+    const isTransfer = transferIds.has(t.id);
+    // Épargne (catégorie kind=savings OU virement vers un compte épargne) :
+    // exclue de income/expense (sinon la jambe positive comptait en revenu).
+    const isSavingsTx = cat?.kind === 'savings' || (isTransfer && getTransferType(t, accounts) === 'savings');
+    if (isSavingsTx) return;
+    // Virement interne (arbitrage non-épargne) : on exclut les DEUX jambes.
+    if (isTransfer) return;
+    const isManualIncome = t.isManualCategory && cat?.type === 'income';
+    const isManualExpense = t.isManualCategory && cat?.type === 'expense';
     if (t.amount >= 0) {
-      incomeByCat[slug] = (incomeByCat[slug] || 0) + t.sharedAmount;
-    } else {
+      if (accountCountsAsIncome(role) || isManualIncome) {
+        incomeByCat[slug] = (incomeByCat[slug] || 0) + t.sharedAmount;
+      }
+    } else if (accountCountsAsExpense(role) || isManualExpense) {
       expenseByCat[slug] = (expenseByCat[slug] || 0) + Math.abs(t.sharedAmount);
     }
   });

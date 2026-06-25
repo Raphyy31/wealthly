@@ -199,7 +199,7 @@ const assets = [
     id: 'demo-asset-pea',
     type: 'pea',
     name: 'PEA Boursorama',
-    currentValue: 32500,
+    currentValue: 32424,  // = somme exacte des 6 positions (13660+6195+4370+4295+2284+1620) → le header de la fiche colle aux lignes
     notes: '80 % MSCI World, 20 % émergents',
     memberIds: [M.alice],
     updatedAt: new Date().toISOString(),
@@ -301,7 +301,7 @@ const budgets = {
 };
 
 const goals = [
-  { id: 'demo-goal-1', name: 'Vacances été 2026', emoji: '🏖️', target: 3500, current: 1800, deadline: '2026-07-01' },
+  { id: 'demo-goal-1', name: 'Vacances été', emoji: '🏖️', target: 3500, current: 1800, deadline: new Date(Date.now() + 120 * 86400000).toISOString().slice(0, 10) },
   { id: 'demo-goal-2', name: 'Apport futur achat', emoji: '🏡', target: 50000, current: 32400, deadline: null },
 ];
 

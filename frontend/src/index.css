@@ -178,9 +178,12 @@
   --bg-card-hover:   var(--bg-hover);
   --bg-subtle:       var(--bg-sunk);
   --bg-elevated:     var(--bg-elev);
+  --surface-hero:    #FBFAF6;   /* bandeau hero des fiches — papier le plus clair (light) */
+  --on-accent:       #FFFFFF;   /* texte/icône sur aplat cobalt (boutons primaires, badges actifs) */
   --text-primary:    var(--ink);
   --text-secondary:  var(--ink-2);
   --text-tertiary:   var(--ink-3);
+  --text-muted:      var(--ink-3);   /* token consommé ~40× (Admin/nav/banques) mais jamais défini → en dark il retombait en blanc cassé */
   --border-subtle:   var(--border);
   --border-default:  var(--border);
   --border-light:    var(--border);
@@ -242,6 +245,8 @@
   --bg-elev:      #2A2620;
   --bg-sunk:      #15130F;
   --bg-hover:     #312D26;
+  --surface-hero: #2F2A22;   /* léger lift papier nocturne pour le bandeau hero (était #FBFAF6 codé en dur → titre blanc invisible) */
+  --on-accent:    #16140F;   /* en dark l'accent est un périwinkle clair → texte FONCÉ sur les boutons cobalt (contraste AA) */
   --border:       #3E3A31;
   --border-strong:#4D483D;
 
@@ -400,12 +405,12 @@ html, body {
 .ds-btn.lg { height: 40px; padding: 0 18px; font-size: 14px; }
 
 .ds-btn.primary {
-  background: var(--ink); color: var(--bg); border-color: transparent;
-  box-shadow: 0 1px 0 rgba(20,20,15,.04), 0 4px 14px -4px rgba(37,64,217,.25);
+  background: var(--accent); color: var(--on-accent); border-color: transparent;
+  box-shadow: 0 1px 0 rgba(20,20,15,.04), 0 6px 18px -5px rgba(37,64,217,.5);
 }
 .ds-btn.primary:hover {
-  background: var(--ink-2);
-  box-shadow: 0 1px 0 rgba(20,20,15,.04), 0 8px 22px -6px rgba(37,64,217,.4);
+  background: var(--accent-2);
+  box-shadow: 0 1px 0 rgba(20,20,15,.04), 0 10px 26px -6px rgba(37,64,217,.6);
 }
 .ds-btn.ghost { background: transparent; border-color: transparent; }
 .ds-btn.ghost:hover { background: var(--bg-hover); }
@@ -544,10 +549,10 @@ html, body {
 }
 .ds-micro {
   font-size: 10px;
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--ink-3);
+  color: var(--ink-2);
 }
 
 /* Range tabs (segmented) */
@@ -1383,9 +1388,9 @@ html, body {
   transform: scale(1.08);
 }
 .ws-nav button.on, .ws-nav a.on {
-  background: var(--bg-sunk);
-  color: var(--ink);
-  font-weight: 500;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
   padding-left: 14px;
 }
 .ws-nav button.on svg, .ws-nav a.on svg { color: var(--accent); }

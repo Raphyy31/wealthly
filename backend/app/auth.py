@@ -46,7 +46,26 @@ def hash_password(password: str) -> str:
     de 72 octets → on tronque explicitement (passlib tronquait silencieusement).
     """
     pw = password.encode("utf-8")[:72]
-    return _bcrypt.hashpw(pw, _bcrypt.gensalt()).decode("utf-8")
+    # Coût 10 (choix user 2026-06-25) : ~4× plus rapide que le défaut 12, reste
+    # au-dessus du plancher OWASP. checkpw lit le coût DANS le hash → les anciens
+    # hashes coût 12 continuent de vérifier ; on les re-hashe au login (cf.
+    # password_needs_rehash + route login) pour migrer progressivement.
+    return _bcrypt.hashpw(pw, _bcrypt.gensalt(rounds=BCRYPT_ROUNDS)).decode("utf-8")
+
+
+# Coût bcrypt cible. Baissé de 12 → 10 le 2026-06-25 pour accélérer le login.
+BCRYPT_ROUNDS = 10
+
+
+def password_needs_rehash(hashed: str) -> bool:
+    """True si le hash a été produit avec un coût bcrypt différent de la cible
+    (typiquement un ancien `$2b$12$…`) → à re-hasher au prochain login réussi."""
+    try:
+        # Format bcrypt : $2b$<cost>$<salt+digest>
+        cost = int(hashed.split("$")[2])
+        return cost != BCRYPT_ROUNDS
+    except (IndexError, ValueError, AttributeError):
+        return False
 
 
 def verify_password(plain: str, hashed: str) -> bool:

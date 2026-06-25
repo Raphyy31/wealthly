@@ -71,7 +71,7 @@ export function Styles({ theme }) {
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* HEADER */
-.app-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 24px; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); background: ${dark ? 'rgba(21, 25, 38, 0.75)' : 'rgba(255, 255, 255, 0.75)'}; gap: 12px; flex-wrap: wrap; }
+.app-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 24px; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); background: ${dark ? 'rgba(42, 38, 32, 0.75)' : 'rgba(255, 255, 255, 0.75)'}; gap: 12px; flex-wrap: wrap; }
 .brand { display: flex; align-items: center; gap: 12px; cursor: pointer; }
 .brand:hover { opacity: 0.85; }
 .brand-mark {
@@ -137,14 +137,16 @@ export function Styles({ theme }) {
 .danger-btn:disabled, .danger-btn-sm:disabled, .link-btn:disabled {
   opacity: 0.5; cursor: not-allowed; pointer-events: none; box-shadow: none;
 }
-/* Primary — Option B : encre, texte crème, fin halo cobalt */
+/* Primary — aplat cobalt franc (choix user 2026-06-25, remplace l'encre
+   "Option B"). Texte via --on-accent (blanc en light, encre foncée en dark où
+   l'accent est un périwinkle clair) → contraste AA garanti dans les 2 thèmes. */
 .primary-btn, .primary-btn-large {
-  background: var(--ink); color: var(--bg); border-color: transparent;
-  box-shadow: 0 1px 0 rgba(20,20,15,0.04), 0 4px 14px -4px rgba(37,64,217,0.25);
+  background: var(--accent); color: var(--on-accent); border-color: transparent;
+  box-shadow: 0 1px 0 rgba(20,20,15,0.04), 0 6px 18px -5px rgba(37,64,217,0.50);
 }
 .primary-btn:hover, .primary-btn-large:hover {
-  background: var(--ink-2);
-  box-shadow: 0 1px 0 rgba(20,20,15,0.04), 0 8px 22px -6px rgba(37,64,217,0.40);
+  background: var(--accent-2);
+  box-shadow: 0 1px 0 rgba(20,20,15,0.04), 0 10px 26px -6px rgba(37,64,217,0.60);
 }
 .primary-btn-large { height: 44px; padding: 0 22px; font-size: 14px; }
 /* Secondary — discret, bordé */
@@ -180,7 +182,7 @@ export function Styles({ theme }) {
   width: 244px; flex-shrink: 0; height: 100vh;
   position: sticky; top: 0;
   border-right: 1px solid var(--border);
-  background: ${dark ? 'rgba(21, 25, 38, 0.65)' : 'rgba(255, 255, 255, 0.70)'};
+  background: ${dark ? 'rgba(42, 38, 32, 0.65)' : 'rgba(255, 255, 255, 0.70)'};
   backdrop-filter: blur(24px) saturate(140%);
   -webkit-backdrop-filter: blur(24px) saturate(140%);
   padding: 22px 14px 18px;

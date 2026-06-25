@@ -15,8 +15,11 @@ Security guarantees added in this module:
     cookie is the only transport.
 """
 import hashlib
+import logging
 import secrets
 from datetime import datetime, timedelta
+
+logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
@@ -29,8 +32,8 @@ from app.schemas import (
     ForgotPasswordRequest, ResetPasswordRequest, ChangePasswordRequest, MessageOut,
 )
 from app.auth import (
-    hash_password, verify_password, create_access_token, get_current_user,
-    set_auth_cookie, clear_auth_cookie,
+    hash_password, verify_password, password_needs_rehash, create_access_token,
+    get_current_user, set_auth_cookie, clear_auth_cookie,
 )
 from app.defaults import DEFAULT_CATEGORIES
 from app.config import settings
@@ -204,6 +207,17 @@ def login(request: Request, response: Response, payload: UserLogin, db: Session 
         except Exception:
             raise HTTPException(status_code=500, detail="Erreur vérification 2FA")
 
+    # Re-hash transparent : si le mot de passe est bon mais stocké à l'ancien
+    # coût bcrypt (12), on le re-hashe au coût cible (10) sans rien demander à
+    # l'utilisateur. Migration progressive, uniquement après authentification
+    # complète (mot de passe + 2FA OK).
+    if password_needs_rehash(user.hashed_password):
+        try:
+            user.hashed_password = hash_password(payload.password)
+            db.commit()
+        except Exception:
+            db.rollback()
+
     token = create_access_token(user.id, user.household_id, user.token_version)
     set_auth_cookie(response, token)
     record_auth_event(db, kind="login_success", success=True, request=request,
@@ -271,7 +285,19 @@ def forgot_password(request: Request, payload: ForgotPasswordRequest, db: Sessio
         db.commit()
 
         link = f"{settings.FRONTEND_URL.rstrip('/')}/?reset_token={raw_token}"
-        send_password_reset_email(user.email, user.full_name, link)
+        email_sent = send_password_reset_email(user.email, user.full_name, link)
+        if not email_sent:
+            # On NE révèle PAS l'échec au client (anti-énumération), mais on le
+            # trace côté serveur — sinon l'app dit « envoyé » alors que rien n'est
+            # parti. Causes fréquentes : RESEND_API_KEY absente sur Railway ou
+            # domaine Resend non vérifié (EMAIL_FROM). Diagnostic : logs Railway
+            # + auth_events (kind=password_reset_email_failed).
+            logger.warning(
+                "[forgot-password] échec d'envoi de l'email de reset (user_id=%s) — "
+                "vérifier RESEND_API_KEY + domaine Resend.", user.id,
+            )
+            record_auth_event(db, kind="password_reset_email_failed", success=False,
+                              request=request, email=payload.email, user_id=user.id)
 
     record_auth_event(db, kind="password_reset_request", success=True, request=request,
                       email=payload.email,

@@ -70,6 +70,17 @@ function buildProjection({
     else totalsOut += Math.abs(ev.amount || 0);
   });
 
+  // Prêts modélisés comme passifs (monthlyPayment) = source canonique des
+  // échéances de la projection (elles s'arrêtent à endDate). Si l'échéance a
+  // AUSSI été saisie en charge fixe (même montant), on ne la compte qu'UNE
+  // fois : la charge fixe est skippée tant que le prêt est actif (cf. boucle
+  // charges fixes ci-dessous). Sans ça, un crédit présent en passif ET en
+  // charge fixe (cas courant — la détection de récurrence crée la charge) était
+  // déduit 2×/mois → trésorerie projetée bien trop pessimiste.
+  const loanPayments = (liabilities || [])
+    .map(l => ({ amount: Math.round(Math.abs(l.monthlyPayment || 0)), endKey: l.endDate ? monthKeyOf(new Date(l.endDate)) : null }))
+    .filter(l => l.amount > 0);
+
   const series = [];
   let balance = startBalance;
   let trough = { date: iso(start), balance: startBalance };
@@ -95,6 +106,10 @@ function buildProjection({
       if (chargeDay !== dom) return;
       if (passedToday) return;
       const amt = Math.abs(fc.amount || 0);
+      // Dédoublonnage prêt : si une mensualité de passif du même montant (prêt
+      // encore actif ce mois) existe, l'échéance est déjà déduite par la boucle
+      // « Loan échéances » plus bas → on ne la recompte pas ici (±1 €).
+      if (fc.kind !== 'income' && loanPayments.some(lp => Math.abs(lp.amount - Math.round(amt)) <= 1 && (!lp.endKey || mk <= lp.endKey))) return;
       if (fc.kind === 'income') { balance += amt; dayEvents.push({ label: fc.name, amount: amt, kind: 'income', source: 'fixed' }); }
       else { balance -= amt; dayEvents.push({ label: fc.name, amount: -amt, kind: 'expense', source: 'fixed' }); }
     });

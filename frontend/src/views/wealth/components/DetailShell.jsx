@@ -261,7 +261,7 @@ const DSH_CSS = String.raw`
   padding: 32px 32px 28px;
   background:
     radial-gradient(ellipse at top right, rgba(37,64,217,0.06), transparent 50%),
-    linear-gradient(180deg, #FBFAF6 0%, var(--bg-card) 100%);
+    linear-gradient(180deg, var(--surface-hero) 0%, var(--bg-card) 100%);
   border-bottom: 1px solid var(--border);
 }
 @media (max-width: 720px) { .dsh-hero { grid-template-columns: 1fr; gap: 16px; padding: 24px 22px 20px; } }

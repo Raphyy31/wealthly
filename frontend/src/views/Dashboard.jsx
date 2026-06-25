@@ -238,7 +238,7 @@ export function Dashboard({
   thisMonthStats, monthlyEvolution,
   accounts = [],
   visibleAccounts, accountBalances,
-  visibleAssets, visibleLiabilities, liabilityShare,
+  visibleAssets, visibleAssetsAll = visibleAssets, visibleLiabilities, liabilityShare,
   members, activeMemberId,
   transactions, categories, fmt, memberShare,
   categoryAnalysis = {}, anomalies = [], cashflowProjection,
@@ -327,7 +327,28 @@ export function Dashboard({
     if (wealthHistory && wealthHistory.length >= 2) {
       return [...wealthHistory]
         .sort((a, b) => a.month.localeCompare(b.month))
-        .map(s => ({ month: s.month, balance: s.net_worth ?? s.netWorth ?? 0 }));
+        .map(s => {
+          // Le hero affiche le patrimoine FINANCIER net → la courbe, le delta
+          // ET le survol doivent mesurer la MÊME grandeur. Avant : on traçait
+          // `net_worth` (patrimoine TOTAL, immo compris) sous un chiffre
+          // financier → delta incohérent + survol qui injectait le total
+          // (~620 k) dans le slot du financier (~104 k). Fix : financier net =
+          // financial_assets_value − other_debt (champs du snapshot).
+          const fin = s.financial_assets_value ?? s.financialAssetsValue;
+          const otherD = s.other_debt ?? s.otherDebt ?? 0;
+          let balance;
+          if (fin != null) {
+            balance = fin - otherD;
+          } else {
+            // Snapshots legacy sans le champ financier : financier = net total
+            // − (immo − crédit immo).
+            const nw = s.net_worth ?? s.netWorth ?? 0;
+            const re = s.real_estate_value ?? s.realEstateValue ?? 0;
+            const mort = s.mortgage_debt ?? s.mortgageDebt ?? 0;
+            balance = nw - (re - mort);
+          }
+          return { month: s.month, balance };
+        });
     }
     return [...(monthlyEvolution || [])].sort((a, b) => a.month.localeCompare(b.month));
   }, [wealthHistory, monthlyEvolution]);
@@ -362,9 +383,12 @@ export function Dashboard({
   const cashWealth = useMemo(() => {
     let total = liquidWealth || 0;
     (visibleAssets || []).forEach(a => {
-      const cls = ASSET_CLASS_MAP[a.type]?.class;
-      // Tout sauf Immobilier (qui est compte separement dans realEstateNet)
-      if (cls && cls !== 'Immobilier') {
+      // Tout actif NON-immobilier compte dans le financier. On filtre sur
+      // `type === 'real_estate'` (comme la valeur canonique WealthlyApp), PAS
+      // sur la classe ASSET_CLASS_MAP : un type non mappé (ex. or/métal) avait
+      // une classe falsy et tombait en silence → Dashboard 100 860 vs Wealth
+      // 104 310. Désormais les deux réconcilient.
+      if (a.type !== 'real_estate') {
         total += (parseFloat(a.currentValue) || 0) * (memberShare?.(a) ?? 1);
       }
     });
@@ -374,7 +398,7 @@ export function Dashboard({
   const realEstateNet = useMemo(() => {
     let immoAssets = 0;
     (visibleAssets || []).forEach(a => {
-      if (ASSET_CLASS_MAP[a.type]?.class === 'Immobilier') {
+      if (a.type === 'real_estate') {
         immoAssets += (parseFloat(a.currentValue) || 0) * (memberShare?.(a) ?? 1);
       }
     });
@@ -689,7 +713,7 @@ export function Dashboard({
               generateBilanHtmlReport({
                 netWorth, liquidWealth, assetsValue, liabilitiesValue,
                 thisMonthStats, monthlyEvolution, wealthHistory, budgets,
-                visibleAccounts, accountBalances, visibleAssets, visibleLiabilities,
+                visibleAccounts, accountBalances, visibleAssets: visibleAssetsAll, visibleLiabilities,
                 members, activeMemberId,
                 recurringGroups, categoryAnalysis, categories,
                 memberShare, currentMonth,
@@ -1409,10 +1433,10 @@ function DashStyles() {
   opacity: 0.7;
 }
 .dash-eyebrow-label {
-  font: 500 11px/1 var(--font-sans);
+  font: 600 11px/1 var(--font-sans);
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--ink-3);
+  color: var(--ink-2);
 }
 
 
@@ -1559,7 +1583,7 @@ function DashStyles() {
 }
 .kpi-cell { padding: 16px 20px; border-right: 1px solid var(--border); display: flex; flex-direction: column; gap: 4px; }
 .kpi-cell:last-child { border-right: none; }
-.kpi-val { font-size: 17px; font-weight: 500; color: var(--ink); font-variant-numeric: tabular-nums; letter-spacing: -0.005em; }
+.kpi-val { font-size: 22px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
 .kpi-sub { font: 400 11px/1.3 'Newsreader', Georgia, serif; font-style: italic; color: var(--ink-3); margin-top: -2px; }
 .kpi-delta { font-size: 11px; }
 .kpi-delta.pos { color: var(--positive); }

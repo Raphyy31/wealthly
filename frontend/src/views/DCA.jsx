@@ -206,30 +206,16 @@ function capitalInvested(plan) {
  *  This converges to the theoretical value if real performance matched
  *  expected_return, and diverges to reflect actual market moves otherwise. */
 function realCurrentState(plan, price) {
-  if (!price || price <= 0) return null;
-  if (!plan.start_date) return { invested: 0, value: 0, gain: 0, shares: 0 };
-  const months = monthsElapsed(plan.start_date);
-  const freqM = FREQ_MONTHS[plan.frequency] || 1;
-  const r = (plan.expected_return || 0) / 100 / 12;
-  const start = new Date(plan.start_date);
-  const startY = start.getFullYear();
-  const startM = start.getMonth();
-  const exec = plan.executions || {};
-  let invested = 0;
-  let shares = 0;
-  for (let m = 1; m <= months; m++) {
-    if (m % freqM === 0) {
-      const d = new Date(startY, startM + m, 1);
-      const key = monthKey(d);
-      if (!isMonthPaid(exec, key)) continue;
-      invested += plan.amount;
-      // months elapsed since this contribution = months - m
-      const estPriceThen = r > 0 ? price / Math.pow(1 + r, months - m) : price;
-      shares += plan.amount / estPriceThen;
-    }
-  }
-  const value = shares * price;
-  return { invested: Math.round(invested), value: Math.round(value), gain: Math.round(value - invested), shares };
+  // DÉSACTIVÉ (2026-06-25). On ne stocke pas le prix d'achat / le nombre de
+  // parts par exécution → impossible de calculer une VRAIE valeur de marché.
+  // L'ancienne version actualisait le prix courant par le rendement ESPÉRÉ pour
+  // inventer un nombre de parts : la « valeur actuelle » et la « +/- value »
+  // devenaient une fonction de l'hypothèse de rendement (plus-value fantôme
+  // quasi toujours positive), contredisant le courtier de l'utilisateur.
+  // En renvoyant null, tout retombe sur currentState() — la projection
+  // théorique, explicitement libellée « Valeur théorique ». Pour un vrai
+  // mark-to-market, il faudra tracer parts + prix d'achat par exécution.
+  return null;
 }
 
 // ── Tooltip personnalisé ─────────────────────────────────────────────────────
@@ -836,13 +822,13 @@ function ProjectionHero({ plans, quotes, fmt0 }) {
   // Current state aggregated across included plans — prefer real quote when
   // available, fall back to the theoretical compound projection otherwise.
   const today = useMemo(() => {
-    let allReal = includedPlans.length > 0;
+    // allReal toujours false : sans prix d'achat par exécution on ne peut pas
+    // mark-to-market → on agrège la projection théorique (currentState), et le
+    // libellé bascule sur « Valeur théorique » au lieu de « Valeur actuelle ».
+    const allReal = false;
     const agg = includedPlans.reduce(
       (acc, p) => {
-        const tk = (p.ticker || '').trim().toUpperCase();
-        const q = tk ? quotes?.[tk] : null;
-        const s = q ? realCurrentState(p, q.price) : currentState(p);
-        if (!q) allReal = false;
+        const s = currentState(p);
         return { invested: acc.invested + s.invested, value: acc.value + s.value, gain: acc.gain + s.gain };
       },
       { invested: 0, value: 0, gain: 0 }
@@ -1156,9 +1142,7 @@ function DcaKpiStrip({ plans, quotes, fmt0 }) {
   const totals = useMemo(() => {
     let invested = 0, value = 0;
     for (const p of activePlans) {
-      const tickerKey = (p.ticker || '').trim().toUpperCase();
-      const quote = tickerKey ? quotes?.[tickerKey] : null;
-      const state = quote ? realCurrentState(p, quote.price) : currentState(p);
+      const state = currentState(p);
       if (state) {
         invested += state.invested || 0;
         value += state.value || 0;

@@ -45,9 +45,13 @@ export default function AuthScreen({ onAuth, onTryDemo, onBackToLanding, initial
 
   // Force dark — cohérent avec la Landing magazine en encre profonde.
   useEffect(() => {
-    const prev = document.documentElement.getAttribute('data-theme');
     document.documentElement.setAttribute('data-theme', 'dark');
-    return () => { if (prev) document.documentElement.setAttribute('data-theme', prev); };
+    return () => {
+      // Restaure la préférence stockée (défaut clair), pas un attribut transitoire.
+      let stored = 'light';
+      try { const s = localStorage.getItem('wealthly-theme'); if (s === 'light' || s === 'dark') stored = s; } catch {}
+      document.documentElement.setAttribute('data-theme', stored);
+    };
   }, []);
 
   // Scrub reset_token de l'URL après lecture.
