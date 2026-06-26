@@ -13,7 +13,7 @@ import { useEffect, useState } from 'react';
 import { MagneticButton } from './components/MagneticButton.jsx';
 import { useTranslation } from 'react-i18next';
 import { Mail, Lock, User, Home, Eye, EyeOff, AlertCircle, ArrowLeft, Check, Sparkles } from 'lucide-react';
-import { auth } from './api.js';
+import { auth, subscribeBackendStatus, retryBackendNow } from './api.js';
 import { enableDemoMode } from './demoData.js';
 import { LegalModal } from './components/LegalModal.jsx';
 import Logo from './components/Logo.jsx';
@@ -42,6 +42,10 @@ export default function AuthScreen({ onAuth, onTryDemo, onBackToLanding, initial
   // detail="totp_required", on switch sur cet écran pour demander le code.
   const [totpStep, setTotpStep] = useState(false);
   const [totpCode, setTotpCode] = useState('');
+  // Serveur indisponible : on prévient AVANT que l'user attende un timeout, et
+  // on rassure (les données sont en sécurité côté base, c'est juste l'API).
+  const [backendDown, setBackendDown] = useState(false);
+  useEffect(() => subscribeBackendStatus(({ status }) => setBackendDown(status === 'offline')), []);
 
   // Force dark — cohérent avec la Landing magazine en encre profonde.
   useEffect(() => {
@@ -148,6 +152,13 @@ export default function AuthScreen({ onAuth, onTryDemo, onBackToLanding, initial
 
         {/* CARTE FORMULAIRE */}
         <div className="auth-card">
+          {backendDown && (
+            <div className="auth-info" role="alert" style={{ background: 'var(--negative-soft)', color: 'var(--negative)', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <AlertCircle size={15} style={{ flexShrink: 0 }}/>
+              <span style={{ flex: 1, fontSize: 13 }}>Le serveur est momentanément indisponible. Tes données sont en sécurité — réessaie dans un instant.</span>
+              <button type="button" onClick={() => retryBackendNow()} style={{ flexShrink: 0, background: 'transparent', border: '1px solid currentColor', color: 'inherit', borderRadius: 8, padding: '4px 10px', fontSize: 12, cursor: 'pointer' }}>Réessayer</button>
+            </div>
+          )}
           {(mode === 'login' || mode === 'register') && (
             <div className="auth-tabs">
               <button
