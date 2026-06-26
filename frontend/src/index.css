@@ -4523,3 +4523,19 @@ html, body {
 .tx-period-stat-value.negative { color: var(--negative); }
 .tx-period-stat-value.neutral  { color: var(--ink-3); font-weight: 500; font-size: 13.5px; }
 .tx-period-stat.transfers .tx-period-stat-value { font-size: 13.5px; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Refonte tech 2026-06-26 — titres-accent en ENCRE monochrome, jamais en
+   cobalt/italique (feedback user "le bleu de partout"). Sélecteurs qualifiés
+   :root pour battre les anciennes règles em cobalt sans !important. Le cobalt
+   reste réservé aux boutons, liens et données.
+   ───────────────────────────────────────────────────────────────────────── */
+:root h1 em, :root h2 em, :root h3 em,
+:root .dash-h1 em, :root .dash-h1-em, :root .mcc-title em,
+:root .rm-head h2 em, :root .mon-empty-state h3 em,
+:root .settings-panel h2 em, :root .drawer-title em,
+:root .drawer-section-title em, :root .empty-state-title em,
+:root .auth-title em, :root .import-header h2 em {
+  font-style: normal;
+  color: var(--ink);
+}
