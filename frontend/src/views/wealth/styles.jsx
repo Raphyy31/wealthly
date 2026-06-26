@@ -58,7 +58,7 @@ export function RealEstatePatchStyles() {
   font-size: 11px; font-weight: 500;
   padding: 3px 10px;
   background: var(--accent-soft, #E7EBFF);
-  color: var(--accent, #2540D9);
+  color: var(--accent, #0E7C56);
   border-radius: 999px;
   letter-spacing: 0;
   text-transform: none;
@@ -203,7 +203,7 @@ export function RealEstatePatchStyles() {
   font-family: 'Geist', sans-serif;
   font-size: 18px;
   font-weight: 500;
-  color: var(--accent, #2540D9);
+  color: var(--accent, #0E7C56);
   letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
 }
@@ -218,7 +218,7 @@ export function RealEstatePatchStyles() {
 }
 .re-finary-page .re-progress-fill {
   height: 100%;
-  background: var(--accent, #2540D9);
+  background: var(--accent, #0E7C56);
   border-radius: 999px;
   transition: width .3s ease;
 }

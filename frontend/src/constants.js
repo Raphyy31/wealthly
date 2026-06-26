@@ -340,4 +340,4 @@ export const LIABILITY_TYPES = [
 
 // Palette membres — hex fixes assez foncés pour des initiales BLANCHES lisibles
 // (identité stable inter-thèmes, comme les avatars Slack/Linear).
-export const MEMBER_PALETTE = ['#2E5BFF', '#7C3AED', '#0E9F6E', '#0E7490', '#DB2777', '#475569', '#B45309', '#BE185D'];
+export const MEMBER_PALETTE = ['#0E7C56', '#7C3AED', '#0E9F6E', '#0E7490', '#DB2777', '#475569', '#B45309', '#BE185D'];

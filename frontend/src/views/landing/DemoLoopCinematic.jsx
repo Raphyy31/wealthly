@@ -353,8 +353,8 @@ function DemoLoopCinematic({ onComplete, replayToken = 0 }) {
           <svg className="connector" style={{ position: 'absolute', inset: 0 }} aria-hidden>
             <line x1={spotRect.x + spotRect.width} y1={spotRect.y + spotRect.height/2}
               x2={annoPos.x} y2={annoPos.y + 28}
-              stroke="#7E92FF" strokeWidth="1" strokeDasharray="2 4" opacity="0.55"/>
-            <circle cx={spotRect.x + spotRect.width} cy={spotRect.y + spotRect.height/2} r="3" fill="#7E92FF"/>
+              stroke="#54C2D9" strokeWidth="1" strokeDasharray="2 4" opacity="0.55"/>
+            <circle cx={spotRect.x + spotRect.width} cy={spotRect.y + spotRect.height/2} r="3" fill="#54C2D9"/>
           </svg>
         )}
 

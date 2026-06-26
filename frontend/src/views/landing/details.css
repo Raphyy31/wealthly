@@ -24,8 +24,8 @@
   width: min(900px, 90vw); height: 400px;
   transform: translateX(-50%);
   background: radial-gradient(ellipse 55% 50% at 50% 50%,
-    rgba(126,146,255,0.16) 0%,
-    rgba(126,146,255,0.03) 40%,
+    rgba(65,212,155,0.16) 0%,
+    rgba(65,212,155,0.03) 40%,
     transparent 70%);
   filter: blur(48px);
   pointer-events: none;
@@ -438,14 +438,14 @@
   background: linear-gradient(180deg,
     color-mix(in srgb, var(--accent-soft) 80%, transparent) 0%,
     var(--bg-elev) 80%);
-  box-shadow: 0 14px 32px -16px rgba(126,146,255,0.5);
+  box-shadow: 0 14px 32px -16px rgba(65,212,155,0.5);
 }
 .d-price-badge {
   position: absolute; top: 14px; right: 16px;
   font: 600 9.5px/1 var(--font-mono);
   text-transform: uppercase; letter-spacing: 0.14em;
   color: var(--accent-2);
-  background: rgba(126,146,255,0.16);
+  background: rgba(65,212,155,0.16);
   padding: 5px 8px; border-radius: 4px;
 }
 .d-price-head {
@@ -505,11 +505,11 @@
 .d-price-cta.primary {
   background: var(--ink); color: var(--bg);
   border-color: var(--ink);
-  box-shadow: 0 8px 20px -8px rgba(126,146,255,0.5);
+  box-shadow: 0 8px 20px -8px rgba(65,212,155,0.5);
 }
 .d-price-cta.primary:hover {
-  background: #E5E2D8; border-color: #E5E2D8;
-  box-shadow: 0 12px 28px -8px rgba(126,146,255,0.65);
+  background: #E8EFE9; border-color: #E8EFE9;
+  box-shadow: 0 12px 28px -8px rgba(65,212,155,0.65);
 }
 
 /* ─── FAQ grid ──────────────────────────────────────────────────────── */
@@ -567,8 +567,8 @@
   width: 700px; height: 400px;
   transform: translate(-50%, -50%);
   background: radial-gradient(ellipse 55% 60% at 50% 50%,
-    rgba(126,146,255,0.22) 0%,
-    rgba(126,146,255,0.04) 40%,
+    rgba(65,212,155,0.22) 0%,
+    rgba(65,212,155,0.04) 40%,
     transparent 72%);
   filter: blur(60px);
   pointer-events: none;
@@ -604,14 +604,14 @@
   cursor: pointer;
   box-shadow:
     0 1px 0 rgba(0,0,0,0.3),
-    0 12px 28px -8px rgba(126,146,255,0.55);
+    0 12px 28px -8px rgba(65,212,155,0.55);
   transition: background .15s, box-shadow .2s;
 }
 .d-outro-cta:hover {
-  background: #E5E2D8;
+  background: #E8EFE9;
   box-shadow:
     0 1px 0 rgba(0,0,0,0.3),
-    0 16px 36px -8px rgba(126,146,255,0.7);
+    0 16px 36px -8px rgba(65,212,155,0.7);
 }
 
 /* ─── RESPONSIVE ────────────────────────────────────────────────────── */

@@ -4,7 +4,7 @@ import { X, Check } from 'lucide-react';
 import { ResponsiveModal } from '../../../components/ui/ResponsiveModal.jsx';
 
 const CATEGORY_PALETTE = [
-  '#2540D9', '#136D3E', '#B0392B', '#8E641A',
+  '#0E7C56', '#136D3E', '#B0392B', '#8E641A',
   '#7E5A9B', '#C76A8A', '#6B7280', '#0F766E',
   '#A16207', '#9333EA', '#0EA5E9', '#DC2626',
 ];

@@ -21,7 +21,7 @@ export function ownersList(memberIds = [], members = []) {
  * @returns {string}
  */
 export function positionColor(name) {
-  const colors = ['#2540D9', '#1F8E6E', '#C2733B', '#7B57C6', '#B85D7A', '#4D4D4D', '#E0B23E', '#7a8aa8'];
+  const colors = ['#0E7C56', '#1F8E6E', '#C2733B', '#7B57C6', '#B85D7A', '#4D4D4D', '#E0B23E', '#7a8aa8'];
   if (!name) return colors[0];
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
@@ -72,7 +72,7 @@ export function formatCryptoQty(q) {
 export function cryptoColor(key) {
   const fixed = { BTC: '#F7931A', ETH: '#627EEA', SOL: '#9945FF', USDC: '#2775CA', ADA: '#0033AD', DOT: '#E6007A', BNB: '#F0B90B' };
   if (fixed[key]) return fixed[key];
-  const colors = ['#2540D9', '#1F8E6E', '#C2733B', '#7B57C6', '#B85D7A', '#4D4D4D', '#E0B23E'];
+  const colors = ['#0E7C56', '#1F8E6E', '#C2733B', '#7B57C6', '#B85D7A', '#4D4D4D', '#E0B23E'];
   let h = 0;
   for (let i = 0; i < (key || '').length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
   return colors[h % colors.length];

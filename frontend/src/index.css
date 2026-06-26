@@ -63,55 +63,55 @@
    ───────────────────────────────────────────────────────────────────────── */
 :root {
   /* Surfaces — tech neutral (gris froid quasi-blanc, net) — refonte 2026-06-25 */
-  --bg:           #FBFBFC;
+  --bg:           #F7F9F6;
   --bg-elev:      #FFFFFF;
-  --bg-sunk:      #F3F4F6;
-  --bg-hover:     #EEF0F3;
-  --border:       #E7E8EC;
-  --border-strong:#D6D8DE;
+  --bg-sunk:      #EEF1ED;
+  --bg-hover:     #E8ECE6;
+  --border:       #E2E6DF;
+  --border-strong:#D1D6CC;
 
   /* Ink — quasi-noir froid */
-  --ink:        #0C0D10;
-  --ink-2:      #555A64;
-  --ink-3:      #868B95;
-  --ink-mute:   #B4B8C0;
+  --ink:        #0C0F0B;
+  --ink-2:      #545B4F;
+  --ink-3:      #878E7C;
+  --ink-mute:   #AEB4A6;
 
   /* Accent — bleu électrique (CTA, data principale, liens) */
-  --accent:       #2E5BFF;
-  --accent-2:     #1E40DB;
-  --accent-soft:  #E9EEFF;
-  --accent-line:  #C3D0FF;
+  --accent:       #0E7C56;
+  --accent-2:     #0A5E41;
+  --accent-soft:  #E1F1E9;
+  --accent-line:  #BFE0CE;
 
   /* Sémantique */
-  --positive:      #0B8A5A;
-  --positive-soft: #DFF3EB;
-  --negative:      #E5484D;
-  --negative-soft: #FBE4E5;
-  --warning:       #B7791F;
-  --warning-soft:  #F6ECD6;
-  --neutral-soft:  #EEF0F3;
+  --positive:      #0C7349;
+  --positive-soft: #E1F1E8;
+  --negative:      #B23E29;
+  --negative-soft: #F6E5DF;
+  --warning:       #856017;
+  --warning-soft:  #F3EBD6;
+  --neutral-soft:  #EEF1ED;
 
   /* Dataviz — palette tech, 9 séries stables (ordre figé inter-vues) */
-  --d1: #2E5BFF; /* electric blue — principale */
-  --d2: #12B5A6; /* teal */
-  --d3: #8B5CF6; /* violet */
-  --d4: #F59E0B; /* amber */
-  --d5: #EC4899; /* pink */
-  --d6: #64748B; /* slate */
-  --d7: #06B6D4; /* cyan */
-  --d8: #84CC16; /* lime */
-  --d9: #F43F5E; /* rose */
+  --d1: #0E7C56; /* emerald — principale */
+  --d2: #2B8FB0; /* teal-blue */
+  --d3: #7A6CC2; /* violet */
+  --d4: #C2843B; /* amber/ochre */
+  --d5: #B5557A; /* rose */
+  --d6: #5E7355; /* sage */
+  --d7: #2AA0A0; /* cyan-teal */
+  --d8: #8FA83E; /* olive-lime */
+  --d9: #C2603E; /* terracotta */
 
   /* Dataviz softs — fonds discrets (hover/active/badge) */
-  --d1-soft: #D9E1FF;
-  --d2-soft: #C7EFEB;
-  --d3-soft: #E6DCFB;
-  --d4-soft: #FBEBCB;
-  --d5-soft: #FBD9EB;
-  --d6-soft: #D9DEE6;
-  --d7-soft: #CDEFF7;
-  --d8-soft: #E2F3C8;
-  --d9-soft: #FBD5DC;
+  --d1-soft: #D7EAE0;
+  --d2-soft: #D2E6EE;
+  --d3-soft: #E4DEF3;
+  --d4-soft: #F1E5D2;
+  --d5-soft: #F2DDE6;
+  --d6-soft: #DEE5DA;
+  --d7-soft: #D3EAEA;
+  --d8-soft: #E6ECD2;
+  --d9-soft: #F2DED6;
 
   /* Radii — net/serré (tech) */
   --radius-xs: 4px;
@@ -182,7 +182,7 @@
   --bg-card-hover:   var(--bg-hover);
   --bg-subtle:       var(--bg-sunk);
   --bg-elevated:     var(--bg-elev);
-  --surface-hero:    #FBFAF6;   /* bandeau hero des fiches — papier le plus clair (light) */
+  --surface-hero:    #FBFCFA;   /* bandeau hero des fiches — surface la plus claire (light) */
   --on-accent:       #FFFFFF;   /* texte/icône sur aplat cobalt (boutons primaires, badges actifs) */
   --text-primary:    var(--ink);
   --text-secondary:  var(--ink-2);
@@ -244,53 +244,53 @@
   /* Dark "tech" — refonte 2026-06-25. Quasi-noir froid (façon Linear/Vercel),
      fini le papier-chaud espresso. Élévation par bordures fines + surfaces qui
      se détachent, pas par ombres. Accent bleu électrique relevé. */
-  --bg:           #0A0A0C;
-  --bg-elev:      #141518;
-  --bg-sunk:      #060607;
-  --bg-hover:     #1C1D21;
-  --surface-hero: #17181C;   /* léger lift au-dessus de bg-elev pour le bandeau hero des fiches */
-  --on-accent:    #0A0A0C;   /* texte foncé sur l'accent périwinkle clair du dark (contraste AA) */
-  --border:       #232428;
-  --border-strong:#303137;
+  --bg:           #10150F;
+  --bg-elev:      #1A2018;
+  --bg-sunk:      #0C110B;
+  --bg-hover:     #222A20;
+  --surface-hero: #1E251C;   /* léger lift au-dessus de bg-elev pour le bandeau hero des fiches */
+  --on-accent:    #0A0E08;   /* texte foncé sur l'accent émeraude clair du dark (contraste AA) */
+  --border:       #2A322A;
+  --border-strong:#3B453A;
 
-  --ink:        #F2F3F5;
-  --ink-2:      #9AA0AC;
-  --ink-3:      #6A6F7B;
-  --ink-mute:   #44484F;
+  --ink:        #ECF1E9;
+  --ink-2:      #A4AE9F;
+  --ink-3:      #727D6E;
+  --ink-mute:   #4C544A;
 
-  --accent:       #5B7CFF;
-  --accent-2:     #88A0FF;
-  --accent-soft:  #182142;
-  --accent-line:  #2A3566;
+  --accent:       #41D49B;
+  --accent-2:     #74E3B7;
+  --accent-soft:  #163026;
+  --accent-line:  #244A3A;
 
-  --positive:      #2DD4A0;
-  --positive-soft: #0E2A22;
-  --negative:      #FF5C61;
-  --negative-soft: #2E1416;
-  --warning:       #E0A93C;
+  --positive:      #41D49B;
+  --positive-soft: #163026;
+  --negative:      #FF6F5B;
+  --negative-soft: #2E1813;
+  --warning:       #E0B24C;
   --warning-soft:  #2A2212;
-  --neutral-soft:  #16171C;
+  --neutral-soft:  #161C15;
 
-  --d1: #5B7CFF; /* electric blue */
-  --d2: #2DD4BF; /* teal */
-  --d3: #A78BFA; /* violet */
-  --d4: #FBBF24; /* amber */
-  --d5: #F472B6; /* pink */
-  --d6: #94A3B8; /* slate */
-  --d7: #22D3EE; /* cyan */
-  --d8: #A3E635; /* lime */
-  --d9: #FB7185; /* rose */
+  --d1: #41D49B; /* emerald */
+  --d2: #54C2D9; /* teal-blue */
+  --d3: #A593E8; /* violet */
+  --d4: #E0A95C; /* amber */
+  --d5: #E58AAD; /* rose */
+  --d6: #8FA483; /* sage */
+  --d7: #3FD1C4; /* cyan-teal */
+  --d8: #B6CC5E; /* olive-lime */
+  --d9: #F08A66; /* terracotta */
 
   /* Dataviz softs dark (fonds discrets) */
-  --d1-soft: #182142;
-  --d2-soft: #0E2A26;
+  --d1-soft: #163026;
+  --d2-soft: #0E2A2E;
   --d3-soft: #221C3A;
   --d4-soft: #2A2212;
   --d5-soft: #2C1622;
-  --d6-soft: #1B1E24;
-  --d7-soft: #0E2630;
+  --d6-soft: #1A1E18;
+  --d7-soft: #0E2A2A;
   --d8-soft: #1E2A12;
-  --d9-soft: #2C151B;
+  --d9-soft: #2C1813;
 
   --shadow-sm:  0 1px 2px rgba(0,0,0,.5);
   --shadow-md:  0 2px 8px -2px rgba(0,0,0,.6), 0 1px 2px rgba(0,0,0,.5);
@@ -409,11 +409,11 @@ html, body {
 
 .ds-btn.primary {
   background: var(--accent); color: var(--on-accent); border-color: transparent;
-  box-shadow: 0 1px 0 rgba(20,20,15,.04), 0 6px 18px -5px rgba(37,64,217,.5);
+  box-shadow: 0 1px 0 rgba(20,20,15,.04), 0 6px 18px -5px rgba(14,124,86,.45);
 }
 .ds-btn.primary:hover {
   background: var(--accent-2);
-  box-shadow: 0 1px 0 rgba(20,20,15,.04), 0 10px 26px -6px rgba(37,64,217,.6);
+  box-shadow: 0 1px 0 rgba(20,20,15,.04), 0 10px 26px -6px rgba(14,124,86,.55);
 }
 .ds-btn.ghost { background: transparent; border-color: transparent; }
 .ds-btn.ghost:hover { background: var(--bg-hover); }
@@ -3112,7 +3112,7 @@ html, body {
 }
 .mon-empty-illu > svg:not(.mon-empty-spark) {
   color: var(--accent);
-  filter: drop-shadow(0 8px 18px rgba(37,64,217,0.18));
+  filter: drop-shadow(0 8px 18px rgba(14,124,86,0.18));
 }
 .mon-empty-spark {
   position: absolute;
@@ -3144,7 +3144,7 @@ html, body {
   color: #fff;
   border-radius: 999px;
   font: 500 13px var(--font-sans);
-  box-shadow: 0 8px 24px -8px rgba(37, 64, 217, 0.35), 0 2px 6px rgba(0,0,0,0.08);
+  box-shadow: 0 8px 24px -8px rgba(14, 124, 86, 0.30), 0 2px 6px rgba(0,0,0,0.08);
   animation: sync-banner-in 200ms ease-out;
 }
 .sync-busy-banner .spin { color: #fff; }

@@ -2,7 +2,7 @@
  * Wealthly — bilan patrimonial PDF (HTML/CSS → impression navigateur).
  *
  * CHARTE = celle de l'app (tokens index.css) : papier chaud #F7F6F2, cobalt
- * #2540D9, sage/terracotta, dataviz d1–d7, Geist + Newsreader (serif italique
+ * #0E7C56, sage/terracotta, dataviz d1–d7, Geist + Newsreader (serif italique
  * cobalt). Cartes blanches, radii 16.
  *
  * LOGIQUE MÉTIER (corrigée 2026-06-08) :
@@ -27,11 +27,11 @@ const C = {
   bg: '#F7F6F2', surface: '#FFFFFF', sunk: '#EFEDE6',
   border: '#E4E1D8', borderStrong: '#D2CEC0',
   ink: '#16150F', ink2: '#56544A', ink3: '#8C8979',
-  accent: '#2540D9', accentSoft: '#E7EBFF', accentLine: '#BFC8FF',
+  accent: '#0E7C56', accentSoft: '#E1F1E9', accentLine: '#BFE0CE',
   pos: '#136D3E', posSoft: '#DBEDE2', neg: '#B0392B', negSoft: '#F4E2DE',
   warn: '#8E641A',
 };
-const DV = ['#2540D9', '#1F8E6E', '#C2733B', '#7B57C6', '#B85D7A', '#4D4D4D', '#E0B23E'];
+const DV = ['#0E7C56', '#1F8E6E', '#C2733B', '#7B57C6', '#B85D7A', '#4D4D4D', '#E0B23E'];
 
 const nf = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
 const eur = (v, sign = false) => {

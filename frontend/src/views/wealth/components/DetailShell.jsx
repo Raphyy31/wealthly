@@ -260,7 +260,7 @@ const DSH_CSS = String.raw`
   display: grid; grid-template-columns: auto 1fr auto; gap: 24px; align-items: center;
   padding: 32px 32px 28px;
   background:
-    radial-gradient(ellipse at top right, rgba(37,64,217,0.06), transparent 50%),
+    radial-gradient(ellipse at top right, rgba(14,124,86,0.06), transparent 50%),
     linear-gradient(180deg, var(--surface-hero) 0%, var(--bg-card) 100%);
   border-bottom: 1px solid var(--border);
 }
@@ -271,7 +271,7 @@ const DSH_CSS = String.raw`
   background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
   color: #fff;
   display: inline-flex; align-items: center; justify-content: center;
-  box-shadow: 0 8px 24px -8px rgba(37,64,217,0.5), inset 0 1px 0 rgba(255,255,255,0.2);
+  box-shadow: 0 8px 24px -8px rgba(14,124,86,0.45), inset 0 1px 0 rgba(255,255,255,0.2);
   flex-shrink: 0;
 }
 @media (max-width: 720px) { .dsh-hero-icon { width: 48px; height: 48px; border-radius: 12px; } }
@@ -380,7 +380,7 @@ const DSH_CSS = String.raw`
 .dsh-insight strong, .dsh-insight b { font-weight: 600; color: var(--ink); }
 .dsh-insight.accent {
   background: linear-gradient(135deg, var(--accent-soft) 0%, rgba(231,235,255,0.4) 100%);
-  border-color: rgba(37,64,217,0.18);
+  border-color: rgba(14,124,86,0.18);
 }
 .dsh-insight.accent .dsh-insight-icon { background: var(--accent); }
 .dsh-insight.positive {

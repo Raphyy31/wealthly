@@ -60,7 +60,7 @@ export const ACCOUNT_ROLE_KEYS = Object.keys(ACCOUNT_ROLES);
 // Settings account avatars, future drawer headers…). Uses the v3 dataviz
 // palette so bank chips harmonise with charts. Same string → same color.
 export const bankColor = (name) => {
-  const colors = ['#2540D9', '#1F8E6E', '#C2733B', '#7B57C6', '#B85D7A', '#4D4D4D', '#E0B23E', '#7a8aa8'];
+  const colors = ['#0E7C56', '#1F8E6E', '#C2733B', '#7B57C6', '#B85D7A', '#4D4D4D', '#E0B23E', '#7a8aa8'];
   if (!name) return colors[0];
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
