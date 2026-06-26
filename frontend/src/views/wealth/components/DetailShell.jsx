@@ -15,10 +15,11 @@
 //     <DetailSection title="Coût d'acquisition" aside={fmt(total)}>…</DetailSection>
 //   </DetailShell>
 // ============================================================================
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { ChevronLeft, X, Pencil, Sparkles, Download } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { ResponsiveModal } from '../../../components/ui/ResponsiveModal.jsx';
+import { gsap } from '../../../utils/gsapSetup.js';
 
 export function DetailShell({
   open = true, onClose, breadcrumb, onEdit, editLabel = 'Modifier',
@@ -27,10 +28,30 @@ export function DetailShell({
   heroExtra, kpis = [],
   headerExtra, footer, children,
 }) {
+  // Motion d'entrée (charte Forêt) : la barre est immédiate, le hero + les KPI
+  // + les sections entrent en cascade ; les jauges poussent de 0 → cible.
+  // prefers-reduced-motion → tout reste à l'état final (rien n'est masqué).
+  const shellRef = useRef(null);
+  useEffect(() => {
+    if (!open || !shellRef.current) return;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    const ctx = gsap.context(() => {
+      gsap.fromTo('[data-dsh-reveal]',
+        { opacity: 0, y: 14 },
+        { opacity: 1, y: 0, duration: 0.5, ease: 'expo.out', stagger: 0.07, delay: 0.05, clearProps: 'transform' }
+      );
+      gsap.fromTo('[data-dsh-bar-fill]',
+        { width: '0%' },
+        { width: (i, el) => el.dataset.target, duration: 0.9, ease: 'expo.out', delay: 0.2 }
+      );
+    }, shellRef);
+    return () => ctx.revert();
+  }, [open]);
+
   return (
     <ResponsiveModal open={open} onClose={onClose} className="modal--detail">
       <DetailShellStyles/>
-      <div className="dsh">
+      <div className="dsh" ref={shellRef}>
         {/* Barre fine sticky */}
         <div className="dsh-bar">
           <button className="dsh-back" onClick={onClose}>
@@ -54,7 +75,7 @@ export function DetailShell({
         </div>
 
         {/* Hero affirmé : pastille XL + GROS titre + bloc valeur ou visuel libre */}
-        <div className="dsh-hero">
+        <div className="dsh-hero" data-dsh-reveal>
           {heroIcon && <div className="dsh-hero-icon">{heroIcon}</div>}
           <div className="dsh-hero-left">
             {(icon || eyebrow) && (
@@ -82,7 +103,7 @@ export function DetailShell({
 
         {/* Bande de KPI */}
         {kpis.length > 0 && (
-          <div className="dsh-kpis" style={{ '--dsh-kpi-count': kpis.length }}>
+          <div className="dsh-kpis" data-dsh-reveal style={{ '--dsh-kpi-count': kpis.length }}>
             {kpis.map((k, i) => (
               <div key={i} className="dsh-kpi">
                 <div className="dsh-kpi-label">{k.label}</div>
@@ -108,7 +129,7 @@ export function DetailShell({
 // Section de corps : carte avec titre + valeur optionnelle à droite.
 export function DetailSection({ title, aside, asideClass = '', children, className = '' }) {
   return (
-    <section className={`dsh-section ${className}`}>
+    <section className={`dsh-section ${className}`} data-dsh-reveal>
       {(title || aside) && (
         <div className="dsh-section-head">
           {title && <h3 className="dsh-section-title">{title}</h3>}
@@ -139,7 +160,7 @@ export function DetailProgress({ pct, label, accent = 'var(--accent)' }) {
   const v = Math.max(0, Math.min(100, pct || 0));
   return (
     <div className="dsh-progress-wrap">
-      <div className="dsh-progress"><div className="dsh-progress-fill" style={{ width: `${v}%`, background: accent }}/></div>
+      <div className="dsh-progress"><div className="dsh-progress-fill" data-dsh-bar-fill data-target={`${v}%`} style={{ width: `${v}%`, background: accent }}/></div>
       {label && <div className="dsh-progress-legend">{label}</div>}
     </div>
   );
@@ -253,6 +274,8 @@ const DSH_CSS = String.raw`
   color: var(--text-secondary); cursor: pointer; transition: background .15s, color .15s;
 }
 .dsh-close:hover { background: var(--bg-subtle); color: var(--text-primary); }
+/* États tactiles (charte Forêt : brightness, jamais translate) */
+.dsh-back:active, .dsh-edit:active, .dsh-close:active { filter: var(--press-feedback, brightness(0.97)); }
 
 /* HERO AFFIRMÉ — fond papier-chaud légèrement teinté cobalt, titre 42px */
 .dsh-hero {
