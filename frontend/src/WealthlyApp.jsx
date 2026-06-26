@@ -627,13 +627,26 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
         setCurrentUser(out.me);
         try { localStorage.setItem('w2:current_user', JSON.stringify(out.me)); } catch {}
       }
-      if (has('members')) {
-        setMembers(out.members || []);
-        // onboarded dérivé des membres déjà chargés ici → évite un 2e
-        // api.members.list() séquentiel après reloadAll (fix lenteur login).
-        const hasMembers = (out.members || []).length > 0;
-        setOnboarded(hasMembers);
-        try { localStorage.setItem(STORAGE_KEYS.ONBOARDED, hasMembers ? '1' : '0'); } catch {}
+      if (has('members')) setMembers(out.members || []);
+      // Onboardé = au moins un membre OU la moindre donnée déjà présente
+      // (comptes/actifs/transactions/passifs). On ne montre JAMAIS l'onboarding
+      // à un compte qui contient des données — même si le fetch `members` est
+      // transitoirement vide. Cas vécu (panne Supabase 2026-06-26) : members
+      // revenait vide → onboarding affiché à tort sur un compte rempli, et
+      // ONBOARDED='0' se persistait. On ne persiste désormais QUE l'état
+      // "onboardé" ('1'), jamais '0' sticky.
+      const __anyData =
+        (has('members') && (out.members || []).length > 0) ||
+        (has('accounts') && (out.accounts || []).length > 0) ||
+        (has('assets') && (out.assets || []).length > 0) ||
+        (has('transactions') && (out.transactions || []).length > 0) ||
+        (has('liabilities') && (out.liabilities || []).length > 0);
+      if (__anyData) {
+        setOnboarded(true);
+        try { localStorage.setItem(STORAGE_KEYS.ONBOARDED, '1'); } catch {}
+      } else if (has('members')) {
+        // members chargé avec succès ET zéro donnée nulle part → vrai nouveau compte.
+        setOnboarded(false);
       }
       if (has('accounts')) setAccounts((out.accounts || []).map(accountFromApi));
       if (has('transactions')) setTransactions((out.transactions || []).map(txFromApi));
