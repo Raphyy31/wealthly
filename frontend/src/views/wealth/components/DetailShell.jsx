@@ -287,7 +287,7 @@ const DSH_CSS = String.raw`
   font-size: 42px; line-height: 1.05; letter-spacing: -0.03em; color: var(--ink);
 }
 @media (max-width: 720px) { .dsh-title { font-size: 30px; } }
-.dsh-title em { font-family: 'Geist', system-ui, sans-serif; font-style: normal; font-weight: 600; letter-spacing: -0.02em; color: var(--accent); }
+.dsh-title em { font-family: 'Geist', system-ui, sans-serif; font-style: normal; font-weight: 600; letter-spacing: -0.02em; color: var(--ink); }
 .dsh-sub { margin-top: 6px; font-size: 13.5px; color: var(--text-secondary); display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .dsh-hero-right { text-align: right; }
 @media (max-width: 720px) { .dsh-hero-right { text-align: left; } }

@@ -1393,7 +1393,7 @@ function DashStyles() {
 /* Header */
 .dash-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 4px; flex-wrap: wrap; }
 .dash-h1 { font: 500 26px/1.15 var(--font-sans); letter-spacing: -0.02em; margin: 0 0 6px; color: var(--ink); }
-.dash-h1-em { font-family: var(--font-sans); font-style: normal; font-weight: 600; letter-spacing: -0.02em; color: var(--accent); }
+.dash-h1-em { font-family: var(--font-sans); font-style: normal; font-weight: 600; letter-spacing: -0.02em; color: var(--ink); }
 .dash-sub { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-3); }
 .dash-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 @media (max-width: 640px) {

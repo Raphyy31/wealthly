@@ -25,7 +25,13 @@ export function Mandatory2FAOverlay({ onComplete, onSkip, onLogoutEscape }) {
     let cancelled = false;
     (async () => {
       try {
-        const r = await api.totp.setup();
+        // Timeout 8 s : si /auth/totp/setup traîne (cold start Railway) on ne
+        // reste PAS bloqué sur "Préparation du secret…" → on bascule en 'error'
+        // (qui propose "Configurer plus tard" + Réessayer).
+        const r = await Promise.race([
+          api.totp.setup(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
+        ]);
         if (cancelled) return;
         setSecret(r.secret);
         setUri(r.otpauth_uri);
@@ -39,7 +45,9 @@ export function Mandatory2FAOverlay({ onComplete, onSkip, onLogoutEscape }) {
           onComplete?.();
           return;
         }
-        setError(msg);
+        setError(msg === 'timeout'
+          ? 'La préparation prend trop de temps. Réessaie, ou configure plus tard.'
+          : msg);
         setStep('error');
       }
     })();
@@ -90,6 +98,11 @@ export function Mandatory2FAOverlay({ onComplete, onSkip, onLogoutEscape }) {
             <div className="mandatory-2fa-loading">
               <Loader2 size={20} className="spin"/>
               <span>Préparation du secret…</span>
+              {onSkip && (
+                <button type="button" className="mandatory-2fa-later" onClick={onSkip} style={{ marginTop: 14 }}>
+                  Configurer plus tard
+                </button>
+              )}
             </div>
           )}
 
@@ -227,9 +240,10 @@ const CSS = `
 }
 .mandatory-2fa-title em {
   font-family: 'Geist', system-ui, sans-serif;
-  font-style: italic;
-  font-weight: 400;
-  color: var(--accent);
+  font-style: normal;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
 }
 .mandatory-2fa-lead {
   font: 400 14px/1.5 'Geist', sans-serif;

@@ -446,7 +446,7 @@ export function Styles({ theme }) {
 }
 .page-header h1 em, .page-title em {
   font-family: 'Geist', system-ui, sans-serif;
-  font-style: normal; font-weight: 600; color: var(--accent);
+  font-style: normal; font-weight: 600; color: var(--ink);
   letter-spacing: -0.02em;
 }
 .page-header p, .page-subtitle { font-size: 13px; color: var(--text-tertiary); margin: 0; max-width: 580px; line-height: 1.5; }
