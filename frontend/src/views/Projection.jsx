@@ -17,6 +17,7 @@ import {
 import { LineChart as LineChartIcon, AlertTriangle, Plus, Trash2, Pencil, X, Check, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
 import { ResponsiveModal } from '../components/ui/ResponsiveModal.jsx';
 import { AnimatedNumber } from '../components/AnimatedNumber.jsx';
+import { usePageEnter } from '../hooks/usePageEnter.js';
 
 const prefersReducedMotion = () =>
   typeof window !== 'undefined' &&
@@ -167,6 +168,7 @@ export function Projection({
   categories, members, fmt, currentMonth,
 }) {
   const [horizon, setHorizon] = useState('6M');
+  const rootRef = usePageEnter(); // motion d'entrée standard (charte Forêt)
   const today = useMemo(() => new Date(), []);
 
   // Liquid accounts available for the projection.
@@ -235,8 +237,8 @@ export function Projection({
   };
 
   return (
-    <div className="projection-view">
-      <div className="subview-header">
+    <div className="projection-view" ref={rootRef}>
+      <div className="subview-header" data-reveal>
         <div>
           <h1>Votre <em>projection.</em></h1>
           <p>Anticipez votre trésorerie liquide — soldes futurs, échéances et coups durs.</p>
@@ -247,7 +249,7 @@ export function Projection({
       </div>
 
       {/* Controls */}
-      <div className="cashflow-period">
+      <div className="cashflow-period" data-reveal>
         <div className="projection-accounts">
           {liquidAccounts.length === 0 ? (
             <span className="card-meta">Aucun compte liquide. Ajoutez un compte courant ou une épargne.</span>
@@ -275,7 +277,7 @@ export function Projection({
       </div>
 
       {/* KPI strip */}
-      <div className="cashflow-kpi-row" style={{ marginBottom: 16 }}>
+      <div className="cashflow-kpi-row" data-reveal style={{ marginBottom: 16 }}>
         <div className="cashflow-kpi">
           <div className="cashflow-kpi-label">Solde actuel</div>
           <div className="cashflow-kpi-value"><AnimatedNumber value={startBalance} format={fmtShort}/></div>
@@ -306,7 +308,7 @@ export function Projection({
       )}
 
       {/* Forecast chart */}
-      <section className="card">
+      <section className="card" data-reveal>
         <div className="card-header">
           <h3>Solde liquide projeté</h3>
           <span className="card-meta">{HORIZONS.find(h => h.key === horizon)?.months} mois · {upcoming.length} événement{upcoming.length > 1 ? 's' : ''} planifié{upcoming.length > 1 ? 's' : ''}</span>
@@ -355,7 +357,7 @@ export function Projection({
       </section>
 
       {/* Planned events list */}
-      <section className="card" style={{ marginTop: 16 }}>
+      <section className="card" data-reveal style={{ marginTop: 16 }}>
         <div className="card-header">
           <h3>Événements planifiés</h3>
           <button className="ds-btn sm" onClick={() => setEditor({})}><Plus size={14}/> Ajouter</button>

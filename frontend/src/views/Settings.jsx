@@ -8,6 +8,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { User, Users, Wallet, Shield, Sparkles, Globe, Database, Wand2, ArrowLeftRight, Tag, Store, Settings2 } from 'lucide-react';
 import { gsap } from '../utils/gsapSetup.js';
+import { usePageEnter } from '../hooks/usePageEnter.js';
 import { useTranslation } from 'react-i18next';
 import { MEMBER_PALETTE } from '../constants.js';
 
@@ -69,16 +70,18 @@ export function SettingsView({ members, accounts, accountBalances, saveMember, d
     }
   };
 
+  const rootRef = usePageEnter(); // motion d'entrée standard (charte Forêt)
+
   return (
-    <div className="settings-view">
-      <div className="subview-header">
+    <div className="settings-view" ref={rootRef}>
+      <div className="subview-header" data-reveal>
         <div>
           <h1>Vos <em>{t('settings.title').toLowerCase()}.</em></h1>
           <p>{t('settings.subtitle')}</p>
         </div>
       </div>
 
-      <div className="settings-layout">
+      <div className="settings-layout" data-reveal>
         <nav className="settings-rail" aria-label={t('settings.sections.aria')}>
           {SETTINGS_SECTIONS.map(s => {
             const Icon = s.icon;

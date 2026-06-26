@@ -9,11 +9,13 @@ import {
 import { Activity, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatDate, monthKey, formatCurrency, accountCountsAsIncome, accountCountsAsExpense, getTransferType } from '../utils.js';
 import { useIsNarrow } from '../hooks/useIsNarrow.js';
+import { usePageEnter } from '../hooks/usePageEnter.js';
 
 export function Cashflow({ transactions, categories, accounts, memberShare, fmt, currentMonth, transferIds = new Set() }) {
   const [period, setPeriod] = useState('1M'); // 1M | 3M | 1A
   const [anchor, setAnchor] = useState(currentMonth); // YYYY-MM the period ends on (inclusive)
   const isNarrow = useIsNarrow(760);
+  const rootRef = usePageEnter(); // motion d'entrée standard (charte Forêt)
 
   const monthsInPeriod = period === '1M' ? 1 : period === '3M' ? 3 : 12;
 
@@ -135,14 +137,14 @@ export function Cashflow({ transactions, categories, accounts, memberShare, fmt,
     : `${formatDate(startKey + '-01', { format: 'monthYear' })} → ${formatDate(anchor + '-01', { format: 'monthYear' })}`;
 
   return (
-    <div className="cashflow-view">
-      <div className="subview-header">
+    <div className="cashflow-view" ref={rootRef}>
+      <div className="subview-header" data-reveal>
         <div>
           <h1>Votre <em>cashflow.</em></h1>
           <p>Entrées, sorties et soldes nets — visualisés sur la période.</p>
         </div>
       </div>
-      <div className="cashflow-period">
+      <div className="cashflow-period" data-reveal>
         <div className="cashflow-period-nav">
           <button className="icon-btn" onClick={() => shiftAnchor(-1)} title="Période précédente"><ChevronLeft size={16}/></button>
           <span className="cashflow-period-label">{periodLabel}</span>
@@ -156,7 +158,7 @@ export function Cashflow({ transactions, categories, accounts, memberShare, fmt,
         </div>
       </div>
 
-      <div className="cashflow-grid">
+      <div className="cashflow-grid" data-reveal>
         <section className="card cashflow-sankey-card">
           <div className="card-header">
             <h3>Flux d'argent</h3>
@@ -226,7 +228,7 @@ export function Cashflow({ transactions, categories, accounts, memberShare, fmt,
         </section>
       </div>
 
-      <div className="cashflow-cats-grid">
+      <div className="cashflow-cats-grid" data-reveal>
         <section className="card">
           <div className="card-header">
             <h3>Entrées</h3>

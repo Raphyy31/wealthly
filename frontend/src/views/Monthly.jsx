@@ -12,6 +12,7 @@
 // ============================================================================
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { gsap } from '../utils/gsapSetup.js';
+import { usePageEnter } from '../hooks/usePageEnter.js';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -692,10 +693,12 @@ export function Monthly({
     });
   };
 
+  const rootRef = usePageEnter(); // motion d'entrée standard (charte Forêt)
+
   return (
-    <div className="monthly-v5">
+    <div className="monthly-v5" ref={rootRef}>
       {/* ── Page header ─────────────────────────────────────────────── */}
-      <div className="subview-header">
+      <div className="subview-header" data-reveal>
         <div>
           <h1>{t('views.monthly.title')} <em>{t('views.monthly.titleAccent')}</em></h1>
           <p>
@@ -779,7 +782,7 @@ export function Monthly({
            uniquement si hasRefMonth -> bug user avec compte perso pas
            de mois type configure ne voyait rien). */}
       {!isChildScope && (sankeyData.nodes.length > 0 || realSankeyData.nodes.length > 0) && (
-        <section className="mon-sankey-duo" data-expanded={sankeyLayoutMode}>
+        <section className="mon-sankey-duo" data-reveal data-expanded={sankeyLayoutMode}>
           <SankeyCard
             kind="type"
             eyebrow="Prévu"
