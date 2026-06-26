@@ -84,7 +84,7 @@ export function LiquidityDetail({ item, accounts = [], accountBalances = {}, tra
     { label: 'Sorties · 30j', value: <span style={{ color: 'var(--negative)' }}>−{fmt(outflows30)}</span> },
     { label: 'Tendance 6 mois', value: sixMonthAvg === null ? '—' : `${sixMonthAvg >= 0 ? '+' : ''}${fmt(sixMonthAvg)}`, sub: `/mois · ${trendLabel}` },
     isLivret && { label: `Plafond ${livretLabel}`, value: `${fiscalRatio.toFixed(0)} %`, sub: fmt(livretCap) },
-  ].filter(Boolean);
+  ].filter(Boolean).slice(0, 3); // charte Forêt — max 3 KPI (plafond livret repris dans le corps)
 
   return (
     <DetailShell

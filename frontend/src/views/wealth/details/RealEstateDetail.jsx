@@ -38,14 +38,16 @@ export function RealEstateDetail({ asset, liabilities = [], members = [], member
   const owners = ownersList(asset.memberIds, members);
   const pct = (v) => `${v >= 0 ? '+' : ''}${v.toFixed(1).replace('.', ',')} %`;
 
+  // Charte Forêt — max 3 KPI, quote-part en tête (pas 6 chiffres qui se battent).
+  // Surface/année vivent déjà dans le sous-titre et les sections du corps.
   const kpis = [
-    surface > 0 && { label: 'Surface', value: `${surface} m²` },
-    pricePerM2 > 0 && { label: 'Prix au m²', value: fmt(pricePerM2), sub: purchasePricePerM2 > 0 ? `vs ${fmt(purchasePricePerM2)} à l'achat` : null },
-    asset.purchaseDate && { label: 'Acquis en', value: `${new Date(asset.purchaseDate).getFullYear()}`, sub: yearsSincePurchase >= 1 ? `il y a ${Math.round(yearsSincePurchase)} ans` : null },
-    linkedLoan && currentValue > 0 && { label: 'Financé · LTV', value: `${Math.round((remainingCapital / currentValue) * 100)} %`, sub: 'du bien' },
     ownershipPct !== 100 && { label: 'Quote-part', value: `${ownershipPct} %` },
+    linkedLoan && currentValue > 0 && { label: 'Financé · LTV', value: `${Math.round((remainingCapital / currentValue) * 100)} %`, sub: 'du bien' },
+    pricePerM2 > 0 && { label: 'Prix au m²', value: fmt(pricePerM2), sub: purchasePricePerM2 > 0 ? `vs ${fmt(purchasePricePerM2)} à l'achat` : null },
+    surface > 0 && { label: 'Surface', value: `${surface} m²` },
+    asset.purchaseDate && { label: 'Acquis en', value: `${new Date(asset.purchaseDate).getFullYear()}`, sub: yearsSincePurchase >= 1 ? `il y a ${Math.round(yearsSincePurchase)} ans` : null },
     asset.constructionYear && { label: 'Construction', value: `${asset.constructionYear}` },
-  ].filter(Boolean);
+  ].filter(Boolean).slice(0, 3);
 
   const repaidPct = initialCapital > 0 ? Math.max(0, Math.min(100, ((initialCapital - remainingCapital) / initialCapital) * 100)) : 0;
 

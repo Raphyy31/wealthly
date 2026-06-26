@@ -85,12 +85,12 @@ export function InvestmentDetail({ asset, assets = [], members = [], fmt, onEdit
   };
 
   const [first, ...rest] = (asset.name || 'Compte').split(' ');
+  // Charte Forêt — max 3 KPI ; la valorisation est déjà le chiffre focal du hero.
   const kpis = [
     { label: 'Investi', value: fmt(invested) },
-    { label: 'Valorisation', value: fmt(currentValue) },
     hasPositions && { label: 'Liquidités', value: fmt(cashAvailable) },
     isPEA && { label: 'Plafond PEA', value: `${Math.round((invested / 150000) * 100)} %`, sub: 'de 150 000 €' },
-  ].filter(Boolean);
+  ].filter(Boolean).slice(0, 3);
 
   const allocDonut = [
     ...rows.map(r => ({ name: r.name, value: Math.round(r.value), color: r.color, meta: currentValue > 0 ? `${Math.round((r.value / currentValue) * 100)} %` : null })),

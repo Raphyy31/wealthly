@@ -66,7 +66,7 @@ export function LiabilityDetail({ liability, assets, members, memberShare, fmt, 
     { label: 'Mensualité', value: fmt(monthlyPayment) },
     { label: 'Échéances restantes', value: `${remainingRows.length}`, sub: `sur ${schedule.length}` },
     { label: 'Date de fin', value: endDate ? formatDate(endDate, { format: 'monthYear' }) : '—' },
-  ];
+  ].slice(0, 3); // charte Forêt — max 3 KPI (date de fin reprise dans la légende de progression)
 
   const tabs = (
     <div className="loan-finary-tabs" style={{ margin: '4px 28px 0', padding: 0 }}>

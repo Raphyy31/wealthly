@@ -58,7 +58,7 @@ export function CryptoDetail({ asset, members = [], fmt, onEdit, onClose, onSync
     { label: 'Prix de revient', value: fmt(purchasePrice), sub: '/ unité' },
     { label: <>Cours actuel{isLive && <span style={{ color: 'var(--positive)', fontSize: 9 }}> ● live</span>}</>, value: fmt(unitPrice), sub: showSaisi ? `saisi ${fmt(saisiUnitPrice)}` : '/ unité' },
     cagrPct !== null && { label: 'Perf. annualisée', value: <span style={{ color: cagrPct >= 0 ? 'var(--positive)' : 'var(--negative)' }}>{pct(cagrPct, 1)} /an</span> },
-  ].filter(Boolean);
+  ].filter(Boolean).slice(0, 3); // charte Forêt — max 3 KPI
 
   return (
     <DetailShell
