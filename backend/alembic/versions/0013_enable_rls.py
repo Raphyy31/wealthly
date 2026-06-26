@@ -66,14 +66,20 @@ def upgrade():
         op.execute(f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY")
         # 3) Policy d'isolation : ne voir que les lignes dont household_id
         #    correspond à la variable de session app.current_household_id.
-        #    `RESTRICTIVE` + `FOR ALL` = s'applique à SELECT/INSERT/UPDATE/DELETE.
-        #    `current_setting(..., true)` retourne NULL si non set → 0 ligne
-        #    (donc requête non authentifiée = aucun accès, c'est voulu).
+        #    ⚠️ PERMISSIVE, PAS restrictive. En PostgreSQL une policy RESTRICTIVE
+        #    ne fait que FILTRER des lignes déjà autorisées par une policy
+        #    PERMISSIVE ; une policy restrictive SEULE = "deny all" (0 ligne pour
+        #    le rôle NOBYPASSRLS, quel que soit le contexte). C'est le bug qui a
+        #    rendu TOUTES les données invisibles le 2026-06-26 (corrigé en prod
+        #    via SQL, et ici à la source). PERMISSIVE + FOR ALL accorde l'accès
+        #    aux lignes du foyer sur SELECT/INSERT/UPDATE/DELETE.
+        #    current_setting(..., true) = NULL si non set → 0 ligne (requête non
+        #    authentifiée = aucun accès, c'est voulu).
         policy_name = f"{table}_household_isolation"
         op.execute(f"DROP POLICY IF EXISTS {policy_name} ON {table}")
         op.execute(f"""
             CREATE POLICY {policy_name} ON {table}
-            AS RESTRICTIVE
+            AS PERMISSIVE
             FOR ALL
             USING (household_id = current_setting('app.current_household_id', true))
             WITH CHECK (household_id = current_setting('app.current_household_id', true))
