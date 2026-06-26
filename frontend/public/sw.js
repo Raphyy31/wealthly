@@ -15,7 +15,7 @@
 // to be served (e.g. after a long broken-build streak that the SW cached). The
 // `activate` handler below deletes every cache that doesn't end with this
 // version, so users get a clean slate on the next page load.
-const SW_VERSION = 'wealthly-v13-2026-06-25-tech-redesign';
+const SW_VERSION = 'wealthly-v14-2026-06-26-auto-update';
 const RUNTIME = `wealthly-runtime-${SW_VERSION}`;
 const SHELL = `wealthly-shell-${SW_VERSION}`;
 const SHELL_ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/icon.svg', '/icon-maskable.svg'];
@@ -49,10 +49,11 @@ self.addEventListener('fetch', (event) => {
   // browser handle them normally so CORS/auth still work as expected.
   if (url.origin !== self.location.origin) return;
 
-  // HTML navigations: network first, fall back to cached shell.
+  // HTML navigations: network first (sans cache HTTP → toujours le dernier
+  // index.html, qui référence les derniers assets), fall back au shell en cache.
   if (request.mode === 'navigate' || request.headers.get('accept')?.includes('text/html')) {
     event.respondWith(
-      fetch(request)
+      fetch(request, { cache: 'no-store' })
         .then((response) => {
           const copy = response.clone();
           caches.open(SHELL).then((cache) => cache.put(request, copy));
