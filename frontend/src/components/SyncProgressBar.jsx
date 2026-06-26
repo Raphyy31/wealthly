@@ -171,7 +171,7 @@ function SpbarStyles() {
   border-radius: 999px;
   box-shadow: 0 18px 48px -16px rgba(0, 0, 0, 0.28),
               0 6px 18px -6px rgba(0, 0, 0, 0.14),
-              0 0 0 4px rgba(37, 64, 217, 0.04);
+              0 0 0 4px rgba(14, 124, 86, 0.04);
   font: 500 17px/1 var(--font-sans);
   letter-spacing: -0.01em;
   max-width: calc(100vw - 32px);

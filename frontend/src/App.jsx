@@ -150,7 +150,7 @@ export default function App() {
           transform: 'translate(-50%, -50%)',
           width: 28, height: 28,
           border: '2px solid var(--border, #E4E1D8)',
-          borderTopColor: 'var(--accent, #2540D9)',
+          borderTopColor: 'var(--accent, #0E7C56)',
           borderRadius: '50%',
           animation: 'ws 0.7s linear infinite',
         }}/>

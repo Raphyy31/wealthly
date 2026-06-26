@@ -550,8 +550,8 @@ const css = `
    qu'on est dans une étape supplémentaire, pas dans le login standard. */
 .auth-totp-block {
   padding: 14px 16px;
-  background: rgba(126, 146, 255, 0.08);
-  border: 1px solid rgba(126, 146, 255, 0.25);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
   border-radius: 10px;
   display: flex;
   flex-direction: column;
@@ -576,19 +576,20 @@ const css = `
 /* Submit */
 .auth-submit {
   height: 44px;
-  background: var(--ink);
-  color: var(--bg);
+  background: var(--accent);
+  color: var(--on-accent);
   border: none;
   border-radius: 8px;
   font-size: 14px; font-weight: 500; letter-spacing: -0.005em;
   margin-top: 4px;
-  transition: background .15s, box-shadow .2s;
-  box-shadow: 0 1px 0 rgba(0,0,0,.3), 0 4px 14px -4px rgba(126,146,255,.25);
+  transition: background .15s, box-shadow .2s, filter .12s;
+  box-shadow: 0 1px 0 rgba(0,0,0,.06), 0 6px 18px -6px color-mix(in srgb, var(--accent) 55%, transparent);
 }
 .auth-submit:hover:not(:disabled) {
   background: var(--accent-2);
-  box-shadow: 0 1px 0 rgba(0,0,0,.3), 0 8px 22px -6px rgba(126,146,255,.4);
+  box-shadow: 0 1px 0 rgba(0,0,0,.06), 0 10px 26px -6px color-mix(in srgb, var(--accent) 65%, transparent);
 }
+.auth-submit:active:not(:disabled) { filter: var(--press-feedback); }
 .auth-submit:disabled { opacity: 0.55; cursor: wait; box-shadow: none; }
 .auth-submit:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-soft), 0 0 0 4px var(--accent); }
 

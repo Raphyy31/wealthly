@@ -13,7 +13,7 @@
 //   - Respect prefers-reduced-motion via gsap.matchMedia
 //
 // Le mockup interieur reutilise les memes tokens visuels que DashboardMockup
-// dans Landing.jsx (dark #0F0E0C + accent cobalt #7E92FF + ink #F1EEE4) pour
+// dans Landing.jsx (dark #0F0E0C + accent cobalt #41D49B + ink #F1EEE4) pour
 // la coherence visuelle avec le hero.
 // ============================================================================
 import { useEffect, useRef } from 'react';
@@ -242,8 +242,8 @@ function MiniScreen({ kind }) {
         <rect x="24" y="158" width="100" height="22" rx="11" fill="#15301F"/>
         <text x="40" y="173" fill="#4FB57A" fontFamily="Geist, sans-serif" fontSize="10" fontWeight="500">↑ +1,28 %</text>
         {/* Chart */}
-        <path d="M24,300 C60,290 90,260 130,250 C180,238 220,268 260,218 C310,176 340,198 356,170" stroke="#7E92FF" strokeWidth="2" fill="none" strokeLinecap="round"/>
-        <circle cx="356" cy="170" r="4" fill="#0F0E0C" stroke="#7E92FF" strokeWidth="2"/>
+        <path d="M24,300 C60,290 90,260 130,250 C180,238 220,268 260,218 C310,176 340,198 356,170" stroke="#41D49B" strokeWidth="2" fill="none" strokeLinecap="round"/>
+        <circle cx="356" cy="170" r="4" fill="#0F0E0C" stroke="#41D49B" strokeWidth="2"/>
         {/* KPI cards */}
         {['Cash','Immo','Épargne'].map((l, i) => (
           <g key={l}>
@@ -264,7 +264,7 @@ function MiniScreen({ kind }) {
         {/* Donut chart placeholder */}
         <g transform="translate(190 220)">
           <circle r="80" fill="none" stroke="#2A2823" strokeWidth="14"/>
-          <circle r="80" fill="none" stroke="#7E92FF" strokeWidth="14" strokeDasharray="220 502" transform="rotate(-90)"/>
+          <circle r="80" fill="none" stroke="#41D49B" strokeWidth="14" strokeDasharray="220 502" transform="rotate(-90)"/>
           <circle r="80" fill="none" stroke="#A29475" strokeWidth="14" strokeDasharray="120 502" strokeDashoffset="-220" transform="rotate(-90)"/>
           <circle r="80" fill="none" stroke="#75A289" strokeWidth="14" strokeDasharray="80 502" strokeDashoffset="-340" transform="rotate(-90)"/>
           <text x="0" y="-4" fill="#F1EEE4" fontFamily="Geist, sans-serif" fontSize="11" textAnchor="middle">Total</text>
@@ -272,7 +272,7 @@ function MiniScreen({ kind }) {
         </g>
         {/* Categories */}
         {[
-          { label: 'Immobilier', val: '755 k€', pct: '95 %', color: '#7E92FF' },
+          { label: 'Immobilier', val: '755 k€', pct: '95 %', color: '#41D49B' },
           { label: 'Épargne', val: '37 k€', pct: '5 %', color: '#A29475' },
           { label: 'Placements', val: '3,7 k€', pct: '0 %', color: '#75A289' },
         ].map((row, i) => (
@@ -291,7 +291,7 @@ function MiniScreen({ kind }) {
     const TX = [
       { date: 'Lun 18 mai', label: 'KLARNA', cat: 'Logement', amt: '-120,33 €', col: '#FF8B6B' },
       { date: '', label: 'PREDICA', cat: 'Assurances', amt: '-40,80 €', col: '#A29475' },
-      { date: '', label: 'CRÉDIT AGRICOLE', cat: 'Virement', amt: '-50,00 €', col: '#7E92FF' },
+      { date: '', label: 'CRÉDIT AGRICOLE', cat: 'Virement', amt: '-50,00 €', col: '#41D49B' },
       { date: 'Dim 17 mai', label: 'FRANPRIX', cat: 'Courses', amt: '-32,15 €', col: '#75A289' },
       { date: '', label: 'NETFLIX', cat: 'Abonnements', amt: '-13,49 €', col: '#FF8B6B' },
     ];
@@ -304,7 +304,7 @@ function MiniScreen({ kind }) {
         {/* Filter chips */}
         {['Tout', 'Dépenses', 'Revenus'].map((c, i) => (
           <g key={c}>
-            <rect x={24 + i * 80} y="156" width="72" height="28" rx="14" fill={i === 0 ? '#7E92FF' : '#181714'} stroke={i === 0 ? '#7E92FF' : '#2A2823'}/>
+            <rect x={24 + i * 80} y="156" width="72" height="28" rx="14" fill={i === 0 ? '#41D49B' : '#181714'} stroke={i === 0 ? '#41D49B' : '#2A2823'}/>
             <text x={60 + i * 80} y="174" fill={i === 0 ? '#0F0E0C' : '#F1EEE4'} fontFamily="Geist, sans-serif" fontSize="11" fontWeight="500" textAnchor="middle">{c}</text>
           </g>
         ))}
@@ -333,7 +333,7 @@ function MiniScreen({ kind }) {
       <text x="24" y="156" fill="#75716A" fontFamily="Geist, sans-serif" fontSize="11">sur 6 850 € prévus</text>
       {/* Progress bar */}
       <rect x="24" y="180" width="332" height="6" rx="3" fill="#181714"/>
-      <rect x="24" y="180" width="272" height="6" rx="3" fill="#7E92FF"/>
+      <rect x="24" y="180" width="272" height="6" rx="3" fill="#41D49B"/>
       <text x="340" y="206" fill="#F1EEE4" fontFamily="Geist, sans-serif" fontSize="11" fontWeight="500" textAnchor="end">82 %</text>
       {/* Diverging bars */}
       {[
@@ -416,7 +416,7 @@ function IphoneStyles() {
 .lc-iphone-step-eyebrow {
   font: 500 10.5px/1 'Geist Mono', monospace;
   letter-spacing: 0.22em;
-  color: #7E92FF;
+  color: #41D49B;
 }
 .mono { font-family: 'Geist Mono', monospace; }
 .lc-iphone-step-title {
@@ -467,7 +467,7 @@ function IphoneStyles() {
   box-shadow:
     0 1px 0 1px #2A2823,
     0 0 0 6px #0F0E0C,
-    0 30px 80px -20px rgba(126, 146, 255, 0.20),
+    0 30px 80px -20px rgba(65, 212, 155, 0.20),
     0 50px 100px -30px rgba(0, 0, 0, 0.7);
   will-change: transform;
   transform-style: preserve-3d;
@@ -503,7 +503,7 @@ function IphoneStyles() {
 .lc-iphone-shine {
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, transparent 30%, transparent 60%, rgba(126,146,255,0.04) 100%);
+  background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, transparent 30%, transparent 60%, rgba(65,212,155,0.04) 100%);
   pointer-events: none;
   z-index: 2;
 }
@@ -530,7 +530,7 @@ function IphoneStyles() {
   width: 600px;
   height: 600px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(126, 146, 255, 0.18) 0%, rgba(126, 146, 255, 0) 60%);
+  background: radial-gradient(circle, rgba(65, 212, 155, 0.18) 0%, rgba(65, 212, 155, 0) 60%);
   filter: blur(40px);
   z-index: -1;
 }

@@ -117,7 +117,7 @@ function BMStyles() {
   font: 500 11px/1 'Geist Mono', monospace;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: #7E92FF;
+  color: #41D49B;
   margin-bottom: 14px;
 }
 .bm-title {
@@ -169,7 +169,7 @@ function BMStyles() {
   transition: border-color 0.2s, background 0.2s;
 }
 .bm-logo:hover {
-  border-color: #7E92FF;
+  border-color: #41D49B;
   background: #1F1D17;
 }
 .bm-dot {

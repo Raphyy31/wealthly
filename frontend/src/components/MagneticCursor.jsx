@@ -62,8 +62,8 @@ export function MagneticCursor() {
       isMagnet = e.currentTarget;
       gsap.to(ring, {
         scale: 1.7,
-        backgroundColor: 'rgba(126, 146, 255, 0.18)',
-        borderColor: 'rgba(126, 146, 255, 0.7)',
+        backgroundColor: 'rgba(65, 212, 155, 0.18)',
+        borderColor: 'rgba(65, 212, 155, 0.7)',
         duration: 0.35,
         ease: 'power3.out',
       });
@@ -72,7 +72,7 @@ export function MagneticCursor() {
       isMagnet = null;
       gsap.to(ring, {
         scale: 1,
-        backgroundColor: 'rgba(126, 146, 255, 0)',
+        backgroundColor: 'rgba(65, 212, 155, 0)',
         borderColor: 'rgba(241, 238, 228, 0.4)',
         duration: 0.35,
         ease: 'power3.out',
@@ -126,14 +126,14 @@ function CursorStyles() {
   height: 10px;
   border-radius: 50%;
   background: #F1EEE4; /* cream pur — toujours visible sur le bg #0F0E0C de la Landing */
-  box-shadow: 0 0 0 1px rgba(126,146,255,.45), 0 0 12px rgba(126,146,255,.35);
+  box-shadow: 0 0 0 1px rgba(65,212,155,.45), 0 0 12px rgba(65,212,155,.35);
 }
 .mc-ring {
   width: 38px;
   height: 38px;
   border-radius: 50%;
   border: 1.5px solid rgba(241, 238, 228, 0.85); /* cream tres visible (avant 0.4 -> invisible sur dark) */
-  background: rgba(126, 146, 255, 0);
+  background: rgba(65, 212, 155, 0);
   box-shadow: 0 0 0 1px rgba(15, 14, 12, .2);
   transition: backdrop-filter 0.2s;
 }

@@ -337,7 +337,7 @@ const CSS = `
   font: 500 14px/1 'Geist', sans-serif;
   cursor: pointer;
   transition: background .15s;
-  box-shadow: 0 4px 14px -4px rgba(37,64,217,.25);
+  box-shadow: 0 4px 14px -4px rgba(14,124,86,.25);
 }
 .mandatory-2fa-submit:hover:not(:disabled) { background: var(--accent-2); }
 .mandatory-2fa-submit:disabled {
