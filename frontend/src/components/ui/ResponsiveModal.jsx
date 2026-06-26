@@ -36,7 +36,7 @@ import { createPortal } from 'react-dom';
 import { Drawer as VaulDrawer } from 'vaul';
 import { useIsNarrow } from '../../hooks/useIsNarrow.js';
 
-export function ResponsiveModal({ open, onClose, children, className = '' }) {
+export function ResponsiveModal({ open, onClose, children, className = '', title }) {
   const isNarrow = useIsNarrow(640);
 
   // Lock body scroll quand ouvert (parite desktop / mobile)
@@ -55,9 +55,13 @@ export function ResponsiveModal({ open, onClose, children, className = '' }) {
       <VaulDrawer.Root open={open} onOpenChange={(o) => { if (!o) onClose?.(); }}>
         <VaulDrawer.Portal>
           <VaulDrawer.Overlay className="rm-vaul-overlay" />
-          <VaulDrawer.Content className={`rm-vaul-content modal ${className}`}>
+          <VaulDrawer.Content className={`rm-vaul-content modal ${className}`} aria-describedby={undefined}>
             {/* Drag handle visuel — pattern iOS */}
             <div className="rm-vaul-handle" aria-hidden="true" />
+            {/* Titre a11y (Radix l'exige) — visuellement masqué ; le contenu garde
+                son propre header visuel. Évite le warning « DialogContent requires
+                a DialogTitle ». */}
+            <VaulDrawer.Title className="sr-only">{title || 'Fenêtre'}</VaulDrawer.Title>
             {/* Wrapper interne pour scroll si modal-body present */}
             <div className="rm-vaul-inner">
               {children}

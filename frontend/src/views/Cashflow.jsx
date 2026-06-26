@@ -4,7 +4,6 @@
 import React, { useState, useMemo } from 'react';
 import {
   ResponsiveContainer, Sankey, Layer, Rectangle, Tooltip,
-  PieChart, Pie, Cell,
 } from 'recharts';
 import { Activity, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatDate, monthKey, formatCurrency, accountCountsAsIncome, accountCountsAsExpense, getTransferType } from '../utils.js';
@@ -208,20 +207,38 @@ export function Cashflow({ transactions, categories, accounts, memberShare, fmt,
         <section className="card cashflow-distribution-card">
           <div className="card-header"><h3>Distribution</h3></div>
           {donutData.length > 0 ? (
-            <>
-              <ResponsiveContainer width="100%" height={240}>
-                <PieChart>
-                  <Pie data={donutData} dataKey="value" cx="50%" cy="50%" innerRadius={62} outerRadius={92} paddingAngle={2} stroke="none">
-                    {donutData.map((d, i) => <Cell key={i} fill={d.color}/>)}
-                  </Pie>
-                  <Tooltip formatter={(v) => fmt(v)} contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}/>
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="cashflow-donut-center">
+            <div className="cashflow-distribution-bars">
+              {/* Chiffre focal de la carte */}
+              <div className="cashflow-dist-total" style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <span className="cashflow-donut-label">Somme sorties</span>
-                <span className="cashflow-donut-value negative">−{fmt(totalExpense)}</span>
+                <span className="cashflow-donut-value negative" style={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>−{fmt(totalExpense)}</span>
               </div>
-            </>
+              {/* Barre empilée (charte Forêt : barres > camemberts) */}
+              <div role="img" aria-label="Répartition des dépenses par catégorie"
+                style={{ display: 'flex', height: 12, borderRadius: 6, overflow: 'hidden', gap: 2, background: 'var(--bg-sunk)', margin: '14px 0 16px' }}>
+                {donutData.map((d, i) => {
+                  const pct = totalExpense > 0 ? (d.value / totalExpense) * 100 : 0;
+                  return <span key={i} title={`${d.name} · ${pct.toFixed(0)} %`} style={{ width: `${pct}%`, background: d.color, minWidth: pct > 0 ? 3 : 0 }}/>;
+                })}
+              </div>
+              {/* Légende « X % Catégorie » */}
+              <div className="cashflow-dist-legend" style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+                {donutData.slice(0, 6).map((d, i) => {
+                  const pct = totalExpense > 0 ? (d.value / totalExpense) * 100 : 0;
+                  return (
+                    <div key={i} style={{ display: 'grid', gridTemplateColumns: '10px 1fr auto auto', alignItems: 'baseline', gap: 10 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: 2, background: d.color, alignSelf: 'center' }}/>
+                      <span style={{ fontSize: 13, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</span>
+                      <span className="num" style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ink)', fontVariantNumeric: 'tabular-nums', minWidth: 38, textAlign: 'right' }}>{pct.toFixed(0)} %</span>
+                      <span className="num" style={{ fontSize: 12, color: 'var(--ink-3)', fontVariantNumeric: 'tabular-nums', minWidth: 72, textAlign: 'right' }}>{fmt(d.value)}</span>
+                    </div>
+                  );
+                })}
+                {donutData.length > 6 && (
+                  <div style={{ fontSize: 11.5, color: 'var(--ink-3)' }}>+{donutData.length - 6} autres catégories</div>
+                )}
+              </div>
+            </div>
           ) : (
             <div className="empty-mini"><Activity size={20}/><p>Pas encore de dépenses.</p></div>
           )}

@@ -49,7 +49,7 @@ export function DetailShell({
   }, [open]);
 
   return (
-    <ResponsiveModal open={open} onClose={onClose} className="modal--detail">
+    <ResponsiveModal open={open} onClose={onClose} className="modal--detail" title={typeof breadcrumb === 'string' ? breadcrumb : 'Détail patrimoine'}>
       <DetailShellStyles/>
       <div className="dsh" ref={shellRef}>
         {/* Barre fine sticky */}

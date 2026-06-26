@@ -347,30 +347,31 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
         </section>
       )}
 
-      {/* Allocation mini — compact, click pour expand modal en grand */}
+      {/* Allocation mini — barre empilée (charte Forêt : barres > camemberts),
+          click pour la vue détaillée. */}
       {isAll && classAllocation.length > 0 && (
         <button
           type="button"
-          className="wealth-alloc-mini"
+          className="wealth-alloc-mini wealth-alloc-mini--bar"
           onClick={() => setOpenCategoryModal('chart-alloc')}
           title="Voir l'allocation détaillée"
         >
-          <div className="wealth-alloc-mini-donut">
-            <ResponsiveContainer width={64} height={64}>
-              <PieChart>
-                <Pie data={classAllocation} dataKey="value" cx="50%" cy="50%" innerRadius={20} outerRadius={30} paddingAngle={2} stroke="none" isAnimationActive={false}>
-                  {classAllocation.map((entry, i) => <Cell key={i} fill={entry.color}/>)}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="wealth-alloc-mini-info">
+          <div className="wealth-alloc-mini-info" style={{ flex: 1, minWidth: 0 }}>
             <div className="wealth-alloc-mini-label">Allocation par classe d'actif</div>
+            <div
+              role="img"
+              aria-label="Répartition du patrimoine par classe d'actif"
+              style={{ display: 'flex', height: 10, borderRadius: 5, overflow: 'hidden', gap: 2, background: 'var(--bg-sunk)', margin: '8px 0 10px' }}
+            >
+              {classAllocation.map((c, i) => (
+                <span key={i} title={`${c.name} · ${c.pct.toFixed(0)} %`} style={{ width: `${c.pct}%`, background: c.color, minWidth: c.pct > 0 ? 3 : 0 }}/>
+              ))}
+            </div>
             <div className="wealth-alloc-mini-legend">
               {classAllocation.slice(0, 4).map((c, i) => (
                 <span key={i} className="wealth-alloc-mini-chip">
                   <span className="wealth-alloc-mini-dot" style={{ background: c.color }}/>
-                  {c.name} <strong>{c.pct.toFixed(0)}%</strong>
+                  {c.name} <strong>{c.pct.toFixed(0)}{' '}%</strong>
                 </span>
               ))}
               {classAllocation.length > 4 && (
