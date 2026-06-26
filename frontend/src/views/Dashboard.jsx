@@ -22,11 +22,10 @@ import {
   TrendingUp, AlertTriangle, Sparkles, MoreHorizontal, Loader2,
 } from 'lucide-react';
 import { ASSET_CLASS_MAP } from '../constants.js';
-import { Amount, useFormatEUR } from '../components/ui/Amount.jsx';
+import { useFormatEUR } from '../components/ui/Amount.jsx';
 import { useHideAmounts } from '../contexts/HideAmounts.jsx';
 import { BankMark } from '../components/ui/BankMark.jsx';
 import { Sparkline } from '../components/ui/Sparkline.jsx';
-import { Donut } from '../components/ui/Donut.jsx';
 import { BilanModal } from '../components/BilanModal.jsx';
 // Note: fmtAmount/formatDelta retirés du Dashboard avec la suppression
 // des multi-deltas 30j/3M/YTD (feedback user 2026-05-18 — perf % jugée
@@ -53,22 +52,23 @@ const DATAVIZ = ['var(--d2)', 'var(--d1)', 'var(--d3)', 'var(--d5)', 'var(--d4)'
 // % du total) qui s'animent en GSAP au mount. Plus dense visuellement,
 // pas de vide. height: fit-content -> ne stretch plus pour matcher le hero.
 function AllocationCard({ allocationData, allocationTotal, formatEUR, hidden, onDetails, t }) {
-  const listRef = useRef(null);
+  const wrapRef = useRef(null);
 
   useEffect(() => {
-    if (!listRef.current) return;
+    if (!wrapRef.current) return;
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
     const ctx = gsap.context(() => {
-      // Stagger fade-up des items + width animation sur les barres de progress
-      gsap.fromTo('[data-alloc-row]',
-        { opacity: 0, y: 6 },
-        { opacity: 1, y: 0, duration: 0.42, ease: 'expo.out', stagger: 0.05, delay: 0.1 }
-      );
-      gsap.fromTo('[data-alloc-bar-fill]',
+      // La barre empilée pousse de 0 → cible (charte Forêt : jauges qui se
+      // construisent au mount), puis la légende entre en cascade.
+      gsap.fromTo('[data-alloc-seg]',
         { width: '0%' },
-        { width: (i, el) => el.dataset.target, duration: 0.9, ease: 'expo.out', stagger: 0.05, delay: 0.2 }
+        { width: (i, el) => el.dataset.target, duration: 0.9, ease: 'expo.out', stagger: 0.07, delay: 0.2 }
       );
-    }, listRef);
+      gsap.fromTo('[data-alloc-legend]',
+        { opacity: 0, y: 6 },
+        { opacity: 1, y: 0, duration: 0.42, ease: 'expo.out', stagger: 0.05, delay: 0.35 }
+      );
+    }, wrapRef);
     return () => ctx.revert();
   }, [allocationData.length]);
 
@@ -79,7 +79,7 @@ function AllocationCard({ allocationData, allocationTotal, formatEUR, hidden, on
           <div className="dash-eyebrow">
             <span className="dash-eyebrow-label">{t('dashboard.allocation')}</span>
           </div>
-          <button className="link-btn" onClick={onDetails}>{t('dashboard.details')}</button>
+          <button className="link-btn" onClick={onDetails}>{t('dashboard.details')} →</button>
         </div>
         <div className="dash-empty">
           <span className="dash-empty-lead">{t('dashboard.noAllocData')}</span>
@@ -90,105 +90,45 @@ function AllocationCard({ allocationData, allocationTotal, formatEUR, hidden, on
   }
 
   return (
-    <div className="alloc-card" style={{ height: 'fit-content', alignSelf: 'flex-start' }}>
+    <div className="alloc-card" ref={wrapRef} style={{ height: 'fit-content', alignSelf: 'flex-start' }}>
       <div className="alloc-head">
         <div className="dash-eyebrow">
           <span className="dash-eyebrow-label">{t('dashboard.allocation')}</span>
         </div>
-        <button className="link-btn" onClick={onDetails}>{t('dashboard.details')}</button>
+        <button className="link-btn" onClick={onDetails}>{t('dashboard.details')} →</button>
       </div>
 
-      {/* Donut centre + total a cote (pas en-dessous = layout plus compact) */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 18,
-        paddingBottom: 4,
-      }}>
-        <Donut
-          data={allocationData}
-          size={108}
-          centerLabel={t('dashboard.allocCenterLabel')}
-          centerValue={formatEUR(allocationTotal, { abbr: true })}
-        />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{
-            fontSize: 10, fontWeight: 600, letterSpacing: '0.16em',
-            textTransform: 'uppercase', color: 'var(--ink-3)', marginBottom: 4,
-          }}>
-            Total actifs
-          </div>
-          <div style={{
-            fontFamily: 'Geist, system-ui, sans-serif', fontStyle: 'italic',
-            fontSize: 22, fontWeight: 400, color: 'var(--ink)',
-            letterSpacing: '-0.015em',
-            fontVariantNumeric: 'tabular-nums',
-          }}>
-            {hidden ? '···' : formatEUR(allocationTotal, { abbr: false })}
-          </div>
-          <div style={{
-            fontSize: 11, color: 'var(--ink-3)', marginTop: 4,
-          }}>
-            réparti sur {allocationData.length} classe{allocationData.length > 1 ? 's' : ''}
-          </div>
-        </div>
+      {/* Total actifs — chiffre de contexte, subordonné au hero */}
+      <div className="alloc-total">
+        <span className="alloc-total-cap">Total actifs</span>
+        <span className="alloc-total-val num">{hidden ? '···' : formatEUR(allocationTotal)}</span>
+        <span className="alloc-total-sub">
+          réparti sur {allocationData.length} classe{allocationData.length > 1 ? 's' : ''}
+        </span>
       </div>
 
-      {/* Liste avec barres de progress horizontales animees GSAP */}
-      <div ref={listRef} style={{
-        display: 'flex', flexDirection: 'column', gap: 10,
-        paddingTop: 12, borderTop: '1px solid var(--border)',
-      }}>
-        {allocationData.map((d, i) => {
+      {/* Barre empilée — lisible au coup d'œil, remplace le donut (charte Forêt) */}
+      <div className="alloc-stack" role="img" aria-label="Répartition du patrimoine par classe d'actifs">
+        {allocationData.map((d) => {
           const pct = allocationTotal ? (d.value / allocationTotal) * 100 : 0;
           return (
-            <div key={d.name} data-alloc-row style={{
-              display: 'flex', flexDirection: 'column', gap: 5,
-            }}>
-              <div style={{
-                display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
-                gap: 8,
-              }}>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                  <span style={{
-                    width: 8, height: 8, borderRadius: 2, background: d.color,
-                    flexShrink: 0,
-                  }}/>
-                  <span style={{ fontSize: 13, color: 'var(--ink)', whiteSpace: 'nowrap' }}>
-                    {d.name}
-                  </span>
-                </span>
-                <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 8, flexShrink: 0 }}>
-                  <span style={{
-                    fontSize: 12.5, color: 'var(--ink-2)', fontWeight: 500,
-                    fontVariantNumeric: 'tabular-nums',
-                  }}>
-                    {hidden ? '···' : formatEUR(d.value, { abbr: false })}
-                  </span>
-                  <span style={{
-                    fontSize: 11, color: 'var(--ink-3)',
-                    fontFamily: 'Geist Mono, ui-monospace, Menlo, monospace',
-                    minWidth: 36, textAlign: 'right',
-                  }}>
-                    {hidden ? '···' : `${pct.toFixed(0)} %`}
-                  </span>
-                </span>
-              </div>
-              <div style={{
-                position: 'relative', height: 4, borderRadius: 2,
-                background: 'color-mix(in srgb, var(--ink-3) 12%, transparent)',
-                overflow: 'hidden',
-              }}>
-                <div
-                  data-alloc-bar-fill
-                  data-target={`${pct}%`}
-                  style={{
-                    position: 'absolute', inset: 0,
-                    width: '0%',
-                    background: d.color,
-                    borderRadius: 2,
-                    boxShadow: `0 0 8px color-mix(in srgb, ${d.color} 40%, transparent)`,
-                  }}
-                />
-              </div>
+            <span key={d.name} data-alloc-seg data-target={`${pct}%`}
+              title={`${d.name} · ${pct.toFixed(0)} %`}
+              style={{ width: '0%', background: d.color }} />
+          );
+        })}
+      </div>
+
+      {/* Légende « 71 % Immobilier » */}
+      <div className="alloc-legend">
+        {allocationData.map((d) => {
+          const pct = allocationTotal ? (d.value / allocationTotal) * 100 : 0;
+          return (
+            <div key={d.name} data-alloc-legend className="alloc-leg-item">
+              <span className="alloc-leg-dot" style={{ background: d.color }} />
+              <span className="alloc-leg-name">{d.name}</span>
+              <span className="alloc-leg-pct num">{hidden ? '··' : `${pct.toFixed(0)} %`}</span>
+              <span className="alloc-leg-val num">{hidden ? '···' : formatEUR(d.value)}</span>
             </div>
           );
         })}
@@ -258,6 +198,8 @@ export function Dashboard({
   const [hover, setHover] = useState(null); // chart hover point
   const [bilanOpen, setBilanOpen] = useState(false); // modale Bilan patrimonial complet
   const [syncing, setSyncing] = useState(false);
+  // Bascule Financier / Total — un seul chiffre focal à la fois (charte Forêt).
+  const [heroMode, setHeroMode] = useState('fin'); // 'fin' | 'total'
 
   // GSAP page-enter stagger — fade-in en cascade des sections principales
   // a chaque mount du Dashboard. Donne une sensation premium 'app qui se
@@ -475,6 +417,38 @@ export function Dashboard({
     [financialNet, realEstateNet.value]
   );
 
+  // ── Hero bascule Financier / Total ──────────────────────────────────────
+  // Un seul chiffre focal à la fois (charte Forêt). Le graphe + le delta
+  // restent la trajectoire FINANCIÈRE (seule série historisée) ; en mode
+  // « Total » on remplace le delta par la décomposition financier/immo.
+  const heroValue = heroMode === 'total' ? patrimoineNetTotal : financialNet;
+  const heroLabel = heroMode === 'total' ? 'Patrimoine net total' : 'Patrimoine financier net';
+
+  // Count-up au mount : le chiffre se construit de 0 → valeur (signature
+  // « l'app se construit sous les yeux »). rAF maison car AnimatedNumber ne
+  // compte pas au tout premier mount ; le survol du graphe court-circuite le
+  // tween pour un scrub instantané.
+  const [countUp, setCountUp] = useState(null);
+  const countUpDone = useRef(false);
+  useEffect(() => {
+    if (countUpDone.current) return;
+    countUpDone.current = true;
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (reduce || typeof heroValue !== 'number' || !Number.isFinite(heroValue)) return;
+    const target = heroValue, start = performance.now(), dur = 1100;
+    let raf;
+    setCountUp(0);
+    const tick = (now) => {
+      const p = Math.min(1, (now - start) / dur);
+      const e = 1 - Math.pow(1 - p, 3); // easeOutCubic
+      setCountUp(target * e);
+      if (p < 1) raf = requestAnimationFrame(tick); else setCountUp(null);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => { if (raf) cancelAnimationFrame(raf); };
+  }, []); // mount once — count up vers la valeur initiale (financier)
+  const heroDisplay = hover?.balance ?? (countUp != null ? countUp : heroValue);
+
   const kpis = [
     {
       label: 'Patrimoine financier net',
@@ -491,13 +465,6 @@ export function Dashboard({
       value: realEstateNet.value,
       delta: null,
       negative: realEstateNet.value < 0,
-    },
-    {
-      label: 'Patrimoine net total',
-      sub: 'Financier + Immo',
-      value: patrimoineNetTotal,
-      delta: null,
-      negative: patrimoineNetTotal < 0,
     },
     {
       label: t('dashboard.savingsMonth'),
@@ -750,80 +717,52 @@ export function Dashboard({
         <div className="hero-card">
           <div className="hero-top">
             <div className="dash-eyebrow">
-              <span className="dash-eyebrow-label">Patrimoine financier net</span>
+              <span className="dash-eyebrow-label">{heroLabel}</span>
             </div>
-            <div className="ds-range-tabs">
-              {PERIODS.map(p => (
-                <button key={p.id}
-                  className={period === p.id ? 'on' : ''}
-                  onClick={() => setPeriod(p.id)}>
-                  {p.label}
-                </button>
-              ))}
+            <div className="ds-range-tabs" role="tablist" aria-label="Patrimoine affiché">
+              <button role="tab" aria-selected={heroMode === 'fin'}
+                className={heroMode === 'fin' ? 'on' : ''}
+                onClick={() => setHeroMode('fin')}>Financier</button>
+              <button role="tab" aria-selected={heroMode === 'total'}
+                className={heroMode === 'total' ? 'on' : ''}
+                onClick={() => setHeroMode('total')}>Total</button>
             </div>
           </div>
 
-          {/* Sparkline inline 6m a la Apple Stocks — sprint Dashboard 2026-05-20 */}
-          {chartData.length >= 2 && (
-            <div className="hero-sparkline-wrap" aria-hidden="true">
-              <span className="hero-sparkline-label">{period.toUpperCase()}</span>
-              <Sparkline
-                data={chartData.map(d => d.balance)}
-                width={null}
-                height={36}
-                stroke={periodDelta.abs >= 0 ? 'var(--positive)' : 'var(--negative)'}
-                strokeWidth={2}
-                fill="none"
-                className="hero-sparkline-svg"
-              />
-            </div>
-          )}
-
-          {/* HERO REFONDU v3 (2026-05-21 — user feedback "j'aime pas du tout
-              le cadre patrimoine total niveau design pas aligne degeulasse,
-              j'aurais aime patrimoine financier le plus important").
-              - Hero = patrimoine financier NET (le metric qui bouge tous les
-                jours — liquidites + placements − credits conso). L'immo est
-                accessible via le bouton "Voir tout le patrimoine" en bas.
-              - Breakdown inline propre : separateurs · plutot que chips.
-              - Look private banking sobre, pas chip cm2. */}
+          {/* Chiffre focal UNIQUE (charte Forêt) — Geist Mono tabulaire, count-up
+              au mount, scrub direct au survol du graphe. La bascule Financier/
+              Total ci-dessus pilote la grandeur affichée ; jamais deux nombres
+              en concurrence. Décompo inline sobre + delta (financier). */}
           <div className="hero-number-row">
             <div className="hero-net-stack">
-              <Amount value={hover?.balance ?? financialNet} hero/>
-              {/* Decomposition inline sobre */}
-              <div style={{
-                marginTop: 12, fontSize: 13, color: 'var(--ink-3)',
-                display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap',
-                fontVariantNumeric: 'tabular-nums',
-              }}>
-                <span>
-                  <span style={{ color: 'var(--ink-2)' }}>Liquidités</span>
-                  {' '}
-                  <span style={{ color: 'var(--ink)', fontWeight: 500 }}>{formatEUR(liquidWealth)}</span>
-                </span>
-                {(cashWealth - liquidWealth) > 0.5 && (
+              <span className="ds-hero-num">{formatEUR(heroDisplay, { decimals: 0 })}</span>
+              <div className="hero-breakdown">
+                {heroMode === 'fin' ? (
                   <>
-                    <span style={{ color: 'var(--ink-3)', opacity: 0.4 }}>·</span>
-                    <span>
-                      <span style={{ color: 'var(--ink-2)' }}>Placements</span>
-                      {' '}
-                      <span style={{ color: 'var(--ink)', fontWeight: 500 }}>{formatEUR(cashWealth - liquidWealth)}</span>
-                    </span>
+                    <span><span className="hero-bd-k">Liquidités</span>{' '}<span className="hero-bd-v">{formatEUR(liquidWealth)}</span></span>
+                    {(cashWealth - liquidWealth) > 0.5 && (
+                      <>
+                        <span className="hero-bd-dot">·</span>
+                        <span><span className="hero-bd-k">Placements</span>{' '}<span className="hero-bd-v">{formatEUR(cashWealth - liquidWealth)}</span></span>
+                      </>
+                    )}
+                    {otherDebt > 0.5 && otherDebtLabel && (
+                      <>
+                        <span className="hero-bd-dot">·</span>
+                        <span><span className="hero-bd-k">{otherDebtLabel}</span>{' '}<span className="hero-bd-v neg">−{formatEUR(otherDebt)}</span></span>
+                      </>
+                    )}
                   </>
-                )}
-                {otherDebt > 0.5 && otherDebtLabel && (
+                ) : (
                   <>
-                    <span style={{ color: 'var(--ink-3)', opacity: 0.4 }}>·</span>
-                    <span>
-                      <span style={{ color: 'var(--ink-2)' }}>{otherDebtLabel}</span>
-                      {' '}
-                      <span style={{ color: 'var(--negative)', fontWeight: 500 }}>−{formatEUR(otherDebt)}</span>
-                    </span>
+                    <span><span className="hero-bd-k">Financier net</span>{' '}<span className="hero-bd-v">{formatEUR(financialNet)}</span></span>
+                    <span className="hero-bd-dot">·</span>
+                    <span><span className="hero-bd-k">Immo net</span>{' '}<span className="hero-bd-v">{formatEUR(realEstateNet.value)}</span></span>
                   </>
                 )}
               </div>
             </div>
-            {periodDelta.abs !== 0 && (
+            {heroMode === 'fin' && periodDelta.abs !== 0 && (
               <div className="hero-delta">
                 <span className={`ds-pill ${periodDelta.abs >= 0 ? 'pos' : 'neg'}`}>
                   {periodDelta.abs >= 0 ? <ArrowUp size={11}/> : <ArrowDown size={11}/>}
@@ -846,45 +785,32 @@ export function Dashboard({
             </div>
           )}
 
+          {/* Trajectoire financière (série historisée) + sélecteur de période,
+              contrôle secondaire — ne concurrence pas le chiffre focal. */}
+          <div className="hero-chart-head">
+            <span className="hero-chart-cap">Évolution · patrimoine financier</span>
+            <div className="ds-range-tabs">
+              {PERIODS.map(p => (
+                <button key={p.id}
+                  className={period === p.id ? 'on' : ''}
+                  onClick={() => setPeriod(p.id)}>
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <HeroChart data={chartData} onHover={setHover} hover={hover}/>
 
-          {/* Bouton "Voir tout le patrimoine" — ouvre la modale Bilan complet
-              avec immobilier inclus, style bilan d'expert-comptable.
-              Le hero focus le financier (qui bouge quotidien), l'immo est
-              accessible a la demande pour ne pas polluer la vue principale. */}
-          <button
-            type="button"
-            onClick={() => setBilanOpen(true)}
-            style={{
-              marginTop: 16, alignSelf: 'flex-start',
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '8px 14px', borderRadius: 8,
-              background: 'transparent',
-              border: '1px solid var(--border)',
-              color: 'var(--ink-2)',
-              fontSize: 12.5, fontWeight: 500, cursor: 'pointer',
-              transition: 'all 140ms',
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.background = 'color-mix(in srgb, var(--accent) 6%, transparent)';
-              e.currentTarget.style.borderColor = 'color-mix(in srgb, var(--accent) 28%, var(--border))';
-              e.currentTarget.style.color = 'var(--accent)';
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.borderColor = 'var(--border)';
-              e.currentTarget.style.color = 'var(--ink-2)';
-            }}
-          >
+          {/* Voir tout le patrimoine — ouvre le bilan complet (immo incluse).
+              Le hero focus le financier ; l'immo reste à la demande. */}
+          <button type="button" className="hero-bilan-btn" onClick={() => setBilanOpen(true)}>
             <FileText size={13}/>
             <span>Voir tout le patrimoine (incl. immo)</span>
-            <span style={{ color: 'var(--ink-3)', marginLeft: 4 }}>→</span>
+            <span className="hero-bilan-arrow">→</span>
           </button>
 
-          <div
-            className="kpi-strip"
-            style={{ gridTemplateColumns: `repeat(${kpis.length}, 1fr)`, marginTop: 24 }}
-          >
+          <div className="kpi-strip" style={{ marginTop: 24 }}>
             {kpis.map((k, i) => {
               // Color-code: negative explicit (autres dettes, monthSaving<0) → terracotta.
               const negative = k.negative || (typeof k.value === 'number' && k.value < 0);
@@ -1022,7 +948,10 @@ export function Dashboard({
         );
       })()}
 
-      {/* ── Transactions (Budget + Insights caches 2026-05-21) ────────── */}
+      {/* ── Transactions : déplacées vers leur page dédiée (charte Forêt :
+          un écran = un focal). Ancien panneau conservé en historique, gardé
+          inerte ; le Dashboard n'expose qu'un point d'entrée sobre (plus bas). */}
+      {false && (
       <section className="dash-bottom-row" data-dash-reveal>
         {/* §04 Transactions panel */}
         <div className="ds-panel">
@@ -1179,6 +1108,16 @@ export function Dashboard({
           )}
         </div>
       </section>
+      )}
+
+      {/* Point d'entrée sobre vers la page Transactions (liste déplacée) */}
+      <button type="button" className="dash-tx-link" data-dash-reveal onClick={() => setView?.('transactions')}>
+        <span className="dash-tx-link-main">
+          <span className="dash-eyebrow-label">{t('dashboard.recent')}</span>
+          <span className="dash-tx-link-sub">{t('dashboard.recentMeta')}</span>
+        </span>
+        <span className="dash-tx-link-cta">Voir les transactions →</span>
+      </button>
 
       {/* Modale Bilan complet (clic "Voir tout le patrimoine") */}
       <BilanModal
@@ -1424,6 +1363,91 @@ function DashStyles() {
 .hero-chart { margin: 8px -4px 0; position: relative; cursor: crosshair; }
 .hero-axis { display: flex; justify-content: space-between; padding: 4px 8px 12px; color: var(--ink-3); font-size: 11px; }
 
+/* ── Charte Forêt — bascule, chiffre focal, barre de répartition ───────── */
+/* Press tactile : brightness (charte « pas de translate brutal ») */
+.dash-v3 .ds-range-tabs button:active,
+.dash-v3 .ds-chip:active { filter: var(--press-feedback); }
+
+.hero-breakdown {
+  margin-top: 12px;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  font-size: 13px; color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.hero-bd-k { color: var(--ink-2); }
+.hero-bd-v { color: var(--ink); font-weight: 500; }
+.hero-bd-v.neg { color: var(--negative); }
+.hero-bd-dot { color: var(--ink-3); opacity: 0.4; }
+
+.hero-chart-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin-top: 20px;
+}
+.hero-chart-cap {
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3);
+}
+
+.hero-bilan-btn {
+  margin-top: 16px; align-self: flex-start;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border-radius: var(--radius-md);
+  background: transparent; border: 1px solid var(--border);
+  color: var(--ink-2);
+  font: 500 12.5px/1 var(--font-sans); cursor: pointer;
+  transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast), filter var(--t-fast);
+}
+.hero-bilan-btn:hover { background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent-2); }
+.hero-bilan-btn:active { filter: var(--press-feedback); }
+.hero-bilan-arrow { color: var(--ink-3); margin-left: 4px; }
+.hero-bilan-btn:hover .hero-bilan-arrow { color: var(--accent-2); }
+
+/* Allocation — total (contexte) + barre empilée + légende */
+.alloc-total { display: flex; flex-direction: column; gap: 2px; }
+.alloc-total-cap {
+  font: 500 10px/1 var(--font-mono);
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3);
+}
+.alloc-total-val {
+  font: 600 24px/1.1 var(--font-sans); color: var(--ink);
+  letter-spacing: -0.02em; font-variant-numeric: tabular-nums; margin-top: 4px;
+}
+.alloc-total-sub { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+
+.alloc-stack {
+  display: flex; height: 14px; border-radius: 7px; overflow: hidden; gap: 2px;
+  background: var(--bg-sunk);
+}
+.alloc-stack > span { display: block; height: 100%; min-width: 0; }
+
+.alloc-legend { display: flex; flex-direction: column; gap: 9px; }
+.alloc-leg-item {
+  display: grid; grid-template-columns: 10px 1fr auto auto;
+  align-items: baseline; gap: 10px;
+}
+.alloc-leg-dot { width: 8px; height: 8px; border-radius: 2px; align-self: center; }
+.alloc-leg-name { font-size: 13px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.alloc-leg-pct { font: 600 12.5px/1 var(--font-sans); color: var(--ink); font-variant-numeric: tabular-nums; min-width: 38px; text-align: right; }
+.alloc-leg-val { font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; min-width: 64px; text-align: right; }
+
+/* Lien sobre vers Transactions (liste déplacée hors Dashboard) */
+.dash-tx-link {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  width: 100%; text-align: left;
+  background: var(--bg-elev); border: 1px solid var(--border);
+  border-radius: var(--radius-xl); padding: 18px 22px; cursor: pointer;
+  transition: box-shadow 280ms ease, border-color 280ms ease, filter var(--t-fast);
+  font-family: inherit;
+}
+.dash-tx-link:hover {
+  border-color: color-mix(in srgb, var(--accent) 22%, var(--border));
+  box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 12px 32px -16px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.dash-tx-link:active { filter: var(--press-feedback); }
+.dash-tx-link-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.dash-tx-link-sub { font-size: 12px; color: var(--ink-3); }
+.dash-tx-link-cta { font: 500 13px/1 var(--font-sans); color: var(--accent); white-space: nowrap; }
+
 /* Eyebrow Geist Mono "§ 0X" — pattern canonique des sections Dashboard (C4) */
 .dash-eyebrow { display: inline-flex; align-items: baseline; gap: 8px; }
 .dash-eyebrow-num {
@@ -1577,7 +1601,7 @@ function DashStyles() {
 }
 
 .kpi-strip {
-  display: grid; grid-template-columns: repeat(4, 1fr);
+  display: grid; grid-template-columns: repeat(3, 1fr);
   margin: 0 -28px;
   border-top: 1px solid var(--border);
 }
