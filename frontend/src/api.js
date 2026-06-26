@@ -72,7 +72,7 @@ const scheduleBackendPing = () => {
   __backendRetryTimer = setTimeout(async () => {
     __backendRetryTimer = null;
     try {
-      const res = await fetch(`${API_BASE}/auth/me`, { credentials: 'include' });
+      const res = await fetchWithTimeout(`${API_BASE}/auth/me`, { credentials: 'include' }, 8000);
       // 401 = serveur up mais session expirée → on est online quand même
       if (res.ok || res.status === 401) {
         markBackendOnline();
@@ -138,6 +138,24 @@ export const retryBackendNow = () => {
   scheduleBackendPing();
 };
 
+// Timeout dur sur toute requête API. SANS ça, si le backend accepte la
+// connexion mais ne répond jamais (ex. DB Supabase injoignable → l'API se fige),
+// le fetch pend indéfiniment → l'UI reste coincée sur "Patientez…" sans jamais
+// rendre la main. 15 s couvre un cold-start raisonnable ; au-delà on échoue
+// proprement avec un message + bascule offline (banner + retry auto).
+const REQUEST_TIMEOUT_MS = 15000;
+
+// fetch + timeout via AbortController (réutilisable).
+async function fetchWithTimeout(url, opts = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...opts, signal: ctrl.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // ============================================================================
 // CORE FETCH WRAPPER
 // ============================================================================
@@ -162,11 +180,14 @@ async function request(method, path, body = null) {
 
   let response;
   try {
-    response = await fetch(`${API_BASE}${path}`, opts);
+    response = await fetchWithTimeout(`${API_BASE}${path}`, opts);
   } catch (err) {
     if (isMutation) endMutation();
     markBackendOffline();
-    throw new Error('Impossible de joindre le serveur. Vérifie que le backend tourne.');
+    const timedOut = err?.name === 'AbortError';
+    throw new Error(timedOut
+      ? 'Le serveur ne répond pas pour le moment. Réessaie dans un instant.'
+      : 'Impossible de joindre le serveur. Vérifie ta connexion et réessaie.');
   }
 
   // 5xx persistants = backend en vrac (Railway cold start, crash, etc.)
