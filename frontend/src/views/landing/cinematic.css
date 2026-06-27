@@ -77,8 +77,8 @@ body.cinematic {
   width: min(1280px, 90vw); height: 720px;
   transform: translate(-50%, -50%);
   background: radial-gradient(ellipse 55% 50% at 50% 50%,
-    rgba(65,212,155,0.18) 0%,
-    rgba(65,212,155,0.04) 40%,
+    rgba(14, 124, 86,0.18) 0%,
+    rgba(14, 124, 86,0.04) 40%,
     transparent 72%);
   filter: blur(80px);
   pointer-events: none;
@@ -149,13 +149,13 @@ body.cinematic {
   background: var(--ink); color: var(--bg);
   box-shadow:
     0 1px 0 rgba(0,0,0,0.3),
-    0 12px 28px -8px rgba(65,212,155,0.55);
+    0 12px 28px -8px rgba(14, 124, 86,0.55);
 }
 .cin-cta-primary:hover {
   background: #E8EFE9;
   box-shadow:
     0 1px 0 rgba(0,0,0,0.3),
-    0 16px 36px -8px rgba(65,212,155,0.7);
+    0 16px 36px -8px rgba(14, 124, 86,0.7);
 }
 .cin-cta-ghost {
   background: color-mix(in srgb, var(--bg-elev) 80%, transparent);

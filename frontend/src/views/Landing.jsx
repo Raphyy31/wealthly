@@ -23,10 +23,12 @@ export default function Landing({ onSignIn, onSignUp, onTryDemo, onPresent }) {
 
   const [view, setView] = useState('cinematic'); // 'cinematic' | 'details'
 
-  // Force dark theme on landing, restore on unmount (papier-chaud nocturne).
+  // Force LIGHT theme on landing (charte « Forêt » claire). data-theme="light"
+  // est requis : sinon, pour un user en thème sombre, le bloc [data-theme="dark"]
+  // d'index.css (spécificité > :root) écraserait les tokens clairs de la landing.
   useEffect(() => {
     const root = document.documentElement;
-    root.setAttribute('data-theme', 'dark');
+    root.setAttribute('data-theme', 'light');
     return () => {
       // Restaure la préférence RÉELLE de l'utilisateur (localStorage), pas un
       // attribut transitoire : sinon le dark forcé "fuitait" dans la démo /

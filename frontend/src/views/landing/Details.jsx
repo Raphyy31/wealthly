@@ -146,12 +146,12 @@ function Bento() {
           <svg className="tile-spark" viewBox="0 0 200 50" preserveAspectRatio="none">
             <defs>
               <linearGradient id="tnSpk" x1="0" x2="0" y1="0" y2="1">
-                <stop offset="0%" stopColor="#41D49B" stopOpacity="0.4"/>
-                <stop offset="100%" stopColor="#41D49B" stopOpacity="0"/>
+                <stop offset="0%" stopColor="#0E7C56" stopOpacity="0.4"/>
+                <stop offset="100%" stopColor="#0E7C56" stopOpacity="0"/>
               </linearGradient>
             </defs>
             <path d="M0,38 C20,34 35,28 55,30 C75,32 90,22 115,20 C140,18 155,14 175,10 C190,8 200,6 200,6"
-                  fill="none" stroke="#41D49B" strokeWidth="2" strokeLinecap="round"/>
+                  fill="none" stroke="#0E7C56" strokeWidth="2" strokeLinecap="round"/>
             <path d="M0,38 C20,34 35,28 55,30 C75,32 90,22 115,20 C140,18 155,14 175,10 C190,8 200,6 200,6 L200,50 L0,50 Z"
                   fill="url(#tnSpk)"/>
           </svg>
@@ -185,7 +185,7 @@ function Bento() {
           <div className="tile-eye">Foyer</div>
           <div className="tile-family-stack">
             {['MR', 'CR', 'EM', 'PM'].map((n, i) => (
-              <div key={i} className="tile-avatar" style={{ background: ['#41D49B','#4FB57A','#E0975A','#74E3B7'][i] }}>
+              <div key={i} className="tile-avatar" style={{ background: ['#0E7C56','#4FB57A','#E0975A','#0A5E41'][i] }}>
                 {n}
               </div>
             ))}
@@ -203,7 +203,7 @@ function Bento() {
             <div className="tile-fiscal-row">
               <span className="tile-fiscal-lbl">IR estimé</span>
               <span className="tile-fiscal-val">8 420 €</span>
-              <span className="tile-fiscal-bar"><span style={{width:'42%', background:'#41D49B'}}/></span>
+              <span className="tile-fiscal-bar"><span style={{width:'42%', background:'#0E7C56'}}/></span>
             </div>
             <div className="tile-fiscal-row">
               <span className="tile-fiscal-lbl">IFI</span>
@@ -243,11 +243,11 @@ function Bento() {
           <div className="tile-eye">Tous vos actifs</div>
           <div className="tile-assets-grid">
             {[
-              {l:'Liquidités', v:'42 100', c:'#41D49B'},
+              {l:'Liquidités', v:'42 100', c:'#0E7C56'},
               {l:'PEA / CTO', v:'82 480', c:'#4FB57A'},
               {l:'Crypto', v:'12 410', c:'#E0975A'},
               {l:'SCPI', v:'40 330', c:'#B0392B'},
-              {l:'Immobilier', v:'310 000', c:'#74E3B7'},
+              {l:'Immobilier', v:'310 000', c:'#0A5E41'},
               {l:'Emprunts', v:'−15 880', c:'#75716A'},
             ].map((a,i)=>(
               <div key={i} className="tile-asset">
@@ -265,8 +265,8 @@ function Bento() {
           <div className="tile-security-content">
             <svg className="tile-shield" viewBox="0 0 32 32" fill="none">
               <path d="M16 3 L28 7 V16 C28 23 22 28 16 30 C10 28 4 23 4 16 V7 Z"
-                    fill="none" stroke="#41D49B" strokeWidth="1.4"/>
-              <path d="M11 16 L14.5 19.5 L22 12" fill="none" stroke="#41D49B" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                    fill="none" stroke="#0E7C56" strokeWidth="1.4"/>
+              <path d="M11 16 L14.5 19.5 L22 12" fill="none" stroke="#0E7C56" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
             <div>
               <div className="tile-strong">Vos données restent vôtres.</div>
