@@ -12,6 +12,7 @@
 // ============================================================================
 import { useEffect } from 'react';
 import { useIsNarrow } from '../../hooks/useIsNarrow.js';
+import Logo from '../../components/Logo.jsx';
 
 export default function FilmHero({ onSignIn, onSignUp, onTryDemo, onShowDetails }) {
   const isNarrow = useIsNarrow(760);
@@ -28,8 +29,7 @@ export default function FilmHero({ onSignIn, onSignUp, onTryDemo, onShowDetails 
 
       <header className="fh-strip">
         <div className="fh-brand">
-          <span className="fh-glyph">w</span>
-          <span className="fh-word">wealthly</span>
+          <Logo size={26} wordmark wordmarkSize={15} />
         </div>
         <div className="fh-strip-cta">
           {onTryDemo && <button className="fh-link" onClick={onTryDemo}>Voir la démo</button>}

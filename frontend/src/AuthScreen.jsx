@@ -47,11 +47,12 @@ export default function AuthScreen({ onAuth, onTryDemo, onBackToLanding, initial
   const [backendDown, setBackendDown] = useState(false);
   useEffect(() => subscribeBackendStatus(({ status }) => setBackendDown(status === 'offline')), []);
 
-  // Force dark — cohérent avec la Landing magazine en encre profonde.
+  // Force LIGHT — cohérent avec la charte « Forêt » claire (landing + app).
+  // (Avant : forçait 'dark' façon ancienne landing encre → incohérent depuis
+  // le passage en clair.) On restaure la préférence réelle au démontage.
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', 'dark');
+    document.documentElement.setAttribute('data-theme', 'light');
     return () => {
-      // Restaure la préférence stockée (défaut clair), pas un attribut transitoire.
       let stored = 'light';
       try { const s = localStorage.getItem('wealthly-theme'); if (s === 'light' || s === 'dark') stored = s; } catch {}
       document.documentElement.setAttribute('data-theme', stored);
