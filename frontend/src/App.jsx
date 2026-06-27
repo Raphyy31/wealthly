@@ -142,14 +142,14 @@ export default function App() {
     return (
       <div style={{
         position: 'fixed', inset: 0,
-        background: 'var(--bg, #F7F6F2)',
+        background: 'var(--bg, #F7F9F6)',
         zIndex: 1,
       }}>
         <div style={{
           position: 'fixed', top: '50%', left: '50%',
           transform: 'translate(-50%, -50%)',
           width: 28, height: 28,
-          border: '2px solid var(--border, #E4E1D8)',
+          border: '2px solid var(--border, #E2E6DF)',
           borderTopColor: 'var(--accent, #0E7C56)',
           borderRadius: '50%',
           animation: 'ws 0.7s linear infinite',

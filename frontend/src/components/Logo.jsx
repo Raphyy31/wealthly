@@ -35,8 +35,9 @@ export default function Logo({
   }, []);
 
   const resolved = tone || (theme === 'dark' ? 'cream' : 'ink');
-  const bg = resolved === 'cream' ? '#F1EEE4' : '#16150F';
-  const fg = resolved === 'cream' ? '#0F0E0C' : '#F1EEE4';
+  // Neutres charte « Forêt » (étaient encore en papier-chaud #F1EEE4/#16150F).
+  const bg = resolved === 'cream' ? '#ECF1E9' : '#0C0F0B';
+  const fg = resolved === 'cream' ? '#10150F' : '#F7F9F6';
 
   const radius = Math.round(size * 0.23);
   const fontSize = Math.round(size * 0.5);
