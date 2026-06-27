@@ -12,7 +12,7 @@
 // (cf. CLAUDE.md "Landing is dark-only by force").
 // ============================================================================
 import { useEffect, useState } from 'react';
-import Cinematic from './landing/Cinematic.jsx';
+import FilmHero from './landing/FilmHero.jsx';
 import Details from './landing/Details.jsx';
 
 export default function Landing({ onSignIn, onSignUp, onTryDemo, onPresent }) {
@@ -66,7 +66,7 @@ export default function Landing({ onSignIn, onSignUp, onTryDemo, onPresent }) {
   }
 
   return (
-    <Cinematic
+    <FilmHero
       onSignIn={onSignIn}
       onSignUp={onSignUp}
       onShowDetails={() => setView('details')}
