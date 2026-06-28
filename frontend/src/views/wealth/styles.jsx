@@ -57,7 +57,7 @@ export function RealEstatePatchStyles() {
   display: inline-flex; align-items: center; gap: 6px;
   font-size: 11px; font-weight: 500;
   padding: 3px 10px;
-  background: var(--accent-soft, #E7EBFF);
+  background: var(--accent-soft, #E1F1E9);
   color: var(--accent, #0E7C56);
   border-radius: 999px;
   letter-spacing: 0;

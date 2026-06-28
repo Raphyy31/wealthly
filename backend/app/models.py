@@ -117,6 +117,11 @@ class User(Base):
     # Optional link to a Member entry (adult users usually have a Member counterpart)
     member_id = Column(String, ForeignKey("members.id", ondelete="SET NULL"), nullable=True)
 
+    # Google OAuth — stores the Google user ID ("sub" claim) so the same
+    # Google account always maps to the same Wealthly user, even if they
+    # change their Google email. Nullable = password-only users.
+    google_id = Column(String, nullable=True, index=True)
+
     # 2FA TOTP (C19 2026-05-18) — secret base32 généré par pyotp.random_base32().
     # Stocké en clair (équivalent password — au pire compromis DB = comme leak pw).
     # `totp_enabled` requis pour distinguer "secret en cours de setup" vs "vérifié".

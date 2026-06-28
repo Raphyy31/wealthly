@@ -261,6 +261,11 @@ def _run_lightweight_migrations() -> None:
             # Reclasse les transactions existantes + les règles de catégorisation.
             "UPDATE transactions SET category_slug = 'loan_mortgage' WHERE category_slug = 'mortgage_interest'",
             "UPDATE categorisation_rules SET category_slug = 'loan_mortgage' WHERE category_slug = 'mortgage_interest'",
+            # Google OAuth — google_id stores the Google "sub" claim (stable
+            # across email changes). Partial unique index: NULL rows ignored so
+            # multiple password-only users can coexist without violating uniqueness.
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR",
+            "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_google_id ON users(google_id) WHERE google_id IS NOT NULL",
         ]
     # Each statement runs in its own transaction so a failed DDL/DML
     # doesn't leave the connection in an aborted-transaction state and

@@ -126,6 +126,11 @@ class Settings:
     # les requêtes (jamais d'endpoint sans auth ouvert).
     CRON_SECRET: str = os.getenv("CRON_SECRET", "")
 
+    # Google OAuth — client_id only (not a secret; safe to expose in frontend).
+    # Set GOOGLE_CLIENT_ID on Railway to enable "Se connecter avec Google".
+    # If absent, the /auth/google endpoint returns 501.
+    GOOGLE_CLIENT_ID: str | None = os.getenv("GOOGLE_CLIENT_ID")
+
     # App
     APP_NAME: str = "Wealthly API"
     DEBUG: bool = _DEBUG
