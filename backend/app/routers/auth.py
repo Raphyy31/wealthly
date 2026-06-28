@@ -451,7 +451,8 @@ def google_sign_in(request: Request, response: Response, payload: GoogleSignInRe
 
     if not user:
         # Create a new household + user for first-time Google sign-in.
-        household = Household(name=f"Foyer de {name.split()[0] if name else 'l\'utilisateur'}")
+        first_name = name.split()[0] if name else "l’utilisateur"
+        household = Household(name=f"Foyer de {first_name}")
         db.add(household)
         db.flush()
 
