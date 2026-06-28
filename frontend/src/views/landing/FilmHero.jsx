@@ -59,7 +59,7 @@ export default function FilmHero({ onSignIn, onSignUp, onTryDemo, onShowDetails 
           <button className="fh-cta ghost" onClick={onShowDetails}>Découvrir Wealthly</button>
         </div>
 
-        <div className={`fh-film-card ${isNarrow ? 'is-vertical' : ''}`}>
+        <div className={`fh-film-stage ${isNarrow ? 'is-vertical' : ''}`}>
           <div className="fh-film-glow" aria-hidden/>
           <iframe
             key={src}
@@ -69,7 +69,6 @@ export default function FilmHero({ onSignIn, onSignUp, onTryDemo, onShowDetails 
             scrolling="no"
             className="fh-film"
           />
-          <div className="fh-film-mask" aria-hidden/>
         </div>
       </main>
     </div>
@@ -202,42 +201,36 @@ const FILM_HERO_CSS = `
 .fh-cta.ghost:hover { background: rgba(241,238,228,0.10); border-color: rgba(241,238,228,0.36); }
 .fh-cta:active { transform: translateY(0); filter: brightness(0.95); }
 
-/* ── Carte film ──────────────────────────────────────────────────────── */
-.fh-film-card {
+/* ── Film qui flotte (pas de cadre, bords fondus) ─────────────────────── */
+.fh-film-stage {
   position: relative;
   width: 100%;
-  max-width: 1100px;
-  margin: 64px auto 0;
+  max-width: 1240px;
+  margin: 72px auto 0;
   aspect-ratio: 16 / 9;
-  border-radius: 18px;
-  overflow: hidden;
-  background: #faf9f5;
-  border: 1px solid rgba(241,238,228,0.14);
-  box-shadow:
-    0 1px 0 rgba(241,238,228,0.08) inset,
-    0 30px 80px -20px rgba(0,0,0,0.6),
-    0 0 0 1px rgba(65,212,155,0.10);
+  /* Bords du film fondus dans le noir via un mask radial → l'iframe semble
+     se diffuser dans la page, plus de bordure / d'encadré visible. */
+  -webkit-mask-image: radial-gradient(ellipse 70% 78% at 50% 46%, #000 50%, rgba(0,0,0,0.6) 75%, transparent 100%);
+          mask-image: radial-gradient(ellipse 70% 78% at 50% 46%, #000 50%, rgba(0,0,0,0.6) 75%, transparent 100%);
 }
-.fh-film-card.is-vertical {
-  max-width: 320px;
+.fh-film-stage.is-vertical {
+  max-width: 380px;
   aspect-ratio: 9 / 16;
+  -webkit-mask-image: radial-gradient(ellipse 75% 70% at 50% 46%, #000 55%, rgba(0,0,0,0.6) 78%, transparent 100%);
+          mask-image: radial-gradient(ellipse 75% 70% at 50% 46%, #000 55%, rgba(0,0,0,0.6) 78%, transparent 100%);
 }
 .fh-film-glow {
-  position: absolute; inset: -40px;
-  background: radial-gradient(60% 40% at 50% 0%, rgba(65,212,155,0.22), transparent 70%);
+  position: absolute; inset: -80px;
+  background:
+    radial-gradient(60% 50% at 50% 40%, rgba(65,212,155,0.18), transparent 70%),
+    radial-gradient(40% 40% at 50% 100%, rgba(65,212,155,0.10), transparent 70%);
   filter: blur(20px);
   z-index: -1;
+  pointer-events: none;
 }
 .fh-film {
   width: 100%; height: 100%;
   border: 0; display: block;
-}
-/* Masque le bandeau de lecture du film embarqué (en bas) sans le couper */
-.fh-film-mask {
-  position: absolute;
-  left: 0; right: 0; bottom: 0; height: 56px;
-  background: linear-gradient(180deg, transparent, rgba(250,249,245,1) 60%);
-  pointer-events: none;
 }
 
 /* ── Mobile ──────────────────────────────────────────────────────────── */
@@ -247,7 +240,7 @@ const FILM_HERO_CSS = `
   .fh-title { font-size: clamp(32px, 9vw, 48px); }
   .fh-sub { font-size: 15px; margin-top: 18px; }
   .fh-cta-row { margin-top: 28px; }
-  .fh-film-card { margin-top: 40px; }
+  .fh-film-stage { margin-top: 40px; }
   .fh-grid { background-size: 36px 36px; }
 }
 
