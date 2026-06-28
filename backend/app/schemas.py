@@ -50,17 +50,6 @@ class TotpDisableIn(BaseModel):
     password: str  # exige le mot de passe pour désactiver (anti-takeover)
 
 
-# ============================================================================
-# GOOGLE OAUTH
-# ============================================================================
-
-class GoogleSignInRequest(BaseModel):
-    credential: str  # ID token issued by Google Identity Services
-
-class AuthConfigOut(BaseModel):
-    google_client_id: str | None = None
-
-
 class UserOut(BaseModel):
     id: str
     email: str

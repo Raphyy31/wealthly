@@ -255,8 +255,6 @@ export const auth = {
   me: () => get('/auth/me'),
   forgotPassword: (email) => post('/auth/forgot-password', { email }),
   resetPassword: (token, newPassword) => post('/auth/reset-password', { token, new_password: newPassword }),
-  getConfig: () => get('/auth/config'),
-  googleSignIn: (credential) => post('/auth/google', { credential }),
 };
 
 // 2FA TOTP (C19 2026-05-18)

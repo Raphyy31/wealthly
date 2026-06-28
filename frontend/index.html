@@ -83,8 +83,6 @@
     <!-- Wake up Railway backend immediately (fire-and-forget, before JS bundle parses).
          Passes via /api proxy (Vercel rewrite) pour rester same-origin. -->
     <script>try{fetch('/api/health').catch(function(){});}catch(e){}</script>
-    <!-- Google Identity Services — loaded async, used by AuthScreen when GOOGLE_CLIENT_ID is configured -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

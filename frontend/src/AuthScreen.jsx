@@ -9,7 +9,7 @@
 // Auth = cookie-based (set-cookie au login/register/reset), pas de
 // localStorage côté token de session.
 // ============================================================================
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { MagneticButton } from './components/MagneticButton.jsx';
 import { useTranslation } from 'react-i18next';
 import { Mail, Lock, User, Home, Eye, EyeOff, AlertCircle, ArrowLeft, Check, Sparkles } from 'lucide-react';
@@ -46,57 +46,6 @@ export default function AuthScreen({ onAuth, onTryDemo, onBackToLanding, initial
   // on rassure (les données sont en sécurité côté base, c'est juste l'API).
   const [backendDown, setBackendDown] = useState(false);
   useEffect(() => subscribeBackendStatus(({ status }) => setBackendDown(status === 'offline')), []);
-
-  // Google OAuth
-  const [googleClientId, setGoogleClientId] = useState(null);
-  const googleButtonRef = useRef(null);
-  useEffect(() => {
-    auth.getConfig().then(cfg => {
-      if (cfg?.google_client_id) setGoogleClientId(cfg.google_client_id);
-    }).catch(() => {});
-  }, []);
-
-  const handleGoogleCredential = async (credentialResponse) => {
-    setError(null);
-    setLoading(true);
-    try {
-      await auth.googleSignIn(credentialResponse.credential);
-      onAuth();
-    } catch (err) {
-      setError(err.message || 'Erreur lors de la connexion Google.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!googleClientId || !googleButtonRef.current) return;
-    const init = () => {
-      if (!window.google?.accounts?.id) return;
-      window.google.accounts.id.initialize({
-        client_id: googleClientId,
-        callback: handleGoogleCredential,
-        ux_mode: 'popup',
-      });
-      window.google.accounts.id.renderButton(googleButtonRef.current, {
-        theme: 'outline',
-        size: 'large',
-        width: googleButtonRef.current.offsetWidth || 340,
-        text: mode === 'register' ? 'signup_with' : 'continue_with',
-        locale: 'fr',
-        shape: 'rectangular',
-      });
-    };
-    if (window.google?.accounts?.id) {
-      init();
-    } else {
-      const interval = setInterval(() => {
-        if (window.google?.accounts?.id) { clearInterval(interval); init(); }
-      }, 100);
-      return () => clearInterval(interval);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [googleClientId, mode, googleButtonRef.current]);
 
   // Force LIGHT — cohérent avec la charte « Forêt » claire (landing + app).
   // (Avant : forçait 'dark' façon ancienne landing encre → incohérent depuis
@@ -381,13 +330,6 @@ export default function AuthScreen({ onAuth, onTryDemo, onBackToLanding, initial
               </span>
             )}
           </div>
-
-          {(mode === 'login' || mode === 'register') && googleClientId && (
-            <div className="auth-google-wrap">
-              <div className="auth-separator"><span>ou</span></div>
-              <div ref={googleButtonRef} className="auth-google-btn-container"/>
-            </div>
-          )}
 
           {(mode === 'login' || mode === 'register') && onTryDemo && (
             <button
@@ -682,24 +624,6 @@ const css = `
   transition: color 120ms;
 }
 .auth-link:hover { color: var(--accent-2); }
-
-/* Google OAuth */
-.auth-google-wrap { display: flex; flex-direction: column; gap: 12px; }
-.auth-separator {
-  display: flex; align-items: center; gap: 12px;
-  font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
-  color: var(--ink-3);
-}
-.auth-separator::before, .auth-separator::after {
-  content: ''; flex: 1; height: 1px; background: var(--border);
-}
-.auth-google-btn-container {
-  width: 100%; min-height: 44px;
-  display: flex; justify-content: center; align-items: center;
-  border-radius: 8px;
-  overflow: hidden;
-}
-.auth-google-btn-container > div { width: 100% !important; }
 
 /* Demo button */
 .auth-demo {

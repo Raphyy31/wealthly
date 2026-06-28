@@ -3,7 +3,7 @@
 //
 // S'ouvre en popup sur la landing (pas de changement de page).
 // Modes : login | register | forgot
-// Inclut : email/password, Google OAuth, TOTP step 2, démo
+// Inclut : email/password, TOTP step 2, démo
 // ============================================================================
 import { createPortal } from 'react-dom';
 import { useEffect, useRef, useState } from 'react';
@@ -24,8 +24,6 @@ export default function AuthModal({ open, initialMode = 'login', onClose, onAuth
   const [info, setInfo] = useState(null);
   const [totpStep, setTotpStep] = useState(false);
   const [totpCode, setTotpCode] = useState('');
-  const [googleClientId, setGoogleClientId] = useState(null);
-  const googleButtonRef = useRef(null);
   const shellRef = useRef(null);
 
   // Sync mode when parent changes it (sign-in vs create account)
@@ -55,61 +53,6 @@ export default function AuthModal({ open, initialMode = 'login', onClose, onAuth
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [open, onClose]);
-
-  // Fetch Google OAuth config (once)
-  useEffect(() => {
-    auth.getConfig().then(cfg => {
-      if (cfg?.google_client_id) setGoogleClientId(cfg.google_client_id);
-    }).catch(() => {});
-  }, []);
-
-  const handleGoogleCredential = async (resp) => {
-    setError(null);
-    setLoading(true);
-    try {
-      await auth.googleSignIn(resp.credential);
-      onAuth();
-    } catch (err) {
-      setError(err.message || 'Erreur lors de la connexion Google.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Re-render Google button whenever mode or open state changes
-  useEffect(() => {
-    if (!open || !googleClientId || !googleButtonRef.current) return;
-    const init = () => {
-      if (!window.google?.accounts?.id) return;
-      window.google.accounts.id.initialize({
-        client_id: googleClientId,
-        callback: handleGoogleCredential,
-        ux_mode: 'popup',
-      });
-      const btn = googleButtonRef.current;
-      if (!btn) return;
-      btn.innerHTML = ''; // clear previous render
-      window.google.accounts.id.renderButton(btn, {
-        theme: 'outline',
-        size: 'large',
-        width: btn.offsetWidth || 340,
-        text: mode === 'register' ? 'signup_with' : 'continue_with',
-        locale: 'fr',
-        shape: 'rectangular',
-      });
-    };
-    if (window.google?.accounts?.id) {
-      // Small delay so the ref div is painted with its real width
-      const t = setTimeout(init, 50);
-      return () => clearTimeout(t);
-    } else {
-      const iv = setInterval(() => {
-        if (window.google?.accounts?.id) { clearInterval(iv); init(); }
-      }, 100);
-      return () => clearInterval(iv);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, googleClientId, mode]);
 
   const switchMode = (next) => {
     setMode(next);
@@ -257,14 +200,6 @@ export default function AuthModal({ open, initialMode = 'login', onClose, onAuth
                                    'Envoyer le lien'}
           </button>
         </form>
-
-        {/* Google Sign-In */}
-        {(mode === 'login' || mode === 'register') && googleClientId && (
-          <div className="amod-google-section">
-            <div className="amod-sep"><span>ou</span></div>
-            <div ref={googleButtonRef} className="amod-google-btn"/>
-          </div>
-        )}
 
         {/* Footer links */}
         <div className="amod-footer">
@@ -500,23 +435,6 @@ const MODAL_CSS = `
 }
 .amod-submit:disabled { opacity: .55; cursor: wait; box-shadow: none; }
 .amod-submit:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-soft), 0 0 0 4px var(--accent); }
-
-/* ── Google section ── */
-.amod-google-section { display: flex; flex-direction: column; gap: 10px; }
-.amod-sep {
-  display: flex; align-items: center; gap: 10px;
-  font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
-  color: var(--ink-3);
-}
-.amod-sep::before, .amod-sep::after {
-  content: ''; flex: 1; height: 1px; background: var(--border);
-}
-.amod-google-btn {
-  width: 100%; min-height: 44px;
-  display: flex; justify-content: center; align-items: center;
-  border-radius: 10px; overflow: hidden;
-}
-.amod-google-btn > div { width: 100% !important; }
 
 /* ── Footer links ── */
 .amod-footer {

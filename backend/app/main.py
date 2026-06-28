@@ -78,28 +78,6 @@ def _run_lightweight_migrations() -> None:
     """
     is_pg = engine.dialect.name == "postgresql"
 
-    # PRIORITAIRE — google_id (ajouté au modèle User en juin 2026). Si cette
-    # migration foire silencieusement, TOUTE requête db.query(User) plante en
-    # 500 ("column users.google_id does not exist"). On la fait passer en
-    # premier, dans son propre bloc, avec log explicite succès/échec pour
-    # qu'on voie immédiatement dans Railway si elle ne s'applique pas.
-    if is_pg:
-        try:
-            with engine.begin() as conn:
-                conn.execute(text(
-                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR"
-                ))
-            logger.info("[migrate] users.google_id column ensured")
-        except Exception as e:
-            logger.error("[migrate] CRITICAL: could not add users.google_id — login will 500: %s", e)
-        try:
-            with engine.begin() as conn:
-                conn.execute(text(
-                    "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_google_id ON users(google_id) WHERE google_id IS NOT NULL"
-                ))
-        except Exception as e:
-            logger.warning("[migrate] ix_users_google_id index: %s", e)
-
     statements: list[str] = []
     if is_pg:
         statements = [
@@ -284,11 +262,6 @@ def _run_lightweight_migrations() -> None:
             # Reclasse les transactions existantes + les règles de catégorisation.
             "UPDATE transactions SET category_slug = 'loan_mortgage' WHERE category_slug = 'mortgage_interest'",
             "UPDATE categorisation_rules SET category_slug = 'loan_mortgage' WHERE category_slug = 'mortgage_interest'",
-            # Google OAuth — google_id stores the Google "sub" claim (stable
-            # across email changes). Partial unique index: NULL rows ignored so
-            # multiple password-only users can coexist without violating uniqueness.
-            "ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR",
-            "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_google_id ON users(google_id) WHERE google_id IS NOT NULL",
         ]
 
     # Promote ADMIN_EMAILS → is_admin = TRUE. Idempotent, runs every boot
