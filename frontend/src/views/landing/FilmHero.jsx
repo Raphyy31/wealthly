@@ -201,36 +201,48 @@ const FILM_HERO_CSS = `
 .fh-cta.ghost:hover { background: rgba(241,238,228,0.10); border-color: rgba(241,238,228,0.36); }
 .fh-cta:active { transform: translateY(0); filter: brightness(0.95); }
 
-/* ── Film qui flotte (pas de cadre, bords fondus) ─────────────────────── */
+/* ── Film qui flotte (pas de cadre, bords fondus, UI player cachée) ──── */
 .fh-film-stage {
   position: relative;
   width: 100%;
   max-width: 1240px;
   margin: 72px auto 0;
   aspect-ratio: 16 / 9;
-  /* Bords du film fondus dans le noir via un mask radial → l'iframe semble
-     se diffuser dans la page, plus de bordure / d'encadré visible. */
-  -webkit-mask-image: radial-gradient(ellipse 70% 78% at 50% 46%, #000 50%, rgba(0,0,0,0.6) 75%, transparent 100%);
-          mask-image: radial-gradient(ellipse 70% 78% at 50% 46%, #000 50%, rgba(0,0,0,0.6) 75%, transparent 100%);
+  overflow: hidden;
+  /* Le clip-path adoucit uniquement les COINS pour casser l'effet rectangle
+     sans masquer le contenu central. */
+  border-radius: 24px;
+  /* Bords latéraux fondus dans le noir via mask gradient en X — vertical
+     reste net pour ne pas perdre le contenu. */
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 6%, #000 94%, transparent 100%);
+          mask-image: linear-gradient(90deg, transparent 0%, #000 6%, #000 94%, transparent 100%);
 }
 .fh-film-stage.is-vertical {
   max-width: 380px;
   aspect-ratio: 9 / 16;
-  -webkit-mask-image: radial-gradient(ellipse 75% 70% at 50% 46%, #000 55%, rgba(0,0,0,0.6) 78%, transparent 100%);
-          mask-image: radial-gradient(ellipse 75% 70% at 50% 46%, #000 55%, rgba(0,0,0,0.6) 78%, transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 6%, #000 94%, transparent 100%);
+          mask-image: linear-gradient(180deg, transparent 0%, #000 6%, #000 94%, transparent 100%);
 }
 .fh-film-glow {
   position: absolute; inset: -80px;
   background:
-    radial-gradient(60% 50% at 50% 40%, rgba(65,212,155,0.18), transparent 70%),
-    radial-gradient(40% 40% at 50% 100%, rgba(65,212,155,0.10), transparent 70%);
+    radial-gradient(50% 45% at 50% 40%, rgba(65,212,155,0.22), transparent 70%),
+    radial-gradient(35% 35% at 50% 100%, rgba(65,212,155,0.12), transparent 70%);
   filter: blur(20px);
   z-index: -1;
   pointer-events: none;
 }
 .fh-film {
-  width: 100%; height: 100%;
-  border: 0; display: block;
+  position: absolute;
+  /* Iframe AGRANDI vers le bas pour que le bandeau de lecture du film
+     (boutons play / scrubber / download) soit poussé HORS du cadre visible.
+     Le contenu utile (scènes du film) reste cadré dans la zone visible. */
+  top: 0; left: 0;
+  width: 100%;
+  height: 124%;
+  border: 0;
+  display: block;
+  pointer-events: none; /* le film tourne tout seul — pas d'interactions */
 }
 
 /* ── Mobile ──────────────────────────────────────────────────────────── */

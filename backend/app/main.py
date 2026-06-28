@@ -77,6 +77,29 @@ def _run_lightweight_migrations() -> None:
     the except clause swallows it because in dev the DB is recreated often.
     """
     is_pg = engine.dialect.name == "postgresql"
+
+    # PRIORITAIRE — google_id (ajouté au modèle User en juin 2026). Si cette
+    # migration foire silencieusement, TOUTE requête db.query(User) plante en
+    # 500 ("column users.google_id does not exist"). On la fait passer en
+    # premier, dans son propre bloc, avec log explicite succès/échec pour
+    # qu'on voie immédiatement dans Railway si elle ne s'applique pas.
+    if is_pg:
+        try:
+            with engine.begin() as conn:
+                conn.execute(text(
+                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR"
+                ))
+            logger.info("[migrate] users.google_id column ensured")
+        except Exception as e:
+            logger.error("[migrate] CRITICAL: could not add users.google_id — login will 500: %s", e)
+        try:
+            with engine.begin() as conn:
+                conn.execute(text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_google_id ON users(google_id) WHERE google_id IS NOT NULL"
+                ))
+        except Exception as e:
+            logger.warning("[migrate] ix_users_google_id index: %s", e)
+
     statements: list[str] = []
     if is_pg:
         statements = [
