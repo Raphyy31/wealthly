@@ -9,6 +9,59 @@ Notes for Claude (and any future AI tooling) picking the project back up.
 
 ---
 
+## Session 2026-06-28 — Raphyy31 + Claude (Sonnet 4.6 → Opus 4.7) — charte Forêt + landing immersive + fix login 500
+
+**Tout sur `main` + `claude/wealthly-project-u3527b`, déployé.** Bascule charte « Forêt », tentative Google OAuth abandonnée (cause du 500 login), refonte landing/film, sidebar icon-rail.
+
+### 🎨 Charte « Forêt » (remplace papier-chaud + cobalt)
+- Accent passe de **cobalt `#2540D9`** → **émeraude `#0E7C56`** (light) / **`#41D49B`** (dark)
+- Tokens `index.css` `@theme` block ET `:root` mis à jour — l'oubli du `@theme` faisait que les utilities Tailwind compilaient encore en cobalt
+- Logo refait : carré émeraude `#41D49B` + carré sombre `#0C1009` intérieur (proportions calées sur le SVG du film). **Plus de monogramme W.** Identité stable en clair comme en sombre (pas de flip de couleur selon le thème — seul le wordmark suit). `frontend/src/components/Logo.jsx` + `icon.svg` + `icon-maskable.svg` alignés. `index.html` favicon bumpé `?v=4`.
+- Fallbacks neutres Forêt : `#ECF1E9` (bg crème), `#10150F` (ink), `#F7F9F6` (bg light)
+
+### 🛬 Landing — hero immersif (style Linear/Vercel/Apple)
+`frontend/src/views/landing/FilmHero.jsx` refondu plusieurs fois jusqu'au layout final :
+- **Split desktop** (texte gauche + film droite, visible immédiatement dès l'arrivée — pas de scroll requis)
+- Fond `#0a0e08` avec halo radial émeraude + grid subtile
+- Eyebrow en chip Forêt, titre Geist 62px avec « *en un seul regard.* » en italique Newsreader émeraude
+- Le sélecteur global `:root h1 em` (`index.css` ligne 4605) FORCE `font-style: normal; color: var(--ink)` → il fallait un sélecteur plus spécifique `.film-hero h1.fh-title .fh-title-accent` pour battre la cascade et garder l'italique émeraude
+- CTAs : primary émeraude avec halo + ghost glassmorphism (rgba+blur)
+- Film en iframe avec **mask gradient horizontal** (les bords G/D fondent dans le noir, contenu central net), `border-radius: 22px`, `height: 124%` + `overflow:hidden` → la barre de lecture du film embarqué (play/scrubber/download) sort du cadre visible. `pointer-events: none` sur l'iframe.
+- Stack mobile en colonne (breakpoint 960px)
+- ⚠️ Stages intermédiaires testés et abandonnés : full-bleed avec texte par-dessus (overlap moche), mask radial (floutait le centre), card avec border (encadré crème sur fond sombre — pas intégré)
+
+### 🎬 Film landing (CSP)
+Le film bundle (`/public/film-16x9.html` 261 Ko, `/public/film-9x16.html` 259 Ko, autonomes) charge React/ReactDOM depuis `https://unpkg.com` au runtime. Le CSP `vercel.json` sur `/film-*.html` les bloquait → `[dc] failed to load React or boot`. **Fix** : ajout `https://unpkg.com` à `script-src` et `connect-src` dans la règle CSP scopée aux pages film. La CSP de l'app principale reste stricte (aucun CDN externe).
+
+### 🪟 Sidebar icon-rail collapsible
+`index.css` ~ligne 998 : sidebar passe à **64px** par défaut → **240px** au hover. Tentative initiale avec `opacity: 0` cachait les éléments mais GARDAIT leur hauteur → les 4 pills membres (AG/AM…) s'empilaient en blocs colorés, le footer (cloche/thème/langue/devise/démo) wrappait n'importe comment, les labels de groupe faisaient des trous. **Fix** : `display: none` au lieu de `opacity: 0`. En collapsed, seuls subsistent **logo + icônes nav + avatars comptes + avatar user**. Tout le texte/badges/footer apparaît au hover via `display: ...` restauré.
+
+### 🔴 Login 500 — Google OAuth retiré complètement
+**Symptôme** : `/api/auth/login` → 500 systématique depuis l'ajout de Google sign-in (commit `ee94277`). Login marchait avant. **Causes successives** :
+1. **Syntax error Python** (`48b70ea`) : f-string `f"Foyer de {name.split()[0] if name else 'l\\'utilisateur'}"` — backslash dans une expression f-string interdit en Python ≤ 3.11. L'`import` du module `auth.py` plantait → TOUS les endpoints `/auth/*` en 500.
+2. **Colonne manquante** (suspect mais non confirmé) : `User.google_id` ajoutée au modèle ORM. Si la migration `ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id` foirait silencieusement au boot, `db.query(User)` générait `SELECT users.google_id` → 500 « column does not exist ».
+
+**Décision user** : « *enleve toute relation avec google, ca marchait avant* ». **Rip complet** (commit `2400bf8`) :
+- Backend : retire `User.google_id`, `/auth/config`, `/auth/google`, schemas `GoogleSignInRequest`/`AuthConfigOut`, migration google_id (lightweight + bootstrap), import dans router
+- Frontend : retire boutons Google dans `AuthModal.jsx` + `AuthScreen.jsx`, helpers `auth.getConfig`/`auth.googleSignIn` dans `api.js`, GSI script dans `index.html`
+- `vercel.json` : nettoie CSP (plus de `accounts.google.com` / `oauth2.googleapis.com`)
+- `GOOGLE_CLIENT_ID` reste dans `config.py` mais inutilisé — zéro impact
+
+**Leçon** : ne jamais ajouter une colonne à un modèle ORM en prod sans s'assurer ABSOLUMENT que la migration s'applique (et qu'on voit le succès/échec dans les logs). Le pattern « lightweight migrations IF NOT EXISTS » est silencieusement fragile si la liste de statements crash en milieu de course.
+
+### 🔧 Autres correctifs
+- **Sidebar** : commit `9d18b43` avait ajouté l'icon-rail + bootstrap `ADMIN_EMAILS` (`config.py` + `main.py`). Ce dernier reste utile : poser `ADMIN_EMAILS=raphael.darmon1@gmail.com` sur Railway → promotion idempotente au boot.
+- **AuthModal popup** (`AuthModal.jsx` ~600 lignes) : reste en place pour ouvrir l'auth depuis la landing sans changer de page. `App.jsx` route :
+  - URL `?reset_token=…` → `AuthScreen` plein écran (mode reset)
+  - Sinon → Landing + `AuthModal` (créé via `createPortal(jsx, document.body)`)
+
+### Restant / actions Railway requises
+- Poser `ADMIN_EMAILS=raphael.darmon1@gmail.com` sur Railway (pas encore fait → admin 403)
+- Connexions GoCardless expirées (90 j DSP2) → reconnecter dans Réglages → Comptes bancaires
+- Le commit `c580349` puis `2400bf8` ont reverté les ajouts CSP Google — la CSP principale est à nouveau strict (aucun CDN externe sauf fonts Google)
+
+---
+
 ## Session 2026-06-08 — Raphyy31 + Claude (Opus 4.8) — correctifs prod critiques + bilan PDF + export Excel
 
 **Tout sur `main`, déployé.** Série de fixes prod (signalés par l'user en live) + finition bilan PDF + export Excel.
@@ -278,44 +331,42 @@ QUICKSTART.md Outdated, kept for historical reference
 
 ---
 
-## Visual direction (CRITICAL — figé 2026-05-12, don't deviate without asking)
+## Visual direction (CRITICAL — charte « Forêt » 2026-06-27, don't deviate without asking)
 
-**"Papier chaud + cobalt sobre"** (Wealthly v3 — Refonte Claude Design).
+**« Forêt »** — émeraude profond sur neutres papier verdâtre. Remplace l'ancienne charte « papier-chaud + cobalt » (2026-05-12) qui a tenu jusqu'à fin juin 2026.
 
-Lineage (do NOT roll back to any of these): teal/emerald `#00d09c` rejected 2026-05-05 ("fait plus sérieux"); Méridien gold `#c5a572` shipped briefly then abandoned because the dark-only direction was too narrow. The current cobalt + cream papier chaud system works in both light (app default) and dark (landing cover) modes and is the one to extend.
+Lineage (do NOT roll back to any of these): teal `#00d09c` (rejeté 2026-05-05), Méridien gold `#c5a572` (dark-only trop étroit, abandonné), papier-chaud + cobalt `#2540D9` (charte intermédiaire mai → juin 2026, abandonnée pour Forêt).
 
 ### Source of truth
 
-`frontend/src/index.css` is THE token file. Light by default, dark unlocked via `data-theme="dark"` on `<html>`.
+`frontend/src/index.css` est LE fichier tokens. Light par défaut, dark via `data-theme="dark"` sur `<html>`. **Toujours mettre à jour les DEUX blocs** : le `@theme` Tailwind (en haut) ET le `:root` (en dessous). Oublier le `@theme` fait que les utilities Tailwind compilent encore aux anciennes valeurs (piège vécu lors de la bascule Forêt).
 
-`frontend/src/Styles.jsx` (~1500 lines of CSS-in-JS, paired with WealthlyApp) consumes the same vars. The `--color-w-*` Tailwind theme block at the top of index.css aliases the canonical tokens — do not introduce a new naming scheme.
+`frontend/src/Styles.jsx` consomme les mêmes vars.
 
 ### Key tokens (light, app default)
 
-- `--bg` / `--bg-elev` / `--bg-sunk`: `#F7F6F2` / `#FFFFFF` / `#EFEDE6`
-- `--ink` / `--ink-2` / `--ink-3`: `#16150F` / `#56544A` / `#8C8979`
-- `--border` / `--border-strong`: `#E4E1D8` / `#D2CEC0`
-- `--accent` / `--accent-2` / `--accent-soft`: **`#2540D9`** (cobalt) / `#1A2FA8` / `#E7EBFF`
-- `--positive` / `--negative` / `--warning`: `#136D3E` / `#B0392B` / `#8E641A`
-- `--d1..d7` dataviz: cobalt, sage, terracotta, mauve, pink, grey, ocre — stable order for charts and bank dots
+- `--bg` / `--bg-elev` / `--bg-sunk`: `#F7F9F6` / `#FFFFFF` / `#ECF1E9`
+- `--ink` / `--ink-2` / `--ink-3`: `#10150F` / ~`#52584F` / ~`#86897F`
+- `--accent` / `--accent-2` / `--accent-soft`: **`#0E7C56`** (émeraude) / `#0A5C40` / `#E1F1E9`
+- `--positive` / `--negative` / `--warning`: vert sage / terracotta / ocre (mêmes hues que cobalt-era)
+- `--d1..d7` dataviz: émeraude, sage, terracotta, mauve, pink, grey, ocre — ordre stable
 
-### Key tokens (dark, used by Landing cover + opt-in user theme)
+### Key tokens (dark, landing + opt-in user theme)
 
-- `--bg` / `--bg-elev` / `--bg-sunk`: `#0F0E0C` / `#181714` / `#0A0908`
-- `--ink` / `--ink-2` / `--ink-3`: `#F1EEE4` / `#A29E91` / `#75716A`
-- `--accent`: `#7E92FF` (lifted cobalt for dark)
+- `--bg` Landing : `#0a0e08` avec halo radial émeraude
+- `--accent` dark : **`#41D49B`** (émeraude lifted, plus saturé que le light pour ressortir)
 
-### Typography
+### Typography (inchangée)
 
-- **Geist** — sans-serif for 95% of the UI (Geist 400/500/600/700)
-- **Geist Mono** — IBAN, codes, axes, eyebrow Section labels (`§ 01`)
-- **Newsreader** — italic ONLY, for h1/h2 accents (the lead word stays in Geist 500, the noun italicises in Newsreader 400). Never use Newsreader roman.
-- Loaded in `frontend/index.html` Google Fonts link
-- `font-variant-numeric: tabular-nums` systematic on all monetary values — `.num` / `.amount` / `.w-num` classes
+- **Geist** — sans-serif principal (400/500/600/700)
+- **Geist Mono** — IBAN, codes, axes, eyebrow uppercase
+- **Newsreader** — italic UNIQUEMENT, accents h1/h2 (mot d'attaque en Geist 500, mot italique en Newsreader 400/italic émeraude). Jamais Newsreader roman.
+- Chargées via Google Fonts dans `frontend/index.html`
+- `font-variant-numeric: tabular-nums` systématique sur tout monétaire
 
 ### Brand mark
 
-Single source: `frontend/src/components/Logo.jsx`. Square (cream-on-ink in light, ink-on-cream in dark via MutationObserver on `data-theme`), letter "W" 700, optional wordmark "Wealthly" 500. Used by Landing strip, AuthScreen strip, WealthlyApp desktop sidebar, mobile header, mobile drawer. Favicon + maskable SVGs (`frontend/public/icon*.svg`) match the dark variant for tab/launcher recognition.
+Single source : `frontend/src/components/Logo.jsx`. **SVG carré émeraude `#41D49B` + carré sombre `#0C1009` intérieur centré** (proportions 0.375 calées sur le SVG du film). Couleurs FIXES en clair comme en sombre — c'est l'identité, pas un état UI. Seul le wordmark texte (`#10150F` en light, `#F1EEE4` en dark) suit `data-theme` via MutationObserver. Favicon + maskable SVGs (`frontend/public/icon*.svg`) reproduisent ce design. Bumpé `?v=4` dans `index.html` pour invalider le cache.
 
 ### Page header pattern (extend if you add a view)
 
@@ -329,27 +380,33 @@ Single source: `frontend/src/components/Logo.jsx`. Square (cream-on-ink in light
 </div>
 ```
 
-The `em` inside an h1 inside `.subview-header` (or `.page-header`) automatically picks up Newsreader italic via index.css. Examples already deployed: "Votre *patrimoine.*", "Vos *transactions.*", "Bonjour *Raphaël*".
+Le `em` dans h1 sous `.subview-header` (ou `.page-header`) prend automatiquement Newsreader italic + émeraude via `index.css`.
+
+⚠️ **Piège em sélecteur global** : `index.css` ligne ~4605 a `:root h1 em, :root h2 em, …` qui force `font-style: normal; color: var(--ink)` (héritage de la session « anti tout-cobalt »). Toute mise en valeur émeraude italique DOIT utiliser un sélecteur plus spécifique pour battre la cascade (ex. `.film-hero h1.fh-title .fh-title-accent`) — sinon le mot reste en encre noire/invisible sur fond sombre.
 
 ### Rules
 
-- **No translateY hover** anywhere. Hovers change colour or background, not position. (`:active` jitter on buttons also banned.)
-- **Subtle cobalt drop-shadow** on primary CTAs only — `0 4px 14px -4px rgba(126,146,255,.25)` (dark) / `rgba(37,64,217,.25)` (light). Borders + bg shifts elsewhere.
-- **Sharper radii** — 4 / 6 / 8 / 12 / 16. No 20 / 24.
-- **Single accent**: cobalt for CTAs / data principale / interactive links. Sage for positive, terracotta for negative, ocre for warning. Use them sparingly.
-- **Landing is dark-only by force**. `Landing.jsx` forces `data-theme="dark"` on mount and restores on unmount.
-- **Drop chauvinism**: no "Hébergé en France" / "Fait en France" / "Disponible en France" on the landing — user finds it ridiculous.
-- **PDF export** (`pdfReport.js`) palette mirrors light mode papier chaud — see `C` table at the top of the file.
+- **No translateY hover** sur la chrome de l'app (sidebar, header). OK sur les CTAs émeraude de la landing (`translateY(-1px)` au hover) — c'est marketing.
+- **Halo émeraude** sur primary CTAs : `0 12px 32px -10px rgba(65,212,155,0.55)` (landing) / `0 4px 14px -4px rgba(14,124,86,0.25)` (app light).
+- **Radii** — 4 / 6 / 8 / 12 / 16 dans l'app. Landing peut monter à 22-24 (carte film) pour le côté éditorial.
+- **Single accent** : émeraude pour CTAs / data principale / liens. Sage positif, terracotta négatif, ocre warning. Sparingly.
+- **Landing dark-only par force** (`Landing.jsx` pose `data-theme="dark"` au mount, restaure au unmount). `FilmHero.jsx` utilise des couleurs codées en dur pour ne pas dépendre du thème (le hero est toujours dark).
+- **Pas de chauvinisme** sur la landing — pas de « Fait en France ».
+- **PDF export** (`reportHtml.js`) reflète les tokens light Forêt.
 
 ---
 
 ## Auth flow
 
-- Register → JWT → stored in `localStorage` as `wealthly:token`.
-- Token expires after 7 days.
-- `App.jsx` checks the token on mount via `auth.me()`. If invalid → AuthScreen.
-- **Reset token URL handling**: if `?reset_token=` is in the URL, App.jsx forces AuthScreen even if logged in. AuthScreen reads it, switches to `reset` mode, scrubs it from the URL.
-- **Demo mode**: localStorage flag `wealthly:demo` → App.jsx renders WealthlyApp in demo mode, bypassing all auth. `api.js` short-circuits all API calls in demo mode (GET returns null, mutations throw a "Mode démo" error).
+- Register / login → JWT en **cookie HttpOnly + Secure + SameSite=None** (set côté backend, illisible en JS). Plus de `localStorage`.
+- Token expire après 7 j. Versionné par `User.token_version` — incrémenté à chaque change-password / disable 2FA → tous les anciens cookies invalidés.
+- Cache user en `localStorage` (`w2:current_user`) UNIQUEMENT pour optimiser le first paint (éviter le spinner 5 s sur cold-start Railway). App.jsx pose `unauthed` immédiatement si pas de cache, valide en tâche de fond via `/auth/me`.
+- **Modal popup** (depuis 2026-06) : la landing ouvre `AuthModal.jsx` en `createPortal` au-dessus, pas de navigation. Le plein écran `AuthScreen.jsx` n'est plus utilisé QUE pour le flow `?reset_token=…`.
+- **2FA TOTP** optionnelle (bouton « Configurer plus tard » sur l'overlay 2FA), activable depuis Réglages → Sécurité. Backend exige code 6 chiffres step 2 si `User.totp_enabled`.
+- **Session expirée** : `api.js` émet un signal global (`subscribeSessionExpired`) sur tout 401 hors `/auth/*` → App.jsx déconnecte + bandeau « session expirée » + purge cache user.
+- **Reset token URL** : `?reset_token=…` → App.jsx force `AuthScreen` plein écran même si loggé, switch en mode reset, scrub l'URL.
+- **Demo mode** : flag `localStorage wealthly:demo` → App.jsx rend WealthlyApp avec dataset `demoData.js`, court-circuit toutes les API (GET → null, mutations → toast « Mode démo »).
+- **Pas de Google OAuth** : tentative juin 2026 abandonnée (cause du 500 login), voir bloc Session 2026-06-28.
 
 ---
 
