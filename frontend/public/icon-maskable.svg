@@ -1,8 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- Maskable icon: full-bleed dark with the W contained in the central
-       80% safe zone. Outer 10% margin can be cropped by launchers. -->
-  <rect width="512" height="512" fill="#16150F"/>
-  <text x="256" y="256" font-family="Geist, system-ui, -apple-system, sans-serif"
-        font-weight="700" font-size="220" fill="#F1EEE4"
-        text-anchor="middle" dominant-baseline="central">W</text>
+  <!-- Maskable icon: full-bleed emerald with the dark square contained in
+       the central 60% safe zone. Outer 10% margin can be cropped by launchers. -->
+  <rect width="512" height="512" fill="#41D49B"/>
+  <rect x="180" y="180" width="152" height="152" rx="34" fill="#0C1009"/>
 </svg>
