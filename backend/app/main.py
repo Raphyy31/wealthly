@@ -267,6 +267,20 @@ def _run_lightweight_migrations() -> None:
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR",
             "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_google_id ON users(google_id) WHERE google_id IS NOT NULL",
         ]
+
+    # Promote ADMIN_EMAILS → is_admin = TRUE. Idempotent, runs every boot
+    # but only touches rows where is_admin is currently false (safe).
+    if is_pg and settings.ADMIN_EMAILS:
+        for email in settings.ADMIN_EMAILS:
+            try:
+                with engine.begin() as conn:
+                    conn.execute(
+                        text("UPDATE users SET is_admin = TRUE WHERE LOWER(email) = :email AND is_admin = FALSE"),
+                        {"email": email.lower()},
+                    )
+                    logger.info("[admin-bootstrap] promoted %s to admin", email)
+            except Exception as e:
+                logger.warning("[admin-bootstrap] failed for %s: %s", email, e)
     # Each statement runs in its own transaction so a failed DDL/DML
     # doesn't leave the connection in an aborted-transaction state and
     # block every subsequent statement (and app queries) in the same block.

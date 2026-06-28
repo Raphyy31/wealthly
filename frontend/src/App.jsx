@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { auth, subscribeSessionExpired } from './api.js';
 import AuthScreen from './AuthScreen.jsx';
+import AuthModal from './AuthModal.jsx';
 import WealthlyApp from './WealthlyApp.jsx';
 import { isDemoMode, disableDemoMode, enableDemoMode } from './demoData.js';
 import { useIdleLogout } from './hooks/useIdleLogout.js';
@@ -15,13 +16,14 @@ const Landing = lazy(() => import('./views/Landing.jsx'));
 
 export default function App() {
   const [authState, setAuthState] = useState('checking'); // checking | authed | unauthed | demo
-  // When unauthed, decide whether to show the public marketing landing or
-  // jump straight to the auth form. Default to the landing — auth is one
-  // click away via the nav.
+  // unauthedView: 'landing' shows Landing+AuthModal, 'auth' shows full AuthScreen (reset-password only)
   const [unauthedView, setUnauthedView] = useState('landing'); // landing | auth
   const [authInitialMode, setAuthInitialMode] = useState('login');
   const [refreshKey, setRefreshKey] = useState(0);
   const [sessionExpired, setSessionExpired] = useState(false);
+  // Auth modal (popup on top of landing, replaces full-page auth for sign-in/register)
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState('login');
 
   // Session expirée en cours d'usage : un 401 sur un endpoint authentifié
   // signale que le cookie a expiré. On bascule proprement sur l'écran de
@@ -35,9 +37,10 @@ export default function App() {
       if (authStateRef.current !== 'authed') return; // déjà déconnecté / en démo
       try { localStorage.removeItem('w2:current_user'); } catch {}
       setSessionExpired(true);
-      setAuthInitialMode('login');
-      setUnauthedView('auth');
+      setAuthModalMode('login');
+      setAuthModalOpen(true);
       setAuthState('unauthed');
+      setUnauthedView('landing');
     });
     return unsub;
   }, []);
@@ -163,33 +166,42 @@ export default function App() {
   }
 
   if (authState === 'unauthed') {
-    if (unauthedView === 'landing') {
+    // Full-page AuthScreen uniquement pour les liens de reset-password (URL param)
+    if (unauthedView === 'auth') {
       return (
+        <AuthScreen
+          initialMode={authInitialMode}
+          notice={sessionExpired ? 'Votre session a expiré. Reconnectez-vous pour continuer.' : null}
+          onBackToLanding={() => { setSessionExpired(false); setUnauthedView('landing'); }}
+          onAuth={() => { setSessionExpired(false); setAuthState('authed'); }}
+          onTryDemo={() => setAuthState('demo')}
+        />
+      );
+    }
+    // Landing + AuthModal (popup) pour connexion / inscription
+    return (
+      <>
         <Suspense fallback={<div style={{minHeight:'100vh'}}/>}>
           <Landing
-            onSignIn={() => { setAuthInitialMode('login'); setUnauthedView('auth'); }}
-            onSignUp={() => { setAuthInitialMode('register'); setUnauthedView('auth'); }}
+            onSignIn={() => { setAuthModalMode('login'); setAuthModalOpen(true); }}
+            onSignUp={() => { setAuthModalMode('register'); setAuthModalOpen(true); }}
             onTryDemo={() => { enableDemoMode(); setAuthState('demo'); }}
             onPresent={() => {
-              // Mode Presentation depuis Landing : on enable la demo (donnees
-              // synthetiques) + on pose un flag pour que WealthlyApp lance
-              // automatiquement le DemoTour au mount.
               try { localStorage.setItem('wealthly:auto_demo_tour', '1'); } catch {}
               enableDemoMode();
               setAuthState('demo');
             }}
           />
         </Suspense>
-      );
-    }
-    return (
-      <AuthScreen
-        initialMode={authInitialMode}
-        notice={sessionExpired ? 'Votre session a expiré. Reconnectez-vous pour continuer.' : null}
-        onBackToLanding={() => { setSessionExpired(false); setUnauthedView('landing'); }}
-        onAuth={() => { setSessionExpired(false); setAuthState('authed'); }}
-        onTryDemo={() => setAuthState('demo')}
-      />
+        <AuthModal
+          open={authModalOpen}
+          initialMode={authModalMode}
+          notice={sessionExpired ? 'Votre session a expiré. Reconnectez-vous pour continuer.' : null}
+          onClose={() => { setAuthModalOpen(false); setSessionExpired(false); }}
+          onAuth={() => { setAuthModalOpen(false); setSessionExpired(false); setAuthState('authed'); }}
+          onTryDemo={() => { setAuthModalOpen(false); enableDemoMode(); setAuthState('demo'); }}
+        />
+      </>
     );
   }
 

@@ -131,6 +131,15 @@ class Settings:
     # If absent, the /auth/google endpoint returns 501.
     GOOGLE_CLIENT_ID: str | None = os.getenv("GOOGLE_CLIENT_ID")
 
+    # Platform admin bootstrap — comma-separated list of emails to promote
+    # as platform admins on first boot. Idempotent (UPDATE … WHERE NOT is_admin).
+    # Set ADMIN_EMAILS on Railway: raphael.darmon1@gmail.com
+    ADMIN_EMAILS: list[str] = [
+        e.strip().lower()
+        for e in os.getenv("ADMIN_EMAILS", "").split(",")
+        if e.strip()
+    ]
+
     # App
     APP_NAME: str = "Wealthly API"
     DEBUG: bool = _DEBUG
