@@ -59,7 +59,6 @@ class GoogleSignInRequest(BaseModel):
 
 class AuthConfigOut(BaseModel):
     google_client_id: str | None = None
-    code: Optional[str] = None  # ou code TOTP si récente activation
 
 
 class UserOut(BaseModel):
