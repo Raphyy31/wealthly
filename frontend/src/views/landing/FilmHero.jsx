@@ -1,15 +1,13 @@
 // ============================================================================
-// FilmHero — landing hero immersif (charte « Forêt »).
+// FilmHero — landing hero (charte « Forêt »).
 //
-// Pattern inspiré Linear / Vercel / Apple Product :
-//   - Film en FULL-BLEED comme fond de hero (100vh)
-//   - Texte (eyebrow / title / sub / CTAs) flotte au-dessus avec un scrim
-//     gradient en bas qui assure la lisibilité sans masquer le film
-//   - Header (logo + se connecter) en sticky avec backdrop-blur subtil
-//
-// Sources :
-//   - desktop : /film-16x9.html (1920×1080, ~28 s)
-//   - mobile  : /film-9x16.html (1080×1920, ~12 s)
+// Pattern Linear / Vercel / Apple Product :
+//   - Fond hero sombre (vert-noir Forêt) avec halo émeraude radial
+//   - Texte centré en haut (eyebrow, gros titre Newsreader italic émeraude,
+//     subtitle, CTAs)
+//   - Film en grande carte centrée en dessous, avec halo et perspective
+//     subtile, taille généreuse (max 1100 px)
+//   - Aucun overlap texte/film → lisible, premium, calme
 // ============================================================================
 import { useEffect } from 'react';
 import { useIsNarrow } from '../../hooks/useIsNarrow.js';
@@ -27,22 +25,11 @@ export default function FilmHero({ onSignIn, onSignUp, onTryDemo, onShowDetails 
     <div className="film-hero">
       <style>{FILM_HERO_CSS}</style>
 
-      {/* Film full-bleed — fond de hero */}
-      <div className="fh-stage" aria-hidden>
-        <iframe
-          key={src}
-          src={src}
-          title="Wealthly — le film"
-          loading="eager"
-          scrolling="no"
-          className="fh-film"
-        />
-        {/* Vignette + scrim de lisibilité — sans cacher le film */}
-        <div className="fh-vignette" />
-        <div className="fh-scrim" />
+      <div className="fh-bg" aria-hidden>
+        <div className="fh-halo" />
+        <div className="fh-grid" />
       </div>
 
-      {/* Header flottant */}
       <header className="fh-strip">
         <div className="fh-brand">
           <Logo size={28} wordmark wordmarkSize={16} tone="light" />
@@ -53,25 +40,36 @@ export default function FilmHero({ onSignIn, onSignUp, onTryDemo, onShowDetails 
         </div>
       </header>
 
-      {/* Contenu hero — flotte au-dessus du film */}
       <main className="fh-main">
-        <div className="fh-content">
-          <div className="fh-eyebrow">WEALTHLY · LE PATRIMOINE EN UN SEUL REGARD</div>
-          <h1 className="fh-title">
-            Votre patrimoine, <em>en un seul regard.</em>
-          </h1>
-          <p className="fh-sub">
-            Comptes, placements, immobilier, fiscalité — réconciliés et tenus à jour,
-            en temps réel.
-          </p>
+        <div className="fh-eyebrow">WEALTHLY · PATRIMOINE FAMILIAL</div>
+        <h1 className="fh-title">
+          Votre patrimoine,<br/>
+          <em>en un seul regard.</em>
+        </h1>
+        <p className="fh-sub">
+          Comptes, placements, immobilier, fiscalité —
+          réconciliés et tenus à jour, en temps réel.
+        </p>
 
-          <div className="fh-cta-row">
-            <button className="fh-cta primary" onClick={onSignUp}>
-              Créer un compte
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
-            </button>
-            <button className="fh-cta ghost" onClick={onShowDetails}>Découvrir Wealthly</button>
-          </div>
+        <div className="fh-cta-row">
+          <button className="fh-cta primary" onClick={onSignUp}>
+            Créer un compte
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </button>
+          <button className="fh-cta ghost" onClick={onShowDetails}>Découvrir Wealthly</button>
+        </div>
+
+        <div className={`fh-film-card ${isNarrow ? 'is-vertical' : ''}`}>
+          <div className="fh-film-glow" aria-hidden/>
+          <iframe
+            key={src}
+            src={src}
+            title="Wealthly — le film"
+            loading="eager"
+            scrolling="no"
+            className="fh-film"
+          />
+          <div className="fh-film-mask" aria-hidden/>
         </div>
       </main>
     </div>
@@ -84,57 +82,36 @@ const FILM_HERO_CSS = `
   min-height: 100vh;
   width: 100%;
   overflow: hidden;
-  color: #F7F9F6;
+  background: #0a0e08;
+  color: #F1EEE4;
   font-family: var(--font-sans);
   isolation: isolate;
 }
 
-/* ── Film en fond ──────────────────────────────────────────────────────── */
-.fh-stage {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  background: #0c1009;
-  pointer-events: none; /* la barre de lecture du film ne bloque pas les clics */
+/* ── Fond : halo radial émeraude + grid subtile ───────────────────────── */
+.fh-bg {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
 }
-.fh-film {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  border: 0;
-  display: block;
-  /* on agrandit légèrement et on remonte pour cacher la barre de lecture
-     du film embarqué (qui ferait tâche en bas) */
-  transform: scale(1.06) translateY(-2.5%);
-  transform-origin: center 40%;
-}
-/* Vignette douce sur les bords pour donner du focus au centre */
-.fh-vignette {
-  position: absolute;
-  inset: 0;
+.fh-halo {
+  position: absolute; inset: 0;
   background:
-    radial-gradient(120% 80% at 50% 30%, transparent 50%, rgba(12,16,9,0.45) 100%);
-  z-index: 1;
-  pointer-events: none;
+    radial-gradient(900px 540px at 50% 8%, rgba(65,212,155,0.20), transparent 70%),
+    radial-gradient(700px 400px at 50% 60%, rgba(65,212,155,0.10), transparent 70%);
 }
-/* Scrim gradient en bas pour lisibilité du texte */
-.fh-scrim {
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(180deg, rgba(12,16,9,0.45) 0%, rgba(12,16,9,0.0) 18%, rgba(12,16,9,0.0) 35%, rgba(12,16,9,0.75) 80%, rgba(12,16,9,0.95) 100%);
-  z-index: 2;
-  pointer-events: none;
+.fh-grid {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(241,238,228,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(241,238,228,0.035) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, #000 30%, transparent 80%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, #000 30%, transparent 80%);
 }
 
-/* ── Header sticky avec blur subtil ────────────────────────────────────── */
+/* ── Header ──────────────────────────────────────────────────────────── */
 .fh-strip {
-  position: relative;
-  z-index: 10;
-  width: 100%;
-  max-width: 1280px;
-  margin: 0 auto;
+  position: relative; z-index: 10;
+  width: 100%; max-width: 1280px; margin: 0 auto;
   display: flex; align-items: center; justify-content: space-between;
   padding: 22px 32px;
 }
@@ -146,48 +123,45 @@ const FILM_HERO_CSS = `
   padding: 10px 18px;
   cursor: pointer;
   transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
-  backdrop-filter: blur(16px) saturate(1.4);
-  -webkit-backdrop-filter: blur(16px) saturate(1.4);
 }
 .fh-link {
-  background: rgba(247,249,246,0.08);
-  border: 1px solid rgba(247,249,246,0.18);
-  color: #F7F9F6;
+  background: rgba(241,238,228,0.04);
+  border: 1px solid rgba(241,238,228,0.14);
+  color: #F1EEE4;
 }
-.fh-link:hover { background: rgba(247,249,246,0.14); border-color: rgba(247,249,246,0.32); }
+.fh-link:hover { background: rgba(241,238,228,0.10); border-color: rgba(241,238,228,0.26); }
 .fh-signin {
-  background: #F7F9F6;
+  background: #F1EEE4;
   border: 1px solid transparent;
-  color: #0c1009;
+  color: #0a0e08;
   font-weight: 600;
 }
-.fh-signin:hover { background: #fff; transform: translateY(-1px); }
+.fh-signin:hover { background: #fff; }
 
-/* ── Contenu hero ──────────────────────────────────────────────────────── */
+/* ── Contenu hero ────────────────────────────────────────────────────── */
 .fh-main {
-  position: relative;
-  z-index: 5;
-  min-height: calc(100vh - 84px);
-  display: flex;
-  align-items: flex-end;        /* texte ancré en bas, le film règne au-dessus */
-  justify-content: flex-start;
-  padding: 0 32px 72px;
-  max-width: 1280px;
-  margin: 0 auto;
+  position: relative; z-index: 5;
+  max-width: 1180px; margin: 0 auto;
+  padding: 56px 32px 80px;
+  text-align: center;
 }
-.fh-content { max-width: 720px; }
 .fh-eyebrow {
   font: 600 11px/1.4 var(--font-mono, 'Geist Mono', monospace);
-  letter-spacing: 0.22em;
+  letter-spacing: 0.24em;
   color: #41D49B;
-  margin-bottom: 18px;
+  margin-bottom: 24px;
+  display: inline-block;
+  padding: 6px 14px;
+  border: 1px solid rgba(65,212,155,0.30);
+  border-radius: 999px;
+  background: rgba(65,212,155,0.06);
 }
 .fh-title {
-  margin: 0;
-  font: 600 clamp(36px, 6.4vw, 76px)/1.02 var(--font-sans);
-  letter-spacing: -0.035em;
+  margin: 0 auto;
+  max-width: 880px;
+  font: 600 clamp(40px, 6.4vw, 78px)/1.04 var(--font-sans);
+  letter-spacing: -0.038em;
   color: #F7F9F6;
-  text-shadow: 0 2px 30px rgba(0,0,0,0.35);
 }
 .fh-title em {
   font-style: italic;
@@ -196,16 +170,16 @@ const FILM_HERO_CSS = `
   color: #41D49B;
 }
 .fh-sub {
-  margin: 20px 0 0;
-  max-width: 560px;
-  font: 400 17px/1.55 var(--font-sans);
-  color: rgba(247,249,246,0.82);
-  text-shadow: 0 1px 12px rgba(0,0,0,0.4);
+  margin: 22px auto 0;
+  max-width: 600px;
+  font: 400 17px/1.6 var(--font-sans);
+  color: rgba(241,238,228,0.72);
 }
 
 .fh-cta-row {
   display: flex; flex-wrap: wrap; gap: 12px;
   margin-top: 36px;
+  justify-content: center;
 }
 .fh-cta {
   display: inline-flex; align-items: center; gap: 10px;
@@ -215,35 +189,66 @@ const FILM_HERO_CSS = `
   transition: transform 160ms ease, background 160ms ease, border-color 160ms ease, filter 160ms ease;
 }
 .fh-cta.primary {
-  background: #41D49B; color: #0c1009;
+  background: #41D49B; color: #0a0e08;
   border: 1px solid transparent;
   box-shadow: 0 12px 32px -10px rgba(65,212,155,0.55);
 }
 .fh-cta.primary:hover { background: #54e0a8; transform: translateY(-1px); }
 .fh-cta.ghost {
-  background: rgba(247,249,246,0.08);
-  color: #F7F9F6;
-  border: 1px solid rgba(247,249,246,0.22);
-  backdrop-filter: blur(16px) saturate(1.4);
-  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  background: rgba(241,238,228,0.05);
+  color: #F1EEE4;
+  border: 1px solid rgba(241,238,228,0.20);
 }
-.fh-cta.ghost:hover { background: rgba(247,249,246,0.16); border-color: rgba(247,249,246,0.4); }
+.fh-cta.ghost:hover { background: rgba(241,238,228,0.10); border-color: rgba(241,238,228,0.36); }
 .fh-cta:active { transform: translateY(0); filter: brightness(0.95); }
 
-/* ── Mobile ────────────────────────────────────────────────────────────── */
+/* ── Carte film ──────────────────────────────────────────────────────── */
+.fh-film-card {
+  position: relative;
+  width: 100%;
+  max-width: 1100px;
+  margin: 64px auto 0;
+  aspect-ratio: 16 / 9;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #faf9f5;
+  border: 1px solid rgba(241,238,228,0.14);
+  box-shadow:
+    0 1px 0 rgba(241,238,228,0.08) inset,
+    0 30px 80px -20px rgba(0,0,0,0.6),
+    0 0 0 1px rgba(65,212,155,0.10);
+}
+.fh-film-card.is-vertical {
+  max-width: 320px;
+  aspect-ratio: 9 / 16;
+}
+.fh-film-glow {
+  position: absolute; inset: -40px;
+  background: radial-gradient(60% 40% at 50% 0%, rgba(65,212,155,0.22), transparent 70%);
+  filter: blur(20px);
+  z-index: -1;
+}
+.fh-film {
+  width: 100%; height: 100%;
+  border: 0; display: block;
+}
+/* Masque le bandeau de lecture du film embarqué (en bas) sans le couper */
+.fh-film-mask {
+  position: absolute;
+  left: 0; right: 0; bottom: 0; height: 56px;
+  background: linear-gradient(180deg, transparent, rgba(250,249,245,1) 60%);
+  pointer-events: none;
+}
+
+/* ── Mobile ──────────────────────────────────────────────────────────── */
 @media (max-width: 760px) {
   .fh-strip { padding: 16px 18px; }
-  .fh-main { padding: 0 20px 48px; min-height: calc(100vh - 72px); }
+  .fh-main { padding: 32px 20px 56px; }
   .fh-title { font-size: clamp(32px, 9vw, 48px); }
-  .fh-sub { font-size: 15px; }
-  .fh-film {
-    /* film vertical → on cadre plus serré pour qu'il remplisse bien */
-    transform: scale(1.02) translateY(-1%);
-  }
-  .fh-scrim {
-    background:
-      linear-gradient(180deg, rgba(12,16,9,0.55) 0%, rgba(12,16,9,0.0) 22%, rgba(12,16,9,0.0) 40%, rgba(12,16,9,0.85) 75%, rgba(12,16,9,0.96) 100%);
-  }
+  .fh-sub { font-size: 15px; margin-top: 18px; }
+  .fh-cta-row { margin-top: 28px; }
+  .fh-film-card { margin-top: 40px; }
+  .fh-grid { background-size: 36px 36px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
