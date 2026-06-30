@@ -1223,7 +1223,7 @@ function MonthlyCompareTable({ sections, monthTx, fmt, catFor, expandedRows, tog
           </div>
 
           <ul className="mon-compare-rows">
-            {section.parents.map(group => {
+            {section.parents.map((group, gi) => {
               const cat = group.parent_cat;
               const rowKey = `${section.kind}::${group.parent_id}`;
               const isExpanded = expandedRows.has(rowKey);
@@ -1232,44 +1232,58 @@ function MonthlyCompareTable({ sections, monthTx, fmt, catFor, expandedRows, tog
               const isOver = section.kind === 'expense' ? delta > 0 : delta < 0;
               const txs = isExpanded ? txForParent(group.parent_id) : [];
 
+              // Jauge : le réel se remplit contre la cible (mois type). Trait =
+              // cible. Couleur = vert si dans le budget, rose si dépassé.
+              const target = group.ref_total || 0;
+              const actual = group.real_total || 0;
+              const scale = Math.max(target, actual, 1);
+              const fillPct = Math.min(100, (actual / scale) * 100);
+              const targetPct = target > 0 ? Math.min(100, (target / scale) * 100) : null;
+              const noTarget = target <= 0;
+              const barColor = noTarget ? 'var(--d6)' : (hasDelta && isOver ? 'var(--negative)' : 'var(--positive)');
+              const statusText = noTarget
+                ? `${fmt(actual)} dépensé · pas dans ton mois type`
+                : !hasDelta
+                  ? '✓ pile dans le budget'
+                  : section.kind === 'expense'
+                    ? (isOver ? `↑ +${fmt(Math.abs(delta))} au-dessus` : `↓ ${fmt(Math.abs(delta))} sous le budget`)
+                    : (isOver ? `↓ ${fmt(Math.abs(delta))} sous l'objectif` : `↑ +${fmt(Math.abs(delta))} au-dessus de l'objectif`);
+
               return (
                 <li key={rowKey} className={`mon-compare-row ${isExpanded ? 'is-expanded' : ''}`}>
                   <button
-                    className="mon-compare-row-head"
+                    className="mon-compare-row-head mcr"
                     onClick={() => toggleRow(rowKey)}
                     aria-expanded={isExpanded}
                   >
-                    <span className="mon-compare-row-chevron" aria-hidden="true">
-                      <ChevronRight size={14}/>
-                    </span>
-                    <span className="mon-compare-row-cat">
-                      <span className="mon-compare-row-icon" style={{ background: cat?.color || 'var(--ink-3)' }}>
-                        {cat?.icon || '•'}
+                    <div className="mcr-top">
+                      <span className="mon-compare-row-chevron" aria-hidden="true">
+                        <ChevronRight size={14}/>
                       </span>
-                      <span className="mon-compare-row-name">{cat?.name || group.parent_id}</span>
-                      {group.children.length > 0 && (
-                        <span className="mon-compare-row-childcount" title={`${group.children.length} sous-catégorie(s)`}>
-                          {group.children.length}
+                      <span className="mon-compare-row-cat">
+                        <span className="mon-compare-row-icon" style={{ background: cat?.color || 'var(--ink-3)' }}>
+                          {cat?.icon || '•'}
                         </span>
-                      )}
-                      {group.is_unexpected && <span className="mon-compare-badge">Nouveau</span>}
-                    </span>
-
-                    <span className="mon-compare-row-amounts">
-                      <span className="mon-compare-row-ref num" title="Mois type">
-                        {group.ref_total > 0 ? fmt(group.ref_total) : '—'}
+                        <span className="mon-compare-row-name">{cat?.name || group.parent_id}</span>
+                        {group.children.length > 0 && (
+                          <span className="mon-compare-row-childcount" title={`${group.children.length} sous-catégorie(s)`}>
+                            {group.children.length}
+                          </span>
+                        )}
+                        {group.is_unexpected && <span className="mon-compare-badge">Nouveau</span>}
                       </span>
-                      <span className="mon-compare-row-arrow" aria-hidden="true">→</span>
-                      <span className="mon-compare-row-real num" title={selectedMonthLabel}>
-                        {group.real_total > 0 ? fmt(group.real_total) : '—'}
+                      <span className="mcr-amounts num">
+                        <span style={{ color: barColor, fontWeight: 600 }}>{fmt(actual)}</span>
+                        {!noTarget && <span className="mcr-amounts-target"> / {fmt(target)}</span>}
                       </span>
-                    </span>
+                    </div>
 
-                    <span className={`mon-compare-row-delta num ${hasDelta ? (isOver ? 'neg' : 'pos') : 'zero'}`}>
-                      {hasDelta ? (
-                        <>{delta > 0 ? '↑ +' : '↓ '}{fmt(Math.abs(delta))}</>
-                      ) : '±0'}
-                    </span>
+                    <div className="mcr-bar" role="img" aria-label={statusText}>
+                      <span className="mcr-bar-fill" style={{ width: `${fillPct}%`, background: barColor, animationDelay: `${gi * 0.04}s` }}/>
+                      {targetPct != null && <span className="mcr-bar-target" style={{ left: `${targetPct}%` }}/>}
+                    </div>
+
+                    <div className="mcr-status" style={{ color: barColor }}>{statusText}</div>
                   </button>
 
                   {isExpanded && (
