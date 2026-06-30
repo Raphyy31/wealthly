@@ -32,10 +32,28 @@ const CATEGORY_VISUAL = {
 
 const TOP_N_BY_DEFAULT = 3;
 
+// localStorage : on garde l'état déplié/replié de chaque classe pour ne pas
+// repartir tout fermé à chaque visite. Clé par catégorie.
+const OPEN_LS_KEY = 'wealthly:wcOpen';
+function readOpenMap() {
+  try { return JSON.parse(localStorage.getItem(OPEN_LS_KEY) || '{}') || {}; } catch { return {}; }
+}
+function writeOpenMap(map) {
+  try { localStorage.setItem(OPEN_LS_KEY, JSON.stringify(map)); } catch { /* ignore */ }
+}
+
 export function WealthCategoryCard({ category, items, total, totalWealth, fmt, onItemClick, onItemDelete, onAdd, onHeaderClick }) {
   const visual = CATEGORY_VISUAL[category] || CATEGORY_VISUAL.autres;
   const Icon = visual.Icon;
+  // « expanded » = afficher tous les items (au lieu de top 3)
   const [expanded, setExpanded] = useState(false);
+  // « isOpen » = card dépliée (items visibles) vs repliée (header seul)
+  // Mémorisé en localStorage par catégorie ; default = ouvert pour la 1re visite
+  // (sauf si l'user a explicitement replié).
+  const [isOpen, setIsOpen] = useState(() => {
+    const m = readOpenMap();
+    return m[category] !== false; // undefined → ouvert ; false explicite → fermé
+  });
   const bodyRef = useRef(null);
   const contentRef = useRef(null);
 
@@ -48,27 +66,45 @@ export function WealthCategoryCard({ category, items, total, totalWealth, fmt, o
 
   const pct = totalWealth > 0 ? (Math.abs(total) / Math.abs(totalWealth)) * 100 : 0;
 
-  // Animation accordion via GSAP
+  // Animation accordion via GSAP — anime à 0 (replié) ou scrollHeight (déplié)
   useLayoutEffect(() => {
     const wrap = bodyRef.current;
     const content = contentRef.current;
     if (!wrap || !content) return;
-    const targetH = content.scrollHeight;
+    const targetH = isOpen ? content.scrollHeight : 0;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       gsap.set(wrap, { height: targetH });
       return;
     }
     gsap.to(wrap, { height: targetH, duration: 0.32, ease: 'power3.out' });
-  }, [expanded, displayed.length]);
+  }, [expanded, displayed.length, isOpen]);
+
+  const toggleOpen = () => {
+    if (isEmpty) return;
+    const next = !isOpen;
+    setIsOpen(next);
+    const m = readOpenMap();
+    m[category] = next;
+    writeOpenMap(m);
+  };
 
   return (
-    <div className={`wc-card ${isEmpty ? 'is-empty' : ''}`}>
+    <div
+      className={`wc-card ${isEmpty ? 'is-empty' : ''} ${isOpen ? 'is-open' : 'is-closed'}`}
+      style={{
+        // Bande latérale colorée + header teinté à la couleur de la classe.
+        // Les --wc-* tokens sont consommés par Styles.jsx.
+        '--wc-accent': visual.color,
+        '--wc-tint': visual.tint,
+      }}
+    >
       <button
         type="button"
         className="wc-card-head wc-card-head-btn"
-        onClick={() => !isEmpty && onHeaderClick && onHeaderClick(category)}
+        onClick={toggleOpen}
         disabled={isEmpty}
-        title={isEmpty ? '' : `Voir le détail ${visual.label}`}
+        aria-expanded={isOpen}
+        title={isEmpty ? '' : (isOpen ? 'Replier' : `Voir les ${visual.label.toLowerCase()}`)}
       >
         <div className="wc-card-icon" style={{ background: visual.tint, color: visual.color }}>
           <Icon size={18}/>
@@ -85,6 +121,9 @@ export function WealthCategoryCard({ category, items, total, totalWealth, fmt, o
             {category === 'emprunts' && total > 0 ? '−' : ''}{fmt(Math.abs(total))}
           </div>
         </div>
+        {!isEmpty && (
+          <ChevronDown size={16} className={`wc-card-chev ${isOpen ? 'is-up' : ''}`} aria-hidden="true"/>
+        )}
       </button>
 
       <div ref={bodyRef} className="wc-card-body" style={{ height: 0, overflow: 'hidden' }}>
@@ -154,6 +193,15 @@ export function WealthCategoryCard({ category, items, total, totalWealth, fmt, o
                 <button className="wc-card-toggle" onClick={() => setExpanded(e => !e)}>
                   {expanded ? 'Replier' : `+ ${hidden} de plus`}
                   <ChevronDown size={13} className={`wc-card-toggle-chev ${expanded ? 'is-up' : ''}`}/>
+                </button>
+              )}
+              {onHeaderClick && (
+                <button
+                  type="button"
+                  className="wc-card-detail-link"
+                  onClick={(e) => { e.stopPropagation(); onHeaderClick(category); }}
+                >
+                  Voir le détail {visual.label.toLowerCase()} →
                 </button>
               )}
             </>

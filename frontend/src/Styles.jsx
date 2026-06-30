@@ -963,15 +963,41 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .wc-card {
   background: var(--bg-elev);
   border: 1px solid var(--border);
+  border-left: 5px solid var(--wc-accent, var(--accent));
   border-radius: 12px;
   overflow: hidden;
   transition: border-color 0.22s, box-shadow 0.22s;
 }
 .wc-card:hover {
   border-color: var(--border-strong);
-  box-shadow: 0 2px 10px -4px color-mix(in oklab, var(--ink) 10%, transparent);
+  border-left-color: var(--wc-accent, var(--accent));
+  box-shadow: 0 2px 10px -4px color-mix(in oklab, var(--wc-accent, var(--accent)) 25%, transparent);
 }
-.wc-card.is-empty { opacity: 0.7; }
+.wc-card.is-empty { opacity: 0.7; border-left-color: var(--border); }
+
+/* Chevron à droite du header — rotate quand la card est dépliée */
+.wc-card-chev {
+  color: var(--ink-3);
+  transition: transform .25s ease, color .15s;
+  flex-shrink: 0;
+}
+.wc-card.is-open .wc-card-chev { transform: rotate(180deg); color: var(--wc-accent, var(--ink-2)); }
+
+/* Lien « Voir le détail » en pied de body — l'utilisateur garde l'accès à la
+   vue détaillée qui était avant liée au clic header. */
+.wc-card-detail-link {
+  display: block;
+  width: 100%;
+  background: transparent; border: none;
+  padding: 10px 16px 14px;
+  font: 500 12px/1 var(--font-sans);
+  color: var(--wc-accent, var(--accent));
+  text-align: left;
+  cursor: pointer;
+  letter-spacing: -0.005em;
+  transition: color .12s;
+}
+.wc-card-detail-link:hover { filter: brightness(0.85); text-decoration: underline; }
 
 .wc-card-head {
   display: flex;
@@ -981,7 +1007,9 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 }
 .wc-card-head-btn {
   width: 100%;
-  background: transparent;
+  /* Header teinté à ~8 % de la couleur de la classe — contraste immédiat
+     entre blocs sans nuire à la lecture. */
+  background: color-mix(in oklab, var(--wc-accent, var(--accent)) 8%, transparent);
   border: none;
   font-family: inherit;
   text-align: left;
@@ -989,7 +1017,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
   transition: background 0.18s;
 }
 .wc-card-head-btn:hover:not(:disabled) {
-  background: color-mix(in oklab, var(--accent) 4%, transparent);
+  background: color-mix(in oklab, var(--wc-accent, var(--accent)) 14%, transparent);
 }
 .wc-card-head-btn:disabled { cursor: default; }
 .wc-card-head-btn:focus-visible {
