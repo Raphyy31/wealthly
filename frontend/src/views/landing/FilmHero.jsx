@@ -70,15 +70,28 @@ export default function FilmHero({ onSignIn, onSignUp, onTryDemo, onShowDetails 
           <button className="fh-cta ghost" onClick={onShowDetails}>Découvrir Wealthly</button>
         </div>
 
-        <div className={`fh-film-frame ${isNarrow ? 'is-vertical' : ''}`}>
-          <iframe
-            key={src}
-            src={src}
-            title="Wealthly — le film"
-            loading="lazy"
-            scrolling="no"
-            className="fh-film"
-          />
+        {/* Le film est emboîté dans un "écrin" qui :
+            (a) MASQUE la barre player + bouton download du bundle (overlay cream
+                en bas avec léger fade — invisible parce qu'il match la bg du film)
+            (b) INTÈGRE le cream dans le dark grâce à un halo émeraude diffus
+                qui entoure le cadre (la vidéo a l'air de "naître" du fond) */}
+        <div className={`fh-film-shell ${isNarrow ? 'is-vertical' : ''}`}>
+          <div className="fh-film-aura" aria-hidden/>
+          <div className="fh-film-frame">
+            <iframe
+              key={src}
+              src={src}
+              title="Wealthly — le film"
+              loading="lazy"
+              scrolling="no"
+              className="fh-film"
+            />
+            {/* Masque player + bouton download : cream opaque en bas, on
+                cache la barre de contrôle sans changer la teinte de la scène. */}
+            <div className="fh-film-mask-bottom" aria-hidden/>
+            {/* Léger fade haut pour adoucir l'edge cream/dark */}
+            <div className="fh-film-mask-top" aria-hidden/>
+          </div>
         </div>
 
         <div className="fh-trust">
@@ -251,22 +264,69 @@ const FILM_HERO_CSS = `
 .fh-cta.ghost:hover { border-color: var(--accent); color: var(--accent); }
 .fh-cta:active { filter: brightness(0.95); }
 
-/* Cadre film — halo + bord subtil. La taille reste raisonnable pour ne pas
-   écraser le titre/CTA qui sont au-dessus. */
-.fh-film-frame {
+/* Écrin du film — wrapper qui héberge le cadre et son halo "pool" émeraude.
+   Le halo dépasse du cadre et fait fondre la vidéo cream dans le dark. */
+.fh-film-shell {
   position: relative;
   width: 100%; max-width: 920px; margin: 48px auto 0;
+  isolation: isolate;
+}
+.fh-film-shell.is-vertical { max-width: 320px; }
+.fh-film-aura {
+  position: absolute; inset: -80px -120px;
+  background:
+    radial-gradient(ellipse 60% 70% at 50% 50%,
+      color-mix(in srgb, var(--accent) 26%, transparent) 0%,
+      color-mix(in srgb, var(--accent) 10%, transparent) 35%,
+      transparent 70%);
+  filter: blur(40px);
+  pointer-events: none;
+  z-index: 0;
+}
+.fh-film-frame {
+  position: relative;
+  width: 100%;
   aspect-ratio: 16 / 9;
   border-radius: 18px; overflow: hidden;
-  background: #0B0F0D;
-  border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent);
+  background: #faf9f5;
+  /* On épaissit le bord et on ajoute un ring émeraude à l'extérieur — la
+     vidéo n'est plus posée "à plat", elle est embrassée par l'écrin. */
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
   box-shadow:
-    0 1px 0 color-mix(in srgb, white 5%, transparent) inset,
-    0 30px 80px -28px color-mix(in srgb, var(--accent) 50%, rgba(0,0,0,0.7)),
-    0 0 0 6px color-mix(in srgb, var(--accent) 6%, transparent);
+    0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent),
+    0 0 0 10px color-mix(in srgb, var(--accent) 6%, transparent),
+    0 40px 90px -28px color-mix(in srgb, var(--accent) 55%, rgba(0,0,0,0.7)),
+    0 1px 0 rgba(255,255,255,0.5) inset;
+  z-index: 1;
 }
-.fh-film-frame.is-vertical { max-width: 320px; aspect-ratio: 9 / 16; }
+.fh-film-shell.is-vertical .fh-film-frame { aspect-ratio: 9 / 16; }
 .fh-film { width: 100%; height: 100%; border: 0; display: block; }
+
+/* Masque player + bouton download — overlay cream opaque qui matche la bg
+   du film (#faf9f5). Hauteur calibrée sur la barre de contrôle du bundle
+   (~60-72px sur le 16:9, proportionnel sur le 9:16). */
+.fh-film-mask-bottom {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  height: 72px;
+  background:
+    linear-gradient(180deg,
+      rgba(250,249,245,0) 0%,
+      rgba(250,249,245,0.85) 28%,
+      #faf9f5 55%,
+      #faf9f5 100%);
+  pointer-events: none;
+  z-index: 2;
+}
+.fh-film-shell.is-vertical .fh-film-mask-bottom { height: 56px; }
+.fh-film-mask-top {
+  position: absolute; left: 0; right: 0; top: 0;
+  height: 24px;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--accent) 12%, transparent) 0%,
+    transparent 100%);
+  pointer-events: none;
+  z-index: 2;
+}
 
 /* Trust marquee — banques compatibles */
 .fh-trust {
