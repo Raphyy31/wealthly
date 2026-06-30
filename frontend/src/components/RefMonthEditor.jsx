@@ -367,7 +367,6 @@ export function RefMonthEditor({
         <header className="rm-section-head" style={{ color: KIND_COLOR[kind] }}>
           <span className="rm-section-icon" style={{ color: KIND_COLOR[kind] }}>{KIND_ICON[kind]}</span>
           <span className="rm-section-title">{KIND_LABEL[kind]}</span>
-          <span className="rm-section-total num" style={{ color: KIND_COLOR[kind] }}>{fmt(total)}</span>
         </header>
         {groups.length === 0 && (
           <p className="rm-empty">
@@ -379,13 +378,6 @@ export function RefMonthEditor({
           const catColor = cat?.color || 'var(--border-strong)';
           return (
             <div key={`${kind}-${g.category_id}`} className="rm-group" style={{ borderLeftColor: catColor }}>
-              <div className="rm-group-head">
-                <span className="rm-cat-name">
-                  <span className="rm-cat-icon" aria-hidden="true">{cat?.icon || '•'}</span>
-                  {cat?.name || g.category_id}
-                </span>
-                <span className="rm-cat-total">{fmt(g.lines.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0))}</span>
-              </div>
               {g.lines.map(line => {
                 const sugKey = `${line.kind}::${line.category_id || 'uncategorized'}`;
                 const sug = suggestions[sugKey];
@@ -445,7 +437,7 @@ export function RefMonthEditor({
 
   return (
     <div className="modal-backdrop rm-backdrop" onClick={handleClose}>
-      <div className="modal rm-modal" onClick={e => e.stopPropagation()} role="dialog" aria-label="Éditer mon mois type">
+      <div className="modal rm-modal rm-modal--split" onClick={e => e.stopPropagation()} role="dialog" aria-label="Éditer mon mois type">
         <div className="rm-head">
           <div>
             <h2>
@@ -460,43 +452,54 @@ export function RefMonthEditor({
           <button className="ds-icon-btn" onClick={handleClose} aria-label="Fermer"><X size={18}/></button>
         </div>
 
-        {/* Bandeau « chemin facile » — un clic remplit tout depuis l'historique,
-            l'utilisateur n'a plus qu'à ajuster. Action mise en avant car c'est
-            la façon la plus simple de remplir son mois type. */}
-        <div className="rm-magic">
-          <button className="rm-magic-btn" onClick={resyncAll}>
-            <RotateCcw size={16}/>
-            <span className="rm-magic-btn-main">Remplir automatiquement</span>
-            <span className="rm-magic-btn-sub">d'après mes 3 derniers mois</span>
-          </button>
-          <div className="rm-magic-foot">
-            <span>L'app calcule tes moyennes — tu ajustes ensuite.</span>
-            <button className="rm-magic-reset" onClick={handleReset}>Repartir de zéro</button>
-          </div>
-        </div>
+        {/* ── 2 cartes : flux live à gauche, module de saisie à droite ── */}
+        <div className="rm-split">
 
-        {/* Sankey live — le flux Revenus → Dépenses / Épargne / Reste à vivre
-            se redessine à chaque montant saisi. Donne vie à la saisie. */}
-        <MoisTypeSankey totals={totals} fmt={fmt}/>
+          {/* Carte GAUCHE — le flux en direct */}
+          <aside className="rm-card rm-card--flow">
+            <div className="rm-card-head">
+              <span className="rm-card-eyebrow">Ton flux en direct</span>
+              <span className="rm-card-hint">se met à jour pendant que tu remplis</span>
+            </div>
+            <MoisTypeSankey totals={totals} fmt={fmt}/>
+            <div className="rm-flow-totals">
+              <div><span className="ds-micro">Entrées</span><span className="num pos">{fmt(totals.income)}</span></div>
+              <div><span className="ds-micro">Dépenses</span><span className="num neg">{fmt(-totals.expense)}</span></div>
+              <div><span className="ds-micro">Épargne</span><span className="num">{fmt(-totals.saving)}</span></div>
+              <div className="rm-flow-balance">
+                <span className="ds-micro">Reste à vivre</span>
+                <span className={`num ${totals.balance >= 0 ? 'pos' : 'neg'}`}>{totals.balance >= 0 ? '+' : ''}{fmt(totals.balance)}</span>
+              </div>
+            </div>
+          </aside>
 
-        <div className="rm-body rm-body-grid">
-          <div className="rm-col">
-            {renderKind('income')}
-          </div>
-          <div className="rm-col rm-col-expense">
-            {renderKind('expense')}
-          </div>
-          <div className="rm-col">
-            {renderKind('saving')}
-          </div>
+          {/* Carte DROITE — module de saisie revenus / dépenses / épargne */}
+          <section className="rm-card rm-card--entry">
+            {/* Chemin facile : 1 clic remplit tout depuis l'historique */}
+            <div className="rm-magic">
+              <button className="rm-magic-btn" onClick={resyncAll}>
+                <RotateCcw size={16}/>
+                <span className="rm-magic-btn-main">Remplir automatiquement</span>
+                <span className="rm-magic-btn-sub">d'après mes 3 derniers mois</span>
+              </button>
+              <div className="rm-magic-foot">
+                <span>L'app calcule tes moyennes — tu ajustes ensuite.</span>
+                <button className="rm-magic-reset" onClick={handleReset}>Repartir de zéro</button>
+              </div>
+            </div>
+
+            <div className="rm-entry-scroll">
+              {renderKind('income')}
+              {renderKind('expense')}
+              {renderKind('saving')}
+            </div>
+          </section>
         </div>
 
         <div className="rm-footer">
-          <div className="rm-totals">
-            <div><span className="ds-micro">Entrées</span><span className="num">{fmt(totals.income)}</span></div>
-            <div><span className="ds-micro">Dépenses</span><span className="num">{fmt(-totals.expense)}</span></div>
-            <div><span className="ds-micro">Épargne</span><span className="num">{fmt(-totals.saving)}</span></div>
-            <div className="rm-balance"><span className="ds-micro">Balance</span><span className="num">{totals.balance >= 0 ? '+' : ''}{fmt(totals.balance)}</span></div>
+          <div className="rm-footer-balance">
+            <span className="ds-micro">Reste à vivre / mois</span>
+            <span className={`num ${totals.balance >= 0 ? 'pos' : 'neg'}`}>{totals.balance >= 0 ? '+' : ''}{fmt(totals.balance)}</span>
           </div>
           <div className="rm-actions">
             <button className="ds-btn ghost" onClick={handleClose}>Annuler</button>

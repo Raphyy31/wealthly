@@ -2643,6 +2643,83 @@ html, body {
   border-radius: var(--radius-lg) !important;
   margin: 0 auto !important;
 }
+/* Variante 2 cartes (flux live + saisie) — large, la SAISIE domine. */
+.rm-backdrop .rm-modal--split {
+  width: min(1060px, 96vw) !important;
+  max-height: 92vh !important;
+}
+
+/* ── Layout 2 cartes : flux compact à gauche, saisie XL à droite ── */
+.rm-split {
+  flex: 1; min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(280px, 0.62fr) minmax(0, 1.38fr);
+  gap: 16px;
+  padding: 16px;
+  overflow: hidden;
+}
+.rm-card {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  display: flex; flex-direction: column;
+  min-height: 0; min-width: 0;
+  overflow: hidden;
+}
+.rm-card-head {
+  padding: 14px 16px 10px;
+  display: flex; flex-direction: column; gap: 2px;
+  border-bottom: 1px solid var(--border);
+}
+.rm-card-eyebrow { font: 600 11px var(--font-mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+.rm-card-hint { font: 400 12px var(--font-sans); color: var(--ink-3); }
+
+/* Carte gauche — flux. Sticky (ne scrolle pas), totals en pied. */
+.rm-card--flow { background: linear-gradient(180deg, var(--accent-soft) 0%, var(--bg-elev) 30%); }
+.rm-card--flow .rm-sankey { border-bottom: none; background: transparent; padding: 12px 14px 6px; }
+.rm-flow-totals {
+  margin-top: auto;
+  padding: 14px 16px;
+  border-top: 1px solid var(--border);
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px;
+}
+.rm-flow-totals > div { display: flex; flex-direction: column; gap: 2px; }
+.rm-flow-totals .num { font: 600 15px var(--font-sans); font-variant-numeric: tabular-nums; color: var(--ink); }
+.rm-flow-totals .num.pos { color: var(--positive); }
+.rm-flow-totals .num.neg { color: var(--negative); }
+.rm-flow-balance { grid-column: 1 / -1; padding-top: 8px; border-top: 1px dashed var(--border); }
+.rm-flow-balance .num { font-size: 19px; }
+
+/* Carte droite — saisie. Magic band fixe + form scrollable. */
+.rm-card--entry .rm-magic {
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+}
+.rm-entry-scroll {
+  flex: 1; min-height: 0; overflow-y: auto;
+  scrollbar-gutter: stable;
+  padding: 4px 0;
+}
+.rm-entry-scroll::-webkit-scrollbar { width: 10px; }
+.rm-entry-scroll::-webkit-scrollbar-track { background: transparent; }
+.rm-entry-scroll::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 999px; border: 2px solid var(--bg-elev); }
+.rm-entry-scroll::-webkit-scrollbar-thumb:hover { background: var(--ink-3); }
+.rm-entry-scroll { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+.rm-card--entry .rm-section { padding: 14px 16px; border-bottom: 1px solid var(--border); }
+.rm-card--entry .rm-section:last-child { border-bottom: none; }
+
+/* Footer compact : reste à vivre + actions. */
+.rm-footer-balance { display: flex; flex-direction: column; gap: 2px; }
+.rm-footer-balance .num { font: 600 18px var(--font-sans); font-variant-numeric: tabular-nums; }
+.rm-footer-balance .num.pos { color: var(--positive); }
+.rm-footer-balance .num.neg { color: var(--negative); }
+
+/* Mobile : on empile les 2 cartes. */
+@media (max-width: 880px) {
+  .rm-split { grid-template-columns: 1fr; overflow-y: auto; }
+  .rm-card { min-height: auto; }
+  .rm-entry-scroll { overflow: visible; }
+}
 @media (max-width: 767px) {
   .rm-backdrop {
     padding: 8px !important;
@@ -2766,8 +2843,16 @@ html, body {
   background: var(--bg-elev);
   border: 1px solid var(--border);
 }
-.rm-section-title { flex: 1; font: 700 11px var(--font-sans); text-transform: uppercase; letter-spacing: 0.12em; }
+.rm-section-title { flex: 1; font: 700 12px var(--font-sans); text-transform: uppercase; letter-spacing: 0.12em; }
 .rm-section-total { font: 700 14px var(--font-mono); font-variant-numeric: tabular-nums; }
+/* Carte saisie XL : lignes plus grandes, plus aérées, plus lisibles. */
+.rm-card--entry .rm-line-main { padding: 14px 0; }
+.rm-card--entry .rm-line-label-static { font: 500 15px var(--font-sans); }
+.rm-card--entry .rm-line-amount { padding: 9px 14px; }
+.rm-card--entry .rm-line-amount-input { width: 96px; font-size: 17px; }
+.rm-card--entry .rm-section-head { margin-bottom: 12px; }
+.rm-card--entry .rm-add-cat,
+.rm-card--entry .rm-add-sub { font-size: 13.5px; }
 
 .rm-empty {
   margin: 0 0 8px;
@@ -3083,9 +3168,11 @@ html, body {
 
 .cat-dd-empty { padding: 12px; text-align: center; color: var(--ink-3); font-size: 12.5px; }
 .rm-footer {
-  padding: 16px 24px 18px;
+  padding: 14px 24px;
   border-top: 1px solid var(--border);
   background: var(--bg-sunk);
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  flex-wrap: wrap;
 }
 .rm-totals {
   display: grid; grid-template-columns: repeat(4, 1fr);
