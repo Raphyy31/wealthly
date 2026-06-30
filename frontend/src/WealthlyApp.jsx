@@ -49,6 +49,7 @@ import { SettingsView } from './views/Settings.jsx';
 import { Admin } from './views/Admin.jsx';
 import { ImportFlow } from './views/ImportFlow.jsx';
 import { DCAView } from './views/DCA.jsx';
+import { SubscriptionsView } from './views/Subscriptions.jsx';
 import { Projection } from './views/Projection.jsx';
 import { ImmoSimulator } from './views/ImmoSimulator.jsx';
 import { NotificationBell } from './components/NotificationBell.jsx';
@@ -2893,6 +2894,11 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
                 </span>
               )}
             </a>
+            <a href="#/subscriptions"
+               onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('subscriptions'); }}
+               className={view === 'subscriptions' ? 'on' : ''}>
+              <Repeat size={16}/> <span>Abonnements</span>
+            </a>
             <a href="#/projection"
                onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('projection'); }}
                className={view === 'projection' ? 'on' : ''}>
@@ -3134,6 +3140,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
                 transferIds={transferIds}
                 memberShare={memberShare}
                 currentMonth={currentMonth} fmt={fmt}
+                onOpenSubscriptions={() => setView('subscriptions')}
               />
             )}
             {view === 'cashflow' && (
@@ -3154,6 +3161,12 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             accounts={accounts} members={members}
             dcaPlans={dcaPlans} onPlansChange={setDcaPlans}
             currentUserEmail={currentUser?.email}
+          />
+        )}
+        {view === 'subscriptions' && (
+          <SubscriptionsView
+            transactions={visibleTransactions} categories={categories} fmt={fmt}
+            onGoTransactions={() => setView('transactions')}
           />
         )}
         {view === 'projection' && (
@@ -3292,6 +3305,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
                 { v: 'dashboard', icon: <Activity size={16}/>, label: t('nav.dashboard') },
                 { v: 'wealth',    icon: <Landmark size={16}/>,  label: t('nav.wealth') },
                 { v: 'monthly',   icon: <Calendar size={16}/>,  label: t('nav.monthly'), badge: budgetsOverCount },
+                { v: 'subscriptions', icon: <Repeat size={16}/>, label: 'Abonnements' },
                 { v: 'transactions', icon: <BarChart3 size={16}/>, label: t('nav.transactions') },
                 { v: 'tax',       icon: <Calculator size={16}/>, label: t('nav.tax') },
                 { v: 'settings',  icon: <Settings size={16}/>,  label: t('nav.settings') },

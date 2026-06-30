@@ -30,6 +30,7 @@ import { useIncomeShift } from '../hooks/useIncomeShift.js';
 import { useIsNarrow } from '../hooks/useIsNarrow.js';
 import { RefMonthEditor } from '../components/RefMonthEditor.jsx';
 import { FiftyThirtyTwentyModal } from '../components/FiftyThirtyTwentyModal.jsx';
+import { SubscriptionsSummary } from './Subscriptions.jsx';
 
 const SAVING_SLUGS = new Set(['savings']);
 const SAVING_KEYWORDS = ['saving', 'virement', 'transfer', 'epargne', 'épargne', 'livret'];
@@ -86,6 +87,7 @@ export function Monthly({
   transferIds = new Set(),
   memberShare,
   currentMonth, fmt,
+  onOpenSubscriptions,
 }) {
   // Le scope détermine le libellé affiché et désactive l'édition pour les
   // enfants (qui n'ont pas leur propre Mois type — leurs dépenses sont
@@ -746,6 +748,11 @@ export function Monthly({
            la modale via le bouton du header. */}
       {!isChildScope && fiftyThirtyTwenty && (fiftyThirtyTwenty.needs || fiftyThirtyTwenty.wants || fiftyThirtyTwenty.savings) > 0 && (
         <FiftyThirtyTwentyStrip ftt={fiftyThirtyTwenty} onOpenDetails={() => setShow5030(true)} fmt={fmt}/>
+      )}
+
+      {/* Bloc abonnements — argument de vente mis en scène dans le budget mensuel */}
+      {!isChildScope && (
+        <SubscriptionsSummary transactions={transactions} categories={categories} onOpen={onOpenSubscriptions}/>
       )}
 
 
