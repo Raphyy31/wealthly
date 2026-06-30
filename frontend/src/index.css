@@ -2671,6 +2671,32 @@ html, body {
 }
 .rm-body { flex: 1; overflow-y: auto; min-height: 0; }
 
+/* Sankey live du mois type — flux Revenus → Dépenses/Épargne/Reste qui se
+   redessine à chaque montant saisi. Posé entre la toolbar et le formulaire. */
+.rm-sankey {
+  padding: 16px 24px 14px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--accent-soft) 0%, transparent 70%);
+}
+.rm-sankey svg { display: block; overflow: visible; }
+.rm-sankey-lbl { font-family: var(--font-mono); letter-spacing: 0.02em; }
+.rm-sankey-val { font-family: var(--font-sans); font-variant-numeric: tabular-nums; }
+.rm-sankey--empty {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 72px; text-align: center;
+  color: var(--ink-2); font-size: 13px; line-height: 1.5;
+}
+.rm-sankey--empty strong { color: var(--accent); font-weight: 600; }
+.rm-sankey-status {
+  margin-top: 10px;
+  font-size: 12.5px; line-height: 1.4;
+  padding: 8px 12px; border-radius: 8px;
+  text-align: center;
+}
+.rm-sankey-status.is-pos { background: var(--positive-soft); color: var(--positive); }
+.rm-sankey-status.is-neg { background: var(--negative-soft); color: var(--negative); }
+.rm-sankey-status strong { font-weight: 700; }
+
 /* ── Section ──────────────────────────────────────────────── */
 .rm-section-head {
   display: flex; align-items: center; gap: 10px;
