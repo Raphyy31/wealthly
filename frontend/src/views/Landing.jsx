@@ -23,12 +23,14 @@ export default function Landing({ onSignIn, onSignUp, onTryDemo, onPresent }) {
 
   const [view, setView] = useState('cinematic'); // 'cinematic' | 'details'
 
-  // Thème par vue : cinematic = DARK (hero tech "Forêt nocturne"), details = LIGHT
-  // (bento + pricing en clair, plus lisible pour la conversion). data-theme est
-  // forcé sur <html> pour que les tokens d'index.css [data-theme="..."] s'appliquent.
+  // Landing « Forêt » SOMBRE pour les DEUX vues (hero film + page Détails),
+  // cohérente avec le film. Le hero (FilmHero) utilise les tokens dark
+  // d'index.css ; la page Détails est en plus scopée `.landing-dark` (#0a0e08).
+  // data-theme="dark" force le body/html en dark → pas de flash clair derrière.
+  // Restauré à la préférence réelle de l'utilisateur au unmount.
   useEffect(() => {
     const root = document.documentElement;
-    root.setAttribute('data-theme', view === 'cinematic' ? 'dark' : 'light');
+    root.setAttribute('data-theme', 'dark');
     return () => {
       // Restaure la préférence RÉELLE de l'utilisateur (localStorage), pas un
       // attribut transitoire : sinon le forcé "fuitait" dans la démo / l'app.

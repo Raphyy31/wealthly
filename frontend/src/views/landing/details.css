@@ -2,6 +2,17 @@
    Wealthly Landing v4 — DÉTAILS page styles (tech, bento, compact)
    ============================================================================ */
 
+/* Accents italiques émeraude — bat le sélecteur global `:root h1 em` /
+   `:root h2 em` d'index.css (qui force normal + ink). Spécificité (0,2,1)
+   > (0,1,2). Cohérent avec l'accent émeraude italique du FilmHero. */
+:root .d-hero-h1 em,
+:root .bento-h2 em,
+:root .d-section-h2 em,
+:root .d-outro-line em {
+  font-style: italic;
+  color: var(--accent);
+}
+
 /* Main container — tighter than v4 cinematic */
 .d-main {
   max-width: 1280px;
@@ -419,28 +430,10 @@
 }
 
 /* ─── PRICING compact ──────────────────────────────────────────────── */
-.d-pricing-roi {
-  font: 400 14.5px/1.6 var(--font-sans);
-  color: var(--ink-2);
-  letter-spacing: -0.005em;
-  max-width: 62ch;
-  margin: -8px 0 28px;
-  padding: 14px 18px;
-  background: var(--accent-soft);
-  border-left: 2px solid var(--accent);
-  border-radius: 4px;
-}
 .d-pricing-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
-}
-.d-pricing-grid-2 {
-  grid-template-columns: repeat(2, 1fr);
-  max-width: 760px;
-}
-@media (max-width: 720px) {
-  .d-pricing-grid-2 { grid-template-columns: 1fr; }
 }
 .d-price-card {
   background: var(--bg-elev);
@@ -521,13 +514,13 @@
 }
 .d-price-cta:hover { background: var(--bg-hover); border-color: var(--ink-2); }
 .d-price-cta.primary {
-  background: var(--accent); color: var(--on-accent, var(--bg));
-  border-color: var(--accent);
+  background: var(--ink); color: var(--bg);
+  border-color: var(--ink);
   box-shadow: 0 8px 20px -8px rgba(14, 124, 86,0.5);
 }
 .d-price-cta.primary:hover {
-  background: var(--accent-2); border-color: var(--accent-2);
-  box-shadow: 0 12px 28px -8px rgba(14, 124, 86,0.65);
+  background: #fff; border-color: #fff;
+  box-shadow: 0 12px 28px -8px rgba(65, 212, 155,0.55);
 }
 
 /* ─── FAQ grid ──────────────────────────────────────────────────────── */
@@ -613,7 +606,7 @@
 .d-outro-line .word { display: inline-block; }
 .d-outro-cta {
   display: inline-flex; align-items: center; gap: 9px;
-  background: var(--accent); color: var(--on-accent, var(--bg));
+  background: var(--ink); color: var(--bg);
   border: none;
   font: 500 14px/1 var(--font-sans);
   letter-spacing: -0.005em;
@@ -626,9 +619,9 @@
   transition: background .15s, box-shadow .2s;
 }
 .d-outro-cta:hover {
-  background: var(--accent-2);
+  background: #fff;
   box-shadow:
-    0 1px 0 rgba(0,0,0,0.06),
+    0 1px 0 rgba(0,0,0,0.3),
     0 16px 36px -8px rgba(14, 124, 86,0.7);
 }
 

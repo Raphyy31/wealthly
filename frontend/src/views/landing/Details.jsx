@@ -430,17 +430,19 @@ function Colophon() {
 export default function Details({ onSignIn, onSignUp, onShowCinematic }) {
   return (
     <DetailsCtx.Provider value={{ onSignIn, onSignUp, onShowCinematic }}>
-      <div className="page-grain" aria-hidden/>
-      <div className="page-sink" aria-hidden/>
-      <Strip/>
-      <main className="d-main">
-        <Hero/>
-        <Bento/>
-        <Pricing/>
-        <FaqGrid/>
-        <Outro/>
-        <Colophon/>
-      </main>
+      <div className="landing-dark">
+        <div className="page-grain" aria-hidden/>
+        <div className="page-sink" aria-hidden/>
+        <Strip/>
+        <main className="d-main">
+          <Hero/>
+          <Bento/>
+          <Pricing/>
+          <FaqGrid/>
+          <Outro/>
+          <Colophon/>
+        </main>
+      </div>
     </DetailsCtx.Provider>
   );
 }
