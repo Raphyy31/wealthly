@@ -460,16 +460,19 @@ export function RefMonthEditor({
           <button className="ds-icon-btn" onClick={handleClose} aria-label="Fermer"><X size={18}/></button>
         </div>
 
-        <div className="rm-toolbar">
-          <button className="ds-btn primary" onClick={resyncAll} title="Calcule la moyenne par catégorie sur tes 3 derniers mois et la pose dans chaque ligne. Tu n'as plus qu'à ajuster.">
-            <RotateCcw size={14}/> Remplir depuis les 3 derniers mois
+        {/* Bandeau « chemin facile » — un clic remplit tout depuis l'historique,
+            l'utilisateur n'a plus qu'à ajuster. Action mise en avant car c'est
+            la façon la plus simple de remplir son mois type. */}
+        <div className="rm-magic">
+          <button className="rm-magic-btn" onClick={resyncAll}>
+            <RotateCcw size={16}/>
+            <span className="rm-magic-btn-main">Remplir automatiquement</span>
+            <span className="rm-magic-btn-sub">d'après mes 3 derniers mois</span>
           </button>
-          <button className="ds-btn ghost" onClick={handleReset}>
-            <RefreshCw size={14}/> Tout réinitialiser
-          </button>
-          <span className="ds-micro rm-toolbar-meta">
-            {refMonth?.updated_at ? `Maj ${refMonth.updated_at}` : 'Jamais enregistré'}
-          </span>
+          <div className="rm-magic-foot">
+            <span>L'app calcule tes moyennes — tu ajustes ensuite.</span>
+            <button className="rm-magic-reset" onClick={handleReset}>Repartir de zéro</button>
+          </div>
         </div>
 
         {/* Sankey live — le flux Revenus → Dépenses / Épargne / Reste à vivre

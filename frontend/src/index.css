@@ -2669,6 +2669,49 @@ html, body {
   border-bottom: 1px solid var(--border);
   background: var(--bg-sunk);
 }
+
+/* Bandeau « chemin facile » — gros bouton de remplissage auto en évidence. */
+.rm-magic {
+  padding: 14px 24px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-sunk);
+}
+.rm-magic-btn {
+  width: 100%;
+  display: flex; align-items: center; gap: 10px;
+  padding: 13px 18px;
+  border: none; border-radius: 12px;
+  background: var(--accent); color: var(--on-accent, #fff);
+  cursor: pointer;
+  text-align: left;
+  box-shadow: 0 6px 18px -8px color-mix(in oklab, var(--accent) 70%, transparent);
+  transition: filter 0.15s, box-shadow 0.2s;
+}
+.rm-magic-btn:hover { filter: brightness(1.06); box-shadow: 0 8px 24px -8px color-mix(in oklab, var(--accent) 85%, transparent); }
+.rm-magic-btn:active { filter: brightness(0.97); }
+.rm-magic-btn svg { flex-shrink: 0; }
+.rm-magic-btn-main { font: 600 14.5px var(--font-sans); letter-spacing: -0.01em; }
+.rm-magic-btn-sub {
+  margin-left: auto;
+  font: 500 12px var(--font-sans);
+  opacity: 0.82;
+}
+.rm-magic-foot {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin-top: 10px;
+  font: 400 12px var(--font-sans); color: var(--ink-3);
+}
+.rm-magic-reset {
+  background: none; border: none; cursor: pointer;
+  font: 500 12px var(--font-sans); color: var(--ink-2);
+  text-decoration: underline; text-underline-offset: 2px;
+  padding: 0;
+}
+.rm-magic-reset:hover { color: var(--ink); }
+@media (max-width: 560px) {
+  .rm-magic-btn { flex-wrap: wrap; gap: 4px 10px; }
+  .rm-magic-btn-sub { margin-left: 26px; width: 100%; }
+}
 .rm-body { flex: 1; overflow-y: auto; min-height: 0; scrollbar-gutter: stable; }
 /* Scrollbar soignée (plateforme payante) — assez visible, thémée Forêt. */
 .rm-body::-webkit-scrollbar { width: 10px; }
@@ -2794,10 +2837,10 @@ html, body {
 
 .rm-line-amount {
   display: flex; align-items: center; gap: 4px;
-  background: var(--bg-sunk);
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  padding: 5px 9px;
+  background: var(--bg-elev);
+  border: 1.5px solid var(--border-strong);
+  border-radius: 9px;
+  padding: 8px 12px;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 .rm-line-amount:focus-within {
@@ -2806,9 +2849,9 @@ html, body {
   background: var(--bg-elev);
 }
 .rm-line-amount-input {
-  width: 72px; text-align: right;
+  width: 88px; text-align: right;
   background: transparent; border: none;
-  font: 600 14px var(--font-mono); font-variant-numeric: tabular-nums; color: var(--ink);
+  font: 600 16px var(--font-mono); font-variant-numeric: tabular-nums; color: var(--ink);
 }
 .rm-line-amount-input:focus { outline: none; }
 .rm-line-amount-input::-webkit-inner-spin-button,
