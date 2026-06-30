@@ -2597,34 +2597,31 @@ html, body {
    ============================================================================ */
 .rm-backdrop { align-items: center; }
 .rm-modal {
-  width: min(1080px, 96vw);
   max-width: none !important;
-  max-height: 92vh;
+  max-height: 90vh;
   display: flex; flex-direction: column;
   padding: 0 !important;
   overflow: hidden;
   animation: rm-pop 200ms ease-out;
 }
 @keyframes rm-pop { from { transform: translateY(10px) scale(0.988); opacity: 0; } to { transform: none; opacity: 1; } }
+/* Une seule colonne, centrée et étroite — fini le tableur 3 colonnes plein
+   écran. Les 3 sections (Entrées / Dépenses / Épargne) s'empilent. */
 .rm-col {
   display: flex; flex-direction: column; gap: 0;
   min-width: 0;
-  padding: 22px 20px;
-  border-right: 1px solid var(--border);
+  padding: 20px 22px;
+  border-bottom: 1px solid var(--border);
 }
-.rm-col:last-child { border-right: none; }
-.rm-col-expense { /* middle — wider for the densest bucket */ }
+.rm-col:last-child { border-bottom: none; }
 .rm-body-grid {
   display: grid;
-  grid-template-columns: 1fr 1.55fr 1fr;
+  grid-template-columns: 1fr;
   gap: 0;
   padding: 0 !important;
 }
 @media (max-width: 880px) {
-  .rm-body-grid { grid-template-columns: 1fr; }
-  .rm-col { border-right: none; border-bottom: 1px solid var(--border); padding: 18px; }
-  .rm-col:last-child { border-bottom: none; }
-  .rm-modal { width: 100vw; max-height: 100vh; border-radius: 0; }
+  .rm-col { padding: 16px 18px; }
 }
 
 /* RefMonthEditor — opt-out du bottom-sheet pattern mobile (user feedback
@@ -2640,6 +2637,9 @@ html, body {
   padding: 16px !important;
 }
 .rm-backdrop .rm-modal {
+  /* Bat le `.modal { width: 100% }` de Styles.jsx (même spécificité mais
+     injecté après index.css) qui faisait s'étaler la modale plein écran. */
+  width: min(620px, 94vw) !important;
   border-radius: var(--radius-lg) !important;
   margin: 0 auto !important;
 }
