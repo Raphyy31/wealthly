@@ -187,7 +187,8 @@ function RegLesPanel({
   reloadCategories, onCategoryCreated, onCategoryDeleted, showToast,
   recategorizeUncategorized, recategorizeTransfers,
 }) {
-  const [activeTab, setActiveTab] = useState('rules-cat');
+  const [activeTab, setActiveTab] = useState('payees');
+  const [showAdvancedRules, setShowAdvancedRules] = useState(false);
   const contentRef = useRef(null);
   const tabsRef = useRef(null);
   const indicatorRef = useRef(null);
@@ -223,39 +224,25 @@ function RegLesPanel({
 
   const tabs = [
     {
-      id: 'rules-cat',
-      icon: Wand2,
-      label: 'Catégorisation auto',
-      desc: 'Pour les libellés bizarres qu\'aucun marchand ne couvre. Si la tx contient un mot-clé brut, elle reçoit la catégorie choisie. À utiliser quand l\'onglet Marchands ne suffit pas.',
-      example: '« VIR LBP 0345 » → Virement',
-    },
-    {
-      id: 'rules-vir',
-      icon: ArrowLeftRight,
-      label: 'Virements internes',
-      desc: 'Évite que tes mouvements entre comptes soient comptés comme des dépenses (ou inversement).',
-      example: '« LIVRET A » → marqué virement vers ton Livret',
+      id: 'payees',
+      icon: Store,
+      label: 'Marchands',
+      desc: 'La méthode recommandée. Assigne une catégorie à un marchand : toutes ses variantes futures (Picard, PICARD #234, PIC.PARIS) en héritent automatiquement.',
+      example: 'Picard → Courses',
     },
     {
       id: 'categories',
       icon: Tag,
       label: 'Catégories',
-      desc: 'Les boîtes dans lesquelles tes dépenses sont rangées (Logement, Courses, Restos…). Crée les tiennes ou supprime celles qui te servent pas.',
+      desc: 'Les boîtes dans lesquelles tes dépenses sont rangées (Logement, Courses, Restos…).',
       example: '',
     },
     {
-      id: 'payees',
-      icon: Store,
-      label: 'Marchands',
-      desc: 'La méthode recommandée. L\'app détecte les variantes (« PICARD », « PICARD #234 », « PIC.PARIS ») et les unifie sous une seule enseigne. Tu lui assignes une catégorie une fois, toutes les variantes futures héritent.',
-      example: 'Picard → Courses (couvre toutes ses variantes)',
-    },
-    {
-      id: 'tools',
-      icon: Settings2,
-      label: 'Outils',
-      desc: 'Ré-applique tes règles à l\'historique en un clic, ou rejoue la détection des virements internes.',
-      example: '',
+      id: 'rules-vir',
+      icon: ArrowLeftRight,
+      label: 'Virements internes',
+      desc: 'Évite que tes mouvements entre comptes soient comptés comme des dépenses.',
+      example: 'LIVRET A → virement vers ton Livret',
     },
   ];
 
@@ -298,17 +285,34 @@ function RegLesPanel({
       </div>
 
       <div ref={contentRef} className="reg-content" role="tabpanel">
-        {activeTab === 'rules-cat' && <CustomRulesSection categories={categories} />}
+        {activeTab === 'payees' && (
+          <>
+            <PayeesSection categories={categories} showToast={showToast} />
 
-        {activeTab === 'rules-vir' && (
-          <TransferRulesSection
-            accounts={accounts}
-            transactions={transactions}
-            transferIds={transferIds}
-            updateTags={updateTags}
-            setTransferOverride={setTransferOverride}
-            showToast={showToast}
-          />
+            {/* Mots-clés bruts — repli "Avancé". Pour les libellés qu'aucun
+                marchand ne couvre (ex. "VIR LBP 0345"). */}
+            <section className="card" style={{ marginTop: 16 }}>
+              <button
+                type="button"
+                onClick={() => setShowAdvancedRules(v => !v)}
+                className="reg-advanced-toggle"
+                aria-expanded={showAdvancedRules}
+              >
+                <Wand2 size={15}/>
+                <span>Règles par mot-clé (avancé)</span>
+                <span className="reg-advanced-caret" data-open={showAdvancedRules}>›</span>
+              </button>
+              {showAdvancedRules && (
+                <div style={{ borderTop: '1px solid var(--border)', padding: '14px 18px 18px' }}>
+                  <p style={{ fontSize: 13, color: 'var(--ink-2)', margin: '0 0 12px', lineHeight: 1.5 }}>
+                    Si la transaction contient un mot-clé brut, elle reçoit la catégorie choisie. À utiliser
+                    quand le marchand n'est pas détectable. Exemple : <code>VIR LBP 0345 → Virement</code>.
+                  </p>
+                  <CustomRulesSection categories={categories} />
+                </div>
+              )}
+            </section>
+          </>
         )}
 
         {activeTab === 'categories' && (
@@ -324,46 +328,48 @@ function RegLesPanel({
           </>
         )}
 
-        {activeTab === 'payees' && (
-          <PayeesSection categories={categories} showToast={showToast} />
-        )}
-
-        {activeTab === 'tools' && (
-          <div className="card settings-tools">
-            <div className="card-header">
-              <h3><Wand2 size={16}/> Outils de maintenance</h3>
-              <span className="card-meta">Ré-applique les règles à l'historique en un clic.</span>
-            </div>
-            <div className="settings-tools-list">
-              {recategorizeUncategorized && (
-                <div className="settings-tool-row">
-                  <div className="settings-tool-text">
-                    <strong>Re-catégoriser les non catégorisées</strong>
-                    <span>Ré-applique les règles aux transactions actuellement en « Non catégorisé ».</span>
-                  </div>
-                  <button className="ds-btn" type="button" onClick={recategorizeUncategorized}>Lancer</button>
-                </div>
-              )}
-              {recategorizeTransfers && (
-                <div className="settings-tool-row">
-                  <div className="settings-tool-text">
-                    <strong>Rejouer la détection des virements</strong>
-                    <span>Identifie AMEX, DÉPENSES ÉCHELONNÉES, top-ups Revolut/Lydia/Wise pré-v2. Tes overrides manuels sont préservés.</span>
-                  </div>
-                  <button className="ds-btn" type="button" onClick={recategorizeTransfers}>Lancer</button>
-                </div>
-              )}
-              {!recategorizeUncategorized && !recategorizeTransfers && (
-                <div className="settings-tool-row">
-                  <div className="settings-tool-text">
-                    <em>Aucun outil disponible en mode démo.</em>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+        {activeTab === 'rules-vir' && (
+          <TransferRulesSection
+            accounts={accounts}
+            transactions={transactions}
+            transferIds={transferIds}
+            updateTags={updateTags}
+            setTransferOverride={setTransferOverride}
+            showToast={showToast}
+          />
         )}
       </div>
+
+      {/* Outils — footer toujours visible (le plus utilisé : « re-catégoriser »
+          ne devrait pas être enterré dans un onglet à part). */}
+      {(recategorizeUncategorized || recategorizeTransfers) && (
+        <div className="card settings-tools" style={{ marginTop: 20 }}>
+          <div className="card-header">
+            <h3><Settings2 size={16}/> Outils</h3>
+            <span className="card-meta">Ré-applique les règles à l'historique.</span>
+          </div>
+          <div className="settings-tools-list">
+            {recategorizeUncategorized && (
+              <div className="settings-tool-row">
+                <div className="settings-tool-text">
+                  <strong>Re-catégoriser les non catégorisées</strong>
+                  <span>Applique tes règles aux transactions en « Non catégorisé ».</span>
+                </div>
+                <button className="ds-btn ds-btn--primary" type="button" onClick={recategorizeUncategorized}>Lancer</button>
+              </div>
+            )}
+            {recategorizeTransfers && (
+              <div className="settings-tool-row">
+                <div className="settings-tool-text">
+                  <strong>Rejouer la détection des virements</strong>
+                  <span>AMEX, échelonnés, top-ups Revolut/Lydia/Wise. Tes overrides sont préservés.</span>
+                </div>
+                <button className="ds-btn" type="button" onClick={recategorizeTransfers}>Lancer</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </section>
   );
 }

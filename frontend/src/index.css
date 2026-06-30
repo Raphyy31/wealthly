@@ -4255,6 +4255,28 @@ html, body {
   min-height: 200px;
 }
 
+/* Toggle "Règles par mot-clé (avancé)" — repli sobre dans l'onglet Marchands */
+.reg-advanced-toggle {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%;
+  background: transparent; border: none;
+  padding: 14px 18px;
+  font: 500 13.5px/1 var(--font-sans);
+  color: var(--ink-2); letter-spacing: -0.005em;
+  cursor: pointer;
+  text-align: left;
+  transition: color .12s;
+}
+.reg-advanced-toggle:hover { color: var(--ink); }
+.reg-advanced-toggle svg { color: var(--accent); flex-shrink: 0; }
+.reg-advanced-toggle > span:first-of-type { flex: 1; }
+.reg-advanced-caret {
+  font: 400 18px/1 var(--font-mono);
+  color: var(--ink-3);
+  transition: transform .2s ease;
+}
+.reg-advanced-caret[data-open="true"] { transform: rotate(90deg); }
+
 /* Responsive : sur mobile, on cache le label et on garde juste les icones */
 @media (max-width: 720px) {
   .reg-tab-label { display: none; }
