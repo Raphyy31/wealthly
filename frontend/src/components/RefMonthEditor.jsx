@@ -528,76 +528,77 @@ function MoisTypeSankey({ totals, fmt }) {
     );
   }
 
-  const W = 560, H = 158, padV = 14, barW = 13;
+  // Montants ronds (pas de centimes) — un flux veut des chiffres lisibles.
+  const eur0 = (v) => new Intl.NumberFormat('fr-FR', {
+    style: 'currency', currency: 'EUR', maximumFractionDigits: 0,
+  }).format(Math.round(v));
+
+  // Géométrie : gouttières dédiées aux labels (gauche + droite) pour qu'AUCUN
+  // texte ne soit coupé et que les labels ne chevauchent jamais les barres.
+  const W = 560, H = 150, padV = 12;
+  const BAR_W = 12;
+  const GUT_L = 86;             // gouttière labels gauche (Revenus + montant)
+  const GUT_R = 152;            // gouttière labels droite
+  const LB_X = GUT_L;          // x de la barre Revenus
+  const RB_X = W - GUT_R - BAR_W;
+  const flowL = LB_X + BAR_W;
+  const flowR = RB_X;
+  const cx = (flowL + flowR) / 2;
   const usable = H - 2 * padV;
-  // Échelle : le plus grand des deux côtés, pour que rien ne déborde.
+
   const scale = Math.max(income, expense + saving, 1);
   const px = (v) => (v / scale) * usable;
 
-  // Côté gauche : 1 barre « Revenus » centrée verticalement.
   const hIncome = px(income);
   const leftTop = padV + (usable - hIncome) / 2;
+  const incomeCy = leftTop + hIncome / 2;
 
-  // Segments sortants, dans l'ordre vertical (dépenses, épargne, reste>0).
   const segs = [
-    { key: 'expense', label: 'Dépenses',      val: expense,             color: 'var(--negative)' },
-    { key: 'saving',  label: 'Épargne',       val: saving,              color: 'var(--accent)' },
-    { key: 'rest',    label: 'Reste à vivre', val: Math.max(0, rest),   color: 'var(--positive)' },
+    { key: 'expense', label: 'Dépenses',      val: expense,           color: 'var(--negative)' },
+    { key: 'saving',  label: 'Épargne',       val: saving,            color: 'var(--accent)' },
+    { key: 'rest',    label: 'Reste à vivre', val: Math.max(0, rest), color: 'var(--positive)' },
   ].filter(s => s.val > 0);
 
-  // Empile les segments à GAUCHE (dans la barre revenus) et à DROITE (chacun
-  // sa propre barre, empilées du haut). Même hauteur des deux côtés = même val.
   const rightTotalH = segs.reduce((s, x) => s + px(x.val), 0);
   let lY = leftTop;
   let rY = padV + (usable - rightTotalH) / 2;
   const bands = segs.map(s => {
     const h = px(s.val);
-    const b = { ...s, h, lY, rY };
+    const b = { ...s, h, lY, rY, cy: rY + h / 2 };
     lY += h; rY += h;
     return b;
   });
-
-  const x1 = barW;            // bord droit de la barre gauche
-  const x2 = W - barW;        // bord gauche des barres droites
-  const cx = (x1 + x2) / 2;
-
-  const fmtShort = (v) => fmt(Math.round(v));
 
   return (
     <div className="rm-sankey">
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="xMidYMid meet" role="img" aria-label="Flux du mois type">
         {/* Rubans */}
         {bands.map(b => {
-          const d = `M ${x1},${b.lY} C ${cx},${b.lY} ${cx},${b.rY} ${x2},${b.rY} `
-                  + `L ${x2},${b.rY + b.h} C ${cx},${b.rY + b.h} ${cx},${b.lY + b.h} ${x1},${b.lY + b.h} Z`;
-          return <path key={b.key} d={d} fill={b.color} fillOpacity="0.22"/>;
+          const d = `M ${flowL},${b.lY} C ${cx},${b.lY} ${cx},${b.rY} ${flowR},${b.rY} `
+                  + `L ${flowR},${b.rY + b.h} C ${cx},${b.rY + b.h} ${cx},${b.lY + b.h} ${flowL},${b.lY + b.h} Z`;
+          return <path key={b.key} d={d} fill={b.color} fillOpacity="0.20"/>;
         })}
-        {/* Barre Revenus (gauche) */}
-        <rect x="0" y={leftTop} width={barW} height={hIncome} rx="3" fill="var(--accent)"/>
-        <text x="0" y={leftTop - 6} className="rm-sankey-lbl" fill="var(--ink-2)" fontSize="11">
-          Revenus
-        </text>
-        <text x="0" y={leftTop + hIncome + 14} className="rm-sankey-val" fill="var(--ink)" fontSize="12" fontWeight="600">
-          {fmtShort(income)}
-        </text>
-        {/* Barres cibles (droite) + labels */}
+
+        {/* Barre Revenus (gauche) + labels dans la gouttière gauche */}
+        <rect x={LB_X} y={leftTop} width={BAR_W} height={hIncome} rx="3" fill="var(--accent)"/>
+        <text x={LB_X - 12} y={incomeCy - 3} textAnchor="end" className="rm-sankey-lbl" fill="var(--ink-2)" fontSize="11">Revenus</text>
+        <text x={LB_X - 12} y={incomeCy + 13} textAnchor="end" className="rm-sankey-val" fill="var(--ink)" fontSize="13" fontWeight="600">{eur0(income)}</text>
+
+        {/* Barres cibles (droite) + labels dans la gouttière droite */}
         {bands.map(b => (
           <g key={`r-${b.key}`}>
-            <rect x={W - barW} y={b.rY} width={barW} height={b.h} rx="3" fill={b.color}/>
-            <text x={W} y={b.rY + b.h / 2 - 2} textAnchor="end" className="rm-sankey-lbl" fill="var(--ink-2)" fontSize="11" transform={`translate(0,0)`}>
-              {b.label}
-            </text>
-            <text x={W} y={b.rY + b.h / 2 + 12} textAnchor="end" className="rm-sankey-val" fill="var(--ink)" fontSize="11.5" fontWeight="600">
-              {fmtShort(b.val)}
-            </text>
+            <rect x={RB_X} y={b.rY} width={BAR_W} height={b.h} rx="3" fill={b.color}/>
+            <text x={RB_X + BAR_W + 12} y={b.cy - 3} className="rm-sankey-lbl" fill="var(--ink-2)" fontSize="11">{b.label}</text>
+            <text x={RB_X + BAR_W + 12} y={b.cy + 13} className="rm-sankey-val" fill="var(--ink)" fontSize="12.5" fontWeight="600">{eur0(b.val)}</text>
           </g>
         ))}
       </svg>
+
       {/* Bandeau état : équilibré / déficit */}
       <div className={`rm-sankey-status ${rest < 0 ? 'is-neg' : 'is-pos'}`}>
         {rest < 0
-          ? <>⚠ Déficit de <strong>{fmtShort(-rest)}</strong> — tes dépenses + épargne dépassent tes revenus.</>
-          : <>Tu dégages <strong>{fmtShort(rest)}</strong> de reste à vivre chaque mois.</>}
+          ? <>⚠ Déficit de <strong>{eur0(-rest)}</strong> — dépenses + épargne dépassent les revenus.</>
+          : <>Tu dégages <strong>{eur0(rest)}</strong> de reste à vivre chaque mois.</>}
       </div>
     </div>
   );

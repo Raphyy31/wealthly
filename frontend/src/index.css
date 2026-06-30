@@ -2669,7 +2669,17 @@ html, body {
   border-bottom: 1px solid var(--border);
   background: var(--bg-sunk);
 }
-.rm-body { flex: 1; overflow-y: auto; min-height: 0; }
+.rm-body { flex: 1; overflow-y: auto; min-height: 0; scrollbar-gutter: stable; }
+/* Scrollbar soignée (plateforme payante) — assez visible, thémée Forêt. */
+.rm-body::-webkit-scrollbar { width: 10px; }
+.rm-body::-webkit-scrollbar-track { background: transparent; }
+.rm-body::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 999px;
+  border: 2px solid var(--bg-card);
+}
+.rm-body::-webkit-scrollbar-thumb:hover { background: var(--ink-3); }
+.rm-body { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
 
 /* Sankey live du mois type — flux Revenus → Dépenses/Épargne/Reste qui se
    redessine à chaque montant saisi. Posé entre la toolbar et le formulaire. */
