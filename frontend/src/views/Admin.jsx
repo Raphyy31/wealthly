@@ -43,10 +43,10 @@ function fmt(n) {
 }
 
 const PLAN_COLORS = {
-  solo:   { bg: 'var(--bg-subtle)',       color: 'var(--text-secondary)' },
-  pro:    { bg: 'var(--primary-soft)',    color: 'var(--color-w-accent-2)' },
-  family: { bg: 'rgba(52,211,153,0.12)', color: '#34d399' },
-  admin:  { bg: 'rgba(168,85,247,0.15)', color: '#a855f7' },
+  solo:   { bg: 'var(--bg-subtle)',    color: 'var(--text-secondary)' },
+  pro:    { bg: 'var(--primary-soft)', color: 'var(--color-w-accent-2)' },
+  family: { bg: 'var(--positive-soft)', color: 'var(--positive)' },
+  admin:  { bg: 'var(--d3-soft)',       color: 'var(--d3)' },
 };
 
 const PLAN_LABELS = { solo: 'Solo', pro: 'Pro', family: 'Famille', admin: 'Admin' };
@@ -78,11 +78,11 @@ const KIND_TONE = {
 };
 
 const TONE_STYLE = {
-  success: { bg: 'rgba(52,211,153,0.12)', color: '#34d399' },
-  danger:  { bg: 'rgba(239,68,68,0.12)',  color: '#f87171' },
-  warn:    { bg: 'rgba(251,191,36,0.12)', color: '#fbbf24' },
-  info:    { bg: 'rgba(99,102,241,0.12)', color: '#818cf8' },
-  muted:   { bg: 'var(--bg-subtle)',      color: 'var(--text-tertiary)' },
+  success: { bg: 'var(--positive-soft)', color: 'var(--positive)' },
+  danger:  { bg: 'var(--negative-soft)', color: 'var(--negative)' },
+  warn:    { bg: 'var(--warning-soft)',  color: 'var(--warning)' },
+  info:    { bg: 'var(--d3-soft)',       color: 'var(--d3)' },
+  muted:   { bg: 'var(--bg-subtle)',     color: 'var(--text-tertiary)' },
 };
 
 const PlanBadge = ({ plan }) => {
@@ -284,10 +284,10 @@ export function Admin() {
             {/* KPI cards */}
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(160px, 1fr))', gap:12 }}>
               {[
-                { label:'Utilisateurs', value: metrics?.total_users ?? '—', sub:`${metrics?.active_users ?? 0} actifs`, icon: Users, color:'var(--color-w-accent-2)' },
-                { label:'Transactions', value: (metrics?.total_transactions ?? 0).toLocaleString('fr-FR'), icon: Activity, color:'#fbbf24' },
-                { label:'Comptes bancaires', value: metrics?.total_accounts ?? '—', icon: Database, color:'#60a5fa' },
-                { label:'Nouveaux (30j)', value: metrics?.new_users_this_month ?? '—', sub:`${metrics?.new_users_this_week ?? 0} cette semaine`, icon: Users, color:'#f97316' },
+                { label:'Utilisateurs', value: metrics?.total_users ?? '—', sub:`${metrics?.active_users ?? 0} actifs`, icon: Users, color:'var(--accent)' },
+                { label:'Transactions', value: (metrics?.total_transactions ?? 0).toLocaleString('fr-FR'), icon: Activity, color:'var(--d4)' },
+                { label:'Comptes bancaires', value: metrics?.total_accounts ?? '—', icon: Database, color:'var(--d2)' },
+                { label:'Nouveaux (30j)', value: metrics?.new_users_this_month ?? '—', sub:`${metrics?.new_users_this_week ?? 0} cette semaine`, icon: Users, color:'var(--d5)' },
               ].map(k => (
                 <div key={k.label} style={{ background:'var(--bg-card)', borderRadius:12, padding:'16px 18px', border:'1px solid var(--color-w-border)' }}>
                   <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
@@ -344,8 +344,8 @@ export function Admin() {
 
             {/* Security alerts */}
             {stats?.lockouts?.length > 0 && (
-              <div style={{ background:'rgba(239,68,68,0.08)', borderRadius:12, padding:'16px 20px', border:'1px solid rgba(239,68,68,0.2)' }}>
-                <h3 style={{ fontSize:13, fontWeight:600, margin:'0 0 12px', color:'#f87171', display:'flex', alignItems:'center', gap:6 }}>
+              <div style={{ background:'var(--negative-soft)', borderRadius:12, padding:'16px 20px', border:'1px solid var(--negative)' }}>
+                <h3 style={{ fontSize:13, fontWeight:600, margin:'0 0 12px', color:'var(--negative)', display:'flex', alignItems:'center', gap:6 }}>
                   <AlertTriangle size={14}/> {stats.lockouts.length} compte{stats.lockouts.length > 1 ? 's' : ''} bloqué{stats.lockouts.length > 1 ? 's' : ''}
                 </h3>
                 {stats.lockouts.map(l => (
@@ -390,7 +390,7 @@ export function Admin() {
                         <td style={tdStyle}>
                           <div style={{ display:'flex', alignItems:'center', gap:6 }}>
                             <span>{u.email}</span>
-                            {u.is_admin && <span style={{ fontSize:10, fontWeight:700, padding:'1px 6px', borderRadius:999, background:'rgba(168,85,247,0.15)', color:'#a855f7' }}>admin</span>}
+                            {u.is_admin && <span style={{ fontSize:10, fontWeight:700, padding:'1px 6px', borderRadius:999, background:'var(--d3-soft)', color:'var(--d3)' }}>admin</span>}
                           </div>
                         </td>
                         <td style={tdStyle}>{u.full_name || '—'}</td>
@@ -400,8 +400,8 @@ export function Admin() {
                         <td style={{ ...tdStyle, fontVariantNumeric:'tabular-nums' }}>{u.transaction_count}</td>
                         <td style={tdStyle}>
                           <span style={{ display:'inline-flex', alignItems:'center', gap:4, padding:'2px 8px', borderRadius:999, fontSize:11, fontWeight:600,
-                            background: u.is_active ? 'rgba(52,211,153,0.12)' : 'var(--bg-subtle)',
-                            color: u.is_active ? '#34d399' : 'var(--text-muted)' }}>
+                            background: u.is_active ? 'var(--positive-soft)' : 'var(--bg-subtle)',
+                            color: u.is_active ? 'var(--positive)' : 'var(--text-muted)' }}>
                             {u.is_active ? <ShieldCheck size={10}/> : null}
                             {u.is_active ? 'Actif' : 'Suspendu'}
                           </span>
@@ -411,18 +411,18 @@ export function Admin() {
                             <div style={{ display:'flex', gap:5 }}>
                               <button onClick={() => handleResetPassword(u.id, u.email)}
                                 disabled={actionLoading === u.id}
-                                title="Envoyer email reset" style={iconBtnStyle('#60a5fa')}>
+                                title="Envoyer email reset" style={iconBtnStyle('var(--d2)')}>
                                 <MailCheck size={13}/>
                               </button>
                               <button onClick={() => handleToggle(u.id, u.email)}
                                 disabled={actionLoading === u.id}
                                 title={u.is_active ? 'Suspendre' : 'Réactiver'}
-                                style={iconBtnStyle(u.is_active ? '#fbbf24' : '#34d399')}>
+                                style={iconBtnStyle(u.is_active ? 'var(--warning)' : 'var(--positive)')}>
                                 {u.is_active ? <ToggleLeft size={13}/> : <ToggleRight size={13}/>}
                               </button>
                               <button onClick={() => handleDelete(u.id, u.email)}
                                 disabled={actionLoading === u.id}
-                                title="Supprimer" style={iconBtnStyle('#f87171')}>
+                                title="Supprimer" style={iconBtnStyle('var(--negative)')}>
                                 <Trash2 size={13}/>
                               </button>
                             </div>
@@ -579,15 +579,15 @@ export function Admin() {
               {/* API health */}
               <div style={{ background:'var(--bg-card)', borderRadius:12, padding:'20px', border:'1px solid var(--color-w-border)' }}>
                 <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14 }}>
-                  <Server size={18} style={{ color:'var(--color-w-accent-2)' }}/>
+                  <Server size={18} style={{ color:'var(--accent)' }}/>
                   <h3 style={{ fontSize:14, fontWeight:600, margin:0 }}>API Railway</h3>
                 </div>
                 {apiHealth ? (
                   <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                     {apiHealth.ok
-                      ? <CheckCircle2 size={20} style={{ color:'#34d399' }}/>
-                      : <XCircle size={20} style={{ color:'#f87171' }}/>}
-                    <span style={{ fontSize:14, fontWeight:600, color: apiHealth.ok ? '#34d399' : '#f87171' }}>
+                      ? <CheckCircle2 size={20} style={{ color:'var(--positive)' }}/>
+                      : <XCircle size={20} style={{ color:'var(--negative)' }}/>}
+                    <span style={{ fontSize:14, fontWeight:600, color: apiHealth.ok ? 'var(--positive)' : 'var(--negative)' }}>
                       {apiHealth.ok ? `Opérationnel — ${apiHealth.ms}ms` : 'Hors ligne'}
                     </span>
                   </div>
@@ -603,7 +603,7 @@ export function Admin() {
               {/* DB stats */}
               <div style={{ background:'var(--bg-card)', borderRadius:12, padding:'20px', border:'1px solid var(--color-w-border)' }}>
                 <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14 }}>
-                  <Database size={18} style={{ color:'#a855f7' }}/>
+                  <Database size={18} style={{ color:'var(--d3)' }}/>
                   <h3 style={{ fontSize:14, fontWeight:600, margin:0 }}>Base de données</h3>
                 </div>
                 <div style={{ fontSize:13, display:'flex', flexDirection:'column', gap:6, color:'var(--text-secondary)' }}>
@@ -625,7 +625,7 @@ export function Admin() {
               {/* Frontend */}
               <div style={{ background:'var(--bg-card)', borderRadius:12, padding:'20px', border:'1px solid var(--color-w-border)' }}>
                 <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14 }}>
-                  <Globe size={18} style={{ color:'#60a5fa' }}/>
+                  <Globe size={18} style={{ color:'var(--d2)' }}/>
                   <h3 style={{ fontSize:14, fontWeight:600, margin:0 }}>Frontend</h3>
                 </div>
                 <div style={{ fontSize:13, display:'flex', flexDirection:'column', gap:6, color:'var(--text-secondary)' }}>
@@ -636,10 +636,10 @@ export function Admin() {
                     <span style={{ color:'var(--text-muted)' }}>Framework</span><span>React 18 + Vite</span>
                   </div>
                   <div style={{ display:'flex', justifyContent:'space-between' }}>
-                    <span style={{ color:'var(--text-muted)' }}>Auto-deploy</span><span style={{ color:'#34d399' }}>✓ Actif</span>
+                    <span style={{ color:'var(--text-muted)' }}>Auto-deploy</span><span style={{ color:'var(--positive)' }}>✓ Actif</span>
                   </div>
                   <div style={{ display:'flex', justifyContent:'space-between' }}>
-                    <span style={{ color:'var(--text-muted)' }}>PWA</span><span style={{ color:'#34d399' }}>✓ Installable</span>
+                    <span style={{ color:'var(--text-muted)' }}>PWA</span><span style={{ color:'var(--positive)' }}>✓ Installable</span>
                   </div>
                 </div>
               </div>
@@ -647,7 +647,7 @@ export function Admin() {
               {/* Security config */}
               <div style={{ background:'var(--bg-card)', borderRadius:12, padding:'20px', border:'1px solid var(--color-w-border)' }}>
                 <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14 }}>
-                  <Lock size={18} style={{ color:'#fbbf24' }}/>
+                  <Lock size={18} style={{ color:'var(--warning)' }}/>
                   <h3 style={{ fontSize:14, fontWeight:600, margin:0 }}>Sécurité</h3>
                 </div>
                 <div style={{ fontSize:13, display:'flex', flexDirection:'column', gap:6, color:'var(--text-secondary)' }}>
@@ -661,7 +661,7 @@ export function Admin() {
                   ].map(([k, v]) => (
                     <div key={k} style={{ display:'flex', justifyContent:'space-between' }}>
                       <span style={{ color:'var(--text-muted)' }}>{k}</span>
-                      <span style={{ color: v.includes('à venir') ? '#fbbf24' : 'inherit' }}>{v}</span>
+                      <span style={{ color: v.includes('à venir') ? 'var(--warning)' : 'inherit' }}>{v}</span>
                     </div>
                   ))}
                 </div>
