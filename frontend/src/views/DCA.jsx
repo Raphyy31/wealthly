@@ -33,6 +33,20 @@ const RETURN_PRESETS = [
   { label: 'Agressif 12 %',  value: 12 },
 ];
 
+// Couleur déterministe par ticker — tirée du palette dataviz Forêt (d1..d7).
+// Permet de différencier visuellement chaque plan DCA (bande latérale + header
+// teinté), même esprit que les cards de classe Patrimoine.
+const DCA_PALETTE = ['--accent', '--d2', '--d3', '--d4', '--d5', '--d6', '--d7'];
+function hashTicker(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+function colorVarForPlan(plan) {
+  const key = (plan?.ticker || plan?.name || '').toString().trim().toUpperCase() || 'X';
+  return DCA_PALETTE[hashTicker(key) % DCA_PALETTE.length];
+}
+
 /** FV of a recurring PMT over n months at monthly rate r */
 function fvPmt(pmt, annualPct, months) {
   const r = annualPct / 100 / 12;
@@ -573,23 +587,29 @@ function PlanCard({ plan, accounts, quotes, onEdit, onToggle, onDelete, onSetExe
 
   const fmt = v => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: plan.currency || 'EUR', maximumFractionDigits: 0 }).format(v);
 
+  const planColorVar = colorVarForPlan(plan);
+
   return (
     <section
-      className="card"
-      style={{ opacity: plan.status === 'paused' ? 0.72 : 1 }}
+      className="card dca-plan-card"
+      style={{
+        opacity: plan.status === 'paused' ? 0.72 : 1,
+        '--wc-accent': `var(${planColorVar})`,
+        '--wc-tint': `color-mix(in oklab, var(${planColorVar}) 8%, transparent)`,
+      }}
     >
       {/* Canonical card header */}
-      <div className="card-header">
+      <div className="card-header dca-plan-head">
         <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {tickerKey && (
             <span style={{
               fontFamily: 'Geist Mono, ui-monospace, Menlo, monospace',
-              fontSize: 10.5, fontWeight: 700, color: 'var(--accent)',
+              fontSize: 10.5, fontWeight: 700, color: `var(${planColorVar})`,
               letterSpacing: '0.04em', padding: '2px 6px',
-              background: 'var(--accent-soft)', borderRadius: 4,
+              background: `color-mix(in oklab, var(${planColorVar}) 14%, transparent)`, borderRadius: 4,
             }}>{tickerKey}</span>
           )}
-          <span style={{ color: 'var(--accent)' }}>{plan.name}</span>
+          <span style={{ color: `var(${planColorVar})` }}>{plan.name}</span>
           {plan.status === 'paused' && (
             <span style={{
               fontSize: 10, fontWeight: 600, letterSpacing: '0.14em',

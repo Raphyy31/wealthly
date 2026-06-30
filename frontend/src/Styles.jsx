@@ -2038,6 +2038,26 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 /* DCA — aligned with the canonical .card / .subview-header system */
 .dca-view { display: flex; flex-direction: column; gap: 20px; }
 
+/* Plan card DCA — différenciation par couleur d'instrument, esprit cohérent
+   avec Patrimoine (bande latérale + header teinté). La couleur est dérivée
+   du ticker du plan (voir colorVarForPlan dans DCA.jsx). */
+.dca-plan-card {
+  border-left: 5px solid var(--wc-accent, var(--accent)) !important;
+  overflow: hidden;
+  transition: border-color .22s, box-shadow .22s;
+}
+.dca-plan-card:hover {
+  box-shadow: 0 2px 10px -4px color-mix(in oklab, var(--wc-accent, var(--accent)) 25%, transparent);
+}
+.dca-plan-card .dca-plan-head {
+  background: var(--wc-tint, transparent);
+  /* la card a padding 24px → on déborde négativement pour que la teinte
+     touche les 3 bords de la card et fasse vraiment "header" */
+  margin: -24px -24px 16px;
+  padding: 14px 24px;
+  border-bottom: 0.5px solid color-mix(in oklab, var(--wc-accent, var(--accent)) 22%, transparent);
+}
+
 /* Projection hero — la pièce centrale de la vue DCA. Courbe surface cobalt
    (valeur projetée) + ligne pointillée (capital versé) sur un horizon réglable. */
 .dca-hero .card-header { align-items: center; }
