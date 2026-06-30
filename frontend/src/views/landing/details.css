@@ -419,10 +419,28 @@
 }
 
 /* ─── PRICING compact ──────────────────────────────────────────────── */
+.d-pricing-roi {
+  font: 400 14.5px/1.6 var(--font-sans);
+  color: var(--ink-2);
+  letter-spacing: -0.005em;
+  max-width: 62ch;
+  margin: -8px 0 28px;
+  padding: 14px 18px;
+  background: var(--accent-soft);
+  border-left: 2px solid var(--accent);
+  border-radius: 4px;
+}
 .d-pricing-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
+}
+.d-pricing-grid-2 {
+  grid-template-columns: repeat(2, 1fr);
+  max-width: 760px;
+}
+@media (max-width: 720px) {
+  .d-pricing-grid-2 { grid-template-columns: 1fr; }
 }
 .d-price-card {
   background: var(--bg-elev);
@@ -503,12 +521,12 @@
 }
 .d-price-cta:hover { background: var(--bg-hover); border-color: var(--ink-2); }
 .d-price-cta.primary {
-  background: var(--ink); color: var(--bg);
-  border-color: var(--ink);
+  background: var(--accent); color: var(--on-accent, var(--bg));
+  border-color: var(--accent);
   box-shadow: 0 8px 20px -8px rgba(14, 124, 86,0.5);
 }
 .d-price-cta.primary:hover {
-  background: #E8EFE9; border-color: #E8EFE9;
+  background: var(--accent-2); border-color: var(--accent-2);
   box-shadow: 0 12px 28px -8px rgba(14, 124, 86,0.65);
 }
 
@@ -595,7 +613,7 @@
 .d-outro-line .word { display: inline-block; }
 .d-outro-cta {
   display: inline-flex; align-items: center; gap: 9px;
-  background: var(--ink); color: var(--bg);
+  background: var(--accent); color: var(--on-accent, var(--bg));
   border: none;
   font: 500 14px/1 var(--font-sans);
   letter-spacing: -0.005em;
@@ -608,9 +626,9 @@
   transition: background .15s, box-shadow .2s;
 }
 .d-outro-cta:hover {
-  background: #E8EFE9;
+  background: var(--accent-2);
   box-shadow:
-    0 1px 0 rgba(0,0,0,0.3),
+    0 1px 0 rgba(0,0,0,0.06),
     0 16px 36px -8px rgba(14, 124, 86,0.7);
 }
 

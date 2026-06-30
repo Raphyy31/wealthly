@@ -180,23 +180,7 @@ function Bento() {
           </div>
         </div>
 
-        {/* ── 3 — Famille (small, avatars) ── */}
-        <div className="bento-tile tile-family">
-          <div className="tile-eye">Foyer</div>
-          <div className="tile-family-stack">
-            {['MR', 'CR', 'EM', 'PM'].map((n, i) => (
-              <div key={i} className="tile-avatar" style={{ background: ['#0E7C56','#4FB57A','#E0975A','#0A5E41'][i] }}>
-                {n}
-              </div>
-            ))}
-          </div>
-          <div className="tile-family-meta">
-            <div className="tile-num">4 membres</div>
-            <div className="tile-sub">Permissions granulaires</div>
-          </div>
-        </div>
-
-        {/* ── 4 — Fiscal (medium, mini IR / IFI) ── */}
+        {/* ── 3 — Fiscal (mini IR / IFI) ── */}
         <div className="bento-tile tile-fiscal">
           <div className="tile-eye">Fiscalité française</div>
           <div className="tile-fiscal-rows">
@@ -218,27 +202,7 @@ function Bento() {
           </div>
         </div>
 
-        {/* ── 5 — Suivi en direct (small) ── */}
-        <div className="bento-tile tile-live">
-          <div className="tile-eye">PEA · en direct</div>
-          <div className="tile-live-content">
-            <div className="tile-live-dot-wrap" aria-hidden>
-              <span className="tile-live-dot"/>
-              <span className="tile-live-ring"/>
-            </div>
-            <div>
-              <div className="tile-num">82 480 €</div>
-              <div className="tile-sub" style={{ color: '#4FB57A' }}>+17,4 % · 12 mois</div>
-            </div>
-          </div>
-          <div className="tile-mini-stat">
-            <span>14 lignes</span>
-            <span>·</span>
-            <span>cours 17:42</span>
-          </div>
-        </div>
-
-        {/* ── 6 — Tous types d'actifs (wide) ── */}
+        {/* ── 4 — Tous types d'actifs (wide) ── */}
         <div className="bento-tile tile-assets">
           <div className="tile-eye">Tous vos actifs</div>
           <div className="tile-assets-grid">
@@ -259,40 +223,20 @@ function Bento() {
           </div>
         </div>
 
-        {/* ── 7 — Sécurité ── */}
+        {/* ── 5 — Sécurité ── */}
         <div className="bento-tile tile-security">
           <div className="tile-eye">Confidentialité</div>
           <div className="tile-security-content">
             <svg className="tile-shield" viewBox="0 0 32 32" fill="none">
               <path d="M16 3 L28 7 V16 C28 23 22 28 16 30 C10 28 4 23 4 16 V7 Z"
-                    fill="none" stroke="#0E7C56" strokeWidth="1.4"/>
-              <path d="M11 16 L14.5 19.5 L22 12" fill="none" stroke="#0E7C56" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                    fill="none" stroke="currentColor" strokeWidth="1.4"/>
+              <path d="M11 16 L14.5 19.5 L22 12" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
             <div>
               <div className="tile-strong">Vos données restent vôtres.</div>
               <div className="tile-sub">Aucune publicité. Aucune revente.</div>
             </div>
           </div>
-        </div>
-
-        {/* ── 8 — Bilan PDF (small) ── */}
-        <div className="bento-tile tile-bilan">
-          <div className="tile-eye">Bilan mensuel</div>
-          <div className="tile-doc">
-            <div className="tile-doc-paper">
-              <div className="tile-doc-line w80"/>
-              <div className="tile-doc-line w40"/>
-              <div className="tile-doc-block"/>
-              <div className="tile-doc-line w60"/>
-              <div className="tile-doc-line w70"/>
-            </div>
-            <div className="tile-doc-paper offset">
-              <div className="tile-doc-line w80"/>
-              <div className="tile-doc-line w40"/>
-              <div className="tile-doc-block"/>
-            </div>
-          </div>
-          <div className="tile-sub">Export PDF auto · le 1er du mois</div>
         </div>
       </div>
     </section>
@@ -309,46 +253,33 @@ function Pricing() {
       <div className="d-section-head">
         <div className="d-section-eye">— Tarifs</div>
         <h2 className="d-section-h2">
-          Un prix juste.<br/>
-          <em>Pas un piège.</em>
+          Rentabilisé<br/>
+          <em>dès la première utilisation.</em>
         </h2>
       </div>
 
-      <div className="d-pricing-grid">
+      <p className="d-pricing-roi">
+        Un abonnement oublié, un forfait surévalué, une assurance dormante —
+        Wealthly les repère pour vous. La première résiliation rembourse
+        souvent l'année entière.
+      </p>
+
+      <div className="d-pricing-grid d-pricing-grid-2">
         <div className="d-price-card">
           <div className="d-price-head">
             <div className="d-price-name">Solo</div>
             <div className="d-price-val">
-              <span className="num">0</span>
+              <span className="num">7,99</span>
               <span className="d-price-cur">€</span>
               <span className="d-price-per">/mois</span>
             </div>
           </div>
           <div className="d-price-lines">
-            <div>Une banque connectée</div>
-            <div>Patrimoine en temps réel</div>
-            <div>Simulateur fiscal simple</div>
-            <div>Export complet des données</div>
-          </div>
-          <button className="d-price-cta" onClick={onSignUp}>Commencer →</button>
-        </div>
-
-        <div className="d-price-card featured">
-          <div className="d-price-badge">Recommandé</div>
-          <div className="d-price-head">
-            <div className="d-price-name">Famille</div>
-            <div className="d-price-val">
-              <span className="num">9</span>
-              <span className="d-price-cur">€</span>
-              <span className="d-price-per">/mois</span>
-            </div>
-          </div>
-          <div className="d-price-lines">
-            <div>Foyer multi-membres, comptes-joints</div>
-            <div>Tous types d'actifs (PEA, SCPI, immo)</div>
-            <div>Simulateur IR + IFI complet</div>
+            <div>Toutes vos banques connectées</div>
+            <div>Patrimoine consolidé en temps réel</div>
+            <div>Catégorisation et détection des dépenses</div>
+            <div>Simulateur fiscal (IR + plus-values)</div>
             <div>Bilan patrimonial PDF mensuel</div>
-            <div>Support prioritaire</div>
           </div>
           <button className="d-price-cta primary" onClick={onSignUp}>
             Essayer 14 jours
@@ -356,23 +287,28 @@ function Pricing() {
           </button>
         </div>
 
-        <div className="d-price-card">
+        <div className="d-price-card featured">
+          <div className="d-price-badge">Recommandé</div>
           <div className="d-price-head">
-            <div className="d-price-name">Avancé</div>
+            <div className="d-price-name">Famille</div>
             <div className="d-price-val">
-              <span className="num">29</span>
+              <span className="num">15</span>
               <span className="d-price-cur">€</span>
               <span className="d-price-per">/mois</span>
             </div>
           </div>
           <div className="d-price-lines">
-            <div>Tout le plan Famille</div>
-            <div>Suivi PEA / CTO en direct</div>
-            <div>Optimisations fiscales avancées</div>
-            <div>Bilan annuel patrimonial complet</div>
-            <div>API et exports comptables</div>
+            <div>Tout le plan Solo</div>
+            <div>Foyer multi-membres et comptes-joints</div>
+            <div>Tous types d'actifs (PEA, SCPI, immo, crypto)</div>
+            <div>Simulateur IFI + optimisations avancées</div>
+            <div>Coach IA et alertes intelligentes</div>
+            <div>Support prioritaire</div>
           </div>
-          <button className="d-price-cta" onClick={onSignUp}>En savoir plus →</button>
+          <button className="d-price-cta primary" onClick={onSignUp}>
+            Essayer 14 jours
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </button>
         </div>
       </div>
     </section>
