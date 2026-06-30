@@ -103,7 +103,6 @@ export function Monthly({
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [showEditor, setShowEditor] = useState(false);
   const [show5030, setShow5030] = useState(false);
-  const [showEvolution, setShowEvolution] = useState(false);
   const [expandedRows, setExpandedRows] = useState(() => {
     try { return new Set(JSON.parse(localStorage.getItem('wealthly:monthly_expanded') || '[]')); }
     catch { return new Set(); }
@@ -709,15 +708,12 @@ export function Monthly({
           </p>
         </div>
         <div className="mon-actions">
-          <button className="ds-btn" onClick={() => setShowEvolution(true)}>
-            <TrendingUp size={14}/> {isNarrow ? '' : 'Évolution'}
-          </button>
           <button className="ds-btn" onClick={() => setShow5030(true)}>
             <Target size={14}/> {isNarrow ? '' : '50 / 30 / 20'}
           </button>
           {!isChildScope && (
             <button className="ds-btn primary" onClick={() => setShowEditor(true)}>
-              <Edit3 size={14}/> {isNarrow ? 'Mois type' : 'Éditer mois type'}
+              <Edit3 size={14}/> {isNarrow ? 'Mois type' : 'Générer mois type'}
             </button>
           )}
         </div>
@@ -744,6 +740,14 @@ export function Monthly({
         />
       )}
 
+      {/* ── 50/30/20 strip inline ───────────────────────────────────
+           Surfacé en haut pour que la lecture besoins/envies/épargne soit
+           immédiate. Le détail (recos + comparaison mois type) reste dans
+           la modale via le bouton du header. */}
+      {!isChildScope && fiftyThirtyTwenty && (fiftyThirtyTwenty.needs || fiftyThirtyTwenty.wants || fiftyThirtyTwenty.savings) > 0 && (
+        <FiftyThirtyTwentyStrip ftt={fiftyThirtyTwenty} onOpenDetails={() => setShow5030(true)} fmt={fmt}/>
+      )}
+
 
       {/* ── Empty state : pas de Mois type ET pas de tx reelles ─────── */}
       {!isChildScope && !hasRefMonth && realSankeyData.nodes.length === 0 && (
@@ -756,7 +760,7 @@ export function Monthly({
           <h3>Configure ton <em>mois type.</em></h3>
           <p>Définis ton salaire et tes dépenses habituelles — l'app comparera chaque mois pour t'aider à rester sur la bonne trajectoire.</p>
           <button className="ds-btn primary lg" onClick={() => setShowEditor(true)}>
-            <Edit3 size={14}/> Configurer mon mois type
+            <Edit3 size={14}/> Générer mon mois type
           </button>
         </section>
       )}
@@ -875,15 +879,45 @@ export function Monthly({
         />
       )}
 
-      {showEvolution && (
-        <EvolutionModal
-          monthlyEvolution={monthlyEvolution}
-          fmt={fmt}
-          onClose={() => setShowEvolution(false)}
-        />
-      )}
-
     </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Strip 50/30/20 inline — résumé compact sous le picker. Pour le détail
+// (cibles, recommandations, comparaison mois type vs courant) → modale.
+function FiftyThirtyTwentyStrip({ ftt, onOpenDetails, fmt }) {
+  const total = (ftt?.needs || 0) + (ftt?.wants || 0) + (ftt?.savings || 0);
+  if (!total) return null;
+  const pct = (v) => Math.round((v / total) * 100);
+  const pN = pct(ftt.needs || 0);
+  const pW = pct(ftt.wants || 0);
+  const pS = 100 - pN - pW;
+  const onTarget = pN <= 55 && pW <= 35 && pS >= 15;
+  return (
+    <section
+      className="mon-5030-strip"
+      data-reveal
+      onClick={onOpenDetails}
+      role="button" tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onOpenDetails(); }}
+      title="Voir l'analyse détaillée"
+    >
+      <div className="mon-5030-head">
+        <span className="ds-micro">50 / 30 / 20 · {onTarget ? 'dans la cible' : 'à ajuster'}</span>
+        <span className="mon-5030-detail-link">détails →</span>
+      </div>
+      <div className="mon-5030-bar" aria-hidden>
+        <div className="mon-5030-seg needs" style={{ width: pN + '%' }}>{pN >= 8 && <span>{pN}%</span>}</div>
+        <div className="mon-5030-seg wants" style={{ width: pW + '%' }}>{pW >= 8 && <span>{pW}%</span>}</div>
+        <div className="mon-5030-seg savings" style={{ width: pS + '%' }}>{pS >= 8 && <span>{pS}%</span>}</div>
+      </div>
+      <div className="mon-5030-legend ds-micro">
+        <span><i className="dot needs"/> Besoins {fmt(ftt.needs || 0)}</span>
+        <span><i className="dot wants"/> Envies {fmt(ftt.wants || 0)}</span>
+        <span><i className="dot savings"/> Épargne {fmt(ftt.savings || 0)}</span>
+      </div>
+    </section>
   );
 }
 
@@ -1580,39 +1614,3 @@ function SankeyLink({ sourceX, targetX, sourceY, targetY, sourceControlX, target
   );
 }
 
-function EvolutionModal({ monthlyEvolution, fmt, onClose }) {
-  return (
-    <div className="ftt-overlay" onClick={onClose}>
-      <div className="ftt-modal" style={{ maxWidth: 760 }} onClick={e => e.stopPropagation()}>
-        <div className="ftt-head">
-          <div>
-            <h2><TrendingUp size={18}/> Évolution sur 6 mois</h2>
-            <p className="ds-micro">Revenus, dépenses, solde net.</p>
-          </div>
-          <button className="ds-icon-btn" onClick={onClose} aria-label="Fermer"><X size={16}/></button>
-        </div>
-        {monthlyEvolution.length > 0 ? (
-          <ResponsiveContainer width="100%" height={320}>
-            <ComposedChart data={monthlyEvolution.slice(-6)}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false}/>
-              <XAxis dataKey="month" tickFormatter={(m) => formatDate(m + '-01', { format: 'monthYear' })} stroke="var(--ink-3)" fontSize={11}/>
-              <YAxis tickFormatter={(v) => formatCurrency(v, { compact: true })} stroke="var(--ink-3)" fontSize={11}/>
-              <Tooltip formatter={(v) => formatCurrency(v)} contentStyle={{ background: 'var(--bg-elev)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}/>
-              <Legend wrapperStyle={{ fontSize: 12 }}/>
-              <Bar dataKey="income" name="Revenus" fill="var(--positive)" radius={[3, 3, 0, 0]} maxBarSize={24}/>
-              <Bar dataKey="expenses" name="Dépenses" fill="var(--negative)" radius={[3, 3, 0, 0]} maxBarSize={24}/>
-              <Line type="monotone" dataKey="net" name="Solde" stroke="var(--accent)" strokeWidth={2} dot={{ r: 3, fill: 'var(--accent)' }}/>
-            </ComposedChart>
-          </ResponsiveContainer>
-        ) : (
-          <div className="mon-empty">
-            <BarChart3 size={28}/>
-            <em style={{ fontFamily: 'Geist, system-ui, sans-serif', fontStyle: 'italic', color: 'var(--ink-2)', fontSize: 14 }}>
-              Pas encore de données.
-            </em>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}

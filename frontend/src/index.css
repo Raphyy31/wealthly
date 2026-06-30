@@ -3078,6 +3078,55 @@ html, body {
 .ftt-reco ul { margin: 0; padding-left: 18px; }
 .ftt-reco li { margin: 4px 0; font-size: 13px; color: var(--ink); }
 
+/* ────────────────────────────────────────────────────────────────────
+   50/30/20 strip — version inline compacte (sous le MonthPicker) qui
+   évite à l'utilisateur d'ouvrir la modale juste pour lire son ratio.
+   Clic ouvre la modale détaillée (cibles + recos).
+   ──────────────────────────────────────────────────────────────────── */
+.mon-5030-strip {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 18px 16px;
+  margin: 0 0 14px;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.mon-5030-strip:hover { border-color: var(--border-strong); background: var(--bg-hover, var(--bg-elev)); }
+.mon-5030-strip:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.mon-5030-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 8px;
+}
+.mon-5030-detail-link {
+  font: 500 11px/1 var(--font-sans);
+  color: var(--accent); letter-spacing: -0.005em;
+}
+.mon-5030-bar {
+  display: flex; height: 14px;
+  border-radius: 7px; overflow: hidden;
+  background: var(--bg-sunk);
+}
+.mon-5030-seg {
+  display: flex; align-items: center; justify-content: center;
+  font: 600 10.5px/1 var(--font-sans); color: #fff;
+  transition: width .25s ease;
+}
+.mon-5030-seg.needs    { background: var(--d2); }
+.mon-5030-seg.wants    { background: var(--d3); }
+.mon-5030-seg.savings  { background: var(--accent); }
+.mon-5030-legend {
+  display: flex; gap: 16px; flex-wrap: wrap;
+  margin-top: 9px; color: var(--ink-3);
+}
+.mon-5030-legend .dot {
+  display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+  margin-right: 5px; vertical-align: middle;
+}
+.mon-5030-legend .dot.needs   { background: var(--d2); }
+.mon-5030-legend .dot.wants   { background: var(--d3); }
+.mon-5030-legend .dot.savings { background: var(--accent); }
+
 /* Month picker (replaces the long carousel) */
 .mon-picker-wrap { position: relative; align-self: flex-start; }
 .mon-picker-toggle {

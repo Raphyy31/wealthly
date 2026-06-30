@@ -461,8 +461,8 @@ export function RefMonthEditor({
         </div>
 
         <div className="rm-toolbar">
-          <button className="ds-btn ghost" onClick={resyncAll}>
-            <RotateCcw size={14}/> Synchroniser depuis l'historique
+          <button className="ds-btn primary" onClick={resyncAll} title="Calcule la moyenne par catégorie sur tes 3 derniers mois et la pose dans chaque ligne. Tu n'as plus qu'à ajuster.">
+            <RotateCcw size={14}/> Remplir depuis les 3 derniers mois
           </button>
           <button className="ds-btn ghost" onClick={handleReset}>
             <RefreshCw size={14}/> Tout réinitialiser
