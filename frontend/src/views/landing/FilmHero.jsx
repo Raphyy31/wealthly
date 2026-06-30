@@ -1,20 +1,24 @@
 // ============================================================================
-// FilmHero — landing hero (charte « Forêt »).
+// FilmHero — hero de la landing (charte « Forêt » claire).
 //
-// Split layout desktop (Linear / Stripe) :
-//   - Gauche : texte (eyebrow, gros titre, sub, CTAs)
-//   - Droite : film visible IMMÉDIATEMENT, dès l'arrivée, pas besoin de scroll
-//   - Le tout tient en 100vh
-// Mobile : stack en colonne, film en dessous du texte.
+// Embarque le FILM Wealthly autonome (moteur + scènes + polices inlinés, ~250 Ko,
+// zéro dépendance) livré dans le paquet charte et copié dans /public :
+//   - desktop : /film-16x9.html (film complet ~28 s, 1920×1080)
+//   - mobile  : /film-9x16.html (coupe courte ~12 s, 1080×1920)
+// Le film est sur fond clair (#faf9f5) → cohérent avec la landing claire.
+//
+// Remplace l'ancienne cinématique SVG (DemoLoopCinematic) comme « vidéo » de
+// la landing. CTAs câblés à l'identique (onSignIn/onSignUp/onTryDemo/onShowDetails).
 // ============================================================================
 import { useEffect } from 'react';
 import { useIsNarrow } from '../../hooks/useIsNarrow.js';
 import Logo from '../../components/Logo.jsx';
 
 export default function FilmHero({ onSignIn, onSignUp, onTryDemo, onShowDetails }) {
-  const isNarrow = useIsNarrow(960);
+  const isNarrow = useIsNarrow(760);
   const src = isNarrow ? '/film-9x16.html' : '/film-16x9.html';
 
+  // Page de marketing : on rétablit le scroll (l'ancienne cinématique le bloquait).
   useEffect(() => {
     document.body.classList.remove('cinematic');
   }, []);
@@ -23,14 +27,9 @@ export default function FilmHero({ onSignIn, onSignUp, onTryDemo, onShowDetails 
     <div className="film-hero">
       <style>{FILM_HERO_CSS}</style>
 
-      <div className="fh-bg" aria-hidden>
-        <div className="fh-halo" />
-        <div className="fh-grid" />
-      </div>
-
       <header className="fh-strip">
         <div className="fh-brand">
-          <Logo size={28} wordmark wordmarkSize={16} tone="light" />
+          <Logo size={26} wordmark wordmarkSize={15} />
         </div>
         <div className="fh-strip-cta">
           {onTryDemo && <button className="fh-link" onClick={onTryDemo}>Voir la démo</button>}
@@ -39,36 +38,32 @@ export default function FilmHero({ onSignIn, onSignUp, onTryDemo, onShowDetails 
       </header>
 
       <main className="fh-main">
-        <div className="fh-text">
-          <div className="fh-eyebrow">WEALTHLY · PATRIMOINE FAMILIAL</div>
-          <h1 className="fh-title">
-            Votre patrimoine,
-            <span className="fh-title-accent"> en un seul regard.</span>
-          </h1>
-          <p className="fh-sub">
-            Comptes, placements, immobilier, fiscalité —
-            réconciliés et tenus à jour, en temps réel.
-          </p>
+        <div className="fh-eyebrow">WEALTHLY · LE FILM</div>
+        <h1 className="fh-title">
+          Votre patrimoine, <em>en un seul regard.</em>
+        </h1>
+        <p className="fh-sub">
+          Comptes, placements, immobilier, fiscalité — réconciliés et tenus à jour,
+          en temps réel.
+        </p>
 
-          <div className="fh-cta-row">
-            <button className="fh-cta primary" onClick={onSignUp}>
-              Créer un compte
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
-            </button>
-            <button className="fh-cta ghost" onClick={onShowDetails}>Découvrir Wealthly</button>
-          </div>
-        </div>
-
-        <div className={`fh-film-stage ${isNarrow ? 'is-vertical' : ''}`}>
-          <div className="fh-film-glow" aria-hidden/>
+        <div className={`fh-film-frame ${isNarrow ? 'is-vertical' : ''}`}>
           <iframe
             key={src}
             src={src}
             title="Wealthly — le film"
-            loading="eager"
+            loading="lazy"
             scrolling="no"
             className="fh-film"
           />
+        </div>
+
+        <div className="fh-cta-row">
+          <button className="fh-cta primary" onClick={onSignUp}>
+            Créer un compte
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </button>
+          <button className="fh-cta ghost" onClick={onShowDetails}>Découvrir Wealthly</button>
         </div>
       </main>
     </div>
@@ -77,196 +72,100 @@ export default function FilmHero({ onSignIn, onSignUp, onTryDemo, onShowDetails 
 
 const FILM_HERO_CSS = `
 .film-hero {
-  position: relative;
   min-height: 100vh;
-  width: 100%;
-  overflow: hidden;
-  background: #0a0e08;
-  color: #F1EEE4;
+  background:
+    radial-gradient(900px 480px at 50% -8%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 70%),
+    var(--bg);
+  color: var(--ink);
   font-family: var(--font-sans);
-  isolation: isolate;
   display: flex;
   flex-direction: column;
-}
-
-/* ── Fond ──────────────────────────────────────────────────────────────── */
-.fh-bg {
-  position: absolute; inset: 0; z-index: 0; pointer-events: none;
-}
-.fh-halo {
-  position: absolute; inset: 0;
-  background:
-    radial-gradient(900px 540px at 80% 30%, rgba(65,212,155,0.18), transparent 70%),
-    radial-gradient(700px 400px at 15% 70%, rgba(65,212,155,0.08), transparent 70%);
-}
-.fh-grid {
-  position: absolute; inset: 0;
-  background-image:
-    linear-gradient(rgba(241,238,228,0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(241,238,228,0.035) 1px, transparent 1px);
-  background-size: 56px 56px;
-  mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, #000 30%, transparent 80%);
-  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, #000 30%, transparent 80%);
-}
-
-/* ── Header ──────────────────────────────────────────────────────────── */
-.fh-strip {
-  position: relative; z-index: 10;
-  width: 100%; max-width: 1440px; margin: 0 auto;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 20px 32px;
-  flex-shrink: 0;
-}
-.fh-brand { display: inline-flex; align-items: center; gap: 10px; }
-.fh-strip-cta { display: inline-flex; align-items: center; gap: 10px; }
-.fh-link, .fh-signin {
-  font: 500 13px/1 var(--font-sans);
-  border-radius: 999px;
-  padding: 10px 18px;
-  cursor: pointer;
-  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
-}
-.fh-link {
-  background: rgba(241,238,228,0.04);
-  border: 1px solid rgba(241,238,228,0.14);
-  color: #F1EEE4;
-}
-.fh-link:hover { background: rgba(241,238,228,0.10); border-color: rgba(241,238,228,0.26); }
-.fh-signin {
-  background: #F1EEE4;
-  border: 1px solid transparent;
-  color: #0a0e08;
-  font-weight: 600;
-}
-.fh-signin:hover { background: #fff; }
-
-/* ── Layout split desktop ────────────────────────────────────────────── */
-.fh-main {
-  position: relative; z-index: 5;
-  flex: 1;
-  width: 100%; max-width: 1440px;
-  margin: 0 auto;
-  padding: 16px 32px 48px;
-  display: grid;
-  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
-  gap: 56px;
   align-items: center;
 }
+.fh-strip {
+  width: 100%;
+  max-width: 1180px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 24px;
+}
+.fh-brand { display: inline-flex; align-items: center; gap: 10px; }
+.fh-glyph {
+  width: 30px; height: 30px; border-radius: 8px;
+  background: var(--ink); color: var(--bg);
+  display: inline-flex; align-items: center; justify-content: center;
+  font: 700 16px/1 var(--font-sans);
+}
+.fh-word { font: 600 16px/1 var(--font-sans); letter-spacing: -0.02em; color: var(--ink); }
+.fh-strip-cta { display: inline-flex; align-items: center; gap: 8px; }
+.fh-link, .fh-signin {
+  font: 500 13px/1 var(--font-sans);
+  border-radius: 999px; padding: 8px 16px; cursor: pointer;
+  transition: background var(--t-fast, 120ms), border-color var(--t-fast, 120ms), color var(--t-fast, 120ms), filter 120ms;
+}
+.fh-link { background: transparent; border: 1px solid var(--border); color: var(--ink-2); }
+.fh-link:hover { border-color: var(--accent-line); color: var(--accent-2); background: var(--accent-soft); }
+.fh-signin { background: var(--ink); border: 1px solid transparent; color: var(--bg); }
+.fh-signin:hover { filter: brightness(1.08); }
+.fh-link:active, .fh-signin:active { filter: var(--press-feedback, brightness(0.97)); }
 
-.fh-text { max-width: 560px; }
+.fh-main {
+  width: 100%; max-width: 1180px;
+  padding: 18px 24px 80px;
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+}
 .fh-eyebrow {
-  font: 600 11px/1.4 var(--font-mono, 'Geist Mono', monospace);
-  letter-spacing: 0.24em;
-  color: #41D49B;
-  margin-bottom: 22px;
-  display: inline-block;
-  padding: 6px 14px;
-  border: 1px solid rgba(65,212,155,0.30);
-  border-radius: 999px;
-  background: rgba(65,212,155,0.06);
+  font: 600 11px/1 var(--font-mono); letter-spacing: 0.22em;
+  color: var(--accent-2); margin-top: 8px;
 }
-/* Sélecteur ultra spécifique pour battre :root h1 em de index.css */
-.film-hero h1.fh-title {
-  margin: 0;
-  font: 600 clamp(36px, 5vw, 62px)/1.05 var(--font-sans);
-  letter-spacing: -0.034em;
-  color: #F7F9F6;
-  font-style: normal;
+.fh-title {
+  margin: 16px 0 0; max-width: 760px;
+  font: 600 clamp(30px, 5vw, 52px)/1.05 var(--font-sans);
+  letter-spacing: -0.035em; color: var(--ink);
 }
-.film-hero h1.fh-title .fh-title-accent {
-  font-style: italic;
-  font-weight: 400;
-  font-family: 'Newsreader', 'Geist', serif;
-  color: #41D49B;
-  white-space: normal;
+.fh-title em {
+  font-style: normal; font-weight: 600; color: var(--accent-2);
 }
 .fh-sub {
-  margin: 20px 0 0;
-  font: 400 16px/1.55 var(--font-sans);
-  color: rgba(241,238,228,0.72);
+  margin: 14px auto 0; max-width: 560px;
+  font: 400 15px/1.6 var(--font-sans); color: var(--ink-2);
 }
+
+.fh-film-frame {
+  width: 100%; max-width: 820px; margin: 32px auto 0;
+  aspect-ratio: 16 / 9;
+  border-radius: 16px; overflow: hidden;
+  background: #faf9f5;
+  border: 1px solid var(--border);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.5) inset,
+    0 30px 70px -28px color-mix(in srgb, var(--accent) 28%, rgba(20,40,28,0.4));
+}
+.fh-film-frame.is-vertical { max-width: 300px; aspect-ratio: 9 / 16; }
+.fh-film { width: 100%; height: 100%; border: 0; display: block; }
 
 .fh-cta-row {
-  display: flex; flex-wrap: wrap; gap: 10px;
-  margin-top: 30px;
+  display: flex; flex-wrap: wrap; gap: 12px; justify-content: center;
+  margin-top: 32px;
 }
 .fh-cta {
-  display: inline-flex; align-items: center; gap: 10px;
+  display: inline-flex; align-items: center; gap: 8px;
   height: 46px; padding: 0 22px; border-radius: 999px;
-  font: 600 14px/1 var(--font-sans);
-  cursor: pointer;
-  transition: transform 160ms ease, background 160ms ease, border-color 160ms ease, filter 160ms ease;
+  font: 600 14px/1 var(--font-sans); cursor: pointer;
+  transition: filter 120ms, background 120ms, border-color 120ms, color 120ms;
 }
 .fh-cta.primary {
-  background: #41D49B; color: #0a0e08;
-  border: 1px solid transparent;
-  box-shadow: 0 12px 32px -10px rgba(65,212,155,0.55);
+  background: var(--accent); color: var(--on-accent); border: 1px solid transparent;
+  box-shadow: 0 8px 22px -8px color-mix(in srgb, var(--accent) 60%, transparent);
 }
-.fh-cta.primary:hover { background: #54e0a8; transform: translateY(-1px); }
-.fh-cta.ghost {
-  background: rgba(241,238,228,0.05);
-  color: #F1EEE4;
-  border: 1px solid rgba(241,238,228,0.20);
-}
-.fh-cta.ghost:hover { background: rgba(241,238,228,0.10); border-color: rgba(241,238,228,0.36); }
-.fh-cta:active { transform: translateY(0); filter: brightness(0.95); }
+.fh-cta.primary:hover { background: var(--accent-2); }
+.fh-cta.ghost { background: transparent; color: var(--ink); border: 1px solid var(--border-strong); }
+.fh-cta.ghost:hover { background: var(--bg-hover, var(--bg-sunk)); border-color: var(--ink-3); }
+.fh-cta:active { filter: var(--press-feedback, brightness(0.97)); }
 
-/* ── Film flottant (bords fondus, UI player cachée) ──────────────────── */
-.fh-film-stage {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  max-height: calc(100vh - 180px);
-  overflow: hidden;
-  border-radius: 22px;
-  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 5%, #000 95%, transparent 100%);
-          mask-image: linear-gradient(90deg, transparent 0%, #000 5%, #000 95%, transparent 100%);
-}
-.fh-film-stage.is-vertical {
-  max-width: 380px;
-  margin: 0 auto;
-  aspect-ratio: 9 / 16;
-  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 5%, #000 95%, transparent 100%);
-          mask-image: linear-gradient(180deg, transparent 0%, #000 5%, #000 95%, transparent 100%);
-}
-.fh-film-glow {
-  position: absolute; inset: -60px;
-  background:
-    radial-gradient(55% 50% at 50% 40%, rgba(65,212,155,0.22), transparent 70%),
-    radial-gradient(40% 40% at 50% 100%, rgba(65,212,155,0.12), transparent 70%);
-  filter: blur(20px);
-  z-index: -1;
-  pointer-events: none;
-}
-.fh-film {
-  position: absolute;
-  /* Iframe agrandi vers le bas pour pousser le bandeau de lecture
-     (play / scrubber / download) hors du cadre visible. */
-  top: 0; left: 0;
-  width: 100%;
-  height: 124%;
-  border: 0;
-  display: block;
-  pointer-events: none;
-}
-
-/* ── Mobile / tablette : stack vertical ──────────────────────────────── */
-@media (max-width: 960px) {
-  .fh-strip { padding: 16px 18px; }
-  .fh-main {
-    grid-template-columns: 1fr;
-    gap: 32px;
-    padding: 12px 20px 48px;
-    align-items: start;
-    text-align: center;
-  }
-  .fh-text { max-width: 600px; margin: 0 auto; }
-  .fh-eyebrow { margin-left: auto; margin-right: auto; }
-  .fh-cta-row { justify-content: center; }
-  .film-hero h1.fh-title { font-size: clamp(30px, 7.5vw, 44px); }
-  .fh-sub { font-size: 15px; }
-  .fh-film-stage { max-height: 60vh; }
-  .fh-grid { background-size: 36px 36px; }
+@media (max-width: 760px) {
+  .fh-strip { padding: 16px; }
+  .fh-main { padding: 12px 16px 64px; }
+  .fh-film-frame { margin-top: 24px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
