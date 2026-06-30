@@ -2649,10 +2649,10 @@ html, body {
    Centré, animé, harmonisé charte Forêt.
    ════════════════════════════════════════════════════════════════════ */
 .rm-backdrop .rmw {
-  width: min(620px, 94vw) !important;
+  width: min(780px, 95vw) !important;
   max-width: none !important;
-  height: min(660px, 90vh);
-  max-height: 90vh !important;
+  height: min(820px, 92vh);
+  max-height: 92vh !important;
   margin: 0 auto !important;
   border-radius: 18px !important;
   padding: 0 !important;
