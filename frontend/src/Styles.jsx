@@ -485,6 +485,39 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .ob-feature-text { display: flex; flex-direction: column; gap: 2px; }
 .ob-feature-text strong { font-size: 13px; }
 .ob-feature-text span { font-size: 12px; color: var(--text-tertiary); line-height: 1.4; font-weight: 400; }
+
+/* ── Onboarding v2 : accueil orienté valeur ── */
+.ob-welcome { text-align: center; align-items: center; }
+.ob-welcome-logo { margin-bottom: 18px; }
+.ob-value-list { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 380px; margin: 4px auto 26px; text-align: left; }
+.ob-value-row { display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--text-primary); }
+.ob-value-ic { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 9px; background: var(--primary-soft); color: var(--primary); flex-shrink: 0; }
+
+/* ── Onboarding v2 : launchpad final ── */
+.ob-launch { align-items: center; text-align: center; }
+.ob-launch-cards { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 460px; margin: 8px auto 0; }
+.ob-launch-card {
+  display: flex; align-items: center; gap: 14px; width: 100%;
+  padding: 16px; border-radius: 14px; cursor: pointer; text-align: left;
+  background: var(--bg-subtle); border: 1px solid var(--border);
+  font-family: inherit; color: var(--text-primary);
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+.ob-launch-card:hover:not(:disabled) { border-color: var(--border-strong); box-shadow: 0 4px 16px -8px rgba(0,0,0,0.12); }
+.ob-launch-card:disabled { opacity: 0.6; cursor: default; }
+.ob-launch-card.is-primary { border: 2px solid var(--primary); background: ${dark ? 'rgba(65,212,155,0.07)' : 'rgba(14,124,86,0.05)'}; }
+.ob-launch-ic { display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; border-radius: 11px; flex-shrink: 0; background: var(--bg-elev); color: var(--text-secondary); }
+.ob-launch-ic.primary { background: var(--primary); color: var(--on-accent, #fff); }
+.ob-launch-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.ob-launch-title { font-size: 15px; font-weight: 500; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ob-launch-badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--primary-soft); color: var(--primary); font-weight: 600; }
+.ob-launch-sub { font-size: 12.5px; color: var(--text-tertiary); line-height: 1.4; }
+.ob-launch-arrow { color: var(--text-tertiary); flex-shrink: 0; }
+.ob-launch-card.is-primary .ob-launch-arrow { color: var(--primary); }
+.ob-launch-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; max-width: 460px; margin: 18px auto 0; }
+.ob-launch-later { background: none; border: none; cursor: pointer; color: var(--text-tertiary); font: 500 13px var(--font-sans); text-decoration: underline; text-underline-offset: 2px; display: inline-flex; align-items: center; gap: 6px; }
+.ob-launch-later:hover:not(:disabled) { color: var(--text-secondary); }
+.ob-launch-later:disabled { opacity: 0.6; cursor: default; }
 .member-preview-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
 .member-preview { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--bg-subtle); border-radius: 12px; border: 1px solid var(--border); }
 .member-preview-info { flex: 1; }

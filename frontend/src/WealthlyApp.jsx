@@ -1296,9 +1296,10 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   // ============================================================================
   // ACTIONS — all hit the API
   // ============================================================================
-  const completeOnboarding = async (data) => {
+  const completeOnboarding = async (data, target) => {
     // Robuste : on ne doit JAMAIS rester bloqué sur l'onboarding. Chaque étape
     // est best-effort et, quoi qu'il arrive, on entre dans l'app (finally).
+    // `target` = vue où atterrir juste après (le « moment wow » : import/wealth).
     let createdOk = true;
     try {
       for (const m of data.members) {
@@ -1316,6 +1317,10 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       }
     } finally {
       setOnboarded(true); // toujours entrer dans l'app
+      // Atterrissage sur l'action choisie (le « moment wow ») plutôt qu'un
+      // dashboard vide. Vues valides : 'import', 'wealth', sinon dashboard.
+      if (target === 'import') { setImportStep('upload'); setView('import'); }
+      else if (target === 'wealth') setView('wealth');
     }
     showToast(
       createdOk ? t('toasts.householdSet') : "Bienvenue ! Certaines données se chargeront à la prochaine synchro.",

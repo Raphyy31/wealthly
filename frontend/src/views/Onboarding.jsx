@@ -5,9 +5,10 @@ import { useState } from 'react';
 import { ChipSelect } from '../components/ChipSelect.jsx';
 import { MagneticButton } from '../components/MagneticButton.jsx';
 import {
-  Check, Users, Sparkles, Activity, Landmark, Play, X, Plus, Lightbulb,
-  ChevronLeft, ChevronRight, Loader2,
+  Check, Users, Wallet, Repeat, ShieldCheck, Play, X, Plus, Lightbulb,
+  ChevronLeft, ChevronRight, Loader2, FileUp, Landmark, ArrowRight,
 } from 'lucide-react';
+import Logo from '../components/Logo.jsx';
 import { MEMBER_PALETTE } from '../constants.js';
 import { generateId } from '../utils.js';
 
@@ -23,19 +24,18 @@ export function Onboarding({ onComplete }) {
   };
   const removeMember = (id) => setMembers(members.filter(m => m.id !== id));
 
-  const [completing, setCompleting] = useState(false);
-  const finish = async () => {
+  const [completing, setCompleting] = useState(null); // null | 'import' | 'wealth' | 'later'
+  const finish = async (target) => {
     if (completing) return;
-    setCompleting(true);
+    setCompleting(target || 'later');
     const payload = members.length === 0
       ? { members: [{ id: generateId(), name: 'Moi', role: 'adult', color: MEMBER_PALETTE[0] }] }
       : { members };
     try {
-      await onComplete(payload);
+      // target = vue où atterrir après création du foyer (le « moment wow »).
+      await onComplete(payload, target);
     } finally {
-      // onComplete bascule normalement vers l'app ; si on est toujours là
-      // (ex. erreur), on réactive le bouton pour réessayer.
-      setCompleting(false);
+      setCompleting(null);
     }
   };
 
@@ -61,49 +61,29 @@ export function Onboarding({ onComplete }) {
         </div>
 
         {step === 0 && (
-          <div className="onboarding-step-content">
-            <div className="onboarding-hero">
-              <div className="ob-mark-large">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="square" strokeLinejoin="miter" width="40" height="40">
-                  <rect x="3.5" y="3.5" width="17" height="17" rx="1.5"/>
-                  <path d="M7 9 L9.5 15.5 L12 10.5 L14.5 15.5 L17 9"/>
-                </svg>
+          <div className="onboarding-step-content ob-welcome">
+            <div className="ob-welcome-logo"><Logo size={48}/></div>
+            <h1>Tout ton argent, <em>au même endroit.</em></h1>
+            <p className="onboarding-lead">
+              Comptes, placements, immobilier, dépenses — consolidés.
+              Et Wealthly te montre <strong>où tu peux économiser</strong>.
+            </p>
+            <div className="ob-value-list">
+              <div className="ob-value-row">
+                <span className="ob-value-ic"><Wallet size={18}/></span>
+                <span>Toutes tes banques en une vue famille</span>
               </div>
-              <h1>Bienvenue <em>chez Wealthly</em>.</h1>
-              <p className="onboarding-lead">Suivez. Comprenez. Décidez. La vue consolidée de votre patrimoine familial, hébergée chez vous.</p>
-            </div>
-            <div className="onboarding-features-grid">
-              <div className="ob-feature-card">
-                <div className="ob-feature-icon" style={{ background: 'var(--primary-soft)', color: 'var(--primary)' }}><Users size={18}/></div>
-                <div className="ob-feature-text">
-                  <strong>Foyer multi-membres</strong>
-                  <span>Une vue par personne, une vue famille. Comptes joints partagés automatiquement.</span>
-                </div>
+              <div className="ob-value-row">
+                <span className="ob-value-ic"><Repeat size={18}/></span>
+                <span>Tes abonnements traqués, les économies chiffrées</span>
               </div>
-              <div className="ob-feature-card">
-                <div className="ob-feature-icon" style={{ background: 'var(--primary-soft)', color: 'var(--primary)' }}><Sparkles size={18}/></div>
-                <div className="ob-feature-text">
-                  <strong>Catégorisation par IA</strong>
-                  <span>Détection des marchands français. Vos corrections deviennent des règles.</span>
-                </div>
-              </div>
-              <div className="ob-feature-card">
-                <div className="ob-feature-icon" style={{ background: 'var(--primary-soft)', color: 'var(--primary)' }}><Activity size={18}/></div>
-                <div className="ob-feature-text">
-                  <strong>Suivi mensuel</strong>
-                  <span>Charges fixes détectées, anomalies signalées, reste à vivre projeté.</span>
-                </div>
-              </div>
-              <div className="ob-feature-card">
-                <div className="ob-feature-icon" style={{ background: 'var(--primary-soft)', color: 'var(--primary)' }}><Landmark size={18}/></div>
-                <div className="ob-feature-text">
-                  <strong>Patrimoine consolidé</strong>
-                  <span>Immobilier, AV, PEA, crypto, prêts. Pas que du bancaire.</span>
-                </div>
+              <div className="ob-value-row">
+                <span className="ob-value-ic"><ShieldCheck size={18}/></span>
+                <span>Privé et sécurisé — tes données restent tiennes</span>
               </div>
             </div>
             <MagneticButton className="ds-btn primary lg" onClick={() => setStep(1)}>
-              <Play size={16}/> Commencer
+              Commencer <ArrowRight size={16}/>
             </MagneticButton>
           </div>
         )}
@@ -155,47 +135,47 @@ export function Onboarding({ onComplete }) {
         )}
 
         {step === 2 && (
-          <div className="onboarding-step-content">
-            <div className="ready-icon"><Check size={28} strokeWidth={2}/></div>
-            <h2>Configuration <em>terminée</em>.</h2>
-            <p className="onboarding-lead">Votre espace est prêt. Ajoutez vos comptes, votre patrimoine et vos prêts au fil du temps — commencez petit, enrichissez au rythme qui vous convient.</p>
+          <div className="onboarding-step-content ob-launch">
+            <div className="ready-icon"><Check size={26} strokeWidth={2.4}/></div>
+            <h2>Ton foyer est <em>prêt</em>.</h2>
+            <p className="onboarding-lead">Une dernière chose pour voir Wealthly prendre vie :</p>
 
-            <div className="onboarding-summary">
-              <div className="summary-stat">
-                <div className="summary-num">{members.length || 1}</div>
-                <div className="summary-label">membre{(members.length || 1) > 1 ? 's' : ''} configuré{(members.length || 1) > 1 ? 's' : ''}</div>
-              </div>
-              <div className="summary-list">
-                {(members.length > 0 ? members : [{ name: 'Moi', role: 'adult', color: 'var(--accent)' }]).map((m, i) => (
-                  <div key={i} className="summary-member">
-                    <span className="member-avatar" style={{ background: m.color }}>{m.name.charAt(0).toUpperCase()}</span>
-                    <span>{m.name}</span> <span className="dimmed">· {m.role === 'adult' ? 'adulte' : 'enfant'}</span>
-                  </div>
-                ))}
-              </div>
+            <div className="ob-launch-cards">
+              <button
+                className="ob-launch-card is-primary"
+                onClick={() => finish('import')}
+                disabled={!!completing}
+              >
+                <span className="ob-launch-ic primary"><FileUp size={22}/></span>
+                <span className="ob-launch-body">
+                  <span className="ob-launch-title">
+                    Importer un relevé bancaire
+                    <span className="ob-launch-badge">recommandé</span>
+                  </span>
+                  <span className="ob-launch-sub">CSV Revolut, Crédit Agricole, Boursorama… → ton tableau de bord se remplit d'un coup</span>
+                </span>
+                {completing === 'import' ? <Loader2 size={18} className="spin"/> : <ArrowRight size={18} className="ob-launch-arrow"/>}
+              </button>
+
+              <button
+                className="ob-launch-card"
+                onClick={() => finish('wealth')}
+                disabled={!!completing}
+              >
+                <span className="ob-launch-ic"><Landmark size={22}/></span>
+                <span className="ob-launch-body">
+                  <span className="ob-launch-title">Ajouter un bien ou un compte</span>
+                  <span className="ob-launch-sub">PEA, assurance-vie, immobilier, crypto, prêt…</span>
+                </span>
+                {completing === 'wealth' ? <Loader2 size={18} className="spin"/> : <ArrowRight size={18} className="ob-launch-arrow"/>}
+              </button>
             </div>
 
-            <div className="ob-next-steps">
-              <strong>Vos prochaines étapes :</strong>
-              <div className="next-step-item">
-                <div className="step-num">1</div>
-                <div>Importez votre premier CSV bancaire (Revolut, Crédit Agricole, Boursorama…)</div>
-              </div>
-              <div className="next-step-item">
-                <div className="step-num">2</div>
-                <div>Renseignez votre patrimoine non-bancaire (PEA, AV, immo)</div>
-              </div>
-              <div className="next-step-item">
-                <div className="step-num">3</div>
-                <div>Définissez vos premiers budgets</div>
-              </div>
-            </div>
-
-            <div className="onboarding-actions">
-              <button className="ds-btn" onClick={() => setStep(1)}><ChevronLeft size={14}/> Retour</button>
-              <MagneticButton className="ds-btn primary lg" onClick={finish} disabled={completing}>
-                {completing ? <><Loader2 size={16} className="spin"/> Entrée…</> : <><Sparkles size={16}/> Entrer dans Wealthly</>}
-              </MagneticButton>
+            <div className="ob-launch-foot">
+              <button className="ds-btn" onClick={() => setStep(1)} disabled={!!completing}><ChevronLeft size={14}/> Retour</button>
+              <button className="ob-launch-later" onClick={() => finish()} disabled={!!completing}>
+                {completing === 'later' ? <><Loader2 size={14} className="spin"/> Entrée…</> : 'Plus tard, entrer dans Wealthly'}
+              </button>
             </div>
           </div>
         )}
