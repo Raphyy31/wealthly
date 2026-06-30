@@ -105,13 +105,13 @@ export default function TaxSimulator({ transactions = [] }) {
 
   const solde = result.finalTax - num(pasPaid);
 
-  const card = 'bg-[var(--color-w-surface)] border border-[var(--color-w-border)] rounded-[var(--radius-w-lg)]';
-  const labelCls = 'text-[11px] uppercase tracking-[0.08em] text-[var(--color-w-muted)] font-medium';
-  const inputCls = 'w-full px-3 py-2 rounded-[var(--radius-w-md)] bg-[var(--color-w-surface-2)] border border-[var(--color-w-border)] text-[var(--color-w-text)] text-sm tabular-nums focus:outline-none focus:border-[var(--color-w-accent)]';
+  const card = 'bg-[var(--bg-elev)] border border-[var(--border)] rounded-[12px] min-w-0';
+  const labelCls = 'text-[11px] uppercase tracking-[0.08em] text-[var(--ink-2)] font-medium';
+  const inputCls = 'w-full px-3 py-2 rounded-[8px] bg-[var(--bg-sunk)] border border-[var(--border)] text-[var(--ink)] text-sm tabular-nums focus:outline-none focus:border-[var(--accent)]';
   const inputClsBig = inputCls + ' text-base font-medium';
 
   return (
-    <div className="w-redesign font-sans">
+    <div className="w-redesign font-sans tax-page">
       {/* Header */}
       <div className="subview-header mb-7">
         <div>
@@ -120,7 +120,7 @@ export default function TaxSimulator({ transactions = [] }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div className="tax-grid">
         {/* ============================ INPUTS ============================ */}
         <section className={`${card} p-6`}>
           <div className="flex items-center gap-2 mb-5">
@@ -328,17 +328,17 @@ export default function TaxSimulator({ transactions = [] }) {
 
         {/* ============================ RESULT ============================ */}
         <section className={`${card} p-6 relative overflow-hidden`}>
-          <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-[var(--color-w-accent)]" />
+          <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-[var(--accent)]" />
 
           <div className="flex items-center gap-2 mb-5">
-            <Calculator size={15} className="text-[var(--color-w-accent)]" />
-            <h3 className="text-sm font-semibold text-[var(--color-w-text)]">Résultat</h3>
+            <Calculator size={15} className="text-[var(--accent)]" />
+            <h3 className="text-sm font-semibold text-[var(--ink)]">Résultat</h3>
           </div>
 
           <div className="space-y-5">
             <div>
               <div className={labelCls}>Impôt sur le revenu</div>
-              <div className="text-[40px] leading-[1.1] font-semibold tracking-tight w-num text-[var(--color-w-text)] mt-2">
+              <div className="tax-hero w-num text-[var(--ink)] mt-2">
                 {fmt(result.finalTax)}
               </div>
               <div className="flex flex-wrap gap-x-5 gap-y-1 mt-3 text-xs text-[var(--color-w-muted)]">
@@ -370,7 +370,7 @@ export default function TaxSimulator({ transactions = [] }) {
                     <span className="tabular-nums text-[var(--color-w-accent)] font-semibold">−{fmt(result.credits.total)}</span>
                   </div>
                   {(result.credits.cappedByGlobal || result.credits.childcareCappedSpec || result.credits.cesuCappedSpec) && (
-                    <div className="mt-2 px-3 py-2 rounded-[var(--radius-w-sm)] bg-[var(--color-w-surface-2)] border border-[var(--color-w-warning)]/40 text-[11px] text-[var(--color-w-warning)] leading-relaxed">
+                    <div className="mt-2 px-3 py-2 rounded-[6px] bg-[var(--warning-soft)] border border-[var(--warning)] text-[11px] text-[var(--warning)] leading-relaxed">
                       {result.credits.cappedByGlobal && (
                         <div>
                           ⚠ Plafond niches fiscales (10 000 €) atteint — vous "perdez" {fmt(result.credits.totalRaw - result.credits.total)} de crédit théorique.
@@ -398,12 +398,12 @@ export default function TaxSimulator({ transactions = [] }) {
                 {solde > 0 ? 'Solde à payer' : solde < 0 ? 'Trop-perçu (remboursement)' : 'Équilibré'}
               </div>
               <div
-                className={`text-[28px] leading-tight font-semibold w-num mt-2 ${
+                className={`tax-subhero w-num mt-2 ${
                   solde > 0
-                    ? 'text-[var(--color-w-danger)]'
+                    ? 'text-[var(--negative)]'
                     : solde < 0
-                    ? 'text-[var(--color-w-accent)]'
-                    : 'text-[var(--color-w-muted)]'
+                    ? 'text-[var(--accent)]'
+                    : 'text-[var(--ink-2)]'
                 }`}
               >
                 {solde === 0 ? '—' : `${solde > 0 ? '+' : '−'}${fmt(Math.abs(solde))}`}

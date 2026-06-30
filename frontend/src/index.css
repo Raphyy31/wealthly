@@ -4255,6 +4255,34 @@ html, body {
   min-height: 200px;
 }
 
+/* ────────────────────────────────────────────────────────────────────
+   Simulateur fiscal — layout robuste
+   Le double conteneur Tailwind cramponnait les colonnes; on passe à un
+   grid pur avec min-width: 0 systématique pour que les longs montants
+   "12 345 €" ne forcent pas leur colonne à déborder.
+   ──────────────────────────────────────────────────────────────────── */
+.tax-page { max-width: 1280px; margin: 0 auto; }
+.tax-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+.tax-grid > section { min-width: 0; }
+@media (min-width: 980px) {
+  .tax-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+.tax-hero {
+  font: 600 clamp(28px, 4.4vw, 40px) / 1.1 var(--font-sans);
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow-wrap: anywhere;
+}
+.tax-subhero {
+  font: 600 clamp(22px, 3.2vw, 28px) / 1.2 var(--font-sans);
+  letter-spacing: -0.015em;
+  white-space: nowrap;
+}
+
 /* Toggle "Règles par mot-clé (avancé)" — repli sobre dans l'onglet Marchands */
 .reg-advanced-toggle {
   display: flex; align-items: center; gap: 10px;
