@@ -10,7 +10,7 @@
 // ============================================================================
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, RotateCcw, RefreshCw, Lock, Unlock, Plus, Trash2, TrendingUp, TrendingDown, PiggyBank } from 'lucide-react';
+import { X, RotateCcw, RefreshCw, Lock, Unlock, Plus, Trash2, TrendingUp, TrendingDown, PiggyBank, Check, ArrowLeft, ArrowRight } from 'lucide-react';
 import { monthKey } from '../utils.js';
 import { CategoryDropdown } from './CategoryDropdown.jsx';
 
@@ -163,6 +163,19 @@ const KIND_COLOR = {
   saving:  'var(--accent)',
 };
 
+// Montants ronds, sans centimes — pour les récaps lisibles.
+const EUR0 = (v) => new Intl.NumberFormat('fr-FR', {
+  style: 'currency', currency: 'EUR', maximumFractionDigits: 0,
+}).format(Math.round(v || 0));
+
+// Étapes du wizard : Entrées → Dépenses → Épargne → Bilan.
+const WIZARD_STEPS = [
+  { kind: 'income',  short: 'Entrées',  title: 'Tes entrées',  sub: 'Salaires, revenus et virements reçus chaque mois.', accent: 'var(--positive)' },
+  { kind: 'expense', short: 'Dépenses', title: 'Tes dépenses', sub: 'Loyer, courses, factures, abonnements, transports…', accent: 'var(--negative)' },
+  { kind: 'saving',  short: 'Épargne',  title: 'Ton épargne',  sub: 'Ce que tu mets de côté automatiquement chaque mois.', accent: 'var(--accent)' },
+  { kind: null,      short: 'Bilan',    title: 'Ton bilan',    sub: 'Vérifie ton flux mensuel, puis enregistre.', accent: 'var(--accent)' },
+];
+
 // Starter template for first-time editing. Each entry creates an empty line
 // (amount=0) — the user fills in the values. Categories chosen for a typical
 // French household (couple + enfants, propriétaire ou locataire).
@@ -220,6 +233,11 @@ export function RefMonthEditor({
   // Snapshot of the initial state for dirty-check on close.
   const initialSnapshot = useRef(JSON.stringify(refMonth?.lines || []));
   const [saving, setSaving] = useState(false);
+
+  // Wizard : étape courante (0..3) + direction d'animation (1 avant, -1 arrière).
+  const [step, setStep] = useState(0);
+  const [dir, setDir] = useState(1);
+  const lastStep = WIZARD_STEPS.length - 1;
 
   // Intercept close: if dirty, ask confirmation before discarding edits.
   const handleClose = () => {
@@ -348,6 +366,14 @@ export function RefMonthEditor({
     }
   };
 
+  // Navigation wizard.
+  const goNext = () => {
+    if (step < lastStep) { setDir(1); setStep(s => s + 1); }
+    else handleSave();
+  };
+  const goPrev = () => { if (step > 0) { setDir(-1); setStep(s => s - 1); } };
+  const goTo = (i) => { if (i === step) return; setDir(i > step ? 1 : -1); setStep(i); };
+
   // Sorted list of categories per kind for the "add line" picker. For saving
   // we include transfer-typed categories (savings, investment, credit_principal…)
   // since these are the natural buckets for the épargne section.
@@ -355,158 +381,141 @@ export function RefMonthEditor({
   const expenseCats = categories.filter(c => c.type === 'expense' && c.id !== 'uncategorized');
   const savingCats = categories.filter(c => (c.type === 'transfer' || c.kind === 'savings') && c.id !== 'uncategorized' && c.id !== 'transfer');
 
-  // 2-column layout: Entrées + Épargne on the left, Dépenses on the right
-  // (the biggest bucket gets its own column). Falls back to single column on
-  // narrow screens via CSS.
-  const renderKind = (kind) => {
+  const incomeCount = grouped.filter(g => g.kind === 'income').reduce((s, g) => s + g.lines.length, 0);
+  const expenseCount = grouped.filter(g => g.kind === 'expense').reduce((s, g) => s + g.lines.length, 0);
+  const savingCount = grouped.filter(g => g.kind === 'saving').reduce((s, g) => s + g.lines.length, 0);
+
+  // Lignes d'un type, en plat (1 ligne = 1 catégorie). Style wizard.
+  const renderKindLines = (kind) => {
     const groups = grouped.filter(g => g.kind === kind);
     const cats = kind === 'income' ? incomeCats : (kind === 'saving' ? savingCats : expenseCats);
-    const total = totals[kind] || 0;
+    const lines = groups.flatMap(g => g.lines);
     return (
-      <section key={kind} className={`rm-section rm-section-${kind}`}>
-        <header className="rm-section-head" style={{ color: KIND_COLOR[kind] }}>
-          <span className="rm-section-icon" style={{ color: KIND_COLOR[kind] }}>{KIND_ICON[kind]}</span>
-          <span className="rm-section-title">{KIND_LABEL[kind]}</span>
-        </header>
-        {groups.length === 0 && (
-          <p className="rm-empty">
-            Ajoutez votre première ligne pour démarrer.
-          </p>
+      <div className="rmw-lines">
+        {lines.length === 0 && (
+          <p className="rmw-empty">Aucune ligne pour l'instant — ajoute ta première catégorie ci-dessous.</p>
         )}
-        {groups.map(g => {
-          const cat = catFor(g.category_id);
-          const catColor = cat?.color || 'var(--border-strong)';
+        {lines.map(line => {
+          const c = catFor(line.category_id);
+          const sug = suggestions[`${line.kind}::${line.category_id || 'uncategorized'}`];
+          const filled = (parseFloat(line.amount) || 0) > 0;
           return (
-            <div key={`${kind}-${g.category_id}`} className="rm-group" style={{ borderLeftColor: catColor }}>
-              {g.lines.map(line => {
-                const sugKey = `${line.kind}::${line.category_id || 'uncategorized'}`;
-                const sug = suggestions[sugKey];
-                return (
-                  <div key={line.id} className="rm-line">
-                    <div className="rm-line-main">
-                      <span className="rm-line-label-static">
-                        {(() => { const c = catFor(line.category_id); return c ? `${c.icon} ${c.name}` : (line.label || 'Ligne'); })()}
-                      </span>
-                      <div className="rm-line-right">
-                        <div className="rm-line-amount">
-                          <input
-                            className="rm-line-amount-input"
-                            type="number"
-                            step="0.01"
-                            value={line.amount}
-                            onChange={e => updateLine(line.id, { amount: e.target.value })}
-                            placeholder="0"
-                          />
-                          <span className="rm-currency">€</span>
-                        </div>
-                        <button
-                          className="rm-line-btn"
-                          onClick={() => updateLine(line.id, { locked: !line.locked })}
-                          title={line.locked ? 'Déverrouiller' : 'Verrouiller (la synchro ne touchera plus à cette valeur)'}
-                        >
-                          {line.locked ? <Lock size={13}/> : <Unlock size={13}/>}
-                        </button>
-                        <button className="rm-line-btn rm-line-btn-del" onClick={() => removeLine(line.id)} aria-label="Supprimer">
-                          <Trash2 size={13}/>
-                        </button>
-                      </div>
-                    </div>
-                    <div className="rm-suggest">
-                      <SuggestionHover
-                        sug={sug}
-                        fmt={fmt}
-                        onFill={sug ? (v) => updateLine(line.id, { amount: v }) : undefined}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-              <RefMonthAddSubLine
-                kind={kind}
-                parentCatId={g.category_id}
-                categories={categories}
-                onAdd={(catId) => addLine({ kind, category_id: catId })}
-              />
+            <div key={line.id} className={`rmw-line ${filled ? 'is-filled' : ''}`} style={{ '--rmw-cat': c?.color || 'var(--border-strong)' }}>
+              <span className="rmw-line-cat">
+                <span className="rmw-line-emoji" aria-hidden="true">{c?.icon || '•'}</span>
+                <span className="rmw-line-name">{c?.name || line.label || 'Ligne'}</span>
+              </span>
+              <div className="rmw-line-right">
+                {sug && (
+                  <button
+                    type="button"
+                    className="rmw-sug"
+                    title={`Moyenne de tes 3 derniers mois : ${EUR0(sug.mean)}`}
+                    onClick={() => updateLine(line.id, { amount: sug.mean })}
+                  >
+                    ≈ {EUR0(sug.mean)}
+                  </button>
+                )}
+                <div className="rmw-amount">
+                  <input
+                    className="rmw-amount-input"
+                    type="number" inputMode="decimal" step="1"
+                    value={line.amount}
+                    onChange={e => updateLine(line.id, { amount: e.target.value })}
+                    placeholder="0"
+                  />
+                  <span className="rmw-eur">€</span>
+                </div>
+                <button className="rmw-del" onClick={() => removeLine(line.id)} aria-label="Supprimer la ligne">
+                  <Trash2 size={15}/>
+                </button>
+              </div>
             </div>
           );
         })}
-        <RefMonthAddCategory kind={kind} cats={cats} onAdd={(catId) => addLine({ kind, category_id: catId })}/>
-      </section>
+        <div className="rmw-add">
+          <RefMonthAddCategory kind={kind} cats={cats} onAdd={(catId) => addLine({ kind, category_id: catId })}/>
+        </div>
+      </div>
     );
   };
 
+  const current = WIZARD_STEPS[step];
+  const isRecap = current.kind === null;
+
   return (
     <div className="modal-backdrop rm-backdrop" onClick={handleClose}>
-      <div className="modal rm-modal rm-modal--split" onClick={e => e.stopPropagation()} role="dialog" aria-label="Éditer mon mois type">
-        <div className="rm-head">
-          <div>
-            <h2>
-              Mois type <em>· {scopeLabel}</em>
-            </h2>
-            <p className="ds-micro">
-              {isHouseholdScope
-                ? "Budget partagé du foyer — compte joint, dépenses communes (loyer, courses…) et virements reçus de chaque adulte."
-                : `Mois type personnel — salaire, dépenses propres et virement mensuel vers le compte joint.`}
-            </p>
+      <div className="modal rmw" onClick={e => e.stopPropagation()} role="dialog" aria-label="Configurer mon mois type">
+
+        {/* En-tête : titre + fermeture */}
+        <div className="rmw-head">
+          <div className="rmw-head-titles">
+            <span className="rmw-eyebrow">Mois type · {scopeLabel}</span>
+            <h2 className="rmw-title">{current.title}</h2>
+            <p className="rmw-sub">{current.sub}</p>
           </div>
-          <button className="ds-icon-btn" onClick={handleClose} aria-label="Fermer"><X size={18}/></button>
+          <button className="ds-icon-btn rmw-close" onClick={handleClose} aria-label="Fermer"><X size={18}/></button>
         </div>
 
-        {/* ── 2 cartes : flux live à gauche, module de saisie à droite ── */}
-        <div className="rm-split">
-
-          {/* Carte GAUCHE — le flux en direct */}
-          <aside className="rm-card rm-card--flow">
-            <div className="rm-card-head">
-              <span className="rm-card-eyebrow">Ton flux en direct</span>
-              <span className="rm-card-hint">se met à jour pendant que tu remplis</span>
-            </div>
-            <MoisTypeSankey totals={totals} fmt={fmt}/>
-            <div className="rm-flow-totals">
-              <div><span className="ds-micro">Entrées</span><span className="num pos">{fmt(totals.income)}</span></div>
-              <div><span className="ds-micro">Dépenses</span><span className="num neg">{fmt(-totals.expense)}</span></div>
-              <div><span className="ds-micro">Épargne</span><span className="num">{fmt(-totals.saving)}</span></div>
-              <div className="rm-flow-balance">
-                <span className="ds-micro">Reste à vivre</span>
-                <span className={`num ${totals.balance >= 0 ? 'pos' : 'neg'}`}>{totals.balance >= 0 ? '+' : ''}{fmt(totals.balance)}</span>
-              </div>
-            </div>
-          </aside>
-
-          {/* Carte DROITE — module de saisie revenus / dépenses / épargne */}
-          <section className="rm-card rm-card--entry">
-            {/* Chemin facile : 1 clic remplit tout depuis l'historique */}
-            <div className="rm-magic">
-              <button className="rm-magic-btn" onClick={resyncAll}>
-                <RotateCcw size={16}/>
-                <span className="rm-magic-btn-main">Remplir automatiquement</span>
-                <span className="rm-magic-btn-sub">d'après mes 3 derniers mois</span>
-              </button>
-              <div className="rm-magic-foot">
-                <span>L'app calcule tes moyennes — tu ajustes ensuite.</span>
-                <button className="rm-magic-reset" onClick={handleReset}>Repartir de zéro</button>
-              </div>
-            </div>
-
-            <div className="rm-entry-scroll">
-              {renderKind('income')}
-              {renderKind('expense')}
-              {renderKind('saving')}
-            </div>
-          </section>
-        </div>
-
-        <div className="rm-footer">
-          <div className="rm-footer-balance">
-            <span className="ds-micro">Reste à vivre / mois</span>
-            <span className={`num ${totals.balance >= 0 ? 'pos' : 'neg'}`}>{totals.balance >= 0 ? '+' : ''}{fmt(totals.balance)}</span>
-          </div>
-          <div className="rm-actions">
-            <button className="ds-btn ghost" onClick={handleClose}>Annuler</button>
-            <button className="ds-btn primary" onClick={handleSave} disabled={saving}>
-              {saving ? 'Enregistrement…' : 'Enregistrer'}
+        {/* Barre de progression segmentée — cliquable */}
+        <div className="rmw-steps" role="tablist">
+          {WIZARD_STEPS.map((s, i) => (
+            <button
+              key={s.short}
+              role="tab"
+              aria-selected={i === step}
+              className={`rmw-step ${i === step ? 'is-active' : ''} ${i < step ? 'is-done' : ''}`}
+              style={{ '--rmw-acc': s.accent }}
+              onClick={() => goTo(i)}
+            >
+              <span className="rmw-step-dot">{i < step ? <Check size={12}/> : i + 1}</span>
+              <span className="rmw-step-label">{s.short}</span>
             </button>
-          </div>
+          ))}
+        </div>
+
+        {/* Corps animé — re-monté à chaque step (clé) → slide+fade */}
+        <div className="rmw-body" key={step} data-dir={dir} style={{ '--rmw-acc': current.accent }}>
+          {!isRecap ? (
+            <>
+              {/* Chemin facile : remplir depuis l'historique (idempotent) */}
+              <button className="rmw-magic" onClick={resyncAll}>
+                <RotateCcw size={15}/>
+                <span>Remplir depuis mes 3 derniers mois</span>
+              </button>
+              {renderKindLines(current.kind)}
+            </>
+          ) : (
+            <div className="rmw-recap">
+              <MoisTypeSankey totals={totals} fmt={fmt}/>
+              <div className="rmw-recap-grid">
+                <div><span className="ds-micro">Entrées</span><span className="num pos">{EUR0(totals.income)}</span></div>
+                <div><span className="ds-micro">Dépenses</span><span className="num neg">−{EUR0(totals.expense)}</span></div>
+                <div><span className="ds-micro">Épargne</span><span className="num">−{EUR0(totals.saving)}</span></div>
+                <div className="rmw-recap-bal">
+                  <span className="ds-micro">Reste à vivre</span>
+                  <span className={`num ${totals.balance >= 0 ? 'pos' : 'neg'}`}>{totals.balance >= 0 ? '+' : ''}{EUR0(totals.balance)}</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Pied : navigation */}
+        <div className="rmw-foot">
+          <button className="rmw-nav rmw-nav--prev" onClick={goPrev} disabled={step === 0}>
+            <ArrowLeft size={15}/> Précédent
+          </button>
+          <span className="rmw-foot-counter">{step + 1} / {WIZARD_STEPS.length}</span>
+          {!isRecap ? (
+            <button className="rmw-nav rmw-nav--next" onClick={goNext} style={{ '--rmw-acc': current.accent }}>
+              Suivant <ArrowRight size={15}/>
+            </button>
+          ) : (
+            <button className="rmw-nav rmw-nav--save" onClick={handleSave} disabled={saving}>
+              {saving ? 'Enregistrement…' : <>Enregistrer <Check size={15}/></>}
+            </button>
+          )}
         </div>
       </div>
     </div>

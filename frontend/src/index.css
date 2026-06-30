@@ -2643,6 +2643,210 @@ html, body {
   border-radius: var(--radius-lg) !important;
   margin: 0 auto !important;
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   WIZARD MOIS TYPE (.rmw) — Entrées → Dépenses → Épargne → Bilan.
+   Centré, animé, harmonisé charte Forêt.
+   ════════════════════════════════════════════════════════════════════ */
+.rm-backdrop .rmw {
+  width: min(620px, 94vw) !important;
+  max-width: none !important;
+  height: min(660px, 90vh);
+  max-height: 90vh !important;
+  margin: 0 auto !important;
+  border-radius: 18px !important;
+  padding: 0 !important;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-card);
+}
+
+/* ── En-tête ── */
+.rmw-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 12px; padding: 22px 24px 16px;
+}
+.rmw-head-titles { min-width: 0; }
+.rmw-eyebrow {
+  font: 600 11px var(--font-mono); letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-3);
+}
+.rmw-title {
+  margin: 6px 0 0; font: 500 24px var(--font-sans); letter-spacing: -0.02em; color: var(--ink);
+}
+.rmw-sub { margin: 4px 0 0; font: 400 13.5px var(--font-sans); color: var(--ink-2); line-height: 1.45; }
+.rmw-close { flex-shrink: 0; }
+
+/* ── Barre de progression segmentée ── */
+.rmw-steps {
+  display: flex; gap: 8px; padding: 0 24px 16px;
+}
+.rmw-step {
+  flex: 1; display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border-radius: 10px;
+  background: var(--bg-sunk); border: 1px solid var(--border);
+  cursor: pointer; min-width: 0;
+  transition: background .15s, border-color .15s, color .15s;
+}
+.rmw-step-dot {
+  flex-shrink: 0;
+  width: 20px; height: 20px; border-radius: 50%;
+  display: grid; place-items: center;
+  font: 700 11px var(--font-mono);
+  background: var(--border); color: var(--ink-2);
+  transition: background .2s, color .2s;
+}
+.rmw-step-label {
+  font: 600 12.5px var(--font-sans); color: var(--ink-2);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.rmw-step.is-done { border-color: color-mix(in oklab, var(--accent) 35%, transparent); }
+.rmw-step.is-done .rmw-step-dot { background: var(--accent); color: var(--on-accent, #fff); }
+.rmw-step.is-active {
+  background: color-mix(in oklab, var(--rmw-acc, var(--accent)) 12%, transparent);
+  border-color: color-mix(in oklab, var(--rmw-acc, var(--accent)) 45%, transparent);
+}
+.rmw-step.is-active .rmw-step-dot { background: var(--rmw-acc, var(--accent)); color: var(--on-accent, #fff); }
+.rmw-step.is-active .rmw-step-label { color: var(--ink); }
+@media (max-width: 520px) {
+  .rmw-step-label { display: none; }
+  .rmw-step { justify-content: center; }
+}
+
+/* ── Corps animé ── */
+.rmw-body {
+  flex: 1; min-height: 0; overflow-y: auto;
+  padding: 4px 24px 20px;
+  scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent;
+  animation: rmwIn .3s cubic-bezier(.2,.7,.2,1);
+}
+.rmw-body[data-dir="-1"] { animation-name: rmwInBack; }
+.rmw-body::-webkit-scrollbar { width: 10px; }
+.rmw-body::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 999px; border: 2px solid var(--bg-card); }
+.rmw-body::-webkit-scrollbar-thumb:hover { background: var(--ink-3); }
+@keyframes rmwIn { from { opacity: 0; transform: translateX(22px); } to { opacity: 1; transform: none; } }
+@keyframes rmwInBack { from { opacity: 0; transform: translateX(-22px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .rmw-body { animation: none; } }
+
+/* ── Bouton magique « remplir depuis l'historique » ── */
+.rmw-magic {
+  display: inline-flex; align-items: center; gap: 8px;
+  margin: 8px 0 14px; padding: 9px 14px;
+  border-radius: 999px;
+  background: var(--accent-soft); border: 1px solid color-mix(in oklab, var(--accent) 30%, transparent);
+  color: var(--accent-2, var(--accent));
+  font: 600 13px var(--font-sans); cursor: pointer;
+  transition: filter .15s, background .15s;
+}
+.rmw-magic:hover { background: color-mix(in oklab, var(--accent) 16%, transparent); }
+.rmw-magic svg { flex-shrink: 0; }
+
+/* ── Lignes de saisie ── */
+.rmw-lines { display: flex; flex-direction: column; gap: 8px; }
+.rmw-empty {
+  margin: 4px 0; padding: 18px; text-align: center;
+  font: 400 13.5px var(--font-sans); color: var(--ink-3);
+  background: var(--bg-sunk); border: 1px dashed var(--border-strong); border-radius: 12px;
+}
+.rmw-line {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--rmw-cat, var(--border-strong));
+  border-radius: 12px;
+  background: var(--bg-elev);
+  transition: border-color .15s, box-shadow .15s, background .15s;
+}
+.rmw-line:hover { box-shadow: 0 4px 14px -8px rgba(0,0,0,0.12); }
+.rmw-line.is-filled { background: var(--bg-card); }
+.rmw-line-cat { flex: 1; min-width: 0; display: inline-flex; align-items: center; gap: 10px; }
+.rmw-line-emoji { font-size: 18px; line-height: 1; flex-shrink: 0; }
+.rmw-line-name {
+  font: 500 15px var(--font-sans); color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.rmw-line-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.rmw-sug {
+  background: none; border: none; cursor: pointer;
+  font: 600 12px var(--font-mono); color: var(--accent);
+  padding: 4px 6px; border-radius: 6px;
+  white-space: nowrap;
+  transition: background .12s;
+}
+.rmw-sug:hover { background: var(--accent-soft); }
+.rmw-amount {
+  display: flex; align-items: center; gap: 4px;
+  background: var(--bg-sunk);
+  border: 1.5px solid var(--border-strong);
+  border-radius: 10px; padding: 8px 12px;
+  transition: border-color .15s, box-shadow .15s, background .15s;
+}
+.rmw-amount:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); background: var(--bg-elev); }
+.rmw-amount-input {
+  width: 92px; text-align: right;
+  background: transparent; border: none;
+  font: 600 17px var(--font-mono); font-variant-numeric: tabular-nums; color: var(--ink);
+}
+.rmw-amount-input:focus { outline: none; }
+.rmw-amount-input::-webkit-inner-spin-button, .rmw-amount-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.rmw-amount-input { -moz-appearance: textfield; }
+.rmw-eur { font: 500 13px var(--font-sans); color: var(--ink-3); }
+.rmw-del {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border: none; border-radius: 8px;
+  background: transparent; color: var(--ink-3); cursor: pointer;
+  transition: background .12s, color .12s;
+}
+.rmw-del:hover { background: var(--negative-soft); color: var(--negative); }
+
+/* ── Ajouter une catégorie ── */
+.rmw-add { margin-top: 6px; }
+
+/* ── Bilan (recap) ── */
+.rmw-recap { display: flex; flex-direction: column; gap: 4px; }
+.rmw-recap .rm-sankey { border-bottom: none; border-radius: 14px; border: 1px solid var(--border); margin-top: 8px; }
+.rmw-recap-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  margin-top: 14px;
+}
+.rmw-recap-grid > div {
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 12px 14px; border-radius: 12px;
+  background: var(--bg-sunk); border: 1px solid var(--border);
+}
+.rmw-recap-grid .num { font: 600 18px var(--font-sans); font-variant-numeric: tabular-nums; color: var(--ink); }
+.rmw-recap-grid .num.pos { color: var(--positive); }
+.rmw-recap-grid .num.neg { color: var(--negative); }
+.rmw-recap-bal { grid-column: 1 / -1; background: var(--accent-soft) !important; border-color: color-mix(in oklab, var(--accent) 30%, transparent) !important; }
+.rmw-recap-bal .num { font-size: 24px; }
+
+/* ── Pied : navigation ── */
+.rmw-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px 24px; border-top: 1px solid var(--border); background: var(--bg-sunk);
+}
+.rmw-foot-counter { font: 600 12px var(--font-mono); color: var(--ink-3); letter-spacing: 0.06em; }
+.rmw-nav {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 11px 20px; border-radius: 999px;
+  font: 600 14px var(--font-sans); cursor: pointer;
+  border: 1px solid transparent;
+  transition: filter .15s, background .15s, border-color .15s, color .15s, box-shadow .2s;
+}
+.rmw-nav--prev { background: transparent; border-color: var(--border-strong); color: var(--ink-2); }
+.rmw-nav--prev:hover:not(:disabled) { color: var(--ink); border-color: var(--ink-3); }
+.rmw-nav--prev:disabled { opacity: 0.4; cursor: default; }
+.rmw-nav--next {
+  background: var(--rmw-acc, var(--accent)); color: var(--on-accent, #fff);
+  box-shadow: 0 6px 18px -8px color-mix(in oklab, var(--rmw-acc, var(--accent)) 75%, transparent);
+}
+.rmw-nav--next:hover { filter: brightness(1.07); }
+.rmw-nav--save {
+  background: var(--accent); color: var(--on-accent, #fff);
+  box-shadow: 0 6px 18px -8px color-mix(in oklab, var(--accent) 75%, transparent);
+}
+.rmw-nav--save:hover:not(:disabled) { filter: brightness(1.07); }
+.rmw-nav--save:disabled { opacity: 0.6; cursor: default; }
 /* Variante 2 cartes (flux live + saisie) — large, la SAISIE domine. */
 .rm-backdrop .rm-modal--split {
   width: min(1060px, 96vw) !important;
