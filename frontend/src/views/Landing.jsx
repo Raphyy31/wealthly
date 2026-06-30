@@ -23,21 +23,20 @@ export default function Landing({ onSignIn, onSignUp, onTryDemo, onPresent }) {
 
   const [view, setView] = useState('cinematic'); // 'cinematic' | 'details'
 
-  // Force LIGHT theme on landing (charte « Forêt » claire). data-theme="light"
-  // est requis : sinon, pour un user en thème sombre, le bloc [data-theme="dark"]
-  // d'index.css (spécificité > :root) écraserait les tokens clairs de la landing.
+  // Thème par vue : cinematic = DARK (hero tech "Forêt nocturne"), details = LIGHT
+  // (bento + pricing en clair, plus lisible pour la conversion). data-theme est
+  // forcé sur <html> pour que les tokens d'index.css [data-theme="..."] s'appliquent.
   useEffect(() => {
     const root = document.documentElement;
-    root.setAttribute('data-theme', 'light');
+    root.setAttribute('data-theme', view === 'cinematic' ? 'dark' : 'light');
     return () => {
       // Restaure la préférence RÉELLE de l'utilisateur (localStorage), pas un
-      // attribut transitoire : sinon le dark forcé "fuitait" dans la démo /
-      // l'app → "pas de mode clair" en démo (défaut = clair).
+      // attribut transitoire : sinon le forcé "fuitait" dans la démo / l'app.
       let stored = 'light';
       try { const s = localStorage.getItem('wealthly-theme'); if (s === 'light' || s === 'dark') stored = s; } catch {}
       root.setAttribute('data-theme', stored);
     };
-  }, []);
+  }, [view]);
 
   // Scrub le hash router (#/dashboard, #/transactions, ...) au mount de la
   // landing : si l'user vient de se déconnecter, son URL garde l'ancien
