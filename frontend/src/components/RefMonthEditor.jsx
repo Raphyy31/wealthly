@@ -10,6 +10,7 @@
 // ============================================================================
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Sankey, Layer, Rectangle, Tooltip, ResponsiveContainer } from 'recharts';
 import { X, RotateCcw, RefreshCw, Lock, Unlock, Plus, Trash2, TrendingUp, TrendingDown, PiggyBank, Check, ArrowLeft, ArrowRight } from 'lucide-react';
 import { monthKey } from '../utils.js';
 import { CategoryDropdown } from './CategoryDropdown.jsx';
@@ -401,11 +402,11 @@ export function RefMonthEditor({
           const filled = (parseFloat(line.amount) || 0) > 0;
           return (
             <div key={line.id} className={`rmw-line ${filled ? 'is-filled' : ''}`} style={{ '--rmw-cat': c?.color || 'var(--border-strong)' }}>
-              <span className="rmw-line-cat">
-                <span className="rmw-line-emoji" aria-hidden="true">{c?.icon || '•'}</span>
-                <span className="rmw-line-name">{c?.name || line.label || 'Ligne'}</span>
-              </span>
-              <div className="rmw-line-right">
+              <div className="rmw-line-info">
+                <span className="rmw-line-cat">
+                  <span className="rmw-line-emoji" aria-hidden="true">{c?.icon || '•'}</span>
+                  <span className="rmw-line-name">{c?.name || line.label || 'Ligne'}</span>
+                </span>
                 {sug && (
                   <button
                     type="button"
@@ -413,23 +414,23 @@ export function RefMonthEditor({
                     title={`Moyenne de tes 3 derniers mois : ${EUR0(sug.mean)}`}
                     onClick={() => updateLine(line.id, { amount: sug.mean })}
                   >
-                    ≈ {EUR0(sug.mean)}
+                    ≈ {EUR0(sug.mean)} · utiliser
                   </button>
                 )}
-                <div className="rmw-amount">
-                  <input
-                    className="rmw-amount-input"
-                    type="number" inputMode="decimal" step="1"
-                    value={line.amount}
-                    onChange={e => updateLine(line.id, { amount: e.target.value })}
-                    placeholder="0"
-                  />
-                  <span className="rmw-eur">€</span>
-                </div>
-                <button className="rmw-del" onClick={() => removeLine(line.id)} aria-label="Supprimer la ligne">
-                  <Trash2 size={15}/>
-                </button>
               </div>
+              <div className="rmw-amount">
+                <input
+                  className="rmw-amount-input"
+                  type="number" inputMode="decimal" step="1"
+                  value={line.amount}
+                  onChange={e => updateLine(line.id, { amount: e.target.value })}
+                  placeholder="0"
+                />
+                <span className="rmw-eur">€</span>
+              </div>
+              <button className="rmw-del" onClick={() => removeLine(line.id)} aria-label="Supprimer la ligne">
+                <Trash2 size={15}/>
+              </button>
             </div>
           );
         })}
@@ -487,7 +488,12 @@ export function RefMonthEditor({
             </>
           ) : (
             <div className="rmw-recap">
-              <MoisTypeSankey totals={totals} fmt={fmt}/>
+              <div className={`rmw-sankey-status ${totals.balance < 0 ? 'is-neg' : 'is-pos'}`}>
+                {totals.balance < 0
+                  ? <>⚠ Déficit de <strong>{EUR0(-totals.balance)}</strong> — dépenses + épargne dépassent les revenus.</>
+                  : <>Tu dégages <strong>{EUR0(totals.balance)}</strong> de reste à vivre chaque mois.</>}
+              </div>
+              <MoisTypeBudgetSankey grouped={grouped} catFor={catFor}/>
               <div className="rmw-recap-grid">
                 <div><span className="ds-micro">Entrées</span><span className="num pos">{EUR0(totals.income)}</span></div>
                 <div><span className="ds-micro">Dépenses</span><span className="num neg">−{EUR0(totals.expense)}</span></div>
@@ -518,6 +524,102 @@ export function RefMonthEditor({
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// MoisTypeBudgetSankey — le VRAI Sankey (recharts), comme Cashflow : chaque
+// source de revenu → hub « Budget » → chaque poste de dépense + épargne +
+// reste à vivre. Construit depuis les catégories du mois type.
+// ──────────────────────────────────────────────────────────────────────
+const RecapSankeyNode = React.memo(function RecapSankeyNode({ x, y, width, height, index, payload }) {
+  const isLeft = payload.kind === 'income';
+  const isHub = payload.kind === 'hub';
+  const color = payload.color
+    || (isHub ? 'var(--accent)' : payload.kind === 'saving' ? 'var(--accent)' : payload.kind === 'rest' ? 'var(--positive)' : 'var(--negative)');
+  const val = payload.value
+    ? new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(Math.round(payload.value))
+    : '';
+  return (
+    <Layer key={`n-${index}`}>
+      <Rectangle x={x} y={y} width={width} height={height} radius={[2, 2, 2, 2]} fill={color} fillOpacity={isHub ? 0.95 : 0.85} stroke="none"/>
+      {!isHub && (
+        <text
+          textAnchor={isLeft ? 'end' : 'start'}
+          x={isLeft ? x - 8 : x + width + 8}
+          y={y + height / 2} dy={4}
+          fontSize={11.5} fill="var(--ink)"
+        >
+          {payload.name}{val ? ` · ${val}` : ''}
+        </text>
+      )}
+      {isHub && (
+        <text textAnchor="middle" x={x + width / 2} y={y - 7} fontSize={10.5} fill="var(--ink-3)">Budget</text>
+      )}
+    </Layer>
+  );
+});
+
+function MoisTypeBudgetSankey({ grouped, catFor }) {
+  const { nodes, links, empty } = useMemo(() => {
+    const incByCat = {}, expByCat = {};
+    let saving = 0;
+    for (const g of grouped) {
+      const sum = g.lines.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0);
+      if (sum <= 0) continue;
+      if (g.kind === 'income') incByCat[g.category_id] = (incByCat[g.category_id] || 0) + sum;
+      else if (g.kind === 'saving') saving += sum;
+      else expByCat[g.category_id] = (expByCat[g.category_id] || 0) + sum;
+    }
+    const incEntries = Object.entries(incByCat).sort((a, b) => b[1] - a[1]);
+    const expEntries = Object.entries(expByCat).sort((a, b) => b[1] - a[1]);
+    const totalInc = incEntries.reduce((s, [, v]) => s + v, 0);
+    const totalExp = expEntries.reduce((s, [, v]) => s + v, 0);
+    const reste = totalInc - totalExp - saving;
+    if (totalInc <= 0) return { empty: true };
+
+    const N = [], L = [];
+    incEntries.forEach(([slug]) => { const c = catFor(slug); N.push({ name: c?.name || slug, color: c?.color || 'var(--positive)', kind: 'income' }); });
+    const hub = N.length; N.push({ name: 'Budget', kind: 'hub' });
+    expEntries.forEach(([slug]) => { const c = catFor(slug); N.push({ name: c?.name || slug, color: c?.color || 'var(--negative)', kind: 'expense' }); });
+    let savIdx = null, restIdx = null;
+    if (saving > 0) { savIdx = N.length; N.push({ name: 'Épargne', color: 'var(--accent)', kind: 'saving' }); }
+    if (reste > 0) { restIdx = N.length; N.push({ name: 'Reste à vivre', color: 'var(--positive)', kind: 'rest' }); }
+    incEntries.forEach((e, i) => L.push({ source: i, target: hub, value: e[1] }));
+    expEntries.forEach((e, i) => L.push({ source: hub, target: hub + 1 + i, value: e[1] }));
+    if (savIdx != null) L.push({ source: hub, target: savIdx, value: saving });
+    if (restIdx != null) L.push({ source: hub, target: restIdx, value: reste });
+    return { nodes: N, links: L };
+  }, [grouped, catFor]);
+
+  if (empty) {
+    return <div className="rmw-sankey-empty">Renseigne tes <strong>entrées</strong> pour voir ton flux se dessiner.</div>;
+  }
+
+  const rightCount = links.filter(l => typeof l.source === 'number').length; // approx
+  const rows = Math.max(nodes.filter(n => n.kind === 'income').length, nodes.filter(n => ['expense', 'saving', 'rest'].includes(n.kind)).length);
+  const height = Math.min(440, Math.max(240, rows * 38));
+
+  return (
+    <div className="rmw-realsankey">
+      <ResponsiveContainer width="100%" height={height}>
+        <Sankey
+          data={{ nodes, links }}
+          nodePadding={16}
+          nodeWidth={11}
+          linkCurvature={0.5}
+          iterations={64}
+          node={<RecapSankeyNode/>}
+          link={{ stroke: 'none', fill: 'var(--accent)', fillOpacity: 0.16 }}
+          margin={{ top: 14, right: 150, bottom: 14, left: 120 }}
+        >
+          <Tooltip
+            formatter={(v) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v)}
+            contentStyle={{ background: 'var(--bg-elev)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
+          />
+        </Sankey>
+      </ResponsiveContainer>
     </div>
   );
 }
