@@ -329,10 +329,28 @@ def _alembic_sync() -> None:
                 "SELECT 1 FROM information_schema.tables "
                 "WHERE table_name = 'alembic_version'"
             )).first() is not None
-        if not has_version_table:
-            logger.info("[alembic] no alembic_version table — stamping head")
+            # Révision COURANTE réellement enregistrée (pas juste l'existence
+            # de la table). C'est le point clé du fix perf 2026-06-30 :
+            current_rev = None
+            if has_version_table:
+                row = conn.execute(text(
+                    "SELECT version_num FROM alembic_version LIMIT 1"
+                )).first()
+                current_rev = row[0] if row else None
+
+        if current_rev is None:
+            # DB fraîche OU table alembic_version présente mais VIDE. Dans les
+            # deux cas le schéma est déjà entièrement construit au-dessus par
+            # create_all() + _run_lightweight_migrations(). On STAMPE head
+            # (instantané) au lieu de rejouer toute la chaîne 0001→0015 à CHAQUE
+            # boot — ce que faisait la branche `upgrade` quand la table existait
+            # mais était vide (logs "Running upgrade -> 0001_baseline" à chaque
+            # démarrage → redéploiements lents signalés par l'user).
+            logger.info("[alembic] pas de révision courante — stamp head (schéma déjà via create_all)")
             alembic_command.stamp(cfg, "head")
         else:
+            # Révision existante : on applique uniquement les migrations en
+            # attente (no-op si déjà à head).
             alembic_command.upgrade(cfg, "head")
     except Exception as e:
         logger.warning("[alembic] sync failed (non-fatal): %s", e)
