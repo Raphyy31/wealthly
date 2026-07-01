@@ -77,19 +77,39 @@ export default function App() {
         auth.me().then((me) => { if (me && me.id) setAuthState('authed'); }).catch(() => {});
         return;
       }
-      // Utilisateur déjà connu : on confirme, course courte (2,5 s) pour ne pas
-      // rester bloqué si le backend redémarre.
+      // Utilisateur déjà connu (cache présent) : on confirme via /auth/me, mais
+      // on distingue TIMEOUT vs vraie invalidation. Au cold-start Railway (sortie
+      // de veille), /auth/me peut dépasser 2,5 s → AVANT on éjectait l'user vers
+      // la landing malgré une session valide ("données disparues" / "déconnecté
+      // tout seul"). Désormais : sur timeout AVEC cache de session, on reste
+      // OPTIMISTE (on entre dans l'app) et on laisse reloadAll (+ son retry
+      // cold-start) confirmer/populer. On ne déconnecte QUE sur un vrai 401.
+      const TIMEOUT = Symbol('timeout');
       try {
+        const mePromise = auth.me();
+        // Si le timeout gagne la course, la promesse /auth/me continue et
+        // pourrait rejeter (401 tardif) → on avale ici pour éviter un
+        // "unhandled promise rejection". Le vrai basculement se fait via les
+        // appels de données de reloadAll (non-/auth/*, qui émettent le signal).
+        mePromise.catch(() => {});
         const me = await Promise.race([
-          auth.me(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2500)),
+          mePromise,
+          new Promise((resolve) => setTimeout(() => resolve(TIMEOUT), 3500)),
         ]);
+        if (me === TIMEOUT) {
+          // Backend froid, pas de réponse à temps → optimiste (on a un cache).
+          // /auth/me continue en tâche de fond : un 401 réel basculera l'app
+          // via le signal subscribeSessionExpired.
+          setAuthState('authed');
+          return;
+        }
         if (me && me.id) {
           setAuthState('authed');
           return;
         }
+        // me est null/sans id → session réellement invalide.
       } catch (e) {
-        // 401 / réseau / timeout → unauthed
+        // 401 / réseau → unauthed (vraie invalidation, pas un simple délai).
       }
       setAuthState('unauthed');
     })();

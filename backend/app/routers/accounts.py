@@ -3,7 +3,8 @@ Accounts endpoints: bank accounts, with member assignment for joint accounts.
 """
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy import func
+from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
 from app.models import User, Account, Member, Transaction
@@ -13,7 +14,7 @@ from app.auth import get_current_user
 router = APIRouter(prefix="/accounts", tags=["accounts"])
 
 
-def _to_out(account: Account, db: Session) -> dict:
+def _to_out(account: Account, db: Session, tx_sum_by_account: dict | None = None) -> dict:
     """Serialize an Account.
 
     Pour le `current_balance` on privilegie maintenant le solde officiel
@@ -23,12 +24,21 @@ def _to_out(account: Account, db: Session) -> dict:
     Fix 2026-05-19 : avant on retournait toujours le calcul, qui divergeait
     du vrai solde banque a cause des transactions pending non remontees
     par DSP2 (cas typique Revolut).
+
+    Perf 2026-06-30 : `tx_sum_by_account` (dict account_id -> somme) permet à
+    `list_accounts` de calculer TOUTES les sommes en une seule requête groupée
+    plutôt qu'un SELECT * par compte (N+1 qui chargeait toutes les
+    transactions en mémoire à chaque affichage — cause de lenteur signalée).
     """
     if account.last_known_balance is not None:
         current = float(account.last_known_balance)
+    elif tx_sum_by_account is not None:
+        current = (account.initial_balance or 0.0) + tx_sum_by_account.get(account.id, 0.0)
     else:
-        tx_sum = db.query(Transaction).filter(Transaction.account_id == account.id).all()
-        current = (account.initial_balance or 0.0) + sum(t.amount for t in tx_sum)
+        total = db.query(func.coalesce(func.sum(Transaction.amount), 0.0)).filter(
+            Transaction.account_id == account.id
+        ).scalar()
+        current = (account.initial_balance or 0.0) + float(total or 0.0)
     return {
         "id": account.id,
         "name": account.name,
@@ -60,8 +70,27 @@ def list_accounts(db: Session = Depends(get_db), user: User = Depends(get_curren
     # confirment que la route exécute correctement, le crash est uniquement
     # dans la phase de validation de la response. `_to_out` produit déjà
     # un dict propre, on le renvoie tel quel — FastAPI sérialise en JSON.
-    accounts = db.query(Account).filter(Account.household_id == user.household_id).all()
-    return [_to_out(a, db) for a in accounts]
+    # Eager-load members (évite un SELECT par compte pour `account.members`).
+    accounts = (
+        db.query(Account)
+        .options(selectinload(Account.members))
+        .filter(Account.household_id == user.household_id)
+        .all()
+    )
+    # Somme des transactions par compte en UNE requête groupée (au lieu d'un
+    # SELECT * par compte). Ne concerne que les comptes sans solde officiel
+    # GoCardless, mais on la fait globalement — c'est un seul aller-retour DB.
+    account_ids = [a.id for a in accounts]
+    tx_sum_by_account: dict[str, float] = {}
+    if account_ids:
+        rows = (
+            db.query(Transaction.account_id, func.coalesce(func.sum(Transaction.amount), 0.0))
+            .filter(Transaction.account_id.in_(account_ids))
+            .group_by(Transaction.account_id)
+            .all()
+        )
+        tx_sum_by_account = {acc_id: float(total or 0.0) for acc_id, total in rows}
+    return [_to_out(a, db, tx_sum_by_account) for a in accounts]
 
 
 @router.post("", response_model=AccountOut, status_code=201)

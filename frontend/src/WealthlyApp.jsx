@@ -672,11 +672,43 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       if (has('refMonth')) setRefMonthsByScope({ household: out.refMonth || { version: 1, updated_at: null, lines: [] } });
       api.documents.list().then(setDocuments).catch(() => {});
 
-      // Tranches "core" en échec → on prévient (non bloquant). Les tranches
-      // secondaires (achievements/connections/dca/…) échouent en silence.
+      // Tranches "core" en échec → cold-start Railway (backend qui sort de
+      // veille : les 1ers des 16 appels // partent sur un serveur froid et
+      // timeout/500). Symptôme signalé par l'user : "données qui
+      // disparaissent puis reviennent au refresh". Plutôt que laisser l'écran
+      // vide + un warning, on RETENTE UNE fois ces tranches après un court
+      // délai (le backend est chaud au 2e essai) → l'app se répare seule.
       const coreFailed = failedKeys.filter(k => ['members', 'accounts', 'transactions', 'assets', 'liabilities', 'categories'].includes(k));
       if (coreFailed.length > 0) {
-        showToast("Certaines données n'ont pas pu être rechargées — réessaie ou synchronise.", 'warning');
+        const CALL = {
+          me: () => api.auth.me(),
+          members: () => api.members.list(),
+          accounts: () => api.accounts.list(),
+          transactions: () => api.transactions.list(),
+          assets: () => api.assets.list(),
+          liabilities: () => api.liabilities.list(),
+          categories: () => api.categories.list(),
+        };
+        const APPLY = {
+          me: (v) => { if (v) { setCurrentUser(v); try { localStorage.setItem('w2:current_user', JSON.stringify(v)); } catch {} } },
+          members: (v) => setMembers(v || []),
+          accounts: (v) => setAccounts((v || []).map(accountFromApi)),
+          transactions: (v) => setTransactions((v || []).map(txFromApi)),
+          assets: (v) => setAssets((v || []).map(assetFromApi)),
+          liabilities: (v) => setLiabilities((v || []).map(liaFromApi)),
+          categories: (v) => { const c = (v || []).map(categoryFromApi); setCategories(c.length > 0 ? c : DEFAULT_CATEGORIES); },
+        };
+        const retryKeys = coreFailed.filter(k => CALL[k]);
+        await new Promise((r) => setTimeout(r, 1400));
+        const retried = await Promise.allSettled(retryKeys.map((k) => CALL[k]()));
+        let stillFailed = 0;
+        retried.forEach((res, i) => {
+          if (res.status === 'fulfilled') APPLY[retryKeys[i]](res.value);
+          else stillFailed++;
+        });
+        if (stillFailed > 0) {
+          showToast("Certaines données n'ont pas pu être rechargées — réessaie ou synchronise.", 'warning');
+        }
       }
     } catch (err) {
       showToast(t('toasts.loadError', { message: err.message }), 'error');
