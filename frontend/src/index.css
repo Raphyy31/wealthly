@@ -1076,10 +1076,14 @@ html, body {
 .ws-sidebar:hover .ws-user-info,
 .ws-sidebar:hover .ws-user-chev { display: flex; }
 
-/* Footer actions (cloche, thème, langue, devise, démo) → masqués en collapsed.
-   Trop d'items, ça surchargeait le rail. On les montre dès l'expansion. */
+/* Footer actions (thème, langue, devise, masquer montants) → masqués en
+   collapsed, répartis uniformément en expansion (cloche d'alertes retirée
+   2026-06-30 → footer plus aéré). */
 .ws-foot-actions { display: none; }
-.ws-sidebar:hover .ws-foot-actions { display: flex; gap: 6px; flex-wrap: nowrap; }
+.ws-sidebar:hover .ws-foot-actions {
+  display: flex; gap: 6px; flex-wrap: nowrap;
+  justify-content: space-between; width: 100%;
+}
 
 /* ── Brand block (identité app fixe, séparée du filtre membre) ──────── */
 .ws-brand-row {
@@ -1364,7 +1368,7 @@ html, body {
 
 .ws-nav {
   display: flex; flex-direction: column;
-  gap: 1px;
+  gap: 3px;
   overflow-y: auto;
   flex: 1;
   margin: 0 -4px;
@@ -1374,10 +1378,10 @@ html, body {
   display: flex;
   align-items: baseline;
   gap: 8px;
-  margin: 14px 8px 4px;
+  margin: 18px 8px 6px;
   color: var(--ink-3);
 }
-.ws-nav-group:first-of-type { margin-top: 4px; }
+.ws-nav-group:first-of-type { margin-top: 6px; }
 .ws-nav-group-num {
   font: 500 var(--text-2xs)/1 var(--font-mono);
   letter-spacing: 0.06em;
@@ -1553,7 +1557,7 @@ html, body {
   display: flex; flex-direction: column; gap: 8px;
   position: relative;
 }
-.ws-foot-actions { display: flex; gap: 6px; }
+.ws-foot-actions { display: flex; gap: 6px; justify-content: space-between; width: 100%; }
 .ws-user {
   display: flex; align-items: center; gap: 10px;
   width: 100%;

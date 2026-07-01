@@ -774,23 +774,31 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
           }
         } catch {}
 
-        // Show the app NOW — don't gate on Railway cold-start (15-30s).
-        // Le banner 'Récupération...' (controle par initialSyncing) rassure
-        // l'user que ses donnees ne sont PAS perdues, juste en cours de
-        // fetch. Crucial en navigation privee (pas de cache) ou apres
-        // hard-refresh.
-        setLoading(false);
+        // Deux régimes selon la présence de cache :
+        //  - CACHE présent (retour dans l'app) : on peint TOUT DE SUITE avec
+        //    les données en cache, refresh silencieux en arrière-plan.
+        //  - PAS de cache (nouveau login / navigation privée / hard-refresh) :
+        //    on ATTEND le 1er reloadAll sur l'écran de préparation, puis on
+        //    révèle l'app une fois tout chargé → l'user navigue "détente"
+        //    ensuite, sans données qui popent. Depuis les optims DB (index +
+        //    N+1) ce 1er chargement est court. FILET : au-delà de 12 s (backend
+        //    très froid) on entre quand même — le banner initialSyncing prend
+        //    le relais et le retry cold-start de reloadAll finit de peupler.
+        if (hasCache) setLoading(false);
+        let entered = hasCache;
+        const enterApp = () => { entered = true; setLoading(false); };
+        const coldGuard = hasCache ? null : setTimeout(() => { if (!entered) enterApp(); }, 12000);
 
-        // Refresh from API in the background. currentUser + onboarded sont
-        // désormais dérivés DANS reloadAll (me & members sont dans le batch
-        // parallèle) → plus de 2e round-trip séquentiel api.auth.me() +
-        // api.members.list() après coup (fix lenteur login 2026-06-25).
         reloadAll().catch(() => {}).finally(() => {
+          if (coldGuard) clearTimeout(coldGuard);
+          if (!entered) enterApp();
           setInitialSyncing(false);
           initialSyncDoneRef.current = true;
         });
       }
-      setLoading(false);
+      // NB : plus de setLoading(false) inconditionnel ici — un nouveau login
+      // (sans cache) reste sur l'écran de préparation jusqu'à ce que reloadAll
+      // finisse (ou le filet 12 s). La branche démo gère son propre setLoading.
 
       // Handle GoCardless callback: URL contains ?ref={requisition_reference}
       // after the bank consent. Legacy ?state=&code= still accepted in case
@@ -2597,6 +2605,38 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             </div>
           </div>
         </div>
+
+        {/* Overlay "préparation de vos données" — rend le chargement explicite
+            et rassurant (au lieu d'un skeleton muet). L'app ne se révèle
+            qu'une fois le 1er reloadAll terminé (nouveau login sans cache). */}
+        <div style={{
+          position: 'fixed', inset: 0,
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          gap: 18,
+          background: 'color-mix(in srgb, var(--bg) 78%, transparent)',
+          backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+          zIndex: 50,
+        }}>
+          <Logo size={40}/>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            font: '500 15px/1 Geist, system-ui, sans-serif', color: 'var(--ink)',
+          }}>
+            <span style={{
+              width: 16, height: 16, flexShrink: 0,
+              border: '2px solid var(--border)',
+              borderTopColor: 'var(--accent)',
+              borderRadius: '50%',
+              display: 'inline-block',
+              animation: 'spin 0.7s linear infinite',
+            }}/>
+            Préparation de votre espace…
+          </div>
+          <div style={{ font: '400 13px/1.4 Geist, system-ui, sans-serif', color: 'var(--ink-3)' }}>
+            Récupération et vérification de vos données
+          </div>
+        </div>
         <span className="sr-only">Chargement…</span>
       </div>
     );
@@ -3028,7 +3068,6 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
 
           <div className="ws-foot">
             <div className="ws-foot-actions">
-              <NotificationBell onNavigate={setView}/>
               <ThemeToggle/>
               <LangButton/>
               <CurrencyButton baseCurrency={baseCurrency} setBaseCurrency={setBaseCurrency}/>
