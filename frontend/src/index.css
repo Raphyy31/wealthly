@@ -1395,6 +1395,33 @@ html, body {
   text-transform: uppercase;
   color: var(--ink-3);
 }
+/* ── Sections repliables (accordéon) ────────────────────────────────── */
+.ws-nav-section { display: flex; flex-direction: column; }
+.ws-nav-section-items { display: flex; flex-direction: column; gap: 3px; }
+/* Header = div toggle : garde le look .ws-nav-group, aligné + chevron à droite */
+.ws-nav-group-toggle {
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  border-radius: 6px;
+  transition: color var(--t-fast);
+}
+.ws-nav-group-toggle:hover .ws-nav-group-label { color: var(--ink-2); }
+.ws-nav-group-chev {
+  margin-left: auto;
+  color: var(--ink-3);
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+.ws-nav-section.is-collapsed .ws-nav-group-chev { transform: rotate(-90deg); }
+/* Repli effectif UNIQUEMENT en mode déployé (hover) : une section repliée
+   masque ses items. En rail réduit, toutes les icônes restent visibles,
+   séparées par le header (gap) → navigation claire au petit format. */
+.ws-sidebar:hover .ws-nav-section.is-collapsed .ws-nav-section-items { display: none; }
+/* Chevron caché en rail (pas de label lisible de toute façon) */
+.ws-nav-group-chev { display: none; }
+.ws-sidebar:hover .ws-nav-group-chev { display: block; }
+
 .ws-nav-group--with-cta {
   justify-content: space-between;
 }

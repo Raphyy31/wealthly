@@ -52,7 +52,6 @@ import { DCAView } from './views/DCA.jsx';
 import { SubscriptionsView } from './views/Subscriptions.jsx';
 import { Projection } from './views/Projection.jsx';
 import { ImmoSimulator } from './views/ImmoSimulator.jsx';
-import { NotificationBell } from './components/NotificationBell.jsx';
 import { Vault } from './views/Vault.jsx';
 import { dcaApi } from './api.js';
 import { AccountDrawer } from './components/AccountDrawer.jsx';
@@ -283,6 +282,19 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   // (donc on n'ouvre pas).
   const [postSyncReviewIds, setPostSyncReviewIds] = useState(null);
   const [sidebarMenuOpen, setSidebarMenuOpen] = useState(false);
+  // Sections nav repliables (accordéon) — état persisté. Une section repliée
+  // n'affiche plus ses items en mode déployé → sidebar moins entassée.
+  const [navCollapsed, setNavCollapsed] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('wealthly:nav_collapsed') || '{}') || {}; }
+    catch { return {}; }
+  });
+  const toggleNavGroup = useCallback((key) => {
+    setNavCollapsed((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      try { localStorage.setItem('wealthly:nav_collapsed', JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, []);
   // C4 — workspace switcher (member dropdown, kept for fallback / future)
   const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
   // Mode Presentation auto-tour (pitch investisseurs 2026-05). Trigger via
@@ -2934,132 +2946,156 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
           <nav className="ws-nav" aria-label="Navigation principale" ref={navRef}>
             <span className="ws-nav-indicator" ref={navIndicatorRef} aria-hidden="true"/>
 
-            <div className="ws-nav-group">
-              <span className="ws-nav-group-label">{t('nav.group_pilotage')}</span>
-            </div>
-            {/* Nav links — passes de <button> a <a href> pour supporter
-                Cmd/Ctrl/Middle-click "ouvrir dans un nouvel onglet" (user
-                feedback 2026-05-21). Click normal = preventDefault + setView
-                (navigation React rapide). Cmd+Click = browser ignore le
-                preventDefault et ouvre l'href #/wealth dans un nouvel onglet,
-                qui boot l'app et parse le hash au mount. */}
-            <a href="#/dashboard"
-               onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('dashboard'); }}
-               className={view === 'dashboard' ? 'on' : ''}>
-              <Activity size={16}/> <span>{t('nav.dashboard')}</span>
-            </a>
-            <a href="#/wealth"
-               onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('wealth'); }}
-               className={view === 'wealth' ? 'on' : ''}>
-              <Landmark size={16}/> <span>{t('nav.wealth')}</span>
-            </a>
-            <a href="#/transactions"
-               onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('transactions'); }}
-               className={view === 'transactions' ? 'on' : ''}>
-              <BarChart3 size={16}/> <span>{t('nav.transactions')}</span>
-            </a>
-            <div className="ws-nav-group">
-              <span className="ws-nav-group-label">{t('nav.group_budget')}</span>
-            </div>
-            <a href="#/monthly"
-               onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('monthly'); }}
-               className={view === 'monthly' ? 'on' : ''}>
-              <Calendar size={16}/> <span>{t('nav.monthly')}</span>
-              {budgetsOverCount > 0 && (
-                <span className="ws-nav-dot" title={`${budgetsOverCount} budget(s) dépassé(s)`}>
-                  {budgetsOverCount}
-                </span>
-              )}
-            </a>
-            <a href="#/subscriptions"
-               onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('subscriptions'); }}
-               className={view === 'subscriptions' ? 'on' : ''}>
-              <Repeat size={16}/> <span>Abonnements</span>
-            </a>
-            <a href="#/projection"
-               onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('projection'); }}
-               className={view === 'projection' ? 'on' : ''}>
-              <LineChartIcon size={16}/> <span>{t('nav.projection')}</span>
-            </a>
-            <div className="ws-nav-group">
-              <span className="ws-nav-group-label">{t('nav.group_invest')}</span>
-            </div>
-            <a href="#/dca"
-               onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('dca'); }}
-               className={view === 'dca' ? 'on' : ''}>
-              <TrendingUp size={16}/> <span>{t('nav.dca')}</span>
-            </a>
-            <a href="#/immo"
-               onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('immo'); }}
-               className={view === 'immo' ? 'on' : ''}>
-              <Home size={16}/> <span>{t('nav.immo')}</span>
-            </a>
-            <a href="#/tax"
-               onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('tax'); }}
-               className={view === 'tax' ? 'on' : ''}>
-              <Calculator size={16}/> <span>{t('nav.tax')}</span>
-            </a>
-            <div className="ws-nav-group">
-              <span className="ws-nav-group-label">{t('nav.group_documents')}</span>
-            </div>
-            <a href="#/vault"
-               onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('vault'); }}
-               className={view === 'vault' ? 'on' : ''}>
-              <Lock size={16}/> <span>{t('nav.vault')}</span>
-            </a>
+            {/* Sections repliables (accordéon) — header cliquable + chevron.
+                En rail réduit, seules les icônes des items s'affichent,
+                séparées par section. Nav links en <a href> pour supporter
+                Cmd/Ctrl/Middle-click "ouvrir dans un nouvel onglet". */}
 
-            <div className="ws-nav-group ws-nav-group--with-cta">
-              <span className="ws-nav-group-label">{t('nav.group_accounts')}</span>
-              <button
-                type="button"
-                className="ws-nav-group-cta"
-                onClick={() => setAddBankAccountStep('choice')}
-                title="Ajouter un compte bancaire (DSP2 ou manuel)"
-                aria-label="Ajouter un compte bancaire"
-              >
-                <Plus size={11}/>
-              </button>
+            {/* PILOTAGE */}
+            <div className={`ws-nav-section ${navCollapsed.pilotage ? 'is-collapsed' : ''}`}>
+              <div role="button" tabIndex={0} className="ws-nav-group ws-nav-group-toggle"
+                      onClick={() => toggleNavGroup('pilotage')} aria-expanded={!navCollapsed.pilotage}>
+                <span className="ws-nav-group-label">{t('nav.group_pilotage')}</span>
+                <ChevronDown size={13} className="ws-nav-group-chev"/>
+              </div>
+              <div className="ws-nav-section-items">
+                <a href="#/dashboard"
+                   onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('dashboard'); }}
+                   className={view === 'dashboard' ? 'on' : ''}>
+                  <Activity size={16}/> <span>{t('nav.dashboard')}</span>
+                </a>
+                <a href="#/wealth"
+                   onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('wealth'); }}
+                   className={view === 'wealth' ? 'on' : ''}>
+                  <Landmark size={16}/> <span>{t('nav.wealth')}</span>
+                </a>
+                <a href="#/transactions"
+                   onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('transactions'); }}
+                   className={view === 'transactions' ? 'on' : ''}>
+                  <BarChart3 size={16}/> <span>{t('nav.transactions')}</span>
+                </a>
+              </div>
             </div>
-            {(accounts || []).map(a => {
-              const balance = accountBalances?.[a.id];
-              return (
-                <button
-                  key={a.id}
-                  onClick={() => setDrawerAccount(a)}
-                  className="ws-account-item"
-                  title={a.name || a.bank}
-                >
-                  {/* Badge banque — 2026-05-21 : passe de ws-bank-dot (rectangle
-                      etire, 1 lettre couleur hash) a BankMark (carré 22px,
-                      couleurs officielles BNP/Boursorama/CA/etc). Si l'user
-                      n'a pas renseigne la banque, BankMark fallback sur le
-                      nom -> couleur HSL stable mais quand meme square. */}
-                  <BankMark bank={a.bank || a.name || '?'} size={22}/>
-                  <span className="ws-account-name">{a.name || a.bank}</span>
-                  {Number.isFinite(balance) && !hideAmounts && (
-                    <span className="ws-account-balance">
-                      {fmtAmount(balance, 'card', { currency: a.currency || 'EUR' })}
+
+            {/* BUDGET & PRÉVISION */}
+            <div className={`ws-nav-section ${navCollapsed.budget ? 'is-collapsed' : ''}`}>
+              <div role="button" tabIndex={0} className="ws-nav-group ws-nav-group-toggle"
+                      onClick={() => toggleNavGroup('budget')} aria-expanded={!navCollapsed.budget}>
+                <span className="ws-nav-group-label">{t('nav.group_budget')}</span>
+                <ChevronDown size={13} className="ws-nav-group-chev"/>
+              </div>
+              <div className="ws-nav-section-items">
+                <a href="#/monthly"
+                   onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('monthly'); }}
+                   className={view === 'monthly' ? 'on' : ''}>
+                  <Calendar size={16}/> <span>{t('nav.monthly')}</span>
+                  {budgetsOverCount > 0 && (
+                    <span className="ws-nav-dot" title={`${budgetsOverCount} budget(s) dépassé(s)`}>
+                      {budgetsOverCount}
                     </span>
                   )}
-                </button>
-              );
-            })}
-
-            <div className="ws-nav-group">
-              <span className="ws-nav-group-label">{t('nav.group_config')}</span>
+                </a>
+                <a href="#/subscriptions"
+                   onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('subscriptions'); }}
+                   className={view === 'subscriptions' ? 'on' : ''}>
+                  <Repeat size={16}/> <span>Abonnements</span>
+                </a>
+                <a href="#/projection"
+                   onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('projection'); }}
+                   className={view === 'projection' ? 'on' : ''}>
+                  <LineChartIcon size={16}/> <span>{t('nav.projection')}</span>
+                </a>
+              </div>
             </div>
-            <a href="#/settings"
-               onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('settings'); }}
-               className={view === 'settings' ? 'on' : ''}>
-              <Settings size={16}/> <span>{t('nav.settings')}</span>
-            </a>
-            {currentUser?.is_admin && (
-              <a href="#/admin"
-                 onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('admin'); }}
-                 className={view === 'admin' ? 'on' : ''}>
-                <Lock size={16}/> <span>Admin</span>
-              </a>
-            )}
+
+            {/* INVESTIR & DOCUMENTS (Coffre-fort fusionné ici) */}
+            <div className={`ws-nav-section ${navCollapsed.invest ? 'is-collapsed' : ''}`}>
+              <div role="button" tabIndex={0} className="ws-nav-group ws-nav-group-toggle"
+                      onClick={() => toggleNavGroup('invest')} aria-expanded={!navCollapsed.invest}>
+                <span className="ws-nav-group-label">{t('nav.group_invest')}</span>
+                <ChevronDown size={13} className="ws-nav-group-chev"/>
+              </div>
+              <div className="ws-nav-section-items">
+                <a href="#/dca"
+                   onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('dca'); }}
+                   className={view === 'dca' ? 'on' : ''}>
+                  <TrendingUp size={16}/> <span>{t('nav.dca')}</span>
+                </a>
+                <a href="#/immo"
+                   onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('immo'); }}
+                   className={view === 'immo' ? 'on' : ''}>
+                  <Home size={16}/> <span>{t('nav.immo')}</span>
+                </a>
+                <a href="#/tax"
+                   onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('tax'); }}
+                   className={view === 'tax' ? 'on' : ''}>
+                  <Calculator size={16}/> <span>{t('nav.tax')}</span>
+                </a>
+                <a href="#/vault"
+                   onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('vault'); }}
+                   className={view === 'vault' ? 'on' : ''}>
+                  <Lock size={16}/> <span>{t('nav.vault')}</span>
+                </a>
+              </div>
+            </div>
+
+            {/* COMPTES — non repliable (bouton + d'ajout) */}
+            <div className="ws-nav-section">
+              <div className="ws-nav-group ws-nav-group--with-cta">
+                <span className="ws-nav-group-label">{t('nav.group_accounts')}</span>
+                <button
+                  type="button"
+                  className="ws-nav-group-cta"
+                  onClick={() => setAddBankAccountStep('choice')}
+                  title="Ajouter un compte bancaire (DSP2 ou manuel)"
+                  aria-label="Ajouter un compte bancaire"
+                >
+                  <Plus size={11}/>
+                </button>
+              </div>
+              <div className="ws-nav-section-items">
+                {(accounts || []).map(a => {
+                  const balance = accountBalances?.[a.id];
+                  return (
+                    <button
+                      key={a.id}
+                      onClick={() => setDrawerAccount(a)}
+                      className="ws-account-item"
+                      title={a.name || a.bank}
+                    >
+                      <BankMark bank={a.bank || a.name || '?'} size={22}/>
+                      <span className="ws-account-name">{a.name || a.bank}</span>
+                      {Number.isFinite(balance) && !hideAmounts && (
+                        <span className="ws-account-balance">
+                          {fmtAmount(balance, 'card', { currency: a.currency || 'EUR' })}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* CONFIGURATION — non repliable */}
+            <div className="ws-nav-section">
+              <div className="ws-nav-group">
+                <span className="ws-nav-group-label">{t('nav.group_config')}</span>
+              </div>
+              <div className="ws-nav-section-items">
+                <a href="#/settings"
+                   onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('settings'); }}
+                   className={view === 'settings' ? 'on' : ''}>
+                  <Settings size={16}/> <span>{t('nav.settings')}</span>
+                </a>
+                {currentUser?.is_admin && (
+                  <a href="#/admin"
+                     onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('admin'); }}
+                     className={view === 'admin' ? 'on' : ''}>
+                    <Lock size={16}/> <span>Admin</span>
+                  </a>
+                )}
+              </div>
+            </div>
           </nav>
 
           {/* "Mes banques" section retiree 2026-05-21 — faisait doublon
@@ -3133,7 +3169,6 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
               <Logo size={22} wordmark wordmarkSize={14} />
             </div>
             <div className="header-actions">
-              <NotificationBell onNavigate={setView}/>
               <button className="icon-btn" onClick={() => setHideAmounts(!hideAmounts)} title="Masquer/afficher">
                 {hideAmounts ? <EyeOff size={16}/> : <Eye size={16}/>}
               </button>
