@@ -53,16 +53,30 @@ def _resolve_category_id(db: Session, household_id: str, slug: Optional[str]) ->
     return None
 
 
-def _to_out(tx: Transaction, db: Session) -> dict:
+def _to_out(tx: Transaction, db: Session,
+            cat_slug_by_id: dict | None = None,
+            payee_name_by_id: dict | None = None) -> dict:
+    # Perf 2026-06-30 : `cat_slug_by_id` / `payee_name_by_id` permettent à
+    # list_transactions de résoudre catégorie + payee via des dicts pré-chargés
+    # (2 requêtes au total) au lieu d'un SELECT Category + un SELECT Payee PAR
+    # transaction (2×N requêtes — jusqu'à 10 000 sur un listing de 5000 tx, la
+    # cause n°1 de lenteur signalée). Les appels unitaires (create/update)
+    # gardent le fallback par requête.
     cat_slug = None
     if tx.category_id:
-        cat = db.query(Category).filter(Category.id == tx.category_id).first()
-        cat_slug = cat.slug if cat else None
+        if cat_slug_by_id is not None:
+            cat_slug = cat_slug_by_id.get(tx.category_id)
+        else:
+            cat = db.query(Category).filter(Category.id == tx.category_id).first()
+            cat_slug = cat.slug if cat else None
     payee_name = None
     if tx.payee_id:
-        from app.models import Payee  # local import to avoid circular
-        p = db.query(Payee).filter(Payee.id == tx.payee_id).first()
-        payee_name = p.name if p else None
+        if payee_name_by_id is not None:
+            payee_name = payee_name_by_id.get(tx.payee_id)
+        else:
+            from app.models import Payee  # local import to avoid circular
+            p = db.query(Payee).filter(Payee.id == tx.payee_id).first()
+            payee_name = p.name if p else None
     return {
         "id": tx.id,
         "account_id": tx.account_id,
@@ -95,7 +109,24 @@ def list_transactions(
     if account_id:
         q = q.filter(Transaction.account_id == account_id)
     txs = q.order_by(Transaction.date.desc()).limit(limit).all()
-    return [_to_out(t, db) for t in txs]
+
+    # Résolution catégorie + payee en 2 requêtes groupées (au lieu de 2 par tx).
+    cat_ids = {t.category_id for t in txs if t.category_id}
+    payee_ids = {t.payee_id for t in txs if t.payee_id}
+    cat_slug_by_id: dict[str, str] = {}
+    if cat_ids:
+        cat_slug_by_id = {
+            cid: slug for cid, slug in
+            db.query(Category.id, Category.slug).filter(Category.id.in_(cat_ids)).all()
+        }
+    payee_name_by_id: dict[str, str] = {}
+    if payee_ids:
+        from app.models import Payee
+        payee_name_by_id = {
+            pid: name for pid, name in
+            db.query(Payee.id, Payee.name).filter(Payee.id.in_(payee_ids)).all()
+        }
+    return [_to_out(t, db, cat_slug_by_id, payee_name_by_id) for t in txs]
 
 
 @router.post("", response_model=TransactionOut, status_code=201)

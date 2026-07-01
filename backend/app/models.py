@@ -187,7 +187,7 @@ class Member(Base):
     color = Column(String, nullable=False, default="#3b82f6")
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    household_id = Column(String, ForeignKey("households.id", ondelete="CASCADE"), nullable=False)
+    household_id = Column(String, ForeignKey("households.id", ondelete="CASCADE"), nullable=False, index=True)
     household = relationship("Household", back_populates="members")
 
     accounts = relationship("Account", secondary=account_members, back_populates="members")
@@ -249,7 +249,7 @@ class Account(Base):
     wealth_item_uuid = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    household_id = Column(String, ForeignKey("households.id", ondelete="CASCADE"), nullable=False)
+    household_id = Column(String, ForeignKey("households.id", ondelete="CASCADE"), nullable=False, index=True)
     household = relationship("Household", back_populates="accounts")
 
     members = relationship("Member", secondary=account_members, back_populates="accounts")
@@ -355,7 +355,7 @@ class Asset(Base):
     # type='stocks' and parent_asset_id = the open envelope's id.
     parent_asset_id = Column(String, ForeignKey("assets.id", ondelete="CASCADE"), nullable=True, index=True)
 
-    household_id = Column(String, ForeignKey("households.id", ondelete="CASCADE"), nullable=False)
+    household_id = Column(String, ForeignKey("households.id", ondelete="CASCADE"), nullable=False, index=True)
     household = relationship("Household", back_populates="assets")
     members = relationship("Member", secondary=asset_members, back_populates="assets")
 
@@ -391,7 +391,7 @@ class Liability(Base):
     start_date = Column(Date, nullable=True)               # first echéance
     linked_asset_id = Column(String, ForeignKey("assets.id", ondelete="SET NULL"), nullable=True)
 
-    household_id = Column(String, ForeignKey("households.id", ondelete="CASCADE"), nullable=False)
+    household_id = Column(String, ForeignKey("households.id", ondelete="CASCADE"), nullable=False, index=True)
     household = relationship("Household", back_populates="liabilities")
     members = relationship("Member", secondary=liability_members, back_populates="liabilities")
     linked_asset = relationship("Asset", foreign_keys=[linked_asset_id])
@@ -412,7 +412,7 @@ class Category(Base):
     kind = Column(String, nullable=False, default="needs")  # needs | wants | savings (for 50/30/20)
     parent_slug = Column(String, nullable=True)  # parent category slug, NULL = top-level
 
-    household_id = Column(String, ForeignKey("households.id", ondelete="CASCADE"), nullable=False)
+    household_id = Column(String, ForeignKey("households.id", ondelete="CASCADE"), nullable=False, index=True)
     household = relationship("Household", back_populates="categories")
 
     __table_args__ = (
@@ -514,7 +514,7 @@ class Budget(Base):
     amount = Column(Float, nullable=False, default=0.0)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    household_id = Column(String, ForeignKey("households.id", ondelete="CASCADE"), nullable=False)
+    household_id = Column(String, ForeignKey("households.id", ondelete="CASCADE"), nullable=False, index=True)
     household = relationship("Household", back_populates="budgets")
 
     __table_args__ = (
@@ -534,7 +534,7 @@ class Goal(Base):
     deadline = Column(Date, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    household_id = Column(String, ForeignKey("households.id", ondelete="CASCADE"), nullable=False)
+    household_id = Column(String, ForeignKey("households.id", ondelete="CASCADE"), nullable=False, index=True)
     household = relationship("Household", back_populates="goals")
 
 
@@ -620,7 +620,7 @@ class WealthSnapshot(Base):
     mortgage_debt = Column(Float, nullable=True)            # subset of liabilities_value
     other_debt = Column(Float, nullable=True)               # liabilities - mortgage
 
-    household_id = Column(String, ForeignKey("households.id", ondelete="CASCADE"), nullable=False)
+    household_id = Column(String, ForeignKey("households.id", ondelete="CASCADE"), nullable=False, index=True)
     household = relationship("Household")
 
     __table_args__ = (

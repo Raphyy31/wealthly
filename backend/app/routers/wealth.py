@@ -3,7 +3,7 @@ Wealth endpoints: assets and liabilities.
 """
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
 from app.models import User, Asset, Liability, Member, WealthSnapshot
@@ -52,7 +52,14 @@ def _asset_to_out(a: Asset) -> dict:
 
 @router.get("/assets", response_model=List[AssetOut])
 def list_assets(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    return [_asset_to_out(a) for a in db.query(Asset).filter(Asset.household_id == user.household_id).all()]
+    # selectinload(members) : évite un SELECT membres PAR actif (N+1).
+    assets = (
+        db.query(Asset)
+        .options(selectinload(Asset.members))
+        .filter(Asset.household_id == user.household_id)
+        .all()
+    )
+    return [_asset_to_out(a) for a in assets]
 
 
 @router.post("/assets", response_model=AssetOut, status_code=201)
@@ -127,7 +134,13 @@ def _liability_to_out(l: Liability) -> dict:
 
 @router.get("/liabilities", response_model=List[LiabilityOut])
 def list_liabilities(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    return [_liability_to_out(l) for l in db.query(Liability).filter(Liability.household_id == user.household_id).all()]
+    liabilities = (
+        db.query(Liability)
+        .options(selectinload(Liability.members))
+        .filter(Liability.household_id == user.household_id)
+        .all()
+    )
+    return [_liability_to_out(l) for l in liabilities]
 
 
 @router.post("/liabilities", response_model=LiabilityOut, status_code=201)

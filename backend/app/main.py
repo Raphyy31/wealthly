@@ -262,6 +262,23 @@ def _run_lightweight_migrations() -> None:
             # Reclasse les transactions existantes + les règles de catégorisation.
             "UPDATE transactions SET category_slug = 'loan_mortgage' WHERE category_slug = 'mortgage_interest'",
             "UPDATE categorisation_rules SET category_slug = 'loan_mortgage' WHERE category_slug = 'mortgage_interest'",
+            # ── Index household_id (perf 2026-06-30) ────────────────────────
+            # TOUTES les list endpoints filtrent par household_id (et la RLS
+            # ajoute encore ce filtre). Sans index → scan complet de table à
+            # chaque appel de reloadAll. Sur `transactions` (grosse table) c'est
+            # la cause n°1 de lenteur. Ces CREATE INDEX IF NOT EXISTS sont
+            # idempotents et quasi instantanés à l'échelle d'un foyer.
+            "CREATE INDEX IF NOT EXISTS ix_members_household_id ON members (household_id)",
+            "CREATE INDEX IF NOT EXISTS ix_accounts_household_id ON accounts (household_id)",
+            "CREATE INDEX IF NOT EXISTS ix_transactions_household_id ON transactions (household_id)",
+            # Composite (household_id, date) — colle au ORDER BY date DESC du listing.
+            "CREATE INDEX IF NOT EXISTS ix_transactions_household_date ON transactions (household_id, date DESC)",
+            "CREATE INDEX IF NOT EXISTS ix_assets_household_id ON assets (household_id)",
+            "CREATE INDEX IF NOT EXISTS ix_liabilities_household_id ON liabilities (household_id)",
+            "CREATE INDEX IF NOT EXISTS ix_categories_household_id ON categories (household_id)",
+            "CREATE INDEX IF NOT EXISTS ix_budgets_household_id ON budgets (household_id)",
+            "CREATE INDEX IF NOT EXISTS ix_goals_household_id ON goals (household_id)",
+            "CREATE INDEX IF NOT EXISTS ix_wealth_snapshots_household_id ON wealth_snapshots (household_id)",
         ]
 
     # Promote ADMIN_EMAILS → is_admin = TRUE. Idempotent, runs every boot
