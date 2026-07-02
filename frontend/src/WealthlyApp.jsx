@@ -1975,10 +1975,57 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
 
   // ===== Banking / GoCardless =====
   const completeBankCallback = useCallback(async (pending) => {
+    // GoCardless ne passe PAS toujours le statut à "linked" (LN) instantanément
+    // au retour de la banque : le statut peut rester GA/SA/UA (granting access /
+    // selecting accounts / undergoing auth) pendant quelques secondes. Appeler
+    // /complete une seule fois renvoyait alors "pending" et l'utilisateur croyait
+    // que la connexion avait échoué. On POLL désormais /complete (idempotent) avec
+    // feedback visible jusqu'à autorisation, erreur terminale, ou épuisement.
+    const TERMINAL_ERR = new Set(['RJ', 'EX', 'SU']);   // rejected / expired / suspended
+    const MAX_ATTEMPTS = 7;
+    setSyncStage('connecting', 'Finalisation de la connexion bancaire…', { current: 1, total: MAX_ATTEMPTS });
+
+    let result = null;
     try {
-      const result = await api.banking.complete(pending.state);
+      for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+        result = await api.banking.complete(pending.state);
+        if (result.status === 'authorized') break;
+        if (TERMINAL_ERR.has(result.session_status)) break;
+        // Toujours en attente côté banque → on patiente et on relance.
+        if (attempt < MAX_ATTEMPTS - 1) {
+          setSyncStage('connecting', 'Ta banque finalise l\'autorisation…', { current: attempt + 2, total: MAX_ATTEMPTS });
+          await new Promise(r => setTimeout(r, 2500));
+        }
+      }
+    } catch (err) {
       setBankingPendingState(null);
-      if (result.status === 'authorized') {
+      setSyncStatus(null);
+      showToast(t('toasts.bankError', { message: err.message }), 'error');
+      return;
+    }
+
+    setBankingPendingState(null);
+
+    // Cas d'échec terminal explicite côté banque.
+    if (result && TERMINAL_ERR.has(result.session_status) && result.status !== 'authorized') {
+      setSyncStatus(null);
+      showToast('La banque a interrompu ou refusé l\'autorisation. Relance la connexion depuis Réglages → Comptes bancaires.', 'error');
+      try { setBankConnections(await api.banking.listConnections()); } catch { /* ignore */ }
+      return;
+    }
+
+    // Toujours en attente après tous les essais : la connexion existe, elle
+    // finira de se lier côté GoCardless. On l'affiche + message actionnable.
+    if (!result || result.status !== 'authorized') {
+      setSyncStatus(null);
+      try { setBankConnections(await api.banking.listConnections()); } catch { /* ignore */ }
+      showToast('Ta banque prend un peu plus de temps que prévu. La connexion apparaît dans Réglages → Comptes bancaires — clique « Récupérer les comptes » dans une minute.', 'info');
+      return;
+    }
+
+    // ── result.status === 'authorized' ──
+    {
+      {
         showToast(t('toasts.bankConnected'), 'success');
         const conns = await api.banking.listConnections();
         setBankConnections(conns);
@@ -2015,12 +2062,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
             setTimeout(() => setSyncStatus(null), 3500);
           }
         }
-      } else {
-        showToast(t('toasts.bankPending'), 'info');
       }
-    } catch (err) {
-      setBankingPendingState(null);
-      showToast(t('toasts.bankError', { message: err.message }), 'error');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
