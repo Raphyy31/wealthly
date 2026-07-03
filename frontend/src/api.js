@@ -393,8 +393,12 @@ export const categorizeEngine = {
 // AI CATEGORIZATION
 // ============================================================================
 export const categorizeAI = {
-  // transactions: [{label, amount}] -> {results: {label: slug}, ai_used, ai_available}
+  // transactions: [{label, amount}] -> {results: {label: slug}, sources: {label: source}, ai_used, ai_available}
   categorize: (transactions) => post('/categorize', { transactions }),
+  // Passe GRATUITE (moteur serveur, zéro LLM) : re-résout côté backend toutes
+  // les tx non catégorisées du foyer -> {updated, results: [{id, category_slug,
+  // cat_source, is_transfer_override}]}. Appelée automatiquement au chargement.
+  enginePass: () => post('/categorize/engine', {}),
 };
 
 // ============================================================================

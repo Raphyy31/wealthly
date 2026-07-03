@@ -136,3 +136,65 @@ def test_categorize_openai_error_falls_back(client, auth_headers, monkeypatch):
     body = resp.json()
     assert body["ai_used"] is False
     assert body["results"][WEIRD_LABEL] == "uncategorized"
+
+
+# ─── /categorize/engine : passe gratuite automatique ────────────────────────
+
+def _make_account(client, auth_headers):
+    resp = client.post("/accounts", json={
+        "name": "Compte test engine", "bank": "Test", "type": "checking",
+    }, headers=auth_headers)
+    assert resp.status_code == 201, resp.text
+    return resp.json()["id"]
+
+
+def test_engine_pass_heals_uncategorized_after_new_rule(client, auth_headers):
+    """Une tx importée inconnue reste 'uncategorized' ; l'utilisateur crée une
+    règle ; la passe gratuite la re-catégorise SANS IA (cat_source=user_rule)."""
+    acc = _make_account(client, auth_headers)
+    resp = client.post("/transactions", json={
+        "account_id": acc, "date": "2026-06-15",
+        "label": "XKQZ BOUTIQUE 42", "amount": -30.0,
+    }, headers=auth_headers)
+    assert resp.status_code == 201, resp.text
+    tx_id = resp.json()["id"]
+    assert resp.json()["category_slug"] in (None, "uncategorized")
+
+    # Règle custom créée APRÈS coup — le moteur doit soigner l'historique.
+    resp = client.post("/rules", json={
+        "pattern": "XKQZ", "category_slug": "shopping",
+    }, headers=auth_headers)
+    assert resp.status_code == 201, resp.text
+
+    resp = client.post("/categorize/engine", json={}, headers=auth_headers)
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["updated"] >= 1
+    hit = next(r for r in body["results"] if r["id"] == tx_id)
+    assert hit["category_slug"] == "shopping"
+    assert hit["cat_source"] == "user_rule"
+
+    # Idempotence : une 2e passe ne retouche plus cette tx.
+    resp2 = client.post("/categorize/engine", json={}, headers=auth_headers)
+    assert all(r["id"] != tx_id for r in resp2.json()["results"])
+
+
+def test_engine_pass_respects_manual_lock(client, auth_headers):
+    """Une catégorie choisie explicitement (verrouillée) n'est JAMAIS réécrite
+    par la passe gratuite, même si une règle matche le libellé."""
+    acc = _make_account(client, auth_headers)
+    resp = client.post("/transactions", json={
+        "account_id": acc, "date": "2026-06-16",
+        "label": "WQJX GALERIE 7", "amount": -50.0,
+        "category_slug": "uncategorized", "is_manual_category": True,
+    }, headers=auth_headers)
+    assert resp.status_code == 201, resp.text
+    tx_id = resp.json()["id"]
+
+    client.post("/rules", json={
+        "pattern": "WQJX", "category_slug": "leisure",
+    }, headers=auth_headers)
+
+    resp = client.post("/categorize/engine", json={}, headers=auth_headers)
+    assert resp.status_code == 200
+    assert all(r["id"] != tx_id for r in resp.json()["results"])

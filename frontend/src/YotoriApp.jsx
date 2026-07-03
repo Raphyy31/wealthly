@@ -2282,6 +2282,47 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
     return () => clearTimeout(tid);
   }, [loading, demoMode, bankConnections]);  // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Passe moteur GRATUITE automatique (2026-07-03) ────────────────────────
+  // « Ça catégorise sans demander » : au chargement, si des transactions sont
+  // restées non catégorisées, on demande au backend de les re-résoudre via le
+  // moteur canonique (règles custom + payees + règles apprises + builtin).
+  // Zéro LLM, zéro coût, silencieux — l'historique se soigne tout seul à
+  // mesure que les règles s'enrichissent. Le bouton « IA » ne sert plus qu'aux
+  // transactions résistantes. 1 exécution par session (ref).
+  const enginePassRef = useRef(false);
+  useEffect(() => {
+    if (enginePassRef.current) return;
+    if (loading || demoMode) return;
+    if (!transactions.length) return;
+    const hasUncat = transactions.some(tx =>
+      (!tx.categoryId || tx.categoryId === 'uncategorized') &&
+      !tx.isManualCategory && !tx.isTransferOverride && (tx.label || '').trim()
+    );
+    enginePassRef.current = true;
+    if (!hasUncat) return;
+    // Fire-and-forget SANS cleanup : `transactions` change plusieurs fois
+    // pendant le boot (reloadAll, snapshots…) — un cleanup annulerait le
+    // timer à chaque re-render avant qu'il tire, et le ref-guard empêcherait
+    // de le re-poser. YotoriApp ne se démonte qu'au logout, risque nul.
+    setTimeout(() => {
+      api.categorizeAI.enginePass().then(res => {
+        if (!res || !res.updated) return;
+        const byId = new Map((res.results || []).map(r => [r.id, r]));
+        setTransactions(prev => prev.map(tx => {
+          const u = byId.get(tx.id);
+          if (!u) return tx;
+          return {
+            ...tx,
+            categoryId: u.category_slug ?? tx.categoryId,
+            isTransferOverride: u.is_transfer_override ?? tx.isTransferOverride,
+            catSource: u.cat_source || tx.catSource,
+          };
+        }));
+        showToast(`${res.updated} transaction${res.updated > 1 ? 's' : ''} catégorisée${res.updated > 1 ? 's' : ''} automatiquement (règles & marchands connus).`, 'info');
+      }).catch(() => { /* best effort — silencieux */ });
+    }, 2500);
+  }, [loading, demoMode, transactions]);  // eslint-disable-line react-hooks/exhaustive-deps
+
   const deleteBankConnection = async (connectionId) => {
     const conn = bankConnections.find(c => c.id === connectionId);
     const bankLabel = conn?.bank_name || 'cette banque';

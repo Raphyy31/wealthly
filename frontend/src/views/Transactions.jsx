@@ -549,11 +549,13 @@ export function Transactions({ transactions, accounts, categories, members = [],
                   <button
                     className={`ds-btn tx-hdr-btn ${uncatCount > 0 ? 'primary' : 'ghost'}`}
                     onClick={onCategorizeAI}
-                    title="Catégorise automatiquement en un clic (IA serveur, quota maîtrisé). Nécessite la clé API."
+                    title={uncatCount > 0
+                      ? `Envoie à l'IA les ${uncatCount} transaction${uncatCount > 1 ? 's' : ''} que les règles gratuites (marchands connus, règles apprises) n'ont pas su classer.`
+                      : "Tout est catégorisé — les règles gratuites tournent automatiquement, l'IA ne sert qu'au reste."}
                     disabled={uncatCount === 0 || aiCatRunning}
                   >
                     <Sparkles size={14} className={aiCatRunning ? 'spin' : ''}/>
-                    <span className="tx-hdr-label">{aiCatRunning ? 'Catégorisation…' : 'Catégoriser via IA'}</span>
+                    <span className="tx-hdr-label">{aiCatRunning ? 'IA en cours…' : 'IA'}</span>
                     {uncatCount > 0 && !aiCatRunning && <span className="ds-btn-badge">{uncatCount}</span>}
                   </button>
                 )}

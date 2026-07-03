@@ -22,11 +22,12 @@ POST /categorize — refonte « moteur unique » (2026-07-03) :
 import json
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.auth import get_current_user
-from app.models import User, Category
+from app.models import User, Category, Transaction
 from app.config import settings
 from app.rate_limit import limiter
 from app.categorization import categorize_transaction, normalize_label
@@ -71,6 +72,72 @@ def _ai_provider() -> str | None:
     if settings.OPENAI_API_KEY:
         return "openai"
     return None
+
+
+class EnginePassResult(BaseModel):
+    updated: int
+    # [{id, category_slug, cat_source, is_transfer_override}] — uniquement les
+    # transactions modifiées, pour merge côté client sans reload complet.
+    results: list[dict]
+
+
+@router.post("/engine", response_model=EnginePassResult)
+@limiter.limit("200/day")
+def engine_pass(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Passe GRATUITE automatique : re-résout via le moteur canonique toutes
+    les transactions non catégorisées du foyer. Zéro LLM, zéro coût — le
+    client l'appelle silencieusement au chargement pour « soigner »
+    l'historique à mesure que règles custom / payees / règles apprises
+    s'enrichissent. Le bouton IA ne s'occupe plus que des résistantes.
+
+    Ne touche JAMAIS : les catégories verrouillées (is_manual_category),
+    les virements marqués explicitement (is_transfer_override non-null).
+    """
+    hid = current_user.household_id
+    cats = db.query(Category).filter(Category.household_id == hid).all()
+    slug_to_id = {c.slug: c.id for c in cats}
+    uncat_id = slug_to_id.get("uncategorized")
+
+    candidates = db.query(Transaction).filter(
+        Transaction.household_id == hid,
+        Transaction.is_manual_category.is_(False),
+        or_(Transaction.category_id.is_(None), Transaction.category_id == uncat_id),
+    ).all()
+
+    changed: list[dict] = []
+    for tx in candidates:
+        # Flag virement posé explicitement (true OU false) = décision de
+        # l'utilisateur ou d'une détection antérieure → on ne re-décide pas.
+        if tx.is_transfer_override is not None and tx.is_transfer_override:
+            continue
+        result = categorize_transaction(
+            label=tx.label, amount=tx.amount, household_id=hid, db=db, date=tx.date,
+        )
+        if result.is_transfer:
+            if tx.is_transfer_override is None:
+                tx.is_transfer_override = True
+                tx.cat_source = result.source
+                changed.append({
+                    "id": tx.id, "category_slug": None,
+                    "cat_source": result.source, "is_transfer_override": True,
+                })
+        elif result.slug and result.slug in slug_to_id:
+            new_cat_id = slug_to_id[result.slug]
+            if tx.category_id != new_cat_id:
+                tx.category_id = new_cat_id
+                tx.payee_id = result.payee_id or tx.payee_id
+                tx.cat_source = result.source
+                changed.append({
+                    "id": tx.id, "category_slug": result.slug,
+                    "cat_source": result.source, "is_transfer_override": tx.is_transfer_override,
+                })
+
+    db.commit()
+    return EnginePassResult(updated=len(changed), results=changed)
 
 
 @router.post("", response_model=CategorizeResponse)
