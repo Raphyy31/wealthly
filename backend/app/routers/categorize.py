@@ -53,6 +53,10 @@ class CategorizeResponse(BaseModel):
     sources: dict[str, str] = {}
     ai_used: bool
     ai_available: bool
+    # Raison compacte de l'échec LLM (ex. "openai_http_429_insufficient_quota",
+    # "openai_http_401"). Jamais de secret — sert au diagnostic sans accès aux
+    # logs serveur. None si pas d'appel IA ou succès.
+    ai_error: str | None = None
 
 
 def _ai_provider() -> str | None:
@@ -177,6 +181,7 @@ def categorize(
             unmatched.append(tx)
 
     ai_used = False
+    ai_error = None
     provider = _ai_provider()
     ai_available = provider is not None
 
@@ -196,9 +201,11 @@ def categorize(
                 ai_used = True
                 record_use(db, current_user.household_id)
         except Exception as exc:
-            # Log serveur (les logs Railway montrent la vraie cause : 401 clé,
-            # 429 insufficient_quota = crédits absents, modèle inconnu…).
+            # Log serveur + raison compacte renvoyée au client (diagnostic
+            # sans accès aux logs : 401 clé, 429 insufficient_quota = crédits
+            # absents, modèle inconnu…). Aucun secret dans _compact_ai_error.
             logger.warning("[categorize] LLM %s failed: %s", provider, exc)
+            ai_error = _compact_ai_error(provider, exc)
     for tx in unmatched:
         if tx.label not in results:
             results[tx.label] = "uncategorized"
@@ -208,7 +215,28 @@ def categorize(
     # couche learning) s'appuient dessus.
     db.commit()
 
-    return CategorizeResponse(results=results, sources=sources, ai_used=ai_used, ai_available=ai_available)
+    return CategorizeResponse(results=results, sources=sources, ai_used=ai_used, ai_available=ai_available, ai_error=ai_error)
+
+
+def _compact_ai_error(provider: str, exc: Exception) -> str:
+    """Raison d'échec LLM compacte et SANS SECRET pour la réponse API.
+    Ex.: openai_http_429_insufficient_quota, openai_http_401, anthropic_timeout."""
+    try:
+        import httpx
+        if isinstance(exc, httpx.HTTPStatusError):
+            code = exc.response.status_code
+            detail = ""
+            try:
+                err = exc.response.json().get("error") or {}
+                detail = err.get("code") or err.get("type") or ""
+            except Exception:
+                pass
+            return f"{provider}_http_{code}" + (f"_{detail}" if detail else "")
+        if isinstance(exc, httpx.TimeoutException):
+            return f"{provider}_timeout"
+    except Exception:
+        pass
+    return f"{provider}_{type(exc).__name__}"
 
 
 def _build_prompt(transactions: list[TxInput], valid_slugs: list[str], slug_names: dict[str, str] | None = None) -> str:

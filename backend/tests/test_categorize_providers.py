@@ -136,6 +136,8 @@ def test_categorize_openai_error_falls_back(client, auth_headers, monkeypatch):
     body = resp.json()
     assert body["ai_used"] is False
     assert body["results"][WEIRD_LABEL] == "uncategorized"
+    # Diagnostic compact exposé au client (pas de secret)
+    assert body["ai_error"] == "openai_RuntimeError"
 
 
 # ─── Coach personnel (/ai/insights) : provider OpenAI ───────────────────────
