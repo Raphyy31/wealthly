@@ -109,6 +109,14 @@ class Settings:
     # peut monter en gamme via env (ex. gpt-4o) sans toucher au code.
     AI_MODEL_CATEGORIZE_OPENAI: str = os.getenv("AI_MODEL_CATEGORIZE_OPENAI", "gpt-4o-mini")
     AI_MODEL_COACH_OPENAI: str = os.getenv("AI_MODEL_COACH_OPENAI", "gpt-4o-mini")
+    # Chaîne de repli si le modèle demandé est inaccessible pour CE compte/clé
+    # (BYOK : catalogue variable selon l'âge du compte et les restrictions de
+    # la clé — 403/404 model_not_found → candidat suivant, cf. services/llm.py.
+    # Incident prod 2026-07-03 : gpt-4o-mini indisponible sur compte neuf).
+    OPENAI_MODEL_FALLBACKS: str = os.getenv(
+        "OPENAI_MODEL_FALLBACKS",
+        "gpt-4o-mini,gpt-4.1-mini,gpt-5-mini,gpt-5-nano,gpt-4o,gpt-5",
+    )
     # Plafond mensuel d'appels IA par foyer (filet anti token-burn). Au-delà →
     # fallback déterministe. Le cache du Coach (24h) limite déjà fortement.
     AI_MONTHLY_CAP: int = int(os.getenv("AI_MONTHLY_CAP", "300"))

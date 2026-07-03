@@ -140,6 +140,62 @@ def test_categorize_openai_error_falls_back(client, auth_headers, monkeypatch):
     assert body["ai_error"] == "openai_RuntimeError"
 
 
+# ─── Chaîne de repli modèles OpenAI (403/404 model_not_found) ───────────────
+
+def test_openai_model_fallback_chain(monkeypatch):
+    """gpt-4o-mini renvoie 403 model_not_found → repli automatique sur le
+    candidat suivant, qui est mémorisé pour le process."""
+    import httpx
+    from app.services import llm as llm_mod
+
+    monkeypatch.setattr(settings, "OPENAI_API_KEY", "sk-proj-test", raising=False)
+    monkeypatch.setattr(settings, "OPENAI_MODEL_FALLBACKS", "gpt-4o-mini,gpt-4.1-mini", raising=False)
+    monkeypatch.setattr(llm_mod, "_OPENAI_WORKING_MODEL", None, raising=False)
+
+    tried = []
+
+    def fake_post(url, headers=None, json=None, timeout=None):
+        tried.append(json["model"])
+        req = httpx.Request("POST", url)
+        if json["model"] == "gpt-4o-mini":
+            return httpx.Response(403, json={"error": {"code": "model_not_found"}}, request=req)
+        return httpx.Response(200, json={"choices": [{"message": {"content": '{"ok": true}'}}]}, request=req)
+
+    monkeypatch.setattr(llm_mod.__dict__["call_openai"].__globals__["settings"], "OPENAI_API_KEY", "sk-proj-test", raising=False)
+    import httpx as httpx_mod
+    monkeypatch.setattr(httpx_mod, "post", fake_post)
+
+    out = llm_mod.call_openai("Réponds en JSON.", model="gpt-4o-mini")
+    assert out == '{"ok": true}'
+    assert tried == ["gpt-4o-mini", "gpt-4.1-mini"]
+    assert llm_mod._OPENAI_WORKING_MODEL == "gpt-4.1-mini"
+
+    # Appel suivant : direct sur le modèle mémorisé, plus de 403 payé.
+    tried.clear()
+    out2 = llm_mod.call_openai("Réponds en JSON.", model="gpt-4o-mini")
+    assert out2 == '{"ok": true}'
+    assert tried == ["gpt-4.1-mini"]
+
+
+def test_openai_fallback_exhausted_raises(monkeypatch):
+    import httpx
+    from app.services import llm as llm_mod
+
+    monkeypatch.setattr(settings, "OPENAI_API_KEY", "sk-proj-test", raising=False)
+    monkeypatch.setattr(settings, "OPENAI_MODEL_FALLBACKS", "gpt-4o-mini", raising=False)
+    monkeypatch.setattr(llm_mod, "_OPENAI_WORKING_MODEL", None, raising=False)
+
+    def all_403(url, headers=None, json=None, timeout=None):
+        req = httpx.Request("POST", url)
+        return httpx.Response(403, json={"error": {"code": "model_not_found"}}, request=req)
+
+    import httpx as httpx_mod
+    monkeypatch.setattr(httpx_mod, "post", all_403)
+
+    with pytest.raises(httpx.HTTPStatusError):
+        llm_mod.call_openai("Réponds en JSON.", model="gpt-4o-mini")
+
+
 # ─── Coach personnel (/ai/insights) : provider OpenAI ───────────────────────
 
 def test_coach_uses_openai_when_selected(client, auth_headers, monkeypatch):
