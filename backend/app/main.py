@@ -455,7 +455,12 @@ async def _unhandled_exception_handler(request: Request, exc: Exception):
 # Health check (used by Docker healthcheck)
 @app.get("/health", tags=["meta"])
 def health():
-    return {"status": "ok", "version": "2.0.0"}
+    # ai_provider : provider LLM effectivement résolu ("anthropic" | "openai"
+    # | null). Présence uniquement — aucune clé exposée. Permet de vérifier en
+    # un coup d'œil que la variable Railway est bien vue par le process
+    # (diagnostic clé mal nommée / posée sur le mauvais service).
+    from app.services.llm import resolve_provider
+    return {"status": "ok", "version": "2.0.0", "ai_provider": resolve_provider()}
 
 # Mount all routers
 app.include_router(auth.router)
