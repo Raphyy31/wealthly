@@ -15,6 +15,7 @@ POST /ai/insights
     un fallback déterministe construit depuis le snapshot.
 """
 import json
+import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Request
@@ -29,6 +30,7 @@ from app.rate_limit import limiter
 from app.services.ai_budget import under_cap, record_use, coach_cache_get, coach_cache_set
 
 router = APIRouter(prefix="/ai", tags=["ai"])
+logger = logging.getLogger("yotori.insights")
 
 
 # ---- Schémas ----------------------------------------------------------------
@@ -131,8 +133,14 @@ def ai_insights(
     hh = current_user.household_id
 
     # 1) Cache 24h (sauf si l'utilisateur force via le bouton rafraîchir).
+    # Best-effort : un souci ai_state (RLS…) ne doit pas 500 un panneau
+    # secondaire — on continue vers l'appel réel ou le fallback.
     if not payload.force:
-        cached = coach_cache_get(db, hh)
+        try:
+            cached = coach_cache_get(db, hh)
+        except Exception as exc:
+            logger.warning("[insights] cache read failed: %s", exc)
+            cached = None
         if cached:
             return InsightsResponse(
                 coach=[CoachItem(**c) for c in cached.get("coach", [])],
@@ -141,7 +149,12 @@ def ai_insights(
             )
 
     # 2) Plafond mensuel atteint → fallback déterministe.
-    if not under_cap(db, hh):
+    try:
+        capped = not under_cap(db, hh)
+    except Exception as exc:
+        logger.warning("[insights] under_cap failed: %s", exc)
+        capped = True
+    if capped:
         fb = _deterministic_fallback(payload)
         fb.ai_available = True
         return fb
@@ -155,8 +168,10 @@ def ai_insights(
             "alerts": [a.model_dump() for a in res.alerts],
         })
         return res
-    except Exception:
+    except Exception as exc:
         # Jamais d'erreur 500 au client pour un panneau secondaire — fallback.
+        # Le log expose la vraie cause (401 clé, 429 insufficient_quota…).
+        logger.warning("[insights] LLM %s failed: %s", provider, exc)
         fb = _deterministic_fallback(payload)
         fb.ai_available = True
         return fb

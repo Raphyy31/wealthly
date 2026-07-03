@@ -20,6 +20,7 @@ POST /categorize — refonte « moteur unique » (2026-07-03) :
   - Gracefully returns "uncategorized" for all if no provider key is set
 """
 import json
+import logging
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy import or_
@@ -33,6 +34,7 @@ from app.rate_limit import limiter
 from app.categorization import categorize_transaction, normalize_label
 
 router = APIRouter(prefix="/categorize", tags=["categorize"])
+logger = logging.getLogger("yotori.categorize")
 
 class TxInput(BaseModel):
     label: str
@@ -180,25 +182,26 @@ def categorize(
 
     # ── Pass 2 : LLM (Claude Haiku ou OpenAI) pour les libellés que le
     # moteur ne résout pas — bloqué si plafond mensuel atteint. Le plafond
-    # ai_budget s'applique quel que soit le provider.
+    # ai_budget s'applique quel que soit le provider. TOUT le bloc (under_cap
+    # compris) est best-effort : un souci ai_state/LLM ne doit jamais faire
+    # perdre les résultats gratuits du moteur déjà calculés.
     from app.services.ai_budget import under_cap, record_use
-    if unmatched and provider and under_cap(db, current_user.household_id):
+    if unmatched and provider:
         try:
-            ai_results = _categorize_with_ai(provider, unmatched, list(valid_slugs), slug_names)
-            for label, slug in ai_results.items():
-                results[label] = slug
-                sources[label] = "llm"
-            ai_used = True
-            record_use(db, current_user.household_id)
-        except Exception:
-            # Fallback: mark remaining as uncategorized
-            for tx in unmatched:
-                if tx.label not in results:
-                    results[tx.label] = "uncategorized"
-    else:
-        for tx in unmatched:
-            if tx.label not in results:
-                results[tx.label] = "uncategorized"
+            if under_cap(db, current_user.household_id):
+                ai_results = _categorize_with_ai(provider, unmatched, list(valid_slugs), slug_names)
+                for label, slug in ai_results.items():
+                    results[label] = slug
+                    sources[label] = "llm"
+                ai_used = True
+                record_use(db, current_user.household_id)
+        except Exception as exc:
+            # Log serveur (les logs Railway montrent la vraie cause : 401 clé,
+            # 429 insufficient_quota = crédits absents, modèle inconnu…).
+            logger.warning("[categorize] LLM %s failed: %s", provider, exc)
+    for tx in unmatched:
+        if tx.label not in results:
+            results[tx.label] = "uncategorized"
 
     # Le moteur crée des payees à la volée (db.flush) pendant la résolution
     # builtin — on les persiste pour que les prochaines résolutions (et la

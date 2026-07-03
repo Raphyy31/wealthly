@@ -40,6 +40,11 @@ def _get(db: Session, hh: str) -> AiState:
         st = AiState(household_id=hh, period=_period(), month_count=0)
         db.add(st)
         db.commit()
+        # ⚠️ RLS : le commit vient d'effacer app.current_household_id (variable
+        # LOCAL transaction). Sans ré-affirmation, le SELECT du refresh tourne
+        # sans contexte → 0 ligne → InvalidRequestError → 500 au TOUT PREMIER
+        # appel IA d'un foyer neuf (bug prod 2026-07-03, invisible sur SQLite).
+        _ensure_ctx(db, hh)
         db.refresh(st)
     return st
 
