@@ -54,24 +54,10 @@ class CategorizeResponse(BaseModel):
 
 
 def _ai_provider() -> str | None:
-    """Résout le provider LLM effectif selon AI_PROVIDER + clés posées.
-
-    "auto" (défaut) : Anthropic prioritaire (comportement historique), sinon
-    OpenAI si sa clé est présente. Forcer "anthropic"/"openai" ne bascule
-    JAMAIS silencieusement sur l'autre — sans clé, l'IA est indisponible
-    (fallback déterministe "uncategorized", comme avant).
-    """
-    pref = settings.AI_PROVIDER
-    if pref == "anthropic":
-        return "anthropic" if settings.ANTHROPIC_API_KEY else None
-    if pref == "openai":
-        return "openai" if settings.OPENAI_API_KEY else None
-    # auto
-    if settings.ANTHROPIC_API_KEY:
-        return "anthropic"
-    if settings.OPENAI_API_KEY:
-        return "openai"
-    return None
+    """Wrapper fin sur services.llm.resolve_provider (gardé au niveau module
+    pour les tests qui le monkeypatchent)."""
+    from app.services.llm import resolve_provider
+    return resolve_provider()
 
 
 class EnginePassResult(BaseModel):
@@ -311,37 +297,12 @@ def _categorize_with_ai(provider: str, transactions: list[TxInput], valid_slugs:
 
 
 def _call_anthropic(prompt: str) -> str:
-    import anthropic
-
-    client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-    message = client.messages.create(
-        model=settings.AI_MODEL_CATEGORIZE,
-        max_tokens=1024,
-        messages=[{"role": "user", "content": prompt}],
-    )
-    return message.content[0].text
+    """Wrapper fin (monkeypatché par les tests) → services.llm."""
+    from app.services.llm import call_anthropic
+    return call_anthropic(prompt, model=settings.AI_MODEL_CATEGORIZE)
 
 
 def _call_openai(prompt: str) -> str:
-    """Appel OpenAI via l'API REST chat/completions (httpx, déjà dépendance —
-    pas de SDK à installer). response_format=json_object force un JSON valide
-    (le prompt mentionne « JSON », prérequis du json-mode)."""
-    import httpx
-
-    resp = httpx.post(
-        "https://api.openai.com/v1/chat/completions",
-        headers={
-            "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
-            "Content-Type": "application/json",
-        },
-        json={
-            "model": settings.AI_MODEL_CATEGORIZE_OPENAI,
-            "messages": [{"role": "user", "content": prompt}],
-            "max_completion_tokens": 1024,
-            "response_format": {"type": "json_object"},
-        },
-        timeout=30.0,
-    )
-    resp.raise_for_status()
-    data = resp.json()
-    return data["choices"][0]["message"]["content"]
+    """Wrapper fin (monkeypatché par les tests) → services.llm."""
+    from app.services.llm import call_openai
+    return call_openai(prompt, model=settings.AI_MODEL_CATEGORIZE_OPENAI)

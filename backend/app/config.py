@@ -105,8 +105,10 @@ class Settings:
     # Coach = Sonnet (analyses plus fines), catégorisation = Haiku (pas cher).
     AI_MODEL_COACH: str = os.getenv("AI_MODEL_COACH", "claude-sonnet-4-5-20250929")
     AI_MODEL_CATEGORIZE: str = os.getenv("AI_MODEL_CATEGORIZE", "claude-haiku-4-5-20251001")
-    # Équivalent OpenAI pour la catégorisation (petit modèle économique).
+    # Équivalents OpenAI (petits modèles économiques par défaut). Le coach
+    # peut monter en gamme via env (ex. gpt-4o) sans toucher au code.
     AI_MODEL_CATEGORIZE_OPENAI: str = os.getenv("AI_MODEL_CATEGORIZE_OPENAI", "gpt-4o-mini")
+    AI_MODEL_COACH_OPENAI: str = os.getenv("AI_MODEL_COACH_OPENAI", "gpt-4o-mini")
     # Plafond mensuel d'appels IA par foyer (filet anti token-burn). Au-delà →
     # fallback déterministe. Le cache du Coach (24h) limite déjà fortement.
     AI_MONTHLY_CAP: int = int(os.getenv("AI_MONTHLY_CAP", "300"))

@@ -11,7 +11,7 @@ POST /ai/insights
   - L'IA ne fait QUE de la synthèse/formulation à partir des chiffres fournis —
     elle n'invente aucun montant (consigne stricte + on ne lui envoie pas les
     transactions brutes).
-  - Dégradation propre : si ANTHROPIC_API_KEY absente ou erreur API, renvoie
+  - Dégradation propre : si aucune clé LLM (Anthropic OU OpenAI) ou erreur API, renvoie
     un fallback déterministe construit depuis le snapshot.
 """
 import json
@@ -120,7 +120,11 @@ def ai_insights(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    ai_available = bool(settings.ANTHROPIC_API_KEY)
+    # Provider-agnostique (2026-07-03) : Anthropic OU OpenAI, même logique de
+    # sélection que la catégorisation (services.llm.resolve_provider).
+    from app.services.llm import resolve_provider
+    provider = resolve_provider()
+    ai_available = provider is not None
     if not ai_available:
         return _deterministic_fallback(payload)
 
@@ -142,9 +146,9 @@ def ai_insights(
         fb.ai_available = True
         return fb
 
-    # 3) Appel réel (Sonnet), on compte + on met en cache.
+    # 3) Appel réel (Sonnet ou GPT selon provider), on compte + on met en cache.
     try:
-        res = _insights_with_claude(payload)
+        res = _insights_with_ai(provider, payload)
         record_use(db, hh)
         coach_cache_set(db, hh, {
             "coach": [c.model_dump() for c in res.coach],
@@ -158,11 +162,7 @@ def ai_insights(
         return fb
 
 
-def _insights_with_claude(req: InsightsRequest) -> InsightsResponse:
-    import anthropic
-
-    client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-
+def _insights_with_ai(provider: str, req: InsightsRequest) -> InsightsResponse:
     snapshot = {
         "devise": req.currency,
         "patrimoine_net": req.net_worth,
@@ -206,13 +206,13 @@ Réponds UNIQUEMENT avec un objet JSON valide de cette forme, sans texte autour 
   "alerts": [{{"severity": "info|warn", "text": "Message avec le montant exact."}}]
 }}"""
 
-    message = client.messages.create(
-        model=settings.AI_MODEL_COACH,
-        max_tokens=1024,
-        messages=[{"role": "user", "content": prompt}],
-    )
+    from app.services.llm import call_anthropic, call_openai
+    if provider == "openai":
+        raw = call_openai(prompt, model=settings.AI_MODEL_COACH_OPENAI)
+    else:
+        raw = call_anthropic(prompt, model=settings.AI_MODEL_COACH)
 
-    raw = message.content[0].text.strip()
+    raw = raw.strip()
     if "```" in raw:
         # Extrait le bloc entre les premières fences
         parts = raw.split("```")

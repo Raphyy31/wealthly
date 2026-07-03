@@ -138,6 +138,56 @@ def test_categorize_openai_error_falls_back(client, auth_headers, monkeypatch):
     assert body["results"][WEIRD_LABEL] == "uncategorized"
 
 
+# ─── Coach personnel (/ai/insights) : provider OpenAI ───────────────────────
+
+def test_coach_uses_openai_when_selected(client, auth_headers, monkeypatch):
+    """Le coach passe par OpenAI quand c'est le provider résolu (json mocké)."""
+    from app.services import llm as llm_mod
+
+    monkeypatch.setattr(settings, "OPENAI_API_KEY", "sk-proj-test", raising=False)
+    calls = {}
+
+    def fake_openai(prompt, model, max_tokens=1024, json_mode=True):
+        calls["model"] = model
+        calls["prompt_has_snapshot"] = "patrimoine_net" in prompt
+        return '{"coach": [{"title": "Cap", "body": "Vous épargnez bien."}], "alerts": []}'
+
+    def boom(prompt, model, max_tokens=1024):
+        raise AssertionError("anthropic ne devrait pas être appelé")
+
+    monkeypatch.setattr(llm_mod, "call_openai", fake_openai)
+    monkeypatch.setattr(llm_mod, "call_anthropic", boom)
+
+    resp = client.post("/ai/insights", json={
+        "currency": "EUR", "net_worth": 10000, "savings_rate_pct": 22.0,
+        "force": True,
+    }, headers=auth_headers)
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["ai_used"] is True
+    assert body["ai_available"] is True
+    assert body["coach"][0]["body"] == "Vous épargnez bien."
+    assert calls["model"] == settings.AI_MODEL_COACH_OPENAI
+    assert calls["prompt_has_snapshot"] is True
+
+
+def test_coach_openai_error_falls_back_deterministic(client, auth_headers, monkeypatch):
+    from app.services import llm as llm_mod
+
+    monkeypatch.setattr(settings, "OPENAI_API_KEY", "sk-proj-test", raising=False)
+    monkeypatch.setattr(llm_mod, "call_openai", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom")))
+
+    resp = client.post("/ai/insights", json={
+        "currency": "EUR", "net_worth": 5000, "savings_rate_pct": 25.0,
+        "force": True,
+    }, headers=auth_headers)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["ai_used"] is False          # fallback déterministe
+    assert body["ai_available"] is True      # la clé existe pourtant
+    assert any("épargnez" in c["body"] for c in body["coach"])  # vouvoiement
+
+
 # ─── /categorize/engine : passe gratuite automatique ────────────────────────
 
 def _make_account(client, auth_headers):
