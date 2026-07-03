@@ -220,7 +220,9 @@ def categorize(
 
 def _compact_ai_error(provider: str, exc: Exception) -> str:
     """Raison d'échec LLM compacte et SANS SECRET pour la réponse API.
-    Ex.: openai_http_429_insufficient_quota, openai_http_401, anthropic_timeout."""
+    Ex.: openai_http_429_insufficient_quota, openai_http_403_model_not_found:gpt-5,
+    anthropic_timeout. Le modèle en cause (dernier candidat tenté) est ajouté
+    quand il est lisible dans la requête — diagnostic chaîne de repli."""
     try:
         import httpx
         if isinstance(exc, httpx.HTTPStatusError):
@@ -231,7 +233,13 @@ def _compact_ai_error(provider: str, exc: Exception) -> str:
                 detail = err.get("code") or err.get("type") or ""
             except Exception:
                 pass
-            return f"{provider}_http_{code}" + (f"_{detail}" if detail else "")
+            model = ""
+            try:
+                model = json.loads(exc.request.content or b"{}").get("model") or ""
+            except Exception:
+                pass
+            out = f"{provider}_http_{code}" + (f"_{detail}" if detail else "")
+            return out + (f":{model}" if model else "")
         if isinstance(exc, httpx.TimeoutException):
             return f"{provider}_timeout"
     except Exception:
