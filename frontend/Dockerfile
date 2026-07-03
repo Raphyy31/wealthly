@@ -1,4 +1,4 @@
-# Multi-stage build for the Wealthly frontend
+# Multi-stage build for the Yotori Finance frontend
 # Stage 1: build the React app with Vite
 # Stage 2: serve the static dist with nginx
 

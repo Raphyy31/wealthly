@@ -154,7 +154,7 @@ export function LiabilityEditor({ liability, members, assets = [], onSave, onCan
                 </label>
                 <div className="settings-info">
                   <Lightbulb size={14}/>
-                  <span>Tu peux soit saisir la durée totale, soit la date de fin. Wealthly utilise les deux pour calculer le calendrier d'amortissement.</span>
+                  <span>Vous pouvez soit saisir la durée totale, soit la date de fin. Yotori Finance utilise les deux pour calculer le calendrier d'amortissement.</span>
                 </div>
               </>
             )}
@@ -190,7 +190,7 @@ export function LiabilityEditor({ liability, members, assets = [], onSave, onCan
                 </label>
                 <div className="settings-info">
                   <Lightbulb size={14}/>
-                  <span>Lier un emprunt à un actif (ex: ton crédit immobilier à ta résidence principale) permet à Wealthly de croiser les deux dans tes vues Patrimoine.</span>
+                  <span>Lier un emprunt à un actif (ex: votre crédit immobilier à votre résidence principale) permet à Yotori Finance de croiser les deux dans vos vues Patrimoine.</span>
                 </div>
               </>
             )}

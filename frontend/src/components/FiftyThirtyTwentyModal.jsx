@@ -49,7 +49,7 @@ function bucketRefMonth(refMonth, categories) {
 }
 
 function bucketReal(fiftyThirtyTwenty) {
-  // Reuse existing computation that lives in WealthlyApp.
+  // Reuse existing computation that lives in YotoriApp.
   return {
     needs: fiftyThirtyTwenty?.needs || 0,
     wants: fiftyThirtyTwenty?.wants || 0,
@@ -102,10 +102,10 @@ function Recommandation({ buckets, label }) {
   const pWants = Math.round((buckets.wants / total) * 100);
   const pSavings = Math.round((buckets.savings / total) * 100);
   const reco = [];
-  if (pNeeds > 55) reco.push(`Besoins essentiels à ${pNeeds}% (cible ≤50%) — vois si tu peux renégocier ou réduire les charges fixes.`);
+  if (pNeeds > 55) reco.push(`Besoins essentiels à ${pNeeds}% (cible ≤50%) — voyez si vous pouvez renégocier ou réduire les charges fixes.`);
   if (pWants > 35) reco.push(`Envies à ${pWants}% (cible ≤30%) — restos/loisirs/abonnements sont les leviers les plus rapides.`);
   if (pSavings < 15) reco.push(`Épargne à ${pSavings}% (cible ≥20%) — automatise un virement mensuel le jour du salaire.`);
-  if (!reco.length) reco.push(`Tu es dans les clous : ${pNeeds}/${pWants}/${pSavings} — proche de la cible 50/30/20.`);
+  if (!reco.length) reco.push(`Vous êtes dans les clous : ${pNeeds}/${pWants}/${pSavings} — proche de la cible 50/30/20.`);
   return (
     <div className="ftt-reco">
       <div className="ftt-reco-head ds-micro">Recommandation · {label}</div>

@@ -6,7 +6,7 @@ Source des chiffres (100 % serveur, aucune dépendance au frontend) :
   - Transaction du mois → revenus / dépenses / épargne + top catégories.
   - FixedCharge → reste à vivre (revenus − charges fixes actives).
 
-Le HTML est porté de la maquette validée `wealthly-bilan-email.html`
+Le HTML est porté de la maquette validée `yotori-bilan-email.html`
 (email-safe : styles inline, pas de SVG, barre d'allocation empilée).
 
 Aucune exception ne remonte : un foyer sans données est simplement ignoré
@@ -27,7 +27,7 @@ from app.models import (
 from app.email_service import send_email
 from app.config import settings
 
-logger = logging.getLogger("wealthly.report")
+logger = logging.getLogger("yotori.report")
 
 _FR_MONTHS = [
     "", "janvier", "février", "mars", "avril", "mai", "juin",
@@ -70,17 +70,17 @@ def _eur(v: Optional[float], sign: bool = False) -> str:
 
 def _coach_line(savings_rate, delta_pct, net_worth) -> str:
     if savings_rate is not None and savings_rate >= 20:
-        return (f"Beau mois : tu as épargné <b>{savings_rate:.0f} %</b> de tes revenus, "
-                f"au-dessus du repère des 20 %. Continue sur cette lancée.")
+        return (f"Beau mois : vous avez épargné <b>{savings_rate:.0f} %</b> de vos revenus, "
+                f"au-dessus du repère des 20 %. Continuez sur cette lancée.")
     if savings_rate is not None and savings_rate >= 0:
-        return (f"Ton taux d'épargne est de <b>{savings_rate:.0f} %</b> ce mois-ci. "
-                f"Viser 20 % renforcerait ton coussin de sécurité.")
+        return (f"Votre taux d'épargne est de <b>{savings_rate:.0f} %</b> ce mois-ci. "
+                f"Viser 20 % renforcerait votre coussin de sécurité.")
     if savings_rate is not None:
-        return ("Mois déficitaire : tes dépenses ont dépassé tes revenus. "
-                "Regarde les postes les plus élevés pour rééquilibrer.")
+        return ("Mois déficitaire : vos dépenses ont dépassé vos revenus. "
+                "Regardez les postes les plus élevés pour rééquilibrer.")
     if delta_pct is not None and delta_pct > 0:
-        return f"Ton patrimoine net progresse de <b>{delta_pct:.1f} %</b> ce mois-ci."
-    return "Voici ton bilan du mois — un coup d'œil rapide sur tes finances."
+        return f"Votre patrimoine net progresse de <b>{delta_pct:.1f} %</b> ce mois-ci."
+    return "Voici votre bilan du mois — un coup d'œil rapide sur vos finances."
 
 
 def compute_monthly_report(db: Session, household_id: str, month: str) -> Optional[dict]:
@@ -170,7 +170,7 @@ def compute_monthly_report(db: Session, household_id: str, month: str) -> Option
 
 
 def render_html(data: dict, user_name: str) -> str:
-    """Porte la maquette `wealthly-bilan-email.html` avec les chiffres réels."""
+    """Porte la maquette `yotori-bilan-email.html` avec les chiffres réels."""
     fe = settings.FRONTEND_URL.rstrip("/")
     month_long = data["month_long"]
 
@@ -210,7 +210,7 @@ def render_html(data: dict, user_name: str) -> str:
         top_section = (
             f'<div style="padding:24px 32px;border-bottom:1px solid #efede6;">'
             f'<div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#8c8979;'
-            f'font-weight:600;margin-bottom:14px;">Où est parti ton argent</div>{rows}</div>'
+            f'font-weight:600;margin-bottom:14px;">Où est parti votre argent</div>{rows}</div>'
         )
 
     # Allocation
@@ -250,7 +250,7 @@ def render_html(data: dict, user_name: str) -> str:
   <div style="background:#FFFFFF;padding:32px 32px 26px;border-bottom:1px solid #efede6;text-align:center;">
     <div style="display:inline-flex;align-items:center;gap:8px;margin-bottom:20px;">
       <span style="width:26px;height:26px;border-radius:7px;background:#16150f;color:#F7F6F2;font-weight:700;font-size:14px;display:inline-flex;align-items:center;justify-content:center;">W</span>
-      <span style="font-weight:600;font-size:15px;color:#16150f;">Wealthly</span>
+      <span style="font-weight:600;font-size:15px;color:#16150f;">Yotori Finance</span>
     </div>
     <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8c8979;font-weight:600;">Bilan de {month_long}</div>
     <div style="margin:8px 0 18px;font-size:24px;font-weight:600;color:#16150f;">Bonjour <span style="font-family:Georgia,serif;font-style:italic;">{user_name}.</span></div>
@@ -288,13 +288,13 @@ def render_html(data: dict, user_name: str) -> str:
   {alloc_section}
 
   <div style="padding:28px 32px;text-align:center;">
-    <a href="{fe}" style="display:inline-block;background:#16150f;color:#F7F6F2;text-decoration:none;font-weight:600;font-size:14px;padding:13px 26px;border-radius:8px;">Voir le détail dans Wealthly →</a>
+    <a href="{fe}" style="display:inline-block;background:#16150f;color:#F7F6F2;text-decoration:none;font-weight:600;font-size:14px;padding:13px 26px;border-radius:8px;">Voir le détail dans Yotori Finance →</a>
   </div>
 
   <div style="padding:22px 32px 28px;text-align:center;font-size:11.5px;color:#8c8979;line-height:1.6;">
-    Tu reçois ce bilan car tu l'as activé dans tes réglages.<br>
+    Vous recevez ce bilan car vous l'avez activé dans vos réglages.<br>
     <a href="{fe}/#/settings" style="color:#8c8979;text-decoration:underline;">Gérer mes notifications</a><br>
-    Wealthly — ton patrimoine, piloté avec rigueur.
+    Yotori Finance — votre patrimoine, piloté avec rigueur.
   </div>
 </div></body></html>"""
 

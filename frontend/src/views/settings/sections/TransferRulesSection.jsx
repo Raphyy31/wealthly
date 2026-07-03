@@ -201,7 +201,7 @@ export function TransferRulesSection({ accounts, transactions, transferIds, upda
           {impactedCount > 0 && (
             <div className="tr-apply-banner">
               <div className="tr-apply-text">
-                <strong>{impactedCount}</strong> transaction{impactedCount > 1 ? 's' : ''} de l'historique correspond{impactedCount > 1 ? 'ent' : ''} à tes règles.
+                <strong>{impactedCount}</strong> transaction{impactedCount > 1 ? 's' : ''} de l'historique correspond{impactedCount > 1 ? 'ent' : ''} à vos règles.
               </div>
               <button
                 className="ds-btn primary"
@@ -216,7 +216,7 @@ export function TransferRulesSection({ accounts, transactions, transferIds, upda
       )}
 
       <p className="settings-footnote">
-        Les règles sont stockées dans ton compte (Supabase) — retrouvées sur n'importe quel device. Elles s'appliquent <strong>au sync</strong> sur les nouvelles transactions. Pour l'historique, clique sur "Appliquer aux tx existantes".
+        Les règles sont stockées dans votre compte (Supabase) — retrouvées sur n'importe quel device. Elles s'appliquent <strong>au sync</strong> sur les nouvelles transactions. Pour l'historique, cliquez sur "Appliquer aux tx existantes".
       </p>
     </section>
   );

@@ -18,7 +18,7 @@ export function MiniCashflowCard({ thisMonthStats, onOpenMonthly, currentMonth, 
   const income = Math.max(0, thisMonthStats?.income || 0);
   const expenses = Math.max(0, thisMonthStats?.expenses || 0);
   // CHANTIER 2 — saving = vraie epargne (virements savings + cat=savings)
-  // remontee par WealthlyApp.monthlyEvolution. Avant : saving = income -
+  // remontee par YotoriApp.monthlyEvolution. Avant : saving = income -
   // expenses (= reste a vivre), trompeur car comptait les virements savings
   // dans expenses ET produisait un deficit affiche en rouge alors que le
   // user avait justement epargne.
@@ -69,11 +69,17 @@ export function MiniCashflowCard({ thisMonthStats, onOpenMonthly, currentMonth, 
               // Pourcentage retire (user feedback 2026-05-21) : avec un income
               // tres faible (refunds only) le ratio donne des chiffres absurdes
               // type "13004 %". L'epargne brute parle deja toute seule.
+              if (income === 0 && expenses === 0 && saving === 0) {
+                return <>Pas encore de mouvements ce mois-ci.</>;
+              }
               if (saving > 0) {
-                return <>Tu épargnes <em>{formatEUR(saving, { abbr: false })}</em>.</>;
+                return <>Vous épargnez <em>{formatEUR(saving, { abbr: false })}</em>.</>;
               }
               if (deficit > 0 && income > 0) {
-                return <>Tu dépasses ton budget de <em>{formatEUR(deficit, { abbr: false })}</em>.</>;
+                return <>Budget dépassé de <em>{formatEUR(deficit, { abbr: false })}</em>.</>;
+              }
+              if (income - expenses > 0) {
+                return <>Excédent de <em>{formatEUR(income - expenses, { abbr: false })}</em> ce mois-ci.</>;
               }
               return <>Mois équilibré.</>;
             })()}

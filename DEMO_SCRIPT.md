@@ -1,4 +1,4 @@
-# Wealthly — Script de démo pour pitch investisseurs
+# Yotori Finance — Script de démo pour pitch investisseurs
 
 > **Durée totale recommandée : 90-120 secondes.**
 > 3 plans, 1 voice-over par plan.
@@ -9,7 +9,7 @@
 ## 🎬 Plan 0 — Hook (5 sec)
 
 **Voice-over :**
-> « Wealthly, c'est l'app qui montre à une famille où va son argent et combien elle vaut, en temps réel. »
+> « Yotori Finance, c'est l'app qui montre à une famille où va son argent et combien elle vaut, en temps réel. »
 
 **Visuel :**
 - Lancer le **Mode Présentation** (⇧⌘P ou menu user → "Mode présentation")
@@ -33,7 +33,7 @@
 4. Glisser vers la liste de comptes en bas (sync DSP2 visible)
 
 **Insight clé à dire :**
-> « Là où Linxo ou Bankin' s'arrêtent au compte courant, Wealthly inclut le patrimoine ENTIER : immobilier, prêts, PEA, crypto, assurance vie. »
+> « Là où Linxo ou Bankin' s'arrêtent au compte courant, Yotori Finance inclut le patrimoine ENTIER : immobilier, prêts, PEA, crypto, assurance vie. »
 
 ---
 
@@ -46,7 +46,7 @@
 >
 > « En face à face, vous voyez immédiatement où vous avez dérivé. 380 € de plus en restos ce mois ? Visible en 2 secondes. »
 >
-> « Wealthly intègre aussi le décalage salaire fin-de-mois — le virement du 28 avril qui finance mai est automatiquement comptabilisé sur le bon mois. Aucun outil français standard ne fait ça. »
+> « Yotori Finance intègre aussi le décalage salaire fin-de-mois — le virement du 28 avril qui finance mai est automatiquement comptabilisé sur le bon mois. Aucun outil français standard ne fait ça. »
 
 **Pointer :**
 1. Le Sankey "Mois type" à gauche
@@ -84,11 +84,11 @@
 ## 🎬 Plan 4 — Closing (5 sec)
 
 **Voice-over :**
-> « Wealthly. Vue patrimoine. Vue cashflow. Vue budget. Une seule app. Disponible aujourd'hui. »
+> « Yotori Finance. Vue patrimoine. Vue cashflow. Vue budget. Une seule app. Disponible aujourd'hui. »
 
 **Visuel :**
 - Retour Dashboard, hero plein écran
-- Logo Wealthly bottom-right si tu veux finir branding
+- Logo Yotori Finance bottom-right si tu veux finir branding
 
 ---
 
@@ -96,7 +96,7 @@
 
 **Avant de lancer Loom / OBS :**
 
-1. **Connecte tes vraies banques** ou utilise le mode démo (`localStorage.setItem('wealthly:demo', '1')` puis F5)
+1. **Connecte tes vraies banques** ou utilise le mode démo (`localStorage.setItem('yotori:demo', '1')` puis F5)
 2. **Mode démo recommandé** pour la prise — chiffres beaux, pas de risque d'exposer tes vraies données
 3. **Theme light** (papier chaud) — meilleur contraste à la vidéo
 4. **Browser** : Chrome ou Arc, fenêtre maximisée, zoom 100 %
@@ -123,7 +123,7 @@
 ## 📝 Pitch deck slides recommandés en complément
 
 1. **Le problème** : 8M foyers FR, patrimoine éclaté, outils dépassés (Excel / Linxo plafonné)
-2. **La solution** : Wealthly, agrégation patrimoine + cashflow + budget
+2. **La solution** : Yotori Finance, agrégation patrimoine + cashflow + budget
 3. **Démo vidéo** (le MP4 que tu viens de produire)
 4. **Le marché** : TAM, pricing, comparables (Linxo 3M users, Finary 200K)
 5. **L'équipe / la roadmap** : open-source backend, DSP2, IA categorization

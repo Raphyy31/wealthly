@@ -6,6 +6,7 @@
     "monthlyShort": "Monthly",
     "transactions": "Transactions",
     "transactionsShort": "Tx",
+    "subscriptions": "Subscriptions",
     "analysis": "Analysis",
     "goals": "Budgets",
     "cashflow": "Cash Flow",
@@ -185,7 +186,7 @@
     "recent": "Recent activity",
     "recentMeta": "Last 7 days · all accounts",
     "viewAll": "View all",
-    "details": "Details →",
+    "details": "Details",
     "exportPdf": "PDF report",
     "export": "Export",
     "sync": "Sync",
@@ -356,7 +357,7 @@
     "profile": {
       "title": "Your",
       "titleAccent": "profile.",
-      "intro": "The information that identifies your Wealthly account.",
+      "intro": "The information that identifies your Yotori Finance account.",
       "fullName": "Full name",
       "fullNameHint": "Shown in your exports and PDF reports.",
       "changeName": "Change my name",
@@ -458,7 +459,7 @@
       "import": "Import a backup",
       "footnote": "The backup contains your accounts, transactions, wealth, budgets, rules and preferences. No passwords.",
       "dangerZone": "Danger zone",
-      "dangerBody": "Reset Wealthly completely. This erases all your accounts, transactions, assets, debts, rules and budgets. It is <strong>irreversible</strong>.",
+      "dangerBody": "Reset Yotori Finance completely. This erases all your accounts, transactions, assets, debts, rules and budgets. It is <strong>irreversible</strong>.",
       "resetAll": "Reset all my data"
     },
     "banks": {
@@ -475,7 +476,7 @@
       "fetchAccounts": "Fetch accounts",
       "fetchAccountsTitle": "Fetch the account list from GoCardless",
       "disconnect": "Disconnect",
-      "footnote": "Secure connection via <strong>GoCardless</strong> (PSD2 open banking). Your bank credentials never pass through Wealthly.",
+      "footnote": "Secure connection via <strong>GoCardless</strong> (PSD2 open banking). Your bank credentials never pass through Yotori Finance.",
       "syncedSummary_one": "✅ {{imported}} new transaction, {{skipped}} skipped",
       "syncedSummary_other": "✅ {{imported}} new transactions, {{skipped}} skipped",
       "syncedErrors": "{{imported}} imported · {{skipped}} skipped · errors: {{errors}}",

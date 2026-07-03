@@ -1,5 +1,5 @@
 // MonthlyReportToggle — opt-in du bilan mensuel par email.
-// Quand activé, Wealthly envoie chaque début de mois un récap du mois écoulé
+// Quand activé, Yotori Finance envoie chaque début de mois un récap du mois écoulé
 // (patrimoine net + delta, épargne, top dépenses, composition) à l'email du
 // foyer. Bouton "envoyer un test" pour visualiser tout de suite.
 import { useState, useEffect } from 'react';
@@ -65,15 +65,15 @@ export function MonthlyReportToggle({ showToast }) {
       <div style={{ padding: '0 18px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
         <p style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.55, margin: 0 }}>
           Reçois chaque début de mois un <strong style={{ color: 'var(--ink)' }}>récap du mois écoulé</strong> :
-          patrimoine net et son évolution, épargne du mois, top dépenses et composition de ton patrimoine.
-          Envoyé à l'email de ton compte.
+          patrimoine net et son évolution, épargne du mois, top dépenses et composition de votre patrimoine.
+          Envoyé à l'email de votre compte.
         </p>
         <ToggleCard
           checked={enabled}
           onChange={handleChange}
           title="Activer le bilan mensuel"
           description={enabled
-            ? 'Tu recevras le bilan automatiquement au début de chaque mois.'
+            ? 'Vous recevrez le bilan automatiquement au début de chaque mois.'
             : 'Aucun email de bilan ne sera envoyé.'}
           disabled={saving}
         />

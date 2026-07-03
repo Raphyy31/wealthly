@@ -404,7 +404,7 @@ export function DemoTour({ active, onExit, setView }) {
             fontSize: 13, fontWeight: 600, letterSpacing: '-0.005em',
             boxShadow: '0 8px 28px -10px color-mix(in srgb, var(--accent) 70%, transparent)',
           }}>
-            Essayer Wealthly
+            Essayer Yotori Finance
             <ArrowRight size={14}/>
           </div>
         </div>

@@ -1,11 +1,11 @@
 // ============================================================================
-// Dashboard — Wealthly v3 (Refonte Claude Design)
+// Dashboard — Yotori Finance v3 (Refonte Claude Design)
 //
-// Spec source: design_handoff_wealthly_dashboard/README.md (Screen 01).
+// Spec source: design_handoff_yotori_dashboard/README.md (Screen 01).
 // Layout : main header (Bonsoir) + Hero KPI + Allocation (grid 1.5/1)
 //          + Mes comptes + Transactions/Budget/Insights (grid 2/1).
 //
-// Interface props préservée pour ne pas casser WealthlyApp.jsx :
+// Interface props préservée pour ne pas casser YotoriApp.jsx :
 // (netWorth, liquidWealth, assetsValue, liabilitiesValue, thisMonthStats,
 //  monthlyEvolution, visibleAccounts, accountBalances, visibleAssets,
 //  visibleLiabilities, members, activeMemberId, transactions, categories,
@@ -326,7 +326,7 @@ export function Dashboard({
     let total = liquidWealth || 0;
     (visibleAssets || []).forEach(a => {
       // Tout actif NON-immobilier compte dans le financier. On filtre sur
-      // `type === 'real_estate'` (comme la valeur canonique WealthlyApp), PAS
+      // `type === 'real_estate'` (comme la valeur canonique YotoriApp), PAS
       // sur la classe ASSET_CLASS_MAP : un type non mappé (ex. or/métal) avait
       // une classe falsy et tombait en silence → Dashboard 100 860 vs Wealth
       // 104 310. Désormais les deux réconcilient.

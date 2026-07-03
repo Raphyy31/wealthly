@@ -135,8 +135,8 @@ export function InvestmentDetail({ asset, assets = [], members = [], fmt, onEdit
       {hasPositions && topPos && (
         <DetailInsight icon={<PieChart size={15}/>}>
           {rows.length > 1
-            ? <><strong>{topPos.name}</strong> est ta plus grosse ligne : <strong>{Math.round(topWeight)} %</strong> du compte.</>
-            : <>Performance <strong>{plLatente >= 0 ? '+' : ''}{pct(plLatentePct)}</strong> ({plLatente >= 0 ? '+' : ''}{fmt(plLatente)}) sur ton investissement.</>}
+            ? <><strong>{topPos.name}</strong> est votre plus grosse ligne : <strong>{Math.round(topWeight)} %</strong> du compte.</>
+            : <>Performance <strong>{plLatente >= 0 ? '+' : ''}{pct(plLatentePct)}</strong> ({plLatente >= 0 ? '+' : ''}{fmt(plLatente)}) sur votre investissement.</>}
         </DetailInsight>
       )}
       {hasPositions && allocDonut.length > 1 && (
@@ -189,7 +189,7 @@ export function InvestmentDetail({ asset, assets = [], members = [], fmt, onEdit
           <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-tertiary)' }}>
             <BarChart3 size={28}/>
             <h3 style={{ margin: '12px 0 4px', fontSize: 15, color: 'var(--text-primary)' }}>Aucune position importée</h3>
-            <p style={{ margin: '0 auto', maxWidth: 440, fontSize: 13, lineHeight: 1.5 }}>Importe le relevé de positions de ton broker (CSV / XLSX) pour voir le détail ligne à ligne et activer les cours live. La valorisation globale du compte reste à <strong>{fmt(currentValue)}</strong>.</p>
+            <p style={{ margin: '0 auto', maxWidth: 440, fontSize: 13, lineHeight: 1.5 }}>Importez le relevé de positions de votre broker (CSV / XLSX) pour voir le détail ligne à ligne et activer les cours live. La valorisation globale du compte reste à <strong>{fmt(currentValue)}</strong>.</p>
             {onImportCSV && <button className="ds-btn primary" onClick={() => onImportCSV(asset)} style={{ marginTop: 16 }}>Importer un portefeuille</button>}
           </div>
         </DetailSection>

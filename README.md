@@ -1,4 +1,4 @@
-# Wealthly — Patrimoine privé
+# Yotori Finance — Patrimoine privé
 
 Application web de **gestion patrimoniale familiale** auto-hébergée. Comptes bancaires, immobilier, placements, prêts, budgets, suivi mensuel, simulateur d'impôt FR, **score de santé financière**, KPIs gestion privée et historique du patrimoine.
 
@@ -78,9 +78,9 @@ Manifest, service worker, icônes (gold W on dark + maskable). "Ajouter à l'éc
    GoCardless ◄── backend (synchro bancaire DSP2, EU)
 ```
 
-**CORS** : le backend accepte tout `https://wealthly(-…)?\.vercel\.app` via une regex (`CORS_ORIGIN_REGEX`), donc chaque nouveau déploiement Vercel marche automatiquement.
+**CORS** : le backend accepte tout `https://(wealthly|yotori(-finance)?)-…\.vercel\.app` via une regex (`CORS_ORIGIN_REGEX`), donc chaque nouveau déploiement Vercel marche automatiquement.
 
-**Auth** : JWT signé avec `SECRET_KEY` (env Railway). Le token est stocké dans `localStorage` côté navigateur sous `wealthly:token`. Boot optimiste : l'app rentre directement si un token est présent et vérifie `/auth/me` en arrière-plan (évite le freeze sur Railway froid). Rate limiting par IP sur les 3 endpoints sensibles.
+**Auth** : JWT signé avec `SECRET_KEY` (env Railway). Le token est stocké dans `localStorage` côté navigateur sous `yotori:token`. Boot optimiste : l'app rentre directement si un token est présent et vérifie `/auth/me` en arrière-plan (évite le freeze sur Railway froid). Rate limiting par IP sur les 3 endpoints sensibles.
 
 **Schéma DB** : `Base.metadata.create_all()` crée les tables au boot. Alembic est posé en parallèle (auto-stamp de la baseline si pas de `alembic_version` table) pour porter les futures modifs schémas.
 
@@ -105,7 +105,7 @@ cd backend
 cp .env.example .env
 # Édite backend/.env :
 #   - SECRET_KEY (génère avec: python3 -c "import secrets; print(secrets.token_urlsafe(48))")
-#   - DATABASE_URL (laisser SQLite en local : sqlite:///./wealthly.db)
+#   - DATABASE_URL (laisser SQLite en local : sqlite:///./yotori.db)
 #   - RESEND_API_KEY (optionnel — sinon le mot de passe oublié logge le lien sans envoyer)
 
 pip install -r requirements.txt
@@ -130,14 +130,14 @@ npm run dev
 
 | Variable | Obligatoire | Défaut | Description |
 |---|---|---|---|
-| `DATABASE_URL` | oui | `postgresql://wealthly:wealthly@db:5432/wealthly` | URL de connexion. SQLite supporté pour le dev (`sqlite:///./wealthly.db`) |
+| `DATABASE_URL` | oui | `postgresql://yotori:yotori@db:5432/yotori` | URL de connexion. SQLite supporté pour le dev (`sqlite:///./yotori.db`) |
 | `SECRET_KEY` | **oui en prod** | `CHANGE_ME_IN_PRODUCTION_PLEASE` | Clé HMAC pour signer les JWT. **≥32 caractères aléatoires en prod.** |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | non | `10080` (7 jours) | Durée de vie du JWT |
 | `CORS_ORIGINS` | non | `http://localhost:3000,http://localhost:5173` | Liste exacte d'origines autorisées (CSV) |
-| `CORS_ORIGIN_REGEX` | non | `^https://wealthly(-[a-z0-9-]+)?\.vercel\.app$` | Pattern d'origines autorisées — couvre tous les déploiements Vercel |
+| `CORS_ORIGIN_REGEX` | non | `^https://(wealthly|yotori(-finance)?)(-[a-z0-9]+){0,3}\.vercel\.app$` | Pattern d'origines autorisées — couvre tous les déploiements Vercel |
 | `ANTHROPIC_API_KEY` | non | — | Active la catégorisation IA Claude Haiku |
 | `RESEND_API_KEY` | non | — | Sans elle, le flow "mot de passe oublié" est silencieux (logs uniquement) |
-| `EMAIL_FROM` | non | `Wealthly <onboarding@resend.dev>` | Avec l'adresse par défaut, **Resend free tier ne livre qu'à l'email du compte Resend**. Vérifier un domaine sur resend.com pour envoyer à n'importe qui. |
+| `EMAIL_FROM` | non | `Yotori Finance <onboarding@resend.dev>` | Avec l'adresse par défaut, **Resend free tier ne livre qu'à l'email du compte Resend**. Vérifier un domaine sur resend.com pour envoyer à n'importe qui. |
 | `FRONTEND_URL` | non | `https://wealthly-six.vercel.app` | Base URL pour construire les liens de reset |
 | `GOCARDLESS_SECRET_ID` | non | — | Active la synchro bancaire DSP2 (compte gratuit sur https://bankaccountdata.gocardless.com) |
 | `GOCARDLESS_SECRET_KEY` | non | — | À côté de `SECRET_ID`. Sans les 2, la section "Connexions bancaires" est désactivée |
@@ -217,7 +217,7 @@ wealthly/
 │   │   ├── main.jsx                Entry — registers SW in prod only
 │   │   ├── App.jsx                 Auth gate + demo + reset_token + optimistic boot
 │   │   ├── AuthScreen.jsx          login | register | forgot | reset modes
-│   │   ├── WealthlyApp.jsx         Main shell — data layer + sidebar/nav + view router
+│   │   ├── YotoriApp.jsx         Main shell — data layer + sidebar/nav + view router
 │   │   │                           (~1100 lignes — était 6 386 avant la découpe)
 │   │   ├── TaxSimulator.jsx        Vue Impôts (lazy-loaded)
 │   │   ├── BankCallback.jsx        Landing post bank-OAuth (lazy-loaded)

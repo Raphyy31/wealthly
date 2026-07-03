@@ -6,7 +6,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { SUPPORTED_CURRENCIES } from '../utils.js';
 
-const KEY = 'wealthly:base-currency';
+const KEY = 'yotori:base-currency';
 const DEFAULT = 'EUR';
 
 const read = () => {

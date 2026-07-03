@@ -1,12 +1,12 @@
 // ============================================================================
-// Landing — Wealthly v4 cinematic (refonte 2026-05-22)
+// Landing — Yotori Finance v4 cinematic (refonte 2026-05-22)
 //
 // Shell qui pilote la bascule entre :
 //   - Cinematic : intro + 5 scènes auto-jouées → CTAs fin de loop
 //   - Details   : page bento (modules, tarifs, FAQ, outro)
 //
-// Le CTA "Découvrir Wealthly" / "Passer la démo" passe à Details.
-// "Revoir la démo" ou le mark wealthly depuis Details renvoie sur Cinematic.
+// Le CTA "Découvrir Yotori Finance" / "Passer la démo" passe à Details.
+// "Revoir la démo" ou le mark yotori finance depuis Details renvoie sur Cinematic.
 //
 // Force data-theme="dark" sur <html> tout le temps qu'on est sur la landing
 // (cf. CLAUDE.md "Landing is dark-only by force").
@@ -23,22 +23,13 @@ export default function Landing({ onSignIn, onSignUp, onTryDemo, onPresent }) {
 
   const [view, setView] = useState('cinematic'); // 'cinematic' | 'details'
 
-  // Landing « Forêt » SOMBRE pour les DEUX vues (hero film + page Détails),
-  // cohérente avec le film. Le hero (FilmHero) utilise les tokens dark
-  // d'index.css ; la page Détails est en plus scopée `.landing-dark` (#0a0e08).
-  // data-theme="dark" force le body/html en dark → pas de flash clair derrière.
-  // Restauré à la préférence réelle de l'utilisateur au unmount.
-  useEffect(() => {
-    const root = document.documentElement;
-    root.setAttribute('data-theme', 'dark');
-    return () => {
-      // Restaure la préférence RÉELLE de l'utilisateur (localStorage), pas un
-      // attribut transitoire : sinon le forcé "fuitait" dans la démo / l'app.
-      let stored = 'light';
-      try { const s = localStorage.getItem('wealthly-theme'); if (s === 'light' || s === 'dark') stored = s; } catch {}
-      root.setAttribute('data-theme', stored);
-    };
-  }, [view]);
+  // Landing « Forêt » CLAIRE (2026-07-03, demande user) : plus AUCUN forçage
+  // de thème ici. La landing suit la préférence réelle (localStorage via le
+  // script no-flash d'index.html) — défaut clair, dark uniquement si
+  // l'utilisateur l'a explicitement choisi via le toggle de l'app. L'ancien
+  // forçage dark fuyait dans les préférences au moment du login (useTheme
+  // lisait l'attribut DOM transitoire) → des users se retrouvaient en dark
+  // permanent sans l'avoir demandé.
 
   // Scrub le hash router (#/dashboard, #/transactions, ...) au mount de la
   // landing : si l'user vient de se déconnecter, son URL garde l'ancien

@@ -39,7 +39,7 @@ class Token(BaseModel):
 class TotpSetupOut(BaseModel):
     """Réponse de POST /auth/totp/setup — affiche le QR + secret manuel."""
     secret: str  # base32 à afficher en backup
-    otpauth_uri: str  # otpauth://totp/Wealthly:email?secret=...&issuer=Wealthly
+    otpauth_uri: str  # otpauth://totp/Yotori Finance:email?secret=...&issuer=Yotori Finance
 
 
 class TotpVerifyIn(BaseModel):

@@ -1,10 +1,10 @@
 /* ============================================================================
- * Wealthly — Design System v3 (Refonte Claude Design)
+ * Yotori Finance — Design System v3 (Refonte Claude Design)
  *
  * Direction: papier chaud + cobalt sobre, Geist sans + Newsreader serif,
  * tabular-nums systématique, format FR strict, zéro fioriture.
  *
- * Token source: design_handoff_wealthly_dashboard/tokens.css
+ * Token source: design_handoff_yotori_dashboard/tokens.css
  * Light mode = par défaut. Dark via [data-theme="dark"] sur <html>.
  *
  * Cohabitation : on conserve les alias hérités (--color-w-*, --bg-page,
@@ -990,7 +990,7 @@ html, body {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   6. Sidebar v4 (C4) — Wealthly premium
+   6. Sidebar v4 (C4) — Yotori Finance premium
        Workspace switcher + Quick search + § Mono group labels +
        Account balance preview + Polished user menu
    ───────────────────────────────────────────────────────────────────────── */

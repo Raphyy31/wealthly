@@ -1,7 +1,7 @@
 // ============================================================================
 // ImportFlow — 4-step CSV import wizard (upload → mapping → preview → done)
 //
-// State machine lives upstream in WealthlyApp; this view just renders the
+// State machine lives upstream in YotoriApp; this view just renders the
 // current step and emits the navigation callbacks. MappingField is local —
 // only used by the mapping step.
 // ============================================================================

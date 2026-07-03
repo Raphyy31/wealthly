@@ -162,7 +162,7 @@ export function LiquidityDetail({ item, accounts = [], accountBalances = {}, tra
           <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-tertiary)' }}>
             <BarChart3 size={24}/>
             <h3 style={{ margin: '10px 0 4px', fontSize: 14, color: 'var(--text-primary)' }}>Actif manuel</h3>
-            <p style={{ margin: 0, fontSize: 13, maxWidth: 380, marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.5 }}>Cette ligne d'épargne est saisie à la main. Connecte ton compte bancaire pour voir les transactions et l'évolution réelle du solde.</p>
+            <p style={{ margin: 0, fontSize: 13, maxWidth: 380, marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.5 }}>Cette ligne d'épargne est saisie à la main. Connectez votre compte bancaire pour voir les transactions et l'évolution réelle du solde.</p>
           </div>
         </DetailSection>
       )}

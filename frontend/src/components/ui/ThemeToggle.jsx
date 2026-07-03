@@ -1,17 +1,22 @@
 import { useEffect, useState } from 'react';
 import { Sun, Moon } from 'lucide-react';
 
-const KEY = 'wealthly-theme';
+const KEY = 'yotori-theme';
 
 function readTheme() {
   if (typeof document === 'undefined') return 'light';
-  const explicit = document.documentElement.getAttribute('data-theme');
-  if (explicit === 'light' || explicit === 'dark') return explicit;
+  // La préférence STOCKÉE prime sur l'attribut DOM : l'attribut peut être un
+  // état transitoire (ancienne landing qui forçait data-theme="dark" — le
+  // lire ici puis le réécrire dans localStorage transformait ce forçage en
+  // choix permanent de l'utilisateur, qui se retrouvait en dark sans jamais
+  // l'avoir demandé).
   try {
     const stored = localStorage.getItem(KEY);
     if (stored === 'light' || stored === 'dark') return stored;
   } catch {}
-  // Défaut = clair (papier chaud, la charte). On NE suit PAS la préférence
+  const explicit = document.documentElement.getAttribute('data-theme');
+  if (explicit === 'light' || explicit === 'dark') return explicit;
+  // Défaut = clair (charte « Forêt »). On NE suit PAS la préférence
   // système : un téléphone en mode sombre tombait sur l'ancien thème dark
   // (non aligné sur la charte) → rendu "immonde". Le dark reste dispo via le
   // toggle pour qui le choisit explicitement.

@@ -1,12 +1,17 @@
-"""Moteur de catégorisation Wealthly.
+"""Moteur de catégorisation Yotori Finance.
 
 Ordre de résolution (déterministe, stable, garde-fou single source of truth) :
   1. user_rule      : CategorisationRule(created_by='user') du foyer
   2. payee_default  : Payee résolu + default_category_id présent
   3. learned_rule   : CategorisationRule(created_by='learning') du foyer
   4. builtin_rule   : règle livrée d'origine dans rules.py
-  5. llm            : Anthropic Haiku si activé et clé dispo (BYOK)
-  6. unknown        : rien ne matche → None
+  5. unknown        : rien ne matche → None
+
+Le LLM ne vit PAS ici (refonte 2026-07-03) : la couche IA est batch et
+provider-agnostique (Anthropic/OpenAI) dans routers/categorize.py — le moteur
+reste 100 % déterministe et gratuit, appelé sur chaque insertion (import CSV,
+sync bancaire, saisie manuelle) ; l'IA n'est sollicitée qu'à la demande sur
+les libellés que le moteur ne résout pas.
 
 La couche payee EST le mécanisme qui permet à l'utilisateur de requalifier
 "Franprix" partout d'un coup. La couche learning est ce qui rend le système
@@ -14,7 +19,7 @@ meilleur avec l'usage.
 """
 from dataclasses import dataclass
 from datetime import datetime, date
-from typing import Optional, Literal, Any
+from typing import Optional, Literal
 import re
 
 from sqlalchemy.orm import Session
@@ -99,8 +104,6 @@ def categorize_transaction(
     household_id: str,
     db: Session,
     date: Optional[date] = None,
-    use_llm: bool = False,
-    llm_client: Any = None,
 ) -> CategorizationResult:
     """Entrée principale du moteur. Idempotent, déterministe."""
     normalized = normalize_label(label)
@@ -242,14 +245,5 @@ def categorize_transaction(
             confidence=0.8,
         )
 
-    # ── Couche 5 : LLM (optionnel BYOK)
-    if use_llm and llm_client:
-        try:
-            slug = llm_client(label, amount)  # contrat : callable(label, amount) -> slug | None
-            if slug:
-                return CategorizationResult(slug=slug, source="llm", matched_on="llm", confidence=0.6)
-        except Exception:
-            pass
-
-    # ── Couche 6 : unknown
+    # ── Couche 5 : unknown (le LLM batch vit dans routers/categorize.py)
     return CategorizationResult(slug=None, source="unknown", confidence=0.0)

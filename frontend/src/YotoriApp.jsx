@@ -79,7 +79,7 @@ const TaxSimulator = lazy(() => import('./TaxSimulator.jsx'));
 // ============================================================================
 // MAIN APP
 // ============================================================================
-export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) {
+export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   // Tri-state : null = inconnu (attend backend), true = membres existent,
@@ -210,10 +210,10 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   // choix pour ne pas re-bloquer l'accès à chaque visite. Réactivable depuis
   // Réglages → Sécurité.
   const [twoFASkipped, setTwoFASkipped] = useState(() => {
-    try { return localStorage.getItem('wealthly:2fa_skipped') === '1'; } catch { return false; }
+    try { return localStorage.getItem('yotori:2fa_skipped') === '1'; } catch { return false; }
   });
   const skip2FA = () => {
-    try { localStorage.setItem('wealthly:2fa_skipped', '1'); } catch {}
+    try { localStorage.setItem('yotori:2fa_skipped', '1'); } catch {}
     setTwoFASkipped(true);
   };
   const [hideAmounts, setHideAmounts] = useState(false);
@@ -231,8 +231,8 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   // delai pour laisser l'app finir son premier render.
   useEffect(() => {
     try {
-      if (localStorage.getItem('wealthly:auto_demo_tour') === '1') {
-        localStorage.removeItem('wealthly:auto_demo_tour');
+      if (localStorage.getItem('yotori:auto_demo_tour') === '1') {
+        localStorage.removeItem('yotori:auto_demo_tour');
         const tid = setTimeout(() => setDemoTourActive(true), 600);
         return () => clearTimeout(tid);
       }
@@ -285,13 +285,13 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   // Sections nav repliables (accordéon) — état persisté. Une section repliée
   // n'affiche plus ses items en mode déployé → sidebar moins entassée.
   const [navCollapsed, setNavCollapsed] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('wealthly:nav_collapsed') || '{}') || {}; }
+    try { return JSON.parse(localStorage.getItem('yotori:nav_collapsed') || '{}') || {}; }
     catch { return {}; }
   });
   const toggleNavGroup = useCallback((key) => {
     setNavCollapsed((prev) => {
       const next = { ...prev, [key]: !prev[key] };
-      try { localStorage.setItem('wealthly:nav_collapsed', JSON.stringify(next)); } catch {}
+      try { localStorage.setItem('yotori:nav_collapsed', JSON.stringify(next)); } catch {}
       return next;
     });
   }, []);
@@ -340,7 +340,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   const [importing, setImporting] = useState(false);
 
   // ============================================================================
-  // API â†" Frontend mapping helpers (snake_case â†" camelCase)
+  // API ↔ Frontend mapping helpers (snake_case ↔ camelCase)
   // ============================================================================
   // Convert an Account from API shape to frontend shape (memberIds, initialBalance...)
   const accountFromApi = (a) => ({
@@ -502,14 +502,14 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   const goalFromApi = (g) => ({
     id: g.id,
     name: g.name,
-    emoji: g.emoji || '🎯',
+    emoji: g.emoji || 'ðŸŽ¯',
     target: g.target_amount,
     current: g.current_amount,
     deadline: g.deadline,
   });
   const goalToApi = (g) => ({
     name: g.name,
-    emoji: g.emoji || '🎯',
+    emoji: g.emoji || 'ðŸŽ¯',
     target_amount: parseFloat(g.target) || 0,
     current_amount: parseFloat(g.current) || 0,
     deadline: g.deadline || null,
@@ -527,7 +527,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
 
   // Sync view + activeMember → URL hash, so refresh / back / forward / share work.
   // Edge case 2026-05-22 : skip la 1re écriture si l'URL boot SANS hash. Sinon
-  // dès qu'on monte WealthlyApp on pollue l'URL avec #/dashboard — visible
+  // dès qu'on monte YotoriApp on pollue l'URL avec #/dashboard — visible
   // depuis la landing (user voit "/#/dashboard" et trouve ça pas pro).
   const hasInitialHashRef = useRef(typeof window !== 'undefined' && !!window.location.hash);
   useEffect(() => {
@@ -592,7 +592,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       setBankConnections(d.bankConnections || []);
       // Cache pour BankConnectionsSection / SyncButton qui rappellent
       // api.banking.listConnections() avec leur propre state local.
-      try { localStorage.setItem('wealthly:demo_bank_connections_cache', JSON.stringify(d.bankConnections || [])); } catch {}
+      try { localStorage.setItem('yotori:demo_bank_connections_cache', JSON.stringify(d.bankConnections || [])); } catch {}
       if (d.currentUser) {
         setCurrentUser(d.currentUser);
         try { localStorage.setItem('w2:current_user', JSON.stringify(d.currentUser)); } catch {}
@@ -885,7 +885,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   // au PDF qui détaille les lignes d'un PEA/CTO. `visibleAssets` (la liste
   // utilisée PARTOUT ailleurs) EXCLUT les filles : leur valeur est déjà portée
   // par le compte parent, donc les recompter gonflait TOUS les totaux dérivés
-  // dans les vues (bug PEA : +32 k€ sur Wealth/Dashboard/Bilan).
+  // dans les vues (bug PEA : +32 kâ‚¬ sur Wealth/Dashboard/Bilan).
   const visibleAssetsAll = useMemo(() => activeMemberId === 'all' ? livePricedAssets : livePricedAssets.filter(a => (a.memberIds || []).includes(activeMemberId)), [livePricedAssets, activeMemberId]);
   const visibleAssets = useMemo(() => visibleAssetsAll.filter(a => !a.parentAssetId), [visibleAssetsAll]);
   const visibleLiabilities = useMemo(() => activeMemberId === 'all' ? liabilities : liabilities.filter(l => (l.memberIds || []).includes(activeMemberId)), [liabilities, activeMemberId]);
@@ -923,7 +923,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     // Fix 2026-05-19 (retour user "solde Revolut faux") : pour les comptes
     // synchronises via GoCardless, on utilise EN PRIORITE le `currentBalance`
     // renvoye par le backend (qui vaut last_known_balance officiel banque
-    // depuis le commit 3cedc26). Avant, on recalculait initial + Σtx, ce qui
+    // depuis le commit 3cedc26). Avant, on recalculait initial + Î£tx, ce qui
     // donnait un solde lisse sur la periode au lieu du solde courant — typique
     // sur Revolut ou les transactions pending ne remontent pas via DSP2.
     //
@@ -979,8 +979,8 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   );
   // Fix bug double-comptage PEA : les positions filles (parentAssetId set)
   // sont deja incluses dans la valorisation du parent (cf useWealthItems).
-  // Sans ce filtre, un PEA de 32 500 € avec 6 positions filles ~32 400 €
-  // gonflait le patrimoine de 32 k €.
+  // Sans ce filtre, un PEA de 32 500 â‚¬ avec 6 positions filles ~32 400 â‚¬
+  // gonflait le patrimoine de 32 k â‚¬.
   const assetsValue = useMemo(() => visibleAssets.filter(a => !a.parentAssetId).reduce((sum, a) => sum + (parseFloat(a.currentValue) || 0) * memberShare(a), 0), [visibleAssets, memberShare]);
   const liabilitiesValue = useMemo(() => visibleLiabilities.reduce((sum, l) => sum + (parseFloat(l.remainingCapital) || 0) * liabilityShare(l), 0), [visibleLiabilities, liabilityShare]);
   const netWorth = liquidWealth + assetsValue - liabilitiesValue;
@@ -1451,39 +1451,43 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     const options = detectedBank ? (detectedBank.profile.options || {}) : {};
     const txs = applyMapping(parsedData.rows, currentMapping, accountId, options);
 
-    // Pass 1: local regex categorization (instant)
-    txs.forEach(t => { t.categoryId = categorize(t, customRules); });
-
-    // Pass 2: AI categorization for uncategorized transactions
-    const uncategorized = txs.filter(t => t.categoryId === 'uncategorized' && t.label);
-    if (uncategorized.length > 0) {
-      setImportStep('preview');
-      setImportPreview(txs.map(x => ({ ...x }))); // show immediately while AI runs (clone so React tracks)
-      setAiCategorizing(true);
-      try {
-        const res = await api.categorizeAI.categorize(
-          uncategorized.map(t => ({ label: t.label, amount: t.amount }))
-        );
-        if (res.ai_used) {
-          txs.forEach(t => {
-            if (t.categoryId === 'uncategorized' && res.results[t.label] && res.results[t.label] !== 'uncategorized') {
-              t.categoryId = res.results[t.label];
-              t.aiCategorized = true;
-            }
-          });
-          const aiCount = txs.filter(t => t.aiCategorized).length;
-          showToast(t('toasts.aiCategorized', { count: aiCount }), 'success');
+    // Refonte moteur unique (2026-07-03) : la catégorisation de la preview
+    // vient du SERVEUR (/categorize = moteur canonique payees + règles
+    // apprises + ~120 builtin, puis IA batch pour le reste). La preview
+    // affiche donc EXACTEMENT ce que l'import va produire. La regex locale
+    // ne sert plus que de fallback si le serveur est injoignable.
+    setImportStep('preview');
+    setImportPreview(txs.map(x => ({ ...x }))); // affichage immédiat pendant la résolution
+    setAiCategorizing(true);
+    try {
+      const res = await api.categorizeAI.categorize(
+        txs.filter(t => t.label).map(t => ({ label: t.label, amount: t.amount }))
+      );
+      txs.forEach(t => {
+        const slug = res.results?.[t.label];
+        const source = res.sources?.[t.label];
+        if (slug && slug !== 'uncategorized') {
+          t.categoryId = slug;
+          t.catSource = source;
+          // Seuls les résultats IA doivent voyager en category_slug à
+          // l'import — le moteur re-résout le reste côté serveur (et y
+          // rattache payee + source proprement).
+          t.aiCategorized = source === 'llm';
+        } else {
+          t.categoryId = 'uncategorized';
         }
-      } catch {
-        // AI unavailable — silent fallback, uncategorized stays as-is
+      });
+      const aiCount = txs.filter(t => t.aiCategorized).length;
+      if (res.ai_used && aiCount > 0) {
+        showToast(t('toasts.aiCategorized', { count: aiCount }), 'success');
       }
-      // Replace with cloned objects so React re-renders with the new categories
-      setImportPreview(txs.map(x => ({ ...x })));
-      setAiCategorizing(false);
-    } else {
-      setImportPreview(txs);
-      setImportStep('preview');
+    } catch {
+      // Serveur injoignable — fallback regex locale (dégradé mais fonctionnel).
+      txs.forEach(tx => { tx.categoryId = categorize(tx, customRules); });
     }
+    // Replace with cloned objects so React re-renders with the new categories
+    setImportPreview(txs.map(x => ({ ...x })));
+    setAiCategorizing(false);
   };
 
   const confirmImport = async () => {
@@ -1511,10 +1515,17 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
         setColumnMappings(newMappings);
         await persist(STORAGE_KEYS.MAPPINGS, newMappings);
       }
-      // Bulk import transactions via API (server handles dedup)
+      // Bulk import transactions via API (server handles dedup).
+      // category_slug ne voyage QUE pour les catégories IA (non reproductibles
+      // serveur) et les choix manuels : le moteur canonique re-résout tout le
+      // reste à l'insertion (payees créés, cat_source fiable, règles apprises
+      // du foyer appliquées) — la preview et l'import donnent le même résultat.
       const txsForApi = importPreview.map(tx => ({
         ...txToApi(tx),
         account_id: accountId, // override to ensure correct account
+        category_slug: (tx.aiCategorized || tx.isManualCategory) && tx.categoryId && tx.categoryId !== 'uncategorized'
+          ? tx.categoryId
+          : null,
       }));
       const result = await api.transactions.bulkImport(accountId, txsForApi);
       showToast(result.skipped_duplicates > 0 ? t('toasts.importedTxDup', { count: result.inserted, dup: result.skipped_duplicates }) : t('toasts.importedTx', { count: result.inserted }), 'success');
@@ -1594,7 +1605,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       }));
       showToast(`${updates.length} transaction${updates.length > 1 ? 's' : ''} catégorisée${updates.length > 1 ? 's' : ''} par l'IA.`, 'success');
     } catch (err) {
-      showToast("Échec de la catégorisation IA. Réessaie dans un instant.", 'error');
+      showToast("Échec de la catégorisation IA. Réessayez dans un instant.", 'error');
     } finally {
       setAiCatRunning(false);
     }
@@ -1667,7 +1678,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
     const pattern = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const regex = new RegExp(pattern, 'i');
 
-    // ─── Mode 'transfer' : persiste une CategorisationRule(rule_type='transfer')
+    // â”€â”€â”€ Mode 'transfer' : persiste une CategorisationRule(rule_type='transfer')
     // + flag les tx existantes matching pour UX immédiate. Le moteur backend
     // (engine.py couche user_rule) flag automatiquement les futurs imports
     // ET les sync GoCardless via la même règle persistée.
@@ -1698,7 +1709,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       return;
     }
 
-    // ─── Mode 'category' (comportement historique)
+    // â”€â”€â”€ Mode 'category' (comportement historique)
     const targetCat = categories.find(c => c.id === targetSlug);
     const targetName = targetCat?.name || targetSlug;
     const toUpdate = transactions.filter(x =>
@@ -1771,7 +1782,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       }
     }
     if (updates.length === 0) {
-      showToast('Aucune correspondance trouvée — étoffe tes règles ou catégorise manuellement quelques transactions.', 'info');
+      showToast('Aucune correspondance trouvée — étoffez vos règles ou catégorisez manuellement quelques transactions.', 'info');
       return;
     }
     const results = await Promise.allSettled(
@@ -1859,7 +1870,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
 
   // Cree une transaction manuelle (utilise pour les tx miroir de virements
   // internes vers un compte non synchro). Renvoie la tx creee (ou null si erreur).
-  const createTransaction = async ({ accountId, amount, date, label, isTransferOverride = false, tags = [] }) => {
+  const createTransaction = async ({ accountId, amount, date, label, isTransferOverride = false, tags = [], categorySlug = undefined, isManualCategory = false }) => {
     try {
       const payload = {
         account_id: accountId,
@@ -1868,6 +1879,10 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
         label,
         is_transfer_override: isTransferOverride,
         tags,
+        // Saisie manuelle : catégorie optionnelle (suggestion acceptée ou
+        // choix explicite — dans ce cas is_manual_category verrouille la
+        // catégorie face au learning / aux règles).
+        ...(categorySlug ? { category_slug: categorySlug, is_manual_category: isManualCategory } : {}),
       };
       const created = await api.transactions.create(payload);
       // Le backend renvoie le shape API ; on push direct dans state (best effort).
@@ -1877,7 +1892,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
         amount: created.amount ?? amount,
         date: created.date || date,
         label: created.label || label,
-        categoryId: created.category_slug || null,
+        categoryId: created.category_slug || categorySlug || null,
         isTransferOverride: created.is_transfer_override ?? isTransferOverride,
         tags: created.tags || tags,
       }]);
@@ -1921,7 +1936,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       // produit { last_known_balance: undefined, currentBalance: undefined }.
       // Le spread {...a, ...mapped} ecrasait alors les vraies valeurs avec
       // undefined -> accountBalances bascule du last_known_balance (officiel
-      // banque) vers initialBalance + Σtx (= 0 + filteredTx = mauvais solde).
+      // banque) vers initialBalance + Î£tx (= 0 + filteredTx = mauvais solde).
       //
       // Fix : on filtre les champs undefined de mapped AVANT de spread, ce
       // qui preserve les champs existants quand l'API n'en parle pas.
@@ -2023,7 +2038,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       return;
     }
 
-    // ── result.status === 'authorized' ──
+    // â”€â”€ result.status === 'authorized' â”€â”€
     {
       {
         showToast(t('toasts.bankConnected'), 'success');
@@ -2167,7 +2182,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
           // Affichage du resume per-bank avant de passer a la suivante
           if (!silent) {
             const msg = imp > 0
-              ? `${bankLabel} ✓ ${imp} nouvelle${imp > 1 ? 's' : ''} op${imp > 1 ? 's' : ''}.`
+              ? `${bankLabel} âœ“ ${imp} nouvelle${imp > 1 ? 's' : ''} op${imp > 1 ? 's' : ''}.`
               : `${bankLabel} ✓ déjà à jour.`;
             setSyncStage('success', msg, { current: i + 1, total: N, progress: (i + 1) / N });
             await breathe(550);
@@ -2512,14 +2527,14 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
   const exportData = () => {
     // Export current frontend state as JSON (matches v2 backup format)
     const data = {
-      version: 2, app: 'Wealthly', exportedAt: new Date().toISOString(),
+      version: 2, app: 'Yotori Finance', exportedAt: new Date().toISOString(),
       members, accounts, transactions, assets, liabilities, categories, customRules, budgets, columnMappings, recurringOverrides, goals,
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `wealthly-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `yotori-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     showToast(t('toasts.backupDownloaded'), 'success');
   };
@@ -2768,7 +2783,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       {initialSyncing && (
         <div className="init-sync-banner" role="status" aria-live="polite">
           <span className="init-sync-spinner" aria-hidden="true"/>
-          <span className="init-sync-text">Récupération de tes données depuis Supabase…</span>
+          <span className="init-sync-text">Récupération de vos données depuis Supabase…</span>
           <span className="init-sync-meta">Ne ferme pas l'onglet, tout va apparaître</span>
         </div>
       )}
@@ -2796,7 +2811,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       )}
       {backendStatus.status === 'restored' && (
         <div className="backend-status-banner backend-status-restored" role="status" aria-live="polite">
-          <span className="backend-status-check" aria-hidden="true">✓</span>
+          <span className="backend-status-check" aria-hidden="true">âœ“</span>
           <span className="backend-status-title">Connexion rétablie</span>
         </div>
       )}
@@ -2854,7 +2869,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
                           <td style={{ padding: '8px 10px', color: 'var(--ink-2)', whiteSpace: 'nowrap' }}>{d.date}</td>
                           <td style={{ padding: '8px 10px' }}>{d.label}</td>
                           <td className="num" style={{ padding: '8px 10px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                            {(d.amount >= 0 ? '+' : '') + (d.amount?.toFixed(2) ?? '0.00')} €
+                            {(d.amount >= 0 ? '+' : '') + (d.amount?.toFixed(2) ?? '0.00')} â‚¬
                           </td>
                         </tr>
                       ))}
@@ -2864,7 +2879,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
               )}
               <div style={{ marginTop: 14, fontSize: 12, color: 'var(--ink-3)' }}>
                 Ces transactions sont désormais exclues des totaux Revenus / Dépenses.
-                Tu peux toujours en débloquer une manuellement (clic sur le badge ↔ dans la liste).
+                Vous pouvez toujours en débloquer une manuellement (clic sur le badge ↔ dans la liste).
               </div>
             </div>
           </div>
@@ -2887,9 +2902,9 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       {learningOffer && (
         <div className="learning-banner" role="status">
           <div className="learning-banner-text">
-            <span className="learning-banner-icon">🧠</span>
+            <span className="learning-banner-icon">ðŸ§ </span>
             <span>
-              <strong>Wealthly a appris</strong> : « {learningOffer.payeeName} » → <strong>{learningOffer.categoryName}</strong>.
+              <strong>Yotori Finance a appris</strong> : « {learningOffer.payeeName} » → <strong>{learningOffer.categoryName}</strong>.
               {learningOffer.matchableCount > 0 && <> Appliquer aux <strong>{learningOffer.matchableCount}</strong> transaction{learningOffer.matchableCount > 1 ? 's' : ''} historique{learningOffer.matchableCount > 1 ? 's' : ''} de ce marchand ?</>}
             </span>
           </div>
@@ -2933,13 +2948,13 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       )}
 
       <div className="app-shell">
-        {/* Desktop sidebar (â‰¥1024px) — Wealthly v3 handoff spec */}
+        {/* Desktop sidebar (â‰¥1024px) — Yotori Finance v3 handoff spec */}
         <aside className="ws-sidebar">
 
           {/* Brand block — identité app fixe, séparée du filtre membre */}
           <div className="ws-brand-row" onClick={() => setView('dashboard')} role="button" tabIndex={0}>
             <div className="ws-brand-logo"><Logo size={20} /></div>
-            <div className="ws-brand-name">Wealthly</div>
+            <div className="ws-brand-name">Yotori Finance</div>
           </div>
 
           {/* Member filter — pills horizontales avec mini-avatars (C+D hybride).
@@ -3001,17 +3016,17 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
                 <ChevronDown size={13} className="ws-nav-group-chev"/>
               </div>
               <div className="ws-nav-section-items">
-                <a href="#/dashboard"
+                <a href="#/dashboard" title={t('nav.dashboard')}
                    onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('dashboard'); }}
                    className={view === 'dashboard' ? 'on' : ''}>
                   <Activity size={16}/> <span>{t('nav.dashboard')}</span>
                 </a>
-                <a href="#/wealth"
+                <a href="#/wealth" title={t('nav.wealth')}
                    onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('wealth'); }}
                    className={view === 'wealth' ? 'on' : ''}>
                   <Landmark size={16}/> <span>{t('nav.wealth')}</span>
                 </a>
-                <a href="#/transactions"
+                <a href="#/transactions" title={t('nav.transactions')}
                    onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('transactions'); }}
                    className={view === 'transactions' ? 'on' : ''}>
                   <BarChart3 size={16}/> <span>{t('nav.transactions')}</span>
@@ -3027,7 +3042,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
                 <ChevronDown size={13} className="ws-nav-group-chev"/>
               </div>
               <div className="ws-nav-section-items">
-                <a href="#/monthly"
+                <a href="#/monthly" title={t('nav.monthly')}
                    onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('monthly'); }}
                    className={view === 'monthly' ? 'on' : ''}>
                   <Calendar size={16}/> <span>{t('nav.monthly')}</span>
@@ -3037,12 +3052,12 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
                     </span>
                   )}
                 </a>
-                <a href="#/subscriptions"
+                <a href="#/subscriptions" title={t('nav.subscriptions')}
                    onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('subscriptions'); }}
                    className={view === 'subscriptions' ? 'on' : ''}>
-                  <Repeat size={16}/> <span>Abonnements</span>
+                  <Repeat size={16}/> <span>{t('nav.subscriptions')}</span>
                 </a>
-                <a href="#/projection"
+                <a href="#/projection" title={t('nav.projection')}
                    onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('projection'); }}
                    className={view === 'projection' ? 'on' : ''}>
                   <LineChartIcon size={16}/> <span>{t('nav.projection')}</span>
@@ -3058,22 +3073,22 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
                 <ChevronDown size={13} className="ws-nav-group-chev"/>
               </div>
               <div className="ws-nav-section-items">
-                <a href="#/dca"
+                <a href="#/dca" title={t('nav.dca')}
                    onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('dca'); }}
                    className={view === 'dca' ? 'on' : ''}>
                   <TrendingUp size={16}/> <span>{t('nav.dca')}</span>
                 </a>
-                <a href="#/immo"
+                <a href="#/immo" title={t('nav.immo')}
                    onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('immo'); }}
                    className={view === 'immo' ? 'on' : ''}>
                   <Home size={16}/> <span>{t('nav.immo')}</span>
                 </a>
-                <a href="#/tax"
+                <a href="#/tax" title={t('nav.tax')}
                    onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('tax'); }}
                    className={view === 'tax' ? 'on' : ''}>
                   <Calculator size={16}/> <span>{t('nav.tax')}</span>
                 </a>
-                <a href="#/vault"
+                <a href="#/vault" title={t('nav.vault')}
                    onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('vault'); }}
                    className={view === 'vault' ? 'on' : ''}>
                   <Lock size={16}/> <span>{t('nav.vault')}</span>
@@ -3368,7 +3383,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
         {view === 'transactions' && (
           <Transactions
             transactions={visibleTransactions} accounts={accounts} categories={categories}
-            members={members}
+            members={members} customRules={customRules}
             recurringIds={recurringIds} toggleRecurring={toggleRecurring}
             transferIds={transferIds} setTransferOverride={setTransferOverride}
             updateCategory={updateTransactionCategory} updateTags={updateTransactionTags} deleteTransaction={deleteTransaction} createTransaction={createTransaction} fmt={fmt}
@@ -3569,11 +3584,20 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       {showAddAccount && (
         <AddWealthModal
           onPickType={({ category, subtype }) => {
+            setShowAddAccount(false);
+            // Un compte courant / livret saisi à la main est un VRAI compte
+            // bancaire (solde, transactions, cashflow, sidebar) — pas un
+            // actif générique « Autre actif ». On route vers le formulaire
+            // compte manuel existant. Avant : l'user choisissait « Compte
+            // courant » et tombait sur l'éditeur Or/art/SCPI.
+            if (category === 'liquidites' && (subtype === 'compte_courant' || subtype === 'livret')) {
+              setAddBankAccountStep('manual');
+              return;
+            }
             // Mode manuel: l'éditeur canonique 5-step (LiabilityEditor /
             // RealEstateEditor / SimpleAssetEditor) prend le relais côté
             // vue Patrimoine pour capturer toutes les infos d'un coup.
             setSeededNewItem({ category, subtype });
-            setShowAddAccount(false);
             // Bascule en vue Patrimoine si on n'y est pas déjà.
             if (view !== 'wealth') setView('wealth');
           }}
@@ -3612,7 +3636,7 @@ export default function WealthlyApp({ demoMode = false, onExitDemo, onLogout }) 
       )}
 
       {/* Mode Presentation — overlay z-index 9000+, controlled par demoTourActive.
-          Trigger : user menu OR ⇧⌘P. Le composant navigue lui-meme via setView. */}
+          Trigger : user menu OR â‡§âŒ˜P. Le composant navigue lui-meme via setView. */}
       <DemoTour
         active={demoTourActive}
         onExit={() => setDemoTourActive(false)}
@@ -3636,14 +3660,14 @@ const ACCOUNT_TYPES = [
 ];
 
 const BANK_COUNTRIES = [
-  { code: 'FR', name: '🇫🇷 France' },
-  { code: 'DE', name: '🇩🇪 Allemagne' },
-  { code: 'ES', name: '🇪🇸 Espagne' },
-  { code: 'IT', name: '🇮🇹 Italie' },
-  { code: 'BE', name: '🇧🇪 Belgique' },
-  { code: 'NL', name: '🇳🇱 Pays-Bas' },
-  { code: 'PT', name: '🇵🇹 Portugal' },
-  { code: 'GB', name: '🇬🇧 Royaume-Uni' },
+  { code: 'FR', name: 'ðŸ‡«ðŸ‡· France' },
+  { code: 'DE', name: 'ðŸ‡©ðŸ‡ª Allemagne' },
+  { code: 'ES', name: 'ðŸ‡ªðŸ‡¸ Espagne' },
+  { code: 'IT', name: 'ðŸ‡®ðŸ‡¹ Italie' },
+  { code: 'BE', name: 'ðŸ‡§ðŸ‡ª Belgique' },
+  { code: 'NL', name: 'ðŸ‡³ðŸ‡± Pays-Bas' },
+  { code: 'PT', name: 'ðŸ‡µðŸ‡¹ Portugal' },
+  { code: 'GB', name: 'ðŸ‡¬ðŸ‡§ Royaume-Uni' },
 ];
 
 function AddAccountModal({ members = [], onSave, onClose, onImportCsv, initialStep = 'choice' }) {
@@ -3746,7 +3770,7 @@ function AddAccountModal({ members = [], onSave, onClose, onImportCsv, initialSt
           <button className="icon-btn" onClick={onClose}><X size={18}/></button>
         </div>
 
-        {/* ── STEP 1: CHOICE ── */}
+        {/* â”€â”€ STEP 1: CHOICE â”€â”€ */}
         {step === 'choice' && (
           <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 4px' }}>
@@ -3869,7 +3893,7 @@ function AddAccountModal({ members = [], onSave, onClose, onImportCsv, initialSt
           </div>
         )}
 
-        {/* ── STEP 2a: BANK LIST ── */}
+        {/* â”€â”€ STEP 2a: BANK LIST â”€â”€ */}
         {step === 'bank-list' && (
           <div className="modal-body">
             <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center' }}>
@@ -3932,7 +3956,7 @@ function AddAccountModal({ members = [], onSave, onClose, onImportCsv, initialSt
           </div>
         )}
 
-        {/* ── STEP 2b: MANUAL FORM ── */}
+        {/* â”€â”€ STEP 2b: MANUAL FORM â”€â”€ */}
         {step === 'manual' && (
           <form onSubmit={handleSubmit}>
             <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>

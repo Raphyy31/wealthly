@@ -1,3 +1,4 @@
+import './migrateBranding.js'; // ⚠️ premier import — migre les clés localStorage legacy Wealthly → yotori:*
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
@@ -36,7 +37,7 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
         });
       });
     }).catch((err) => {
-      console.warn('[wealthly] SW registration failed:', err);
+      console.warn('[yotori] SW registration failed:', err);
     });
   });
 }

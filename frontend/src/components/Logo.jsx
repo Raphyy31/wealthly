@@ -1,8 +1,8 @@
 // ============================================================================
-// Logo — Wealthly brand mark (charte « Forêt » 2026-06-28)
+// Logo — Yotori Finance brand mark (charte « Forêt » 2026-06-28)
 //
 // Design figé depuis le film générique : carré émeraude `#41D49B` avec un
-// petit carré sombre `#0c1009` centré. Wordmark "Wealthly" en regard.
+// petit carré sombre `#0c1009` centré. Wordmark "Yotori Finance" en regard.
 //
 // Auto-adapte la couleur du wordmark à [data-theme] sur <html> :
 //   - light theme → wordmark encre Forêt
@@ -83,7 +83,7 @@ export default function Logo({
             lineHeight: 1,
           }}
         >
-          Wealthly
+          Yotori Finance
         </span>
       )}
     </span>

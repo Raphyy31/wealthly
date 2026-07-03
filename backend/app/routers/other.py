@@ -1,6 +1,6 @@
 """
 Other endpoints: categories, budgets, goals, achievements, categorisation rules.
-Plus a dedicated /migrate endpoint that ingests a Wealthly v2.0 JSON backup.
+Plus a dedicated /migrate endpoint that ingests a Yotori Finance v2.0 JSON backup.
 """
 from typing import List
 from datetime import datetime
@@ -305,7 +305,7 @@ def delete_rule(rule_id: str, db: Session = Depends(get_db), user: User = Depend
 @router.post("/migrate/import-json", status_code=201)
 def import_v2_backup(payload: dict = Body(...), db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     """
-    Import a Wealthly v2.0 JSON backup (the file you can export from the artifact app).
+    Import a Yotori Finance v2.0 JSON backup (the file you can export from the artifact app).
     This replaces nothing — it ADDS to the current household. Wipe via DELETE endpoints
     first if you want a clean re-import.
 

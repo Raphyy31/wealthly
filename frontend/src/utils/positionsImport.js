@@ -16,7 +16,7 @@
 // (compatible avec le shape attendu par Wealth.jsx onConfirm)
 // ============================================================================
 
-// Mots-clés pour chaque champ Wealthly (normalisés sans accents/casse).
+// Mots-clés pour chaque champ Yotori Finance (normalisés sans accents/casse).
 // L'ordre des hints compte : on match les plus spécifiques en premier.
 const COLUMN_HINTS = {
   name: ['libelle', 'libellé', 'name', 'valeur', 'designation', 'instrument', 'security', 'titre', 'description', 'asset', 'product', 'produit', 'support'],
@@ -246,7 +246,7 @@ export function applyPositionsMapping(headers, dataRows, mapping) {
 // → la 2e import depuis la même banque utilise le mapping appris.
 // ─────────────────────────────────────────────────────────────────────────
 
-const LEARNED_MAPPINGS_KEY = 'wealthly:learned_position_mappings';
+const LEARNED_MAPPINGS_KEY = 'yotori:learned_position_mappings';
 
 export function headersSignature(headers) {
   return headers.map(h => norm(h)).filter(Boolean).sort().join('|');
@@ -308,7 +308,7 @@ export function isinToYahooTicker(isin) {
   return ISIN_TO_YAHOO[String(isin).toUpperCase()] || null;
 }
 
-// Liste des champs Wealthly + libellés courts pour l'UI du wizard de mapping
+// Liste des champs Yotori Finance + libellés courts pour l'UI du wizard de mapping
 export const POSITION_FIELDS = [
   { key: 'name',          label: 'Nom / Libellé',        required: true },
   { key: 'isin',          label: 'ISIN',                 required: false },

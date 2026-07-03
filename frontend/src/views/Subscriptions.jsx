@@ -15,7 +15,7 @@ import { usePageEnter } from '../hooks/usePageEnter.js';
 
 const SUB_ROOT = 'subscriptions';
 const LEGACY_SUB_SLUGS = ['streaming', 'sport', 'subs_video', 'subs_music', 'subs_cloud', 'subs_gym', 'subs_press', 'subs_services'];
-const CANCEL_LS = 'wealthly:subsCancel';
+const CANCEL_LS = 'yotori:subsCancel';
 
 const EUR0 = (v) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(Math.round(v || 0));
 
@@ -125,7 +125,7 @@ export function SubscriptionsView({ transactions = [], categories = [], fmt, onG
       <div className="subview-header" data-reveal>
         <div>
           <h1>Vos <em>abonnements.</em></h1>
-          <p>Tout ce qui se prélève automatiquement — et ce que tu peux récupérer.</p>
+          <p>Tout ce qui se prélève automatiquement — et ce que vous pouvez récupérer.</p>
         </div>
       </div>
 
@@ -133,7 +133,7 @@ export function SubscriptionsView({ transactions = [], categories = [], fmt, onG
         <div className="subs-empty card" data-reveal>
           <Sparkles size={22} style={{ color: 'var(--accent)' }}/>
           <h3>Aucun abonnement détecté pour l'instant.</h3>
-          <p>Catégorise quelques transactions en <em>Abonnements</em> (Netflix, salle de sport, cloud…) et reviens ici : Wealthly chiffrera ce qu'ils te coûtent et ce que tu peux économiser.</p>
+          <p>Catégorisez quelques transactions en <em>Abonnements</em> (Netflix, salle de sport, cloud…) et revenez ici : Yotori Finance chiffrera ce qu'ils vous coûtent et ce que vous pouvez économiser.</p>
         </div>
       ) : (
         <>
@@ -148,9 +148,9 @@ export function SubscriptionsView({ transactions = [], categories = [], fmt, onG
               <Lightbulb size={20}/>
               <div>
                 {savedYearly > 0 ? (
-                  <>En résiliant ce que tu as marqué, tu économises <strong>{EUR0(savedYearly)}/an</strong>. <span className="subs-hero-proof-soft">Wealthly est remboursé en {savedYearly >= 180 ? 'moins d\'un mois' : `${Math.max(1, Math.round(180 / Math.max(1, savedYearly) * 12))} mois`}.</span></>
+                  <>En résiliant ce que vous avez marqué, vous économisez <strong>{EUR0(savedYearly)}/an</strong>. <span className="subs-hero-proof-soft">Yotori Finance est remboursé en {savedYearly >= 180 ? 'moins d\'un mois' : `${Math.max(1, Math.round(180 / Math.max(1, savedYearly) * 12))} mois`}.</span></>
                 ) : (
-                  <>Marque les abonnements dont tu n'as plus besoin : <strong>une seule résiliation</strong> rembourse souvent l'abonnement Wealthly pour l'année.</>
+                  <>Marquez les abonnements dont vous n'avez plus besoin : <strong>une seule résiliation</strong> rembourse souvent l'abonnement Yotori Finance pour l'année.</>
                 )}
               </div>
             </div>
@@ -192,7 +192,7 @@ export function SubscriptionsView({ transactions = [], categories = [], fmt, onG
             <button className="subs-candidates" onClick={onGoTransactions} data-reveal>
               <div>
                 <strong>Des prélèvements oubliés ?</strong>
-                <span>Catégorise tes transactions récurrentes pour qu'elles apparaissent ici.</span>
+                <span>Catégorisez vos transactions récurrentes pour qu'elles apparaissent ici.</span>
               </div>
               <ArrowRight size={16}/>
             </button>

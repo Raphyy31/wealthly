@@ -1,16 +1,16 @@
 // ============================================================================
-// FilmHero — hero de la landing en mode « Forêt nocturne ».
+// FilmHero — hero de la landing, charte « Forêt » token-driven.
 //
-// Direction visuelle (validée 2026-06-30) : dark Linear/Vercel-grade.
-//   - Base near-black à pointe verte
+// Depuis 2026-07-03 : plus AUCUN thème forcé — le hero suit data-theme
+// (défaut clair ; dark seulement si l'utilisateur l'a choisi via le toggle).
+// Tout est exprimé en tokens (var(--bg/--ink/--accent) + color-mix), donc le
+// même markup rend « Forêt » claire ou nocturne sans styles dédiés.
 //   - Grille de points subtile en arrière-plan
-//   - Live pill "patrimoines suivis" qui pulse (signal tech)
+//   - Live pill DSP2 qui pulse (signal tech)
 //   - Hero film conservé (iframe /film-16x9.html ou /film-9x16.html)
 //   - Halo émeraude radial derrière le film (effet premium)
 //   - Marquee horizontal des banques DSP2 (trust signal)
 //   - Microinteractions : hover/active sur les CTA, pas de translateY
-//
-// Le thème dark est forcé par Landing.jsx selon view === 'cinematic'.
 // ============================================================================
 import { useEffect } from 'react';
 import { useIsNarrow } from '../../hooks/useIsNarrow.js';
@@ -51,7 +51,7 @@ export default function FilmHero({ onSignIn, onSignUp, onTryDemo, onShowDetails 
       <main className="fh-main">
         <div className="fh-live">
           <span className="fh-live-dot" aria-hidden/>
-          <span className="fh-live-text">1 248 patrimoines suivis · MAJ en temps réel</span>
+          <span className="fh-live-text">Synchronisation bancaire DSP2 · temps réel</span>
         </div>
 
         <h1 className="fh-title">
@@ -64,10 +64,10 @@ export default function FilmHero({ onSignIn, onSignUp, onTryDemo, onShowDetails 
 
         <div className="fh-cta-row">
           <button className="fh-cta primary" onClick={onSignUp}>
-            Essayer 14 jours
+            Créer mon compte
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
           </button>
-          <button className="fh-cta ghost" onClick={onShowDetails}>Découvrir Wealthly</button>
+          <button className="fh-cta ghost" onClick={onShowDetails}>Découvrir Yotori Finance</button>
         </div>
 
         {/* Le film est emboîté dans un "écrin" qui :
@@ -81,7 +81,7 @@ export default function FilmHero({ onSignIn, onSignUp, onTryDemo, onShowDetails 
             <iframe
               key={src}
               src={src}
-              title="Wealthly — le film"
+              title="Yotori Finance — le film"
               loading="lazy"
               scrolling="no"
               className="fh-film"
@@ -276,8 +276,8 @@ const FILM_HERO_CSS = `
   position: absolute; inset: -80px -120px;
   background:
     radial-gradient(ellipse 60% 70% at 50% 50%,
-      color-mix(in srgb, var(--accent) 26%, transparent) 0%,
-      color-mix(in srgb, var(--accent) 10%, transparent) 35%,
+      color-mix(in srgb, var(--accent) 16%, transparent) 0%,
+      color-mix(in srgb, var(--accent) 6%, transparent) 35%,
       transparent 70%);
   filter: blur(40px);
   pointer-events: none;
@@ -295,7 +295,7 @@ const FILM_HERO_CSS = `
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent),
     0 0 0 10px color-mix(in srgb, var(--accent) 6%, transparent),
-    0 40px 90px -28px color-mix(in srgb, var(--accent) 55%, rgba(0,0,0,0.7)),
+    0 40px 90px -28px color-mix(in srgb, var(--accent) 30%, rgba(12, 15, 11, 0.28)),
     0 1px 0 rgba(255,255,255,0.5) inset;
   z-index: 1;
 }

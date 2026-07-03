@@ -285,7 +285,7 @@ Vérifie avant d'envoyer : ta réponse commence-t-elle par \`{\` et finit-elle p
                 <strong>{candidates.length}</strong> transaction{candidates.length > 1 ? 's' : ''} non catégorisée{candidates.length > 1 ? 's' : ''}.
                 Copie le prompt ci-dessous, colle-le dans <a href="https://claude.ai" target="_blank" rel="noopener noreferrer">Claude.ai</a>,
                 <a href="https://chatgpt.com" target="_blank" rel="noopener noreferrer"> ChatGPT</a> ou
-                ton LLM préféré, puis récupère sa réponse JSON.
+                votre LLM préféré, puis récupérez sa réponse JSON.
               </p>
               <div className="aip-prompt-wrap">
                 <textarea className="aip-prompt-box" readOnly value={prompt} rows={12}/>

@@ -67,7 +67,7 @@ export function MyCategoriesSection({ categories, reloadCategories, onCategoryCr
         </button>
       </div>
       <p style={{ fontSize: 12.5, color: 'var(--text-tertiary)', margin: '0 0 14px', lineHeight: 1.55, maxWidth: 640 }}>
-        Ajoute tes propres catégories (niveau 1) et leurs détails (niveau 2). Les transactions et règles peuvent ensuite cibler n'importe lequel des deux niveaux.
+        Ajoutez vos propres catégories (niveau 1) et leurs détails (niveau 2). Les transactions et règles peuvent ensuite cibler n'importe lequel des deux niveaux.
       </p>
 
       {error && (

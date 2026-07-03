@@ -234,15 +234,15 @@ function RegLesPanel({
       id: 'categories',
       icon: Tag,
       label: 'Catégories',
-      desc: 'Les boîtes dans lesquelles tes dépenses sont rangées (Logement, Courses, Restos…).',
+      desc: 'Les boîtes dans lesquelles vos dépenses sont rangées (Logement, Courses, Restos…).',
       example: '',
     },
     {
       id: 'rules-vir',
       icon: ArrowLeftRight,
       label: 'Virements internes',
-      desc: 'Évite que tes mouvements entre comptes soient comptés comme des dépenses.',
-      example: 'LIVRET A → virement vers ton Livret',
+      desc: 'Évite que vos mouvements entre comptes soient comptés comme des dépenses.',
+      example: 'LIVRET A → virement vers votre Livret',
     },
   ];
 
@@ -353,7 +353,7 @@ function RegLesPanel({
               <div className="settings-tool-row">
                 <div className="settings-tool-text">
                   <strong>Re-catégoriser les non catégorisées</strong>
-                  <span>Applique tes règles aux transactions en « Non catégorisé ».</span>
+                  <span>Applique vos règles aux transactions en « Non catégorisé ».</span>
                 </div>
                 <button className="ds-btn ds-btn--primary" type="button" onClick={recategorizeUncategorized}>Lancer</button>
               </div>

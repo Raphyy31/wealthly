@@ -10,26 +10,40 @@
     <meta name="theme-color" content="#10150F" media="(prefers-color-scheme: dark)" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Wealthly" />
+    <meta name="apple-mobile-web-app-title" content="Yotori" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <title>Wealthly — Le patrimoine de votre famille, enfin clair</title>
-    <meta name="description" content="Wealthly rassemble tous vos comptes, placements et biens dans un tableau de bord moderne. Pour particuliers et familles qui veulent piloter leur patrimoine sans complexité." />
+    <title>Yotori Finance — Le patrimoine de votre famille, enfin clair</title>
+    <meta name="description" content="Yotori Finance rassemble tous vos comptes, placements et biens dans un tableau de bord moderne. Pour particuliers et familles qui veulent piloter leur patrimoine sans complexité." />
 
     <!-- No-flash theme: applied before first paint so the first frame matches user preference. -->
     <script>
       (function() {
         try {
+          // Rebranding Wealthly → Yotori Finance (2026-07) : migre les clés
+          // localStorage `wealthly:*` / `wealthly-*` vers `yotori:*` /
+          // `yotori-*` AVANT toute lecture. Ce script tourne avant le bundle,
+          // c'est donc LE point de migration garanti (thème, langue, démo…).
+          var legacy = [];
+          for (var i = 0; i < localStorage.length; i++) {
+            var k = localStorage.key(i);
+            if (k && (k.indexOf('wealthly:') === 0 || k.indexOf('wealthly-') === 0)) legacy.push(k);
+          }
+          for (var j = 0; j < legacy.length; j++) {
+            var nk = 'yotori' + legacy[j].slice('wealthly'.length);
+            if (localStorage.getItem(nk) === null) localStorage.setItem(nk, localStorage.getItem(legacy[j]));
+            localStorage.removeItem(legacy[j]);
+          }
           // Défaut = clair (charte « Forêt »). On NE suit plus la
           // préférence système : sur mobile en mode sombre, l'app tombait sur
           // l'ancien thème dark (hors charte). Le dark reste dispo si l'user
           // le choisit explicitement via le toggle.
-          var RESET = 'wealthly-theme-default-light-v1';
-          var t = localStorage.getItem('wealthly-theme');
+          var RESET = 'yotori-theme-default-light-v1';
+          var t = localStorage.getItem('yotori-theme');
           // Migration unique : l'ancien code mémorisait 'dark' auto-détecté
           // depuis le système → on repasse tout le monde en clair une fois.
           if (!localStorage.getItem(RESET)) {
             t = 'light';
-            localStorage.setItem('wealthly-theme', 'light');
+            localStorage.setItem('yotori-theme', 'light');
             localStorage.setItem(RESET, '1');
           }
           if (t !== 'light' && t !== 'dark') t = 'light';
@@ -42,7 +56,7 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <!-- Wealthly typography — refonte tech 2026-06-25 :
+    <!-- Yotori Finance typography — refonte tech 2026-06-25 :
          Geist      — UI sans (titres serrés inclus, fini le serif éditorial)
          Geist Mono — chiffres tabulaires, IBAN, codes, axes, gros nombres hero -->
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">

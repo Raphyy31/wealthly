@@ -226,7 +226,7 @@ def send_dca_reminders(
           </div>
           <p style="font-size: 15px; line-height: 1.5; color: #56544A; margin: 0 0 16px;">
             Ton prochain versement DCA arrive dans <strong style="color: #16150F;">{delta} jour{'s' if delta > 1 else ''}</strong>.
-            Assure-toi d'avoir le cash nécessaire sur ton compte.
+            Assurez-vous d'avoir le cash nécessaire sur votre compte.
           </p>
           <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
             <tr><td style="padding: 10px 0; border-bottom: 1px solid #E4E1D8; color: #8C8979;">Montant</td><td style="padding: 10px 0; border-bottom: 1px solid #E4E1D8; text-align: right; font-weight: 600; color: #16150F;">{amount_str}</td></tr>
@@ -235,11 +235,11 @@ def send_dca_reminders(
           </table>
           <a href="https://wealthly-six.vercel.app/#/dca" style="display: inline-block; background: #2540D9; color: #fff; padding: 10px 18px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500;">Voir mes plans DCA →</a>
           <p style="font-size: 12px; color: #8C8979; margin-top: 24px; padding-top: 16px; border-top: 1px solid #E4E1D8;">
-            Tu reçois cet email parce que les rappels sont activés sur ce plan. Désactive-les dans Wealthly → DCA.
+            Vous recevez cet email parce que les rappels sont activés sur ce plan. Désactivez-les dans Yotori Finance → DCA.
           </p>
         </div>
         """
-        text = f"Rappel : ton DCA '{plan.name}' arrive dans {delta} jour(s) ({exec_str}). Montant : {amount_str}."
+        text = f"Rappel : votre DCA '{plan.name}' arrive dans {delta} jour(s) ({exec_str}). Montant : {amount_str}."
         if send_email(user.email, subject, html, text):
             sent += 1
         else:

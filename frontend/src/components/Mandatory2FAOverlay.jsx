@@ -9,7 +9,7 @@
 // Le flux : setup → QR + secret → input code 6 chiffres → activé → reload
 // du currentUser → overlay disparait.
 // ============================================================================
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Shield, Loader2 } from 'lucide-react';
 import * as api from '../api.js';
 
@@ -20,6 +20,14 @@ export function Mandatory2FAOverlay({ onComplete, onSkip, onLogoutEscape }) {
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // onComplete arrive souvent comme arrow inline (nouvelle identité à chaque
+  // render du parent). L'avoir dans les deps de l'effet ci-dessous relançait
+  // /auth/totp/setup à CHAQUE render → tempête de requêtes + rate limit 5/h
+  // brûlé en quelques secondes. On le garde dans un ref : l'effet ne tourne
+  // qu'au mount, le callback reste frais.
+  const onCompleteRef = useRef(onComplete);
+  useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
 
   useEffect(() => {
     let cancelled = false;
@@ -42,17 +50,17 @@ export function Mandatory2FAOverlay({ onComplete, onSkip, onLogoutEscape }) {
         // Si /setup refuse parce que 2FA déjà active → l'overlay ne devrait
         // pas être affiché. On force un onComplete pour sortir.
         if (/déjà activé|déjà active/i.test(msg)) {
-          onComplete?.();
+          onCompleteRef.current?.();
           return;
         }
         setError(msg === 'timeout'
-          ? 'La préparation prend trop de temps. Réessaie, ou configure plus tard.'
+          ? 'La préparation prend trop de temps. Réessayez, ou configurez plus tard.'
           : msg);
         setStep('error');
       }
     })();
     return () => { cancelled = true; };
-  }, [onComplete]);
+  }, []);
 
   const handleVerify = async (e) => {
     e?.preventDefault?.();

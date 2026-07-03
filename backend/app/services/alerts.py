@@ -122,7 +122,7 @@ def _detect_budget_overrun(today, cur_month, txs, budgets, id_to_slug, slug_to_n
                 'dedup_key': f"budget_proj:{b.category_slug}:{cur_month}",
                 'kind': 'budget_overrun', 'severity': 'info',
                 'title': f"Budget {name} en passe d'être dépassé",
-                'body': f"À ce rythme tu finirais le mois à ~{proj:,.0f} €, au-dessus de ton budget de {b.amount:,.0f} €.".replace(',', ' '),
+                'body': f"À ce rythme vous finiriez le mois à ~{proj:,.0f} €, au-dessus de votre budget de {b.amount:,.0f} €.".replace(',', ' '),
                 'data': {'category': b.category_slug, 'projected': round(proj, 2), 'budget': b.amount},
                 'link': 'monthly',
             })
@@ -216,7 +216,7 @@ def _detect_unusual_debit(today, txs) -> list[dict]:
                 'dedup_key': f"unusual_debit:{t.id}",
                 'kind': 'unusual_debit', 'severity': 'warn',
                 'title': 'Dépense inhabituelle',
-                'body': f"« {t.label} » : {amt:,.0f} € le {t.date.isoformat()}, soit ~{amt / avg:.1f}× ta moyenne habituelle (~{avg:,.0f} €).".replace(',', ' '),
+                'body': f"« {t.label} » : {amt:,.0f} € le {t.date.isoformat()}, soit ~{amt / avg:.1f}× votre moyenne habituelle (~{avg:,.0f} €).".replace(',', ' '),
                 'data': {'tx_id': t.id, 'amount': round(amt, 2), 'avg': round(avg, 2)},
                 'link': 'transactions',
             })

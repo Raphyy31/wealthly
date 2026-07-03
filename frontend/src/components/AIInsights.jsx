@@ -55,7 +55,7 @@ export function AIInsights({ snapshot }) {
           <div className="ai-skel-line"/><div className="ai-skel-line short"/>
         </div>
       ) : error ? (
-        <p className="ai-empty">Analyse indisponible pour le moment. Réessaie dans un instant.</p>
+        <p className="ai-empty">Analyse indisponible pour le moment. Réessayez dans un instant.</p>
       ) : (
         <>
           {alerts.length > 0 && (

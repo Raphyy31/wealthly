@@ -321,8 +321,8 @@ function DemoLoopCinematic({ onComplete, replayToken = 0 }) {
             return (
               <div key={s.id} className="scene scene-intro" ref={el => sceneRefs.current[i] = el}>
                 <div className="intro-wordmark">
-                  <div className="intro-glyph">w</div>
-                  <div className="intro-name">wealthly</div>
+                  <div className="intro-glyph">y</div>
+                  <div className="intro-name">yotori finance</div>
                 </div>
                 <div className="intro-tagline">
                   Votre patrimoine, <em>groupé en une vue.</em>

@@ -1,5 +1,5 @@
 /**
- * API service: all HTTP calls to the Wealthly backend.
+ * API service: all HTTP calls to the Yotori Finance backend.
  *
  * Auth: HttpOnly Secure SameSite=None cookie `trove_session` set by the
  * backend on login/register/reset. The browser auto-attaches it on every
@@ -17,7 +17,7 @@ const API_BASE = import.meta.env.VITE_API_URL || '/api';
 // ============================================================================
 // Counter incremente a chaque mutation (POST/PUT/DELETE) en cours, decremente
 // a la fin. Sert a piloter un indicateur global de "ca tourne" (top bar GSAP
-// dans WealthlyApp). Les GET ne comptent pas (trop frequents, bruit).
+// dans YotoriApp). Les GET ne comptent pas (trop frequents, bruit).
 let __mutationCount = 0;
 const __mutationListeners = new Set();
 const notifyMutations = () => {
@@ -161,7 +161,7 @@ async function fetchWithTimeout(url, opts = {}, timeoutMs = REQUEST_TIMEOUT_MS) 
 // ============================================================================
 async function request(method, path, body = null) {
   // In demo mode the UI is fed from demoData.js; never hit the backend.
-  if (typeof window !== 'undefined' && window.localStorage.getItem('wealthly:demo') === '1') {
+  if (typeof window !== 'undefined' && window.localStorage.getItem('yotori:demo') === '1') {
     if (method === 'GET') return null;
     throw new Error('Mode démo : modifications non enregistrées');
   }
@@ -186,8 +186,8 @@ async function request(method, path, body = null) {
     markBackendOffline();
     const timedOut = err?.name === 'AbortError';
     throw new Error(timedOut
-      ? 'Le serveur ne répond pas pour le moment. Réessaie dans un instant.'
-      : 'Impossible de joindre le serveur. Vérifie ta connexion et réessaie.');
+      ? 'Le serveur ne répond pas pour le moment. Réessayez dans un instant.'
+      : 'Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.');
   }
 
   // 5xx persistants = backend en vrac (Railway cold start, crash, etc.)
@@ -450,7 +450,7 @@ const DEMO_DCA_PLANS = [
   },
 ];
 
-const isDemo = () => typeof window !== 'undefined' && window.localStorage.getItem('wealthly:demo') === '1';
+const isDemo = () => typeof window !== 'undefined' && window.localStorage.getItem('yotori:demo') === '1';
 
 export const dcaApi = {
   list:   ()         => isDemo() ? Promise.resolve(DEMO_DCA_PLANS) : get('/dca'),
@@ -520,11 +520,11 @@ export const documents = {
 // ============================================================================
 const DEMO_INSIGHTS = {
   coach: [
-    { title: 'Épargne solide', body: 'Tu épargnes 24 % de tes revenus ce mois-ci — au-dessus du repère des 20 %.' },
-    { title: 'Patrimoine net', body: 'Ton patrimoine net progresse régulièrement sur les 12 derniers mois.' },
+    { title: 'Épargne solide', body: 'Vous épargnez 24 % de vos revenus ce mois-ci — au-dessus du repère des 20 %.' },
+    { title: 'Patrimoine net', body: 'Votre patrimoine net progresse régulièrement sur les 12 derniers mois.' },
   ],
   alerts: [
-    { severity: 'warn', text: 'Restaurants : 320 € ce mois (+45 % vs ta moyenne).' },
+    { severity: 'warn', text: 'Restaurants : 320 € ce mois (+45 % vs votre moyenne).' },
   ],
   ai_used: false, ai_available: false,
 };
@@ -556,8 +556,8 @@ export const notifications = {
 // memberId = '<uuid>'              → Mois type personnel de cet adulte.
 // Demo mode persists a map { [scopeKey]: refMonth } in localStorage.
 // ============================================================================
-const REF_MONTH_DEMO_KEY = 'wealthly:demo_ref_months';
-const REF_MONTH_DEMO_KEY_LEGACY = 'wealthly:demo_ref_month';
+const REF_MONTH_DEMO_KEY = 'yotori:demo_ref_months';
+const REF_MONTH_DEMO_KEY_LEGACY = 'yotori:demo_ref_month';
 function _emptyRefMonth() {
   return { version: 1, updated_at: null, lines: [] };
 }
@@ -632,7 +632,7 @@ auth.changePassword = (currentPassword, newPassword) =>
 // dupliqué ici car api.js ne doit pas importer demoData.js (cycle).
 const DEMO_BANK_CONNECTIONS = () => {
   try {
-    const raw = window?.localStorage?.getItem('wealthly:demo_bank_connections_cache');
+    const raw = window?.localStorage?.getItem('yotori:demo_bank_connections_cache');
     if (raw) return JSON.parse(raw);
   } catch {}
   return [];
@@ -662,7 +662,7 @@ export const banking = {
   /** Re-poll requisition status to update accounts list */
   refreshConnection: (id) => post(`/banking/refresh/${id}`),
 
-  /** List all connections. En démo : lit la liste seedée par WealthlyApp
+  /** List all connections. En démo : lit la liste seedée par YotoriApp
    *  (mis en cache dans localStorage lors du reloadAll démo). */
   listConnections: () => isDemo() ? Promise.resolve(DEMO_BANK_CONNECTIONS()) : get('/banking/connections'),
 

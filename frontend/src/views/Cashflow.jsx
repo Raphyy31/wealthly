@@ -40,7 +40,7 @@ export function Cashflow({ transactions, categories, accounts, memberShare, fmt,
   }, [transactions, startKey, endKey, accounts, memberShare]);
 
   // Group by category — on REPRODUIT exactement la logique de monthlyEvolution
-  // (WealthlyApp) pour que Cashflow donne les MÊMES Entrées/Sorties que le
+  // (YotoriApp) pour que Cashflow donne les MÊMES Entrées/Sorties que le
   // Dashboard et le Mensuel. Avant, Cashflow bucketait par simple signe sans
   // connaître les virements internes : un virement courant→Livret comptait
   // +1000 en entrée ET 1000 en sortie (double-comptage), gonflant les deux

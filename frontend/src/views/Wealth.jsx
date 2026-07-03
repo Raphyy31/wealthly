@@ -104,7 +104,7 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
     return () => ctx.revert();
   }, [subview]);
 
-  // Quand le wizard "+ Ajouter" termine en mode manuel, WealthlyApp passe
+  // Quand le wizard "+ Ajouter" termine en mode manuel, YotoriApp passe
   // ici { category, subtype } via seededNewItem. On ouvre alors l'éditeur
   // canonique correspondant avec un objet blanc préfixé (type + subtype).
   useEffect(() => {
@@ -172,7 +172,7 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
   // Convention de calcul Wealth (bug fix 2026-05-19) — TOUS les calculs
   // affichés dans cette vue utilisent la valeur **full** du foyer.
   // Rationale : un bien immo joint vaut sa valeur réelle (1.5M€), pas la
-  // moitié (750k€) — Wealthly Wealth = inventaire des biens du foyer.
+  // moitié (750k€) — Yotori Finance Wealth = inventaire des biens du foyer.
   // Le memberShare s'applique uniquement au "Patrimoine net total" du
   // Dashboard pour les calculs d'équité d'un membre adulte filtré.
   const totalAssets = visibleAssets.reduce((s, a) => s + (parseFloat(a.currentValue) || 0), 0);

@@ -1,5 +1,5 @@
 // ============================================================================
-// Wealthly — global CSS-in-JS
+// Yotori Finance — global CSS-in-JS
 //
 // One <style> tag with the full design system. Theme tokens are inlined
 // per render so the dark/light branch stays in sync (currently dark only,
@@ -12,7 +12,7 @@
 export function Styles({ theme }) {
   const dark = theme === 'dark';
   const css = `
-/* Wealthly v3 - Claude Design handoff tokens.
+/* Yotori Finance v3 - Claude Design handoff tokens.
    Le :root canonique vit dans index.css. Ici on remappe les alias herites
    utilises par les ~1500 lignes de CSS-in-JS qui suivent.
    Theme: ${dark ? 'dark' : 'light'} (informatif). */

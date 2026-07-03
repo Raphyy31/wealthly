@@ -91,22 +91,22 @@ def _deterministic_fallback(req: InsightsRequest) -> InsightsResponse:
         if req.savings_rate_pct >= 20:
             coach.append(CoachItem(
                 title="Épargne solide",
-                body=f"Tu épargnes {req.savings_rate_pct:.0f} % de tes revenus ce mois-ci — au-dessus du repère des 20 %. Continue sur cette lancée.",
+                body=f"Vous épargnez {req.savings_rate_pct:.0f} % de vos revenus ce mois-ci — au-dessus du repère des 20 %. Continuez sur cette lancée.",
             ))
         elif req.savings_rate_pct >= 0:
             coach.append(CoachItem(
                 title="Marge d'épargne",
-                body=f"Ton taux d'épargne est de {req.savings_rate_pct:.0f} % ce mois-ci. Viser 20 % renforcerait ton coussin de sécurité.",
+                body=f"Votre taux d'épargne est de {req.savings_rate_pct:.0f} % ce mois-ci. Viser 20 % renforcerait votre coussin de sécurité.",
             ))
         else:
             coach.append(CoachItem(
                 title="Mois déficitaire",
-                body="Tes dépenses dépassent tes revenus ce mois-ci. Regarde les postes les plus élevés pour rééquilibrer.",
+                body="Vos dépenses dépassent vos revenus ce mois-ci. Regardez les postes les plus élevés pour rééquilibrer.",
             ))
     if req.net_worth is not None:
         coach.append(CoachItem(
             title="Patrimoine net",
-            body=f"Ton patrimoine net s'élève à {_fmt_eur(req.net_worth)}.",
+            body=f"Votre patrimoine net s'élève à {_fmt_eur(req.net_worth)}.",
         ))
     alerts = [AlertItem(severity=s.severity, text=s.label) for s in req.alert_signals]
     return InsightsResponse(coach=coach[:3], alerts=alerts, ai_used=False, ai_available=False)
@@ -186,8 +186,8 @@ def _insights_with_claude(req: InsightsRequest) -> InsightsResponse:
         ],
     }
 
-    prompt = f"""Tu es le coach financier de Wealthly, une app de gestion de patrimoine familial française.
-Ton ton est sobre, bienveillant, concret — jamais alarmiste ni racoleur. Tutoiement.
+    prompt = f"""Tu es le coach financier de Yotori Finance, une app de gestion de patrimoine familial française.
+Ton ton est sobre, bienveillant, concret — jamais alarmiste ni racoleur. Vouvoiement (adresse-toi à l'utilisateur avec « vous », jamais « tu »).
 
 Voici un instantané chiffré du foyer (tous les montants sont en {req.currency}) :
 {json.dumps(snapshot, ensure_ascii=False, indent=2)}

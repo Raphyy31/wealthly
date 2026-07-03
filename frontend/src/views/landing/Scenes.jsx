@@ -1,4 +1,4 @@
-// Scenes.jsx — Wealthly demo scenes (port ESM 2026-05-22)
+// Scenes.jsx — Yotori Finance demo scenes (port ESM 2026-05-22)
 // Scene 1: full app view (with sidebar). Subsequent scenes are FOCUSED zooms.
 // All scenes use viewBox 1600x900 (matches canvas aspect ratio).
 import React from 'react';
@@ -7,7 +7,7 @@ import React from 'react';
 const Sidebar = ({ activeIdx }) => (
   <g>
     <rect x="24" y="24" width="220" height="852" rx="14" fill="#FFFFFF" stroke="#E2E6DF"/>
-    <text x="44" y="62" fill="#0C0F0B" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500">Wealthly</text>
+    <text x="44" y="62" fill="#0C0F0B" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500">Yotori Finance</text>
     {['Vue', 'Patrimoine', 'Trésorerie', 'Transactions', 'Mois type', 'Fiscalité', 'Réglages'].map((l, i) => (
       <g key={l}>
         <rect x="40" y={108+i*54} width="14" height="14" rx="3" fill={i===activeIdx?"#2B8FB0":"#D1D6CC"}/>

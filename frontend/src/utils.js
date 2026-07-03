@@ -1,5 +1,5 @@
 // ============================================================================
-// Wealthly — pure utilities
+// Yotori Finance — pure utilities
 //
 // Formatting, CSV parsing, transaction categorization, recurring detection.
 // No React, no DOM access, no network. These functions must remain testable
@@ -305,7 +305,7 @@ export const detectInternalTransfers = (transactions, options = {}) => {
 
 // ---- Formatting ------------------------------------------------------------
 
-// Supported display currencies for Wealthly. Adding more is a one-line addition
+// Supported display currencies for Yotori Finance. Adding more is a one-line addition
 // here + Frankfurter handles ~30 ISO codes natively.
 export const SUPPORTED_CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF'];
 
@@ -534,7 +534,7 @@ export const buildInsightsSnapshot = ({
       const pct = Math.round((c.amount / c.avg3m - 1) * 100);
       alert_signals.push({
         kind: 'category_spike', severity: 'warn',
-        label: `${c.name} : ${fmtInt(c.amount)} ce mois (+${pct} % vs ta moyenne)`,
+        label: `${c.name} : ${fmtInt(c.amount)} ce mois (+${pct} % vs votre moyenne)`,
         amount: c.amount,
       });
     }
@@ -584,7 +584,7 @@ export const dayOfMonth = (dateStr) => {
 // fallback sur monthKey classique (pas de risque de mal-attribuer).
 //
 // `settings` = { enabled: boolean, pivotDay: 1..31 } — typiquement lu
-// depuis localStorage 'wealthly:income_shift' (default { enabled: true,
+// depuis localStorage 'yotori:income_shift' (default { enabled: true,
 // pivotDay: 25 }).
 export const INCOME_SHIFT_DEFAULTS = { enabled: true, pivotDay: 25 };
 
@@ -625,7 +625,7 @@ export const isIncomeShifted = (tx, settings, categories) => {
 // Volontairement synchrone — pas besoin de hook React, c'est lu rarement.
 export const readIncomeShiftSetting = () => {
   try {
-    const raw = localStorage.getItem('wealthly:income_shift');
+    const raw = localStorage.getItem('yotori:income_shift');
     if (!raw) return INCOME_SHIFT_DEFAULTS;
     const parsed = JSON.parse(raw);
     return {
@@ -639,7 +639,7 @@ export const readIncomeShiftSetting = () => {
 
 export const writeIncomeShiftSetting = (settings) => {
   try {
-    localStorage.setItem('wealthly:income_shift', JSON.stringify(settings));
+    localStorage.setItem('yotori:income_shift', JSON.stringify(settings));
   } catch {}
 };
 

@@ -323,7 +323,7 @@ function DcaReminderModal({ plan, currentUserEmail, onSave, onClose }) {
               Recevoir un email avant chaque versement
             </div>
             <div style={{ fontSize: 11.5, color: 'var(--ink-3)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
-              <Mail size={11}/> Envoyé à {currentUserEmail || 'ton compte'}
+              <Mail size={11}/> Envoyé à {currentUserEmail || 'votre compte'}
             </div>
           </div>
           <button
@@ -377,7 +377,7 @@ function DcaReminderModal({ plan, currentUserEmail, onSave, onClose }) {
             })}
           </div>
           <p style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 8, fontStyle: 'italic' }}>
-            Tu recevras un email {leadDays} jour{leadDays > 1 ? 's' : ''} avant chaque exécution prévue.
+            Vous recevrez un email {leadDays} jour{leadDays > 1 ? 's' : ''} avant chaque exécution prévue.
           </p>
         </div>
 
@@ -1432,7 +1432,7 @@ export function DCAView({ accounts = [], members = [], dcaPlans = [], onPlansCha
           <EmptyState
             icon={TrendingUp}
             title={<>Investis <em>régulièrement.</em></>}
-            description="Le DCA (Dollar Cost Averaging) lisse les variations du marché. Crée ton premier plan : ETF Monde, livret A, crypto… Wealthly suit tout."
+            description="Le DCA (Dollar Cost Averaging) lisse les variations du marché. Créez votre premier plan : ETF Monde, livret A, crypto… Yotori Finance suit tout."
             cta={{ label: 'Créer un plan DCA', icon: Plus, onClick: () => setModal('new') }}
           />
         ) : (

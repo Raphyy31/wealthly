@@ -1,4 +1,4 @@
-# Wealthly — Roadmap cybersécurité
+# Yotori Finance — Roadmap cybersécurité
 
 **Dernière mise à jour :** 2026-05-19 (audit complet expert cybersécurité)
 
@@ -29,7 +29,7 @@ Il complète `CLAUDE.md` (contexte projet) et `docs/PLAN_2026-05-18.md`
 - ✅ X-Content-Type-Options: nosniff
 - ✅ Referrer-Policy
 - ✅ Permissions-Policy
-- ✅ CORS regex strict `^https://wealthly(-[a-z0-9-]+)?\.vercel\.app$`
+- ✅ CORS regex strict `^https://(wealthly|yotori(-finance)?)(-[a-z0-9]+){0,3}\.vercel\.app$`
 - ✅ CORS methods/headers explicitement listés (pas de wildcard)
 
 ### Validation input
@@ -110,7 +110,7 @@ Il complète `CLAUDE.md` (contexte projet) et `docs/PLAN_2026-05-18.md`
 
 ## 3. Plan RLS Postgres — chantier dédié
 
-C'est le seul défaut architectural majeur restant. Une fois implémenté, Wealthly aura une **defense-in-depth complète** : même un attaquant avec la `DATABASE_URL` ne pourra rien lire.
+C'est le seul défaut architectural majeur restant. Une fois implémenté, Yotori Finance aura une **defense-in-depth complète** : même un attaquant avec la `DATABASE_URL` ne pourra rien lire.
 
 ### Architecture cible
 
@@ -156,7 +156,7 @@ async def set_rls_context(request, call_next):
 | Backend `/auth/login` rejette avec 401 `totp_required` | ✅ Existait depuis commit 3298af1 |
 | Backend `/auth/totp/setup`, `/verify`, `/disable` | ✅ Avec rate limit (commit 76d1291) |
 | Frontend `AuthScreen` step 2 (écran code TOTP) | ✅ Implémenté 2026-05-19 |
-| Frontend overlay **obligatoire** dans WealthlyApp si `totp_enabled === false` | ✅ Implémenté 2026-05-19 (composant `Mandatory2FAOverlay`) |
+| Frontend overlay **obligatoire** dans YotoriApp si `totp_enabled === false` | ✅ Implémenté 2026-05-19 (composant `Mandatory2FAOverlay`) |
 | Settings → Sécurité : toggle pour activer/désactiver | ✅ Existant — désactivation possible si déjà activé (relancera l'overlay au refresh) |
 | Mode démo exempté | ✅ |
 | Admin exempté | ❌ Volontairement non — les admins doivent aussi avoir 2FA |

@@ -1,4 +1,4 @@
-"""Wealthly categorization engine — Payees + Category Learning + builtin rules.
+"""Yotori Finance categorization engine — Payees + Category Learning + builtin rules.
 
 Architecture en 3 couches (inspirée d'Actual Budget) :
   1. normalize : nettoie le libellé brut bancaire

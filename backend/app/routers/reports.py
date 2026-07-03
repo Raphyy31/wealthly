@@ -30,7 +30,7 @@ from app.services.monthly_report import (
     send_monthly_report, compute_monthly_report, last_completed_month,
 )
 
-logger = logging.getLogger("wealthly.report")
+logger = logging.getLogger("yotori.report")
 router = APIRouter(prefix="/reports", tags=["reports"])
 
 
@@ -68,7 +68,7 @@ def send_test(db: Session = Depends(get_db), user: User = Depends(get_current_us
         raise HTTPException(status_code=400, detail="Pas encore assez de données pour générer un bilan.")
     ok = send_monthly_report(db, user.household_id, month)
     if not ok:
-        raise HTTPException(status_code=502, detail="Envoi impossible (email non configuré ?). Réessaie plus tard.")
+        raise HTTPException(status_code=502, detail="Envoi impossible (email non configuré ?). Réessayez plus tard.")
     return {"sent": True, "month": month, "to": user.email}
 
 

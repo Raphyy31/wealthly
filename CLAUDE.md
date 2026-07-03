@@ -69,10 +69,10 @@ Le film bundle (`/public/film-16x9.html` 261 Ko, `/public/film-9x16.html` 259 Ko
 ### 🔴 Correctifs critiques prod
 - **Inscription cassée (500)** : la table `households` en prod n'avait pas la colonne `plan` (dérive de schéma — l'ORM la déclare mais `create_all` n'ajoute pas les colonnes manquantes). `INSERT INTO households` plantait. **Fix** : `ALTER TABLE households ADD COLUMN IF NOT EXISTS plan VARCHAR DEFAULT 'solo' NOT NULL` ajouté aux migrations légères de démarrage (`main.py:_run_lightweight_migrations`). Vérifié prod → register 201. ⚠️ **Diag** : le handler global `@app.exception_handler(Exception)` (main.py) masque le détail des 500 → pour diagnostiquer, lever temporairement une `HTTPException(422, detail=...)` (non masquée) plutôt que lire les logs.
 - **Inscription + RLS** : `register` insère les `DEFAULT_CATEGORIES` (table `categories` en FORCE RLS) alors qu'aucun user n'est encore authentifié → `set_config('app.current_household_id', household.id, true)` posé juste après le flush du foyer, avant l'insert des catégories.
-- **Onboarding bloquant** : `completeOnboarding` faisait `reloadAll()` (15 endpoints en //) après création du membre ; un seul échec (cold-start Railway) bloquait l'écran « Entrer dans Wealthly ». **Fix** : tout best-effort + `setOnboarded(true)` dans `finally` (on entre toujours) + état loading sur le bouton.
+- **Onboarding bloquant** : `completeOnboarding` faisait `reloadAll()` (15 endpoints en //) après création du membre ; un seul échec (cold-start Railway) bloquait l'écran « Entrer dans Yotori Finance ». **Fix** : tout best-effort + `setOnboarded(true)` dans `finally` (on entre toujours) + état loading sur le bouton.
 - **Session expirée** : un 401 laissait l'user sur des données mortes. **Fix** : `api.js` émet un signal global (`subscribeSessionExpired`) sur tout 401 hors `/auth/*` → `App.jsx` déconnecte proprement + bandeau « session expirée » sur AuthScreen + purge cache.
-- **2FA bloquante** : l'overlay 2FA obligatoire (sans échappatoire) bloquait tout nouveau compte. **Fix** : rendue **optionnelle** — bouton « Configurer plus tard » (`onSkip`), choix mémorisé (`localStorage wealthly:2fa_skipped`). Activable depuis Réglages → Sécurité. Backend 2FA OK (`/auth/totp/setup` testé 200).
-- **Thème mobile « immonde »** : l'app suivait `prefers-color-scheme: dark` → ancien thème dark hors charte sur mobile. **Fix** : défaut **clair** partout (script no-flash `index.html` + `useTheme`) + **migration unique** (`wealthly-theme-default-light-v1`) qui reset les users déjà passés en dark. Dark dispo via toggle explicite.
+- **2FA bloquante** : l'overlay 2FA obligatoire (sans échappatoire) bloquait tout nouveau compte. **Fix** : rendue **optionnelle** — bouton « Configurer plus tard » (`onSkip`), choix mémorisé (`localStorage yotori:2fa_skipped`). Activable depuis Réglages → Sécurité. Backend 2FA OK (`/auth/totp/setup` testé 200).
+- **Thème mobile « immonde »** : l'app suivait `prefers-color-scheme: dark` → ancien thème dark hors charte sur mobile. **Fix** : défaut **clair** partout (script no-flash `index.html` + `useTheme`) + **migration unique** (`yotori-theme-default-light-v1`) qui reset les users déjà passés en dark. Dark dispo via toggle explicite.
 
 ### Bilan PDF — refait sur la VRAIE charte + logique correcte (`frontend/src/reportHtml.js`)
 ⚠️ **Leçon** : ne PAS inventer une charte (j'avais sorti du navy+or générique d'un plugin → rejet « immonde »). La charte = tokens `index.css` : papier chaud `#F7F6F2`, cobalt `#2540D9`, sage/terracotta, dataviz d1–d7, **Geist + Newsreader** (serif italique cobalt pour titres/gros chiffres). Génère un **HTML** imprimé par le navigateur (WYSIWYG, pas jsPDF — l'ancien `pdfReport.js` jsPDF est abandonné, plus branché). **Toujours vérifier le rendu** via headless Edge (`msedge --headless --screenshot`/`--print-to-pdf`) avant de livrer. **Logique** : comptes d'investissement (PEA/CTO/AV) valorisés depuis leurs **positions** (`parent_asset_id`) + cash, cours **live** via `api.quotes` ; immobilier **net du prêt lié** (`liability.linked_asset_id`). 2 pages : synthèse (hero net worth, KPI, donut, score, courbe aire) + détail en cartes par classe. Déclencheur : bouton « Bilan PDF » du Dashboard.
@@ -101,7 +101,7 @@ Grosse série de sessions. **État repreneur : tout est sur `main`, déployé en
 | **Simulateur immo** | `views/ImmoSimulator.jsx` | Capacité d'emprunt HCSF 35%, mensualité (réutilise `buildAmortization`), notaire, reste-à-vivre, prix max. 100% frontend. |
 | **Coffre-fort documents** | `views/Vault.jsx` | Upload/aperçu/suppression. Modèle `Document` + router `/documents` (mig `0012`). **Stockage = Postgres LargeBinary** (v1, plafond 8 Mo) — Supabase Storage = v2 possible. Pas de chiffrement applicatif. |
 | **Coach IA + insights** | `components/AIInsights.jsx` (Dashboard) | Endpoint `/ai/insights` (POST snapshot → coach + alertes). **N'envoie que des agrégats, jamais les transactions brutes.** Voir "IA" plus bas. |
-| **Moteur d'alertes** | `services/alerts.py` + `routers/notifications.py` + `components/NotificationBell.jsx` | Modèle `Notification` (dedup_key → scan idempotent, mig `0014`). 6 détecteurs déterministes à seuils conservateurs (découvert, budget dépassé, charge fixe non débitée, doublon, dépense inhabituelle, abonnement en hausse). Cloche + centre déroulant. **Pilier "Wealthly veille pour toi" 1/3** (reste : emails + rapport PDF). |
+| **Moteur d'alertes** | `services/alerts.py` + `routers/notifications.py` + `components/NotificationBell.jsx` | Modèle `Notification` (dedup_key → scan idempotent, mig `0014`). 6 détecteurs déterministes à seuils conservateurs (découvert, budget dépassé, charge fixe non débitée, doublon, dépense inhabituelle, abonnement en hausse). Cloche + centre déroulant. **Pilier "Yotori Finance veille pour toi" 1/3** (reste : emails + rapport PDF). |
 
 ### Refonte UI — fiches détail patrimoine unifiées
 `views/wealth/components/DetailShell.jsx` = châssis commun des **6 fiches détail** (RealEstate/Investment/Crypto/Liquidity/Liability/OtherAsset). Hero (pastille XL d'identité + titre 42px + valeur 48px Newsreader italique + badge delta), bande KPI colorée, sections, insight (`DetailInsight`), donut (`DetailDonut`), bridge (`DetailBridge`). `modal--detail` = 1100px. Header **sticky**. Système de **boutons unifié** "Option B" (primary = encre + halo cobalt) — défini dans `index.css`/`Styles.jsx`, anciennes classes legacy convergées.
@@ -289,7 +289,7 @@ frontend/
     App.jsx                        Auth gate + demo mode + reset_token URL handler
     AuthScreen.jsx                 Login | Register | Forgot | Reset modes
     BankCallback.jsx               Landing page after the bank OAuth redirect
-    WealthlyApp.jsx                Main shell — data layer + sidebar/nav + view router (~1100 lines)
+    YotoriApp.jsx                Main shell — data layer + sidebar/nav + view router (~1100 lines)
     TaxSimulator.jsx               Vue Impôts (lazy-loaded)
     Styles.jsx                     Global CSS-in-JS — pairs with index.css
     constants.js                   STORAGE_KEYS, DEFAULT_CATEGORIES/RULES, BANK_PROFILES, ASSET/LIABILITY_TYPES, MEMBER_PALETTE
@@ -405,7 +405,7 @@ Le `em` dans h1 sous `.subview-header` (ou `.page-header`) prend automatiquement
 - **2FA TOTP** optionnelle (bouton « Configurer plus tard » sur l'overlay 2FA), activable depuis Réglages → Sécurité. Backend exige code 6 chiffres step 2 si `User.totp_enabled`.
 - **Session expirée** : `api.js` émet un signal global (`subscribeSessionExpired`) sur tout 401 hors `/auth/*` → App.jsx déconnecte + bandeau « session expirée » + purge cache user.
 - **Reset token URL** : `?reset_token=…` → App.jsx force `AuthScreen` plein écran même si loggé, switch en mode reset, scrub l'URL.
-- **Demo mode** : flag `localStorage wealthly:demo` → App.jsx rend WealthlyApp avec dataset `demoData.js`, court-circuit toutes les API (GET → null, mutations → toast « Mode démo »).
+- **Demo mode** : flag `localStorage yotori:demo` → App.jsx rend YotoriApp avec dataset `demoData.js`, court-circuit toutes les API (GET → null, mutations → toast « Mode démo »).
 - **Pas de Google OAuth** : tentative juin 2026 abandonnée (cause du 500 login), voir bloc Session 2026-06-28.
 
 ---
@@ -413,15 +413,15 @@ Le `em` dans h1 sous `.subview-header` (ou `.page-header`) prend automatiquement
 ## Things that bite
 
 **1. CORS regex must match every Vercel URL.**
-The default in `backend/app/config.py` is `^https://wealthly(-[a-z0-9-]+)?\.vercel\.app$`. If the user adds a custom domain, update `CORS_ORIGINS` env var on Railway OR adjust the regex.
+The default in `backend/app/config.py` is `^https://(wealthly|yotori(-finance)?)(-[a-z0-9]+){0,3}\.vercel\.app$`. If the user adds a custom domain, update `CORS_ORIGINS` env var on Railway OR adjust the regex.
 
 **2. Resend free tier sender restriction.**
-Default `EMAIL_FROM` is `Wealthly <onboarding@resend.dev>`. With this sender, Resend's free tier **only delivers to the email address used to register on Resend**. Any other recipient → 403 silently. Diagnostic path:
+Default `EMAIL_FROM` is `Yotori Finance <onboarding@resend.dev>`. With this sender, Resend's free tier **only delivers to the email address used to register on Resend**. Any other recipient → 403 silently. Diagnostic path:
 1. https://resend.com/emails — check Logs
 2. Railway → Logs — look for `[email]` lines
 3. Solution: either test with the Resend account's email, or verify a domain on Resend
 
-**3. WealthlyApp is no longer a monolith.**
+**3. YotoriApp is no longer a monolith.**
 L1+L2 of the découpe shipped (commits 955143b → 8663654, 2026-05). The
 file dropped from 6386 to ~1100 lines and now owns only the data layer
 + shell + view router. Sub-views live in `src/views/`, leaf components
@@ -447,7 +447,7 @@ Remaining work if/when needed:
 Update these constants when the law changes (typically late each year for the next year). The user explicitly removed `sharedChildren` (garde alternée) — don't add it back.
 
 **5. The wealth snapshot auto-upsert.**
-`WealthlyApp` posts a snapshot whenever net-worth math materially changes. Debounced 1.5s, gated by a useRef. Don't remove the gating — the deps array on the useEffect is intentionally `[netWorth, liquidWealth, assetsValue, liabilitiesValue]` and would otherwise spam the backend every render.
+`YotoriApp` posts a snapshot whenever net-worth math materially changes. Debounced 1.5s, gated by a useRef. Don't remove the gating — the deps array on the useEffect is intentionally `[netWorth, liquidWealth, assetsValue, liabilitiesValue]` and would otherwise spam the backend every render.
 
 **6. CI tests.**
 `pytest` runs against in-memory SQLite. The **email service is mocked** in conftest — DO NOT make password-reset endpoints depend on getting a real Resend response, the test patches `app.routers.auth.send_password_reset_email` and reads the captured emails via `client.sent_emails`. The **slowapi rate limiter is disabled** in conftest (`limiter.enabled = False`) — TestClient runs everything from one synthetic IP and would otherwise burn the budget within 2 cases.

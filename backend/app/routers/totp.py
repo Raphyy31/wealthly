@@ -82,7 +82,7 @@ def totp_setup(
     db.commit()
 
     totp = pyotp.TOTP(secret)
-    otpauth_uri = totp.provisioning_uri(name=user.email, issuer_name="Wealthly")
+    otpauth_uri = totp.provisioning_uri(name=user.email, issuer_name="Yotori Finance")
     return TotpSetupOut(secret=secret, otpauth_uri=otpauth_uri)
 
 

@@ -1,5 +1,5 @@
 /**
- * Wealthly — demo dataset.
+ * Yotori Finance — demo dataset.
  *
  * Seed a believable household so a first-time visitor can navigate every
  * view with realistic numbers, *without* registering or polluting their
@@ -7,7 +7,7 @@
  * always reflects the last 6 calendar months no matter when the user lands.
  *
  * Used by AuthScreen → "Voir une démo" → localStorage flag picked up by
- * App.jsx which renders WealthlyApp in demo mode (no API calls,
+ * App.jsx which renders YotoriApp in demo mode (no API calls,
  * mutations are no-ops with a friendly toast).
  */
 
@@ -393,7 +393,7 @@ const bankConnections = [
 
 // ── Wealth snapshots ────────────────────────────────────────────────────
 // Calibres pour matcher le netWorth calcule live (apres correction du
-// double-comptage PEA cote WealthlyApp.jsx) :
+// double-comptage PEA cote YotoriApp.jsx) :
 //   liquid (currentBalance sum)      = 23 790
 //   assets parents (immo+pea+av+cto+btc+eth+or) = 500 520
 //   liabilities                                  = 218 500
@@ -439,15 +439,15 @@ const customRules = [];
 // pour ne pas declencher l'overlay 2FA obligatoire.
 const currentUser = {
   id: 'demo-user',
-  email: 'demo@wealthly.fr',
-  full_name: 'Démo Wealthly',
+  email: 'demo@yotori.fr',
+  full_name: 'Démo Yotori Finance',
   plan: 'family',
   totp_enabled: true,
   is_admin: false,
   created_at: '2024-01-15T10:00:00Z',
 };
 
-export const DEMO_FLAG_KEY = 'wealthly:demo';
+export const DEMO_FLAG_KEY = 'yotori:demo';
 
 /**
  * Returns a fresh, "as of now" demo dataset.

@@ -90,7 +90,7 @@ export function CryptoDetail({ asset, members = [], fmt, onEdit, onClose, onSync
     >
       {invested > 0 && (
         <DetailInsight icon={<TrendingUp size={15}/>} tone={plLatente >= 0 ? 'positive' : 'warning'}>
-          Cours actuel <strong>{plLatente >= 0 ? '+' : ''}{pct(plLatentePct)}</strong> vs ton prix de revient — <strong>{fmt(unitPrice)}</strong> contre {fmt(purchasePrice)} l'unité.
+          Cours actuel <strong>{plLatente >= 0 ? '+' : ''}{pct(plLatentePct)}</strong> vs votre prix de revient — <strong>{fmt(unitPrice)}</strong> contre {fmt(purchasePrice)} l'unité.
         </DetailInsight>
       )}
       {asset.notes && (

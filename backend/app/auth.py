@@ -1,7 +1,7 @@
 """
 Authentication: password hashing (bcrypt) + JWT generation/validation.
 
-Token transport — Wealthly uses an HttpOnly, Secure, SameSite=None cookie
+Token transport — Yotori Finance uses an HttpOnly, Secure, SameSite=None cookie
 (`trove_session`, name kept from the Trove rebrand era) so the token is
 unreachable from JavaScript and resistant to XSS exfiltration. The
 production frontend uses cookies exclusively. The `Authorization: Bearer`

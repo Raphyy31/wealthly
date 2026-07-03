@@ -15,13 +15,13 @@
 //   });
 //
 // Implémentation :
-//   - Storage localStorage `wealthly:lastActivity` partagé entre onglets
+//   - Storage localStorage `yotori:lastActivity` partagé entre onglets
 //   - Tick toutes les 30s (suffisant — économique batterie mobile)
 //   - 0 dépendance externe
 // ============================================================================
 import { useEffect, useRef } from 'react';
 
-const STORAGE_KEY = 'wealthly:lastActivity';
+const STORAGE_KEY = 'yotori:lastActivity';
 const TICK_INTERVAL_MS = 30_000;  // 30s
 const ACTIVITY_EVENTS = ['mousemove', 'keydown', 'touchstart', 'scroll', 'click'];
 

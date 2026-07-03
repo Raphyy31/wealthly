@@ -18,7 +18,7 @@ const DEMO_DISABLED_STYLE = { opacity: 0.5, pointerEvents: 'none', cursor: 'not-
 const DEMO_TOOLTIP = 'Indisponible en mode démo';
 
 function IdleTimeoutRow() {
-  const STORAGE_KEY = 'wealthly:idleTimeoutMin';
+  const STORAGE_KEY = 'yotori:idleTimeoutMin';
   const options = [
     { value: '15', label: '15 min' },
     { value: '30', label: '30 min' },

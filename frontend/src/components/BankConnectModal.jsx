@@ -4,7 +4,7 @@
  * 1. User picks a country
  * 2. Component fetches the list of banks from /banking/banks (with logos)
  * 3. User picks a bank → POST /banking/connect → redirected to bank login
- * 4. After bank consent, the app URL gets ?ref={state} and WealthlyApp
+ * 4. After bank consent, the app URL gets ?ref={state} and YotoriApp
  *    detects it + polls /banking/complete to finalise.
  *
  * Design « Forêt » — pas d'emoji structurel, logos de banque, états clairs.
@@ -85,11 +85,11 @@ export function BankConnectModal({ onClose }) {
         <div className="bcm-body">
           <div className="bcm-secure">
             <ShieldCheck size={18}/>
-            <span>Connexion sécurisée via <strong>GoCardless</strong> (DSP2). Tes identifiants restent sur le site de ta banque — Wealthly ne les voit jamais.</span>
+            <span>Connexion sécurisée via <strong>GoCardless</strong> (DSP2). Vos identifiants restent sur le site de votre banque — Yotori Finance ne les voit jamais.</span>
           </div>
 
           <label className="bcm-field">
-            <span className="bcm-label">Pays de ta banque</span>
+            <span className="bcm-label">Pays de votre banque</span>
             <select className="bcm-select" value={country} onChange={(e) => setCountry(e.target.value)}>
               {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
             </select>
@@ -111,7 +111,7 @@ export function BankConnectModal({ onClose }) {
           <div className="bcm-search">
             <Search size={15}/>
             <input
-              placeholder="Chercher ta banque…"
+              placeholder="Chercher votre banque…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               autoFocus

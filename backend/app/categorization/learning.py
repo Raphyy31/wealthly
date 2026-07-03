@@ -26,7 +26,7 @@ def on_transaction_recategorized(
 
     Retourne un dict {rule_id, payee_name, category_name, matchable_count}
     si une règle apprise vient d'être créée OU mise à jour — sinon None.
-    Le dict alimente le toast UI 'Wealthly a appris X → Y' + le bouton
+    Le dict alimente le toast UI 'Yotori Finance a appris X → Y' + le bouton
     'Appliquer aux N transactions historiques'.
     """
     if tx.payee_id is None:

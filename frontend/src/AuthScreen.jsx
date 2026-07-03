@@ -1,5 +1,5 @@
 // ============================================================================
-// AuthScreen — Wealthly v3 (Claude Design)
+// AuthScreen — Yotori Finance v3 (Claude Design)
 //
 // Même vocabulaire que la Landing magazine : top strip + masthead serif
 // + carte formulaire sobre. Papier chaud, cobalt rare, Newsreader pour
@@ -54,7 +54,7 @@ export default function AuthScreen({ onAuth, onTryDemo, onBackToLanding, initial
     document.documentElement.setAttribute('data-theme', 'light');
     return () => {
       let stored = 'light';
-      try { const s = localStorage.getItem('wealthly-theme'); if (s === 'light' || s === 'dark') stored = s; } catch {}
+      try { const s = localStorage.getItem('yotori-theme'); if (s === 'light' || s === 'dark') stored = s; } catch {}
       document.documentElement.setAttribute('data-theme', stored);
     };
   }, []);
@@ -344,7 +344,7 @@ export default function AuthScreen({ onAuth, onTryDemo, onBackToLanding, initial
 
         {/* COLOPHON */}
         <div className="auth-colophon">
-          <span>© {new Date().getFullYear()} Wealthly</span>
+          <span>© {new Date().getFullYear()} Yotori Finance</span>
           <span className="auth-legal">
             <button onClick={() => setLegal('cgu')}>{t('auth.legalTerms')}</button>
             <button onClick={() => setLegal('privacy')}>{t('auth.legalPrivacy')}</button>

@@ -14,11 +14,14 @@ backend/.env
 *.db
 *.sqlite
 *.sqlite3
-backend/wealthly.db
+backend/yotori.db
 
 # =============================================================================
-# Backups Wealthly (peuvent contenir des données financières)
+# Backups Yotori Finance (peuvent contenir des données financières)
 # =============================================================================
+yotori-backup-*.json
+# Legacy pré-rebranding : d'anciens exports wealthly-backup-*.json peuvent
+# encore exister en local — on continue de les ignorer
 wealthly-backup-*.json
 backups/
 

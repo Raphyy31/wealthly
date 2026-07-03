@@ -1,5 +1,5 @@
 """
-Wealthly API — main entry point.
+Yotori Finance API — main entry point.
 
 Run locally: uvicorn app.main:app --reload --port 8000
 Docs available at http://localhost:8000/docs
@@ -29,7 +29,7 @@ from app.database import engine, Base
 from app.rate_limit import limiter, rate_limit_handler
 from app.routers import auth, members, accounts, transactions, wealth, other, categorize, banking, admin, quotes, fixed_charges, dca, ref_month, payees, totp, planned_events, documents, insights, notifications, reports
 
-logger = logging.getLogger("wealthly")
+logger = logging.getLogger("yotori")
 
 # Create tables on startup. New tables are picked up automatically; ALTER TABLE
 # for new columns on existing tables must be run manually below — SQLAlchemy's
@@ -190,7 +190,7 @@ def _run_lightweight_migrations() -> None:
             "ALTER TABLE fixed_charges ADD COLUMN IF NOT EXISTS kind VARCHAR NOT NULL DEFAULT 'expense'",
             "CREATE INDEX IF NOT EXISTS ix_fixed_charges_kind ON fixed_charges (kind)",
             # Account source + external_id — lets the GoCardless sync re-find
-            # the same Wealthly account on subsequent runs (avoid duplicates).
+            # the same Yotori Finance account on subsequent runs (avoid duplicates).
             "ALTER TABLE accounts ADD COLUMN IF NOT EXISTS source VARCHAR NOT NULL DEFAULT 'manual'",
             "ALTER TABLE accounts ADD COLUMN IF NOT EXISTS external_id VARCHAR",
             "CREATE INDEX IF NOT EXISTS ix_accounts_source ON accounts (source)",

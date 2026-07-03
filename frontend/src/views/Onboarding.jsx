@@ -63,23 +63,23 @@ export function Onboarding({ onComplete }) {
         {step === 0 && (
           <div className="onboarding-step-content ob-welcome">
             <div className="ob-welcome-logo"><Logo size={48}/></div>
-            <h1>Tout ton argent, <em>au même endroit.</em></h1>
+            <h1>Tout votre argent, <em>au même endroit.</em></h1>
             <p className="onboarding-lead">
               Comptes, placements, immobilier, dépenses — consolidés.
-              Et Wealthly te montre <strong>où tu peux économiser</strong>.
+              Et Yotori Finance vous montre <strong>où vous pouvez économiser</strong>.
             </p>
             <div className="ob-value-list">
               <div className="ob-value-row">
                 <span className="ob-value-ic"><Wallet size={18}/></span>
-                <span>Toutes tes banques en une vue famille</span>
+                <span>Toutes vos banques en une vue famille</span>
               </div>
               <div className="ob-value-row">
                 <span className="ob-value-ic"><Repeat size={18}/></span>
-                <span>Tes abonnements traqués, les économies chiffrées</span>
+                <span>Vos abonnements traqués, les économies chiffrées</span>
               </div>
               <div className="ob-value-row">
                 <span className="ob-value-ic"><ShieldCheck size={18}/></span>
-                <span>Privé et sécurisé — tes données restent tiennes</span>
+                <span>Privé et sécurisé — vos données restent les vôtres</span>
               </div>
             </div>
             <MagneticButton className="ds-btn primary lg" onClick={() => setStep(1)}>
@@ -102,7 +102,7 @@ export function Onboarding({ onComplete }) {
                       <span className="member-preview-name">{m.name}</span>
                       <span className="member-preview-role">{m.role === 'adult' ? 'Adulte' : 'Enfant'}</span>
                     </div>
-                    <button className="icon-btn-sm" onClick={() => removeMember(m.id)}><X size={14}/></button>
+                    <button className="icon-btn-sm" onClick={() => removeMember(m.id)} aria-label={`Retirer ${m.name}`} title="Retirer"><X size={14}/></button>
                   </div>
                 ))}
               </div>
@@ -119,7 +119,7 @@ export function Onboarding({ onComplete }) {
                   { value: 'child', label: 'Enfant' },
                 ]}
               />
-              <button className="ds-btn primary" onClick={addMember}><Plus size={14}/></button>
+              <button className="ds-btn primary" onClick={addMember} aria-label="Ajouter ce membre" title="Ajouter ce membre"><Plus size={14}/></button>
             </div>
 
             <div className="ob-tip">
@@ -137,8 +137,8 @@ export function Onboarding({ onComplete }) {
         {step === 2 && (
           <div className="onboarding-step-content ob-launch">
             <div className="ready-icon"><Check size={26} strokeWidth={2.4}/></div>
-            <h2>Ton foyer est <em>prêt</em>.</h2>
-            <p className="onboarding-lead">Une dernière chose pour voir Wealthly prendre vie :</p>
+            <h2>Votre foyer est <em>prêt</em>.</h2>
+            <p className="onboarding-lead">Une dernière chose pour voir Yotori Finance prendre vie :</p>
 
             <div className="ob-launch-cards">
               <button
@@ -152,7 +152,7 @@ export function Onboarding({ onComplete }) {
                     Importer un relevé bancaire
                     <span className="ob-launch-badge">recommandé</span>
                   </span>
-                  <span className="ob-launch-sub">CSV Revolut, Crédit Agricole, Boursorama… → ton tableau de bord se remplit d'un coup</span>
+                  <span className="ob-launch-sub">CSV Revolut, Crédit Agricole, Boursorama… → votre tableau de bord se remplit d'un coup</span>
                 </span>
                 {completing === 'import' ? <Loader2 size={18} className="spin"/> : <ArrowRight size={18} className="ob-launch-arrow"/>}
               </button>
@@ -174,7 +174,7 @@ export function Onboarding({ onComplete }) {
             <div className="ob-launch-foot">
               <button className="ds-btn" onClick={() => setStep(1)} disabled={!!completing}><ChevronLeft size={14}/> Retour</button>
               <button className="ob-launch-later" onClick={() => finish()} disabled={!!completing}>
-                {completing === 'later' ? <><Loader2 size={14} className="spin"/> Entrée…</> : 'Plus tard, entrer dans Wealthly'}
+                {completing === 'later' ? <><Loader2 size={14} className="spin"/> Entrée…</> : 'Plus tard, entrer dans Yotori Finance'}
               </button>
             </div>
           </div>

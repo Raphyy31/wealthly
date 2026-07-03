@@ -1,14 +1,49 @@
 /* ============================================================================
-   Wealthly Landing v4 — fusion landing + démo auto-play
-   Charte « Forêt » SOMBRE — cohérente avec FilmHero (#0a0e08 + émeraude
-   #41D49B). La landing entière (hero film + page détails) est dark pour
-   éviter la rupture jarring dark→light quand on clique « Découvrir ».
+   Yotori Finance Landing v4 — fusion landing + démo auto-play
+   Charte « Forêt » CLAIRE (2026-07-03) — alignée sur les tokens light de
+   l'app (index.css). Plus aucun thème forcé : le dark n'existe que si
+   l'utilisateur l'a choisi via le toggle de l'app (data-theme="dark").
    ============================================================================ */
-/* Tokens scopés à `.landing-dark` (wrapper de Details.jsx) — JAMAIS sur
+/* Tokens scopés à `.landing-shell` (wrapper de Details.jsx) — JAMAIS sur
    `:root`, sinon ils fuiteraient dans l'app (CSS reste chargé après avoir
-   quitté la landing → le mode clair de l'app virerait au sombre). La classe
-   wrapper bat `:root` par proximité dans la cascade des custom properties. */
-.landing-dark {
+   quitté la landing). La classe wrapper bat `:root` par proximité dans la
+   cascade des custom properties. Valeurs = miroir du light d'index.css. */
+.landing-shell {
+  --bg: #F7F9F6;
+  --bg-elev: #FFFFFF;
+  --bg-sunk: #EEF1ED;
+  --bg-hover: #E8ECE6;
+
+  --ink: #0C0F0B;
+  --ink-2: #545B4F;
+  --ink-3: #878E7C;
+  --ink-mute: #AEB4A6;
+
+  --accent: #0E7C56;
+  --accent-2: #0A5E41;
+  --accent-soft: rgba(14, 124, 86, 0.10);
+  --accent-line: rgba(14, 124, 86, 0.28);
+
+  --positive: #0C7349;
+  --positive-soft: rgba(12, 115, 73, 0.12);
+  --negative: #B23E29;
+  --negative-soft: rgba(178, 62, 41, 0.12);
+  --ocre: #856017;
+
+  --border: #E2E6DF;
+  --border-strong: #D1D6CC;
+
+  --font-sans: 'Geist', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
+  --font-serif: 'Geist', system-ui, sans-serif;
+
+  background: #F7F9F6;
+  color: var(--ink);
+  min-height: 100vh;
+}
+/* Dark opt-in : quand l'utilisateur a explicitement choisi le thème sombre
+   dans l'app, la landing suit (tokens dark Forêt, ex-défaut). */
+:root[data-theme="dark"] .landing-shell {
   --bg: #0a0e08;
   --bg-elev: #12180F;
   --bg-sunk: #070a06;
@@ -33,17 +68,11 @@
   --border: #232A1F;
   --border-strong: #313A2D;
 
-  --font-sans: 'Geist', system-ui, -apple-system, sans-serif;
-  --font-mono: 'Geist Mono', ui-monospace, monospace;
-  --font-serif: 'Geist', system-ui, sans-serif;
-
   background: #0a0e08;
-  color: var(--ink);
-  min-height: 100vh;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
-.landing-dark {
+.landing-shell {
   font-family: var(--font-sans);
   font-feature-settings: 'ss01', 'cv11';
   -webkit-font-smoothing: antialiased;
@@ -65,7 +94,8 @@ a { color: inherit; text-decoration: none; }
 }
 .page-sink {
   position: fixed; inset: auto 0 0 0; height: 280px; pointer-events: none; z-index: 1;
-  background: linear-gradient(to top, rgba(10, 14, 8,0.65), transparent);
+  /* Fade bas de page vers le fond courant (token) — marche en light ET dark. */
+  background: linear-gradient(to top, color-mix(in srgb, var(--bg) 75%, transparent), transparent);
 }
 
 /* ====================================================================
@@ -78,7 +108,7 @@ a { color: inherit; text-decoration: none; }
   border-bottom: 1px solid transparent;
 }
 .strip.scrolled {
-  background: rgba(10, 14, 8,0.72);
+  background: color-mix(in srgb, var(--bg) 78%, transparent);
   backdrop-filter: blur(14px) saturate(150%);
   -webkit-backdrop-filter: blur(14px) saturate(150%);
   border-bottom-color: var(--border);
@@ -104,7 +134,9 @@ a { color: inherit; text-decoration: none; }
   content: ""; position: absolute;
   top: 50%; left: 50%; transform: translate(-50%, -50%);
   width: 9px; height: 9px; border-radius: 2px;
-  background: #0a0e08;
+  /* Carré intérieur du logo : couleur de MARQUE fixe (identique light/dark,
+     cf. Logo.jsx DARK = #0c1009) — ne PAS tokeniser. */
+  background: #0c1009;
 }
 .strip-mark-word { font: 500 13px/1 var(--font-sans); letter-spacing: -0.005em; text-transform: none; color: var(--ink); }
 .strip-actions { display: flex; align-items: center; gap: 18px; }

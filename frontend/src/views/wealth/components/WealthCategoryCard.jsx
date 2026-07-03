@@ -34,7 +34,7 @@ const TOP_N_BY_DEFAULT = 3;
 
 // localStorage : on garde l'état déplié/replié de chaque classe pour ne pas
 // repartir tout fermé à chaque visite. Clé par catégorie.
-const OPEN_LS_KEY = 'wealthly:wcOpen';
+const OPEN_LS_KEY = 'yotori:wcOpen';
 function readOpenMap() {
   try { return JSON.parse(localStorage.getItem(OPEN_LS_KEY) || '{}') || {}; } catch { return {}; }
 }

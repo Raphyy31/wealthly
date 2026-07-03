@@ -4,7 +4,7 @@
 // Flux :
 //   1. upload  : drop zone, accepte CSV / XLS / XLSX
 //   2. mapping : si l'auto-détection est incomplète, l'utilisateur associe
-//                les colonnes du fichier aux champs Wealthly (Nom, ISIN,
+//                les colonnes du fichier aux champs Yotori Finance (Nom, ISIN,
 //                Quantité, Prix de revient, Cours, Valeur). Possibilité de
 //                mémoriser le mapping pour la prochaine importation depuis
 //                la même banque (signature des headers en localStorage).
@@ -125,14 +125,14 @@ export function ImportPositionsModal({ parentAsset, fmt, onConfirm, onClose }) {
                 onChange={e => e.target.files[0] && handleFile(e.target.files[0])}
               />
               <Upload size={32}/>
-              <p className="ipv3-drop-title">Sélectionne ton fichier</p>
+              <p className="ipv3-drop-title">Sélectionnez votre fichier</p>
               <p className="ipv3-drop-sub">CSV (séparateur <code>;</code> ou <code>,</code>) · XLSX · XLS</p>
             </label>
 
             <div className="ipv3-info">
               <strong>Banques détectées automatiquement :</strong> Boursorama, Bourse Direct, BNP, Crédit Agricole, Société Générale, Trade Republic, Saxo, IBKR et toutes celles dont les colonnes contiennent <code>ISIN</code>, <code>Quantité</code>, <code>Cours</code> ou <code>Valeur</code>.
               <br/><br/>
-              Pour les autres formats, tu pourras associer les colonnes manuellement à l'étape suivante. Le mapping est mémorisé pour les imports futurs.
+              Pour les autres formats, vous pourrez associer les colonnes manuellement à l'étape suivante. Le mapping est mémorisé pour les imports futurs.
             </div>
 
             {error && (
@@ -145,8 +145,8 @@ export function ImportPositionsModal({ parentAsset, fmt, onConfirm, onClose }) {
           <div className="ipv3-body">
             <p className="ipv3-banner">
               {fromLearned
-                ? "Mapping appris lors d'un import précédent. Tu peux ajuster si besoin."
-                : "Format non reconnu automatiquement. Associe chaque champ Wealthly à la colonne correspondante de ton fichier."}
+                ? "Mapping appris lors d'un import précédent. Vous pouvez ajuster si besoin."
+                : "Format non reconnu automatiquement. Associez chaque champ Yotori Finance à la colonne correspondante de votre fichier."}
             </p>
 
             <div className="ipv3-map-grid">

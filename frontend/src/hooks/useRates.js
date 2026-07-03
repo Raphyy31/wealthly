@@ -13,7 +13,7 @@
 // ============================================================================
 import { useEffect, useState, useRef } from 'react';
 
-const CACHE_KEY = 'wealthly:fx-rates';
+const CACHE_KEY = 'yotori:fx-rates';
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 const PRIMARY = 'https://open.er-api.com/v6/latest/EUR';
 const FALLBACK = 'https://api.frankfurter.app/latest?from=EUR&to=USD,GBP,CHF';

@@ -1,68 +1,37 @@
 """
 AI-powered transaction categorization endpoint.
 
-POST /categorize
+POST /categorize — refonte « moteur unique » (2026-07-03) :
   - Accepts a list of {label, amount} transactions
-  - Tries to match each label against the household's custom regex rules first
-  - Falls back to Claude Haiku for unmatched transactions
-  - Returns {label -> category_slug} mapping
-  - Gracefully returns "uncategorized" for all if ANTHROPIC_API_KEY is not set
+  - Chaque libellé passe D'ABORD par le moteur canonique
+    `app.categorization.categorize_transaction` (normalisation du libellé +
+    règles user → payees → règles apprises → ~120 règles builtin) — la même
+    résolution que l'import CSV, la sync bancaire et la saisie manuelle.
+    Plus AUCUNE liste de regex dupliquée ici.
+  - Les libellés non résolus partent en batch vers un LLM — provider au
+    choix : Anthropic (Claude Haiku) ou OpenAI (gpt-4o-mini par défaut),
+    sélection via AI_PROVIDER ("auto" = Anthropic si clé posée, sinon OpenAI).
+    Le prompt reçoit le marchand NORMALISÉ en indice (meilleure précision,
+    moins de tokens).
+  - Returns {label -> category_slug} + {label -> source} (user_rule /
+    payee_default / learned_rule / builtin_rule / llm) pour que le client
+    sache quoi persister : les résultats moteur sont re-résolus serveur à
+    l'insertion, seuls les résultats LLM doivent voyager en category_slug.
+  - Gracefully returns "uncategorized" for all if no provider key is set
 """
 import json
-import re
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.auth import get_current_user
-from app.models import User, CategorisationRule, Category
+from app.models import User, Category
 from app.config import settings
 from app.rate_limit import limiter
+from app.categorization import categorize_transaction, normalize_label
 
 router = APIRouter(prefix="/categorize", tags=["categorize"])
-
-# Default regex rules mirroring the frontend DEFAULT_RULES
-_DEFAULT_RULES = [
-    (r"carrefour|leclerc|lidl|auchan|monoprix|franprix|intermarch|casino|super u|biocoop|naturalia", "groceries"),
-    (r"uber eats|deliveroo|just eat|mcdonald|burger king|kfc|subway|starbucks|paul |brioche dor|krispy kreme", "restaurants"),
-    (r"restaurant|brasserie|bistrot|pizzeria|sushi|kebab|tacos|pizza", "restaurants"),
-    # Subscriptions — streaming, gym, app stores, tools (volontairement large)
-    (r"netflix|spotify|disney|prime video|deezer|youtube|canal\+|salto|paramount|hbo|apple tv|apple music|soundcloud|tidal|qobuz|napster|molotov|olarc", "subscriptions"),
-    (r"apple\.com/bill|app store|appstore|itunes|google play|playstore|google\*|microsoft store|xbox|playstation|nintendo|steam|epic games|ea games|ubisoft", "subscriptions"),
-    (r"icloud|google one|dropbox|microsoft 365|office 365|adobe|github|notion|linear|canva|figma|evernote|lastpass|1password|nordvpn|expressvpn|surfshark|proton ", "subscriptions"),
-    (r"basic-?fit|basic fit|fitness park|anytime fitness|on air fitness|l'orange bleue|neoness|magic form|keepcool|club med gym|elancia|gigafit|fit\\s*[24]|cmg sports", "subscriptions"),
-    (r"hellofresh|hello fresh|quitoque|gousto|kitchen daily|frichti|gigamic|abonnement", "subscriptions"),
-    (r"le monde|le figaro|liberation|mediapart|les echos|l.equipe|la croix|le point|nouvel obs|lemag|la presse", "subscriptions"),
-    (r"sfr|orange|free mobile|bouygues|red by sfr|sosh|prixtel", "utilities"),
-    (r"edf |engie|total energies|enedis|grdf|veolia|suez", "utilities"),
-    (r"loyer|location|fonciere|syndic|charges copro", "housing"),
-    (r"maaf|axa|maif|matmut|generali|allianz|groupama|gan |mma ", "insurance"),
-    (r"sncf|ratp|navigo|blablacar|flixbus|ouigo|trainline|tgv inoui", "transport"),
-    (r"uber(?!\s*eats)|bolt|free now|heetch|kapten", "transport"),
-    (r"total |shell|esso |bp |carbur", "fuel"),
-    (r"pharmacie|doctolib|mutuelle|hopital|laboratoire|opticien|dentiste", "health"),
-    (r"amazon|cdiscount|fnac|darty|leroy merlin|castorama|ikea|but |conforama", "shopping"),
-    (r"zalando|asos|h&m|zara|uniqlo|decathlon|sephora|nocibe|sport2000", "shopping"),
-    (r"cinema|ugc|pathe|gaumont|theatre|concert|fnac spectacles|ticketmaster", "leisure"),
-    (r"booking|airbnb|hotel|hotels\.com|expedia|ryanair|easyjet|air france|transavia", "travel"),
-    (r"salaire|virement employeur|paie ", "salary"),
-    (r"impot|tresor public|dgfip|taxe foncier|taxe habitation|cfe ", "taxes"),
-    (r"retrait|dab |distributeur", "cash"),
-    (r"virement.*compte|epargne|livret a|ldds|pel |pee |per ", "savings"),
-    (r"pea |bourse|action |etf ", "investment"),
-    (r"commission|frais|cotisation carte|agios", "fees"),
-    (r"ecole|creche|nounou|assistante mater|cantine|periscolaire", "children"),
-    (r"cultura|udemy|coursera|formation", "education"),
-    # Generic virements — must be LAST so more specific rules above
-    # (salary, savings, investment) win first.
-    (
-        r"virement (re[cç]u de|de la part de|en faveur de|au profit de|à |a |internet|sepa|instantan|inst |ordinaire|external|familial|interne)"
-        r"|virement\s+\w+|^vir\.?\s|prelevement.*virement|annulation virement",
-        "transfer",
-    ),
-]
-
 
 class TxInput(BaseModel):
     label: str
@@ -75,17 +44,32 @@ class CategorizeRequest(BaseModel):
 
 class CategorizeResponse(BaseModel):
     results: dict[str, str]   # label -> category_slug
+    # label -> source de résolution ('user_rule' | 'payee_default' |
+    # 'learned_rule' | 'builtin_rule' | 'llm' | 'transfer'). Additif —
+    # les clients existants qui ne lisent que `results` restent valides.
+    sources: dict[str, str] = {}
     ai_used: bool
     ai_available: bool
 
 
-def _apply_regex_rules(label: str, rules: list) -> str | None:
-    for rule in rules:
-        try:
-            if re.search(rule.pattern, label, re.IGNORECASE):
-                return rule.category_slug
-        except re.error:
-            continue
+def _ai_provider() -> str | None:
+    """Résout le provider LLM effectif selon AI_PROVIDER + clés posées.
+
+    "auto" (défaut) : Anthropic prioritaire (comportement historique), sinon
+    OpenAI si sa clé est présente. Forcer "anthropic"/"openai" ne bascule
+    JAMAIS silencieusement sur l'autre — sans clé, l'IA est indisponible
+    (fallback déterministe "uncategorized", comme avant).
+    """
+    pref = settings.AI_PROVIDER
+    if pref == "anthropic":
+        return "anthropic" if settings.ANTHROPIC_API_KEY else None
+    if pref == "openai":
+        return "openai" if settings.OPENAI_API_KEY else None
+    # auto
+    if settings.ANTHROPIC_API_KEY:
+        return "anthropic"
+    if settings.OPENAI_API_KEY:
+        return "openai"
     return None
 
 
@@ -98,54 +82,59 @@ def categorize(
     db: Session = Depends(get_db),
 ):
     if not payload.transactions:
-        return CategorizeResponse(results={}, ai_used=False, ai_available=bool(settings.ANTHROPIC_API_KEY))
+        return CategorizeResponse(results={}, sources={}, ai_used=False, ai_available=_ai_provider() is not None)
 
-    # Fetch household's custom regex rules
-    custom_rules = db.query(CategorisationRule).filter(
-        CategorisationRule.household_id == current_user.household_id
-    ).all()
-
-    # Fetch valid category slugs for this household
-    valid_slugs = {c.slug for c in db.query(Category).filter(
+    # Catégories du foyer : slugs valides (garde-fou LLM) + noms lisibles
+    # pour construire un prompt fidèle au paramétrage réel (sous-catégories
+    # custom incluses), plutôt qu'un catalogue figé.
+    _cats = db.query(Category).filter(
         Category.household_id == current_user.household_id
-    ).all()}
+    ).all()
+    valid_slugs = {c.slug for c in _cats}
+    slug_names = {c.slug: c.name for c in _cats}
 
     results: dict[str, str] = {}
+    sources: dict[str, str] = {}
     unmatched: list[TxInput] = []
 
-    # Pass 1a: apply built-in default regex rules
+    # ── Pass 1 : moteur canonique (normalize → user rules → payees →
+    # learned → builtin). Une seule source de vérité, identique à l'import
+    # CSV / la sync / la saisie manuelle. Dédoublonne par libellé (un CSV
+    # contient souvent 30× « NETFLIX.COM ») pour ne résoudre qu'une fois.
+    seen: dict[str, TxInput] = {}
     for tx in payload.transactions:
-        matched = False
-        for pattern, slug in _DEFAULT_RULES:
-            try:
-                if re.search(pattern, tx.label, re.IGNORECASE) and slug in valid_slugs:
-                    results[tx.label] = slug
-                    matched = True
-                    break
-            except re.error:
-                continue
-        if not matched:
+        seen.setdefault(tx.label, tx)
+
+    for label, tx in seen.items():
+        result = categorize_transaction(
+            label=label, amount=tx.amount,
+            household_id=current_user.household_id, db=db,
+        )
+        if result.is_transfer:
+            # Contrat historique de l'endpoint : 'transfer' est un slug
+            # spécial que le client transforme en flag virement interne.
+            results[label] = "transfer"
+            sources[label] = result.source
+        elif result.slug and result.slug in valid_slugs:
+            results[label] = result.slug
+            sources[label] = result.source
+        else:
             unmatched.append(tx)
 
-    # Pass 1b: apply custom household regex rules on still-unmatched
-    still_unmatched = []
-    for tx in unmatched:
-        slug = _apply_regex_rules(tx.label, custom_rules)
-        if slug and slug in valid_slugs:
-            results[tx.label] = slug
-        else:
-            still_unmatched.append(tx)
-    unmatched = still_unmatched
-
     ai_used = False
-    ai_available = bool(settings.ANTHROPIC_API_KEY)
+    provider = _ai_provider()
+    ai_available = provider is not None
 
-    # Pass 2: Claude Haiku for unmatched — bloqué si plafond mensuel atteint.
+    # ── Pass 2 : LLM (Claude Haiku ou OpenAI) pour les libellés que le
+    # moteur ne résout pas — bloqué si plafond mensuel atteint. Le plafond
+    # ai_budget s'applique quel que soit le provider.
     from app.services.ai_budget import under_cap, record_use
-    if unmatched and settings.ANTHROPIC_API_KEY and under_cap(db, current_user.household_id):
+    if unmatched and provider and under_cap(db, current_user.household_id):
         try:
-            ai_results = _categorize_with_claude(unmatched, list(valid_slugs))
-            results.update(ai_results)
+            ai_results = _categorize_with_ai(provider, unmatched, list(valid_slugs), slug_names)
+            for label, slug in ai_results.items():
+                results[label] = slug
+                sources[label] = "llm"
             ai_used = True
             record_use(db, current_user.household_id)
         except Exception:
@@ -158,15 +147,17 @@ def categorize(
             if tx.label not in results:
                 results[tx.label] = "uncategorized"
 
-    return CategorizeResponse(results=results, ai_used=ai_used, ai_available=ai_available)
+    # Le moteur crée des payees à la volée (db.flush) pendant la résolution
+    # builtin — on les persiste pour que les prochaines résolutions (et la
+    # couche learning) s'appuient dessus.
+    db.commit()
+
+    return CategorizeResponse(results=results, sources=sources, ai_used=ai_used, ai_available=ai_available)
 
 
-def _categorize_with_claude(transactions: list[TxInput], valid_slugs: list[str]) -> dict[str, str]:
-    import anthropic
-
-    client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-
-    # Build a readable slug list with friendly names for the prompt
+def _build_prompt(transactions: list[TxInput], valid_slugs: list[str], slug_names: dict[str, str] | None = None) -> str:
+    # Descriptions riches pour les slugs standards ; les catégories custom du
+    # foyer tombent sur leur nom lisible (slug_names, depuis la DB).
     slug_descriptions = {
         "salary": "salaire / revenu employeur",
         "invest_income": "revenus financiers / dividendes",
@@ -194,47 +185,96 @@ def _categorize_with_claude(transactions: list[TxInput], valid_slugs: list[str])
         "uncategorized": "non catégorisé / autre",
     }
 
+    names = slug_names or {}
     categories_desc = "\n".join(
-        f"- {slug}: {slug_descriptions.get(slug, slug)}"
-        for slug in valid_slugs
-        if slug in slug_descriptions
+        f"- {slug}: {slug_descriptions.get(slug, names.get(slug, slug))}"
+        for slug in sorted(valid_slugs)
     )
 
-    tx_lines = "\n".join(
-        f'{i+1}. "{tx.label}" ({tx.amount:+.2f}€)'
-        for i, tx in enumerate(transactions)
-    )
+    def _line(i: int, tx: TxInput) -> str:
+        # Indice « marchand normalisé » : libellé nettoyé des préfixes carte /
+        # dates / références SEPA par le même normalizer que le moteur. Aide
+        # le modèle sans changer le contrat (les clés restent les libellés bruts).
+        try:
+            merchant = normalize_label(tx.label).merchant
+        except Exception:
+            merchant = ""
+        hint = f' [marchand: {merchant}]' if merchant and merchant.strip().lower() != tx.label.strip().lower() else ""
+        return f'{i+1}. "{tx.label}" ({tx.amount:+.2f}€){hint}'
 
-    prompt = f"""Tu es un assistant de catégorisation bancaire pour des relevés français.
+    tx_lines = "\n".join(_line(i, tx) for i, tx in enumerate(transactions))
+
+    return f"""Tu es un assistant de catégorisation bancaire pour des relevés français.
 
 Catégories disponibles :
 {categories_desc}
 
-Transactions à catégoriser :
+Transactions à catégoriser (l'indice [marchand: …] est le libellé nettoyé, utilise-le pour identifier l'enseigne) :
 {tx_lines}
 
-Réponds UNIQUEMENT avec un objet JSON valide dont les clés sont les libellés exacts des transactions et les valeurs sont les slugs de catégorie.
+Réponds UNIQUEMENT avec un objet JSON valide dont les clés sont les libellés BRUTS exacts des transactions (sans l'indice marchand) et les valeurs sont les slugs de catégorie.
 Exemple : {{"SOHO PIZZA": "restaurants", "SNCF INTERNET": "transport"}}
 Ne fournis aucune explication, uniquement le JSON."""
 
-    message = client.messages.create(
-        model=settings.AI_MODEL_CATEGORIZE,
-        max_tokens=1024,
-        messages=[{"role": "user", "content": prompt}],
-    )
 
-    raw = message.content[0].text.strip()
-    # Extract JSON even if wrapped in markdown code fences
+def _parse_ai_json(raw: str, valid_slugs: list[str]) -> dict[str, str]:
+    """JSON → mapping validé. Tolère les code fences markdown (Claude sans
+    json-mode) ; ne garde que les slugs réellement valides pour le foyer."""
+    raw = raw.strip()
     if "```" in raw:
         raw = raw.split("```")[1]
         if raw.startswith("json"):
             raw = raw[4:]
-
     ai_map: dict = json.loads(raw)
-
-    # Validate: only keep results with valid slugs
     return {
         label: slug
         for label, slug in ai_map.items()
         if slug in valid_slugs
     }
+
+
+def _categorize_with_ai(provider: str, transactions: list[TxInput], valid_slugs: list[str], slug_names: dict[str, str] | None = None) -> dict[str, str]:
+    """Dispatch vers le provider choisi. Même prompt, même contrat JSON."""
+    prompt = _build_prompt(transactions, valid_slugs, slug_names)
+    if provider == "openai":
+        raw = _call_openai(prompt)
+    else:
+        raw = _call_anthropic(prompt)
+    return _parse_ai_json(raw, valid_slugs)
+
+
+def _call_anthropic(prompt: str) -> str:
+    import anthropic
+
+    client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+    message = client.messages.create(
+        model=settings.AI_MODEL_CATEGORIZE,
+        max_tokens=1024,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return message.content[0].text
+
+
+def _call_openai(prompt: str) -> str:
+    """Appel OpenAI via l'API REST chat/completions (httpx, déjà dépendance —
+    pas de SDK à installer). response_format=json_object force un JSON valide
+    (le prompt mentionne « JSON », prérequis du json-mode)."""
+    import httpx
+
+    resp = httpx.post(
+        "https://api.openai.com/v1/chat/completions",
+        headers={
+            "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "model": settings.AI_MODEL_CATEGORIZE_OPENAI,
+            "messages": [{"role": "user", "content": prompt}],
+            "max_completion_tokens": 1024,
+            "response_format": {"type": "json_object"},
+        },
+        timeout=30.0,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    return data["choices"][0]["message"]["content"]

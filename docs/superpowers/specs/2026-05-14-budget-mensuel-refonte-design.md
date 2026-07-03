@@ -5,7 +5,7 @@ Status : approved (brainstorm conversationnel)
 
 ## Contexte
 
-Aujourd'hui Wealthly a deux onglets distincts pour gérer le budget :
+Aujourd'hui Yotori Finance a deux onglets distincts pour gérer le budget :
 - **Suivi mensuel** (Monthly.jsx) — vue opérationnelle d'un mois donné
 - **Budgets** (Budgets.jsx) — vue stratégique avec méthode 50/30/20, plafonds par catégorie, objectifs d'épargne
 
@@ -35,7 +35,7 @@ Les deux font doublon en pratique. L'utilisateur veut une vue unique "Budget men
 - Nouveau composant `RefMonthSankey.jsx` (recharts Sankey)
 - Nouveau composant `FiftyThirtyTwentyModal.jsx`
 - `Budgets.jsx` supprimé
-- `Goals` retiré de WealthlyApp + Dashboard
+- `Goals` retiré de YotoriApp + Dashboard
 
 ## Structure de données `ref_month`
 
@@ -107,8 +107,8 @@ Les deux font doublon en pratique. L'utilisateur veut une vue unique "Budget men
 
 1. Migration alembic créant `users.ref_month` (JSON, nullable) — bien que `create_all` suffise pour les nouveaux
 2. Suppression de `Budgets.jsx`, route `'budgets'`, sidebar entry
-3. Suppression de `Goals` partout (WealthlyApp état + Dashboard cards + Budgets.jsx)
-4. `setBudget`/`budgets` état supprimé de WealthlyApp.jsx
+3. Suppression de `Goals` partout (YotoriApp état + Dashboard cards + Budgets.jsx)
+4. `setBudget`/`budgets` état supprimé de YotoriApp.jsx
 5. Localisation : nouvelles clés `dashboard.refMonth.*`, suppression clés `views.budgets.*`
 
 ## Hors scope

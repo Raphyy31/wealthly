@@ -13,7 +13,7 @@
 //                current: int, total: int } | null
 //     stage = 'connecting' | 'balance' | 'transactions' | 'success' | 'error'
 //
-// L'orchestration (mise a jour de status) est cote WealthlyApp via setSync.
+// L'orchestration (mise a jour de status) est cote YotoriApp via setSync.
 // ============================================================================
 import { useEffect, useRef } from 'react';
 import { RefreshCw, Check, AlertTriangle } from 'lucide-react';

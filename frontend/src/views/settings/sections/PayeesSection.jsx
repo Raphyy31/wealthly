@@ -196,7 +196,7 @@ export function PayeesSection({ categories, showToast }) {
       )}
 
       <p className="settings-footnote" style={{ marginTop: 14, fontSize: 11, color: 'var(--ink-3)' }}>
-        Tu peux fusionner deux marchands (variantes d'une même enseigne) via le bouton ⇆ — les transactions de la source sont réassignées à la cible.
+        Vous pouvez fusionner deux marchands (variantes d'une même enseigne) via le bouton ⇆ — les transactions de la source sont réassignées à la cible.
       </p>
     </section>
   );

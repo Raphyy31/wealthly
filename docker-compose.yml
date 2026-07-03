@@ -1,4 +1,4 @@
-# Wealthly — Self-hosted family finance tracker
+# Yotori Finance — Self-hosted family finance tracker
 # Lance toute la stack avec : docker compose up -d
 # Accès : http://localhost:3000
 
@@ -9,16 +9,16 @@ services:
   # --------------------------------------------------------------------------
   db:
     image: postgres:16-alpine
-    container_name: wealthly-db
+    container_name: yotori-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-wealthly}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wealthly}
-      POSTGRES_DB: ${POSTGRES_DB:-wealthly}
+      POSTGRES_USER: ${POSTGRES_USER:-yotori}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-yotori}
+      POSTGRES_DB: ${POSTGRES_DB:-yotori}
     volumes:
-      - wealthly_db_data:/var/lib/postgresql/data
+      - yotori_db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-wealthly}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-yotori}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -32,13 +32,13 @@ services:
   # --------------------------------------------------------------------------
   backend:
     build: ./backend
-    container_name: wealthly-backend
+    container_name: yotori-backend
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-wealthly}:${POSTGRES_PASSWORD:-wealthly}@db:5432/${POSTGRES_DB:-wealthly}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-yotori}:${POSTGRES_PASSWORD:-yotori}@db:5432/${POSTGRES_DB:-yotori}
       SECRET_KEY: ${SECRET_KEY:?SECRET_KEY must be set in .env}
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-10080}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
@@ -56,7 +56,7 @@ services:
       args:
         # Le frontend appelle /api (proxied par nginx) — pas besoin de modifier
         VITE_API_URL: /api
-    container_name: wealthly-frontend
+    container_name: yotori-frontend
     restart: unless-stopped
     depends_on:
       - backend
@@ -65,5 +65,5 @@ services:
 
 # Volume persistant pour Postgres
 volumes:
-  wealthly_db_data:
-    name: wealthly_db_data
+  yotori_db_data:
+    name: yotori_db_data

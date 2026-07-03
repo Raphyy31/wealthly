@@ -1,4 +1,4 @@
-// Details.jsx — Wealthly Landing v4 page détails (port ESM 2026-05-22)
+// Details.jsx — Yotori Finance Landing v4 page détails (port ESM 2026-05-22)
 // Bento-style: hero compact + grid de modules + pricing + faq grid + outro
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { gsap } from 'gsap';
@@ -23,8 +23,8 @@ function Strip() {
     <header className={`strip ${scrolled ? 'scrolled' : ''}`}>
       <div className="strip-inner">
         <a className="strip-mark" href="#" onClick={(e) => { e.preventDefault(); onShowCinematic?.(); }}>
-          <div className="strip-mark-glyph">w</div>
-          <div className="strip-mark-word">wealthly</div>
+          <div className="strip-mark-glyph">y</div>
+          <div className="strip-mark-word">yotori finance</div>
         </a>
         <div className="strip-actions">
           <button className="strip-link" onClick={onSignIn}>Se connecter</button>
@@ -67,7 +67,7 @@ function Hero() {
 
   return (
     <section className="d-hero">
-      <div className="d-hero-eye">— Wealthly · vue produit</div>
+      <div className="d-hero-eye">— Yotori Finance · vue produit</div>
       <h1 className="d-hero-h1" ref={h1Ref}>
         <span className="word">Votre</span>{' '}
         <span className="word">patrimoine,</span>{' '}
@@ -89,7 +89,7 @@ function HeroCta() {
   return (
     <>
       <button className="btn-primary" onClick={onSignUp}>
-        Essayer 14 jours
+        Créer mon compte
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
       </button>
       <a href="#" className="d-back-link" onClick={(e) => { e.preventDefault(); onShowCinematic?.(); }}>
@@ -260,7 +260,7 @@ function Pricing() {
 
       <p className="d-pricing-roi">
         Un abonnement oublié, un forfait surévalué, une assurance dormante —
-        Wealthly les repère pour vous. La première résiliation rembourse
+        Yotori Finance les repère pour vous. La première résiliation rembourse
         souvent l'année entière.
       </p>
 
@@ -282,7 +282,7 @@ function Pricing() {
             <div>Bilan patrimonial PDF mensuel</div>
           </div>
           <button className="d-price-cta primary" onClick={onSignUp}>
-            Essayer 14 jours
+            Créer mon compte
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
           </button>
         </div>
@@ -306,7 +306,7 @@ function Pricing() {
             <div>Support prioritaire</div>
           </div>
           <button className="d-price-cta primary" onClick={onSignUp}>
-            Essayer 14 jours
+            Créer mon compte
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
           </button>
         </div>
@@ -400,7 +400,7 @@ function OutroCta() {
   const { onSignUp } = React.useContext(DetailsCtx);
   return (
     <button className="d-outro-cta" onClick={onSignUp}>
-      Essayer Wealthly
+      Essayer Yotori Finance
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
     </button>
   );
@@ -413,7 +413,7 @@ function Colophon() {
   const { onSignIn } = React.useContext(DetailsCtx);
   return (
     <footer className="colophon">
-      <span>© 2026 Wealthly · Paris</span>
+      <span>© 2026 Yotori Finance · Paris</span>
       <span className="colophon-links">
         <a href="#">À propos</a>
         <a href="#">Sécurité</a>
@@ -430,7 +430,7 @@ function Colophon() {
 export default function Details({ onSignIn, onSignUp, onShowCinematic }) {
   return (
     <DetailsCtx.Provider value={{ onSignIn, onSignUp, onShowCinematic }}>
-      <div className="landing-dark">
+      <div className="landing-shell">
         <div className="page-grain" aria-hidden/>
         <div className="page-sink" aria-hidden/>
         <Strip/>

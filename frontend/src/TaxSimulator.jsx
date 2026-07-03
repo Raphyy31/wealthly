@@ -1,5 +1,5 @@
 /**
- * Wealthly — French income tax simulator (revenus 2025, déclaration 2026).
+ * Yotori Finance — French income tax simulator (revenus 2025, déclaration 2026).
  *
  * Supports two earners (with separate salary + bonus inputs), kids and
  * young children for the childcare credit, and CESU / home-employment
@@ -424,7 +424,7 @@ export default function TaxSimulator({ transactions = [] }) {
                   {fmtPct(result.finalTax / netTaxable, 1)}
                 </div>
                 <p className="mt-2 text-xs text-[var(--color-w-muted)]">
-                  Taux qu'il faudrait que ton employeur applique pour que le PAS couvre exactement l'impôt — ajustable sur impots.gouv.fr.
+                  Taux qu'il faudrait que votre employeur applique pour que le PAS couvre exactement l'impôt — ajustable sur impots.gouv.fr.
                 </p>
               </div>
             )}

@@ -1,7 +1,7 @@
 // ============================================================================
-// Wealthly — shared constants
+// Yotori Finance — shared constants
 //
-// Extracted from WealthlyApp.jsx during the L1 monolith split. Keep this file
+// Extracted from YotoriApp.jsx during the L1 monolith split. Keep this file
 // limited to data and lookup tables; React components and stateful helpers
 // belong elsewhere. Anything imported from lucide-react is already used as a
 // component reference downstream — don't replace icons with strings.
@@ -12,7 +12,7 @@ import {
   CreditCard, Banknote, Wallet,
 } from 'lucide-react';
 
-export const APP_NAME = 'Wealthly';
+export const APP_NAME = 'Yotori Finance';
 
 export const STORAGE_KEYS = {
   MEMBERS: 'w2:members',

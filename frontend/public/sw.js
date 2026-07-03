@@ -1,5 +1,5 @@
 /**
- * Wealthly service worker — minimal install/cache strategy.
+ * Yotori Finance service worker — minimal install/cache strategy.
  *
  * Goals:
  *  - Make the app installable as a PWA (Chrome/Safari).
@@ -15,9 +15,9 @@
 // to be served (e.g. after a long broken-build streak that the SW cached). The
 // `activate` handler below deletes every cache that doesn't end with this
 // version, so users get a clean slate on the next page load.
-const SW_VERSION = 'wealthly-v15-2026-06-30-moistype';
-const RUNTIME = `wealthly-runtime-${SW_VERSION}`;
-const SHELL = `wealthly-shell-${SW_VERSION}`;
+const SW_VERSION = 'yotori-v16-2026-07-03-rebrand';
+const RUNTIME = `yotori-runtime-${SW_VERSION}`;
+const SHELL = `yotori-shell-${SW_VERSION}`;
 const SHELL_ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/icon.svg', '/icon-maskable.svg'];
 
 self.addEventListener('install', (event) => {

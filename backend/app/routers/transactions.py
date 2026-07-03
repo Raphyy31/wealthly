@@ -140,7 +140,6 @@ def create_transaction(payload: TransactionCreate, db: Session = Depends(get_db)
     if not acc:
         raise HTTPException(status_code=400, detail="Compte invalide")
 
-    cat_id = _resolve_category_id(db, user.household_id, payload.category_slug)
     dedup = _make_dedup_hash(payload.account_id, payload.date, payload.amount, payload.label)
 
     # Reject duplicates
@@ -151,6 +150,25 @@ def create_transaction(payload: TransactionCreate, db: Session = Depends(get_db)
     if existing:
         raise HTTPException(status_code=409, detail="Transaction déjà existante (doublon)")
 
+    # Parité avec /transactions/import : sans catégorie fournie, la saisie
+    # manuelle passe par le moteur serveur (user rules → payees → learning →
+    # builtin) — mêmes règles quel que soit le canal d'entrée.
+    payee_id_resolved = None
+    cat_source = None
+    is_transfer_auto = payload.is_transfer_override
+    if payload.category_slug:
+        cat_id = _resolve_category_id(db, user.household_id, payload.category_slug)
+        cat_source = "user_rule" if payload.is_manual_category else None
+    else:
+        result = categorize_transaction(
+            label=payload.label, amount=payload.amount, household_id=user.household_id, db=db, date=payload.date,
+        )
+        cat_id = _resolve_category_id(db, user.household_id, result.slug) if result.slug else None
+        payee_id_resolved = result.payee_id
+        cat_source = result.source
+        if result.is_transfer and is_transfer_auto is None:
+            is_transfer_auto = True
+
     tx = Transaction(
         household_id=user.household_id,
         account_id=payload.account_id,
@@ -158,9 +176,11 @@ def create_transaction(payload: TransactionCreate, db: Session = Depends(get_db)
         label=payload.label,
         amount=payload.amount,
         category_id=cat_id,
+        payee_id=payee_id_resolved,
+        cat_source=cat_source,
         is_manual_category=payload.is_manual_category,
         is_recurring_override=payload.is_recurring_override,
-        is_transfer_override=payload.is_transfer_override,
+        is_transfer_override=is_transfer_auto,
         notes=payload.notes or "",
         tags=payload.tags or [],
         dedup_hash=dedup,

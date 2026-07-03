@@ -207,7 +207,7 @@ export function LiabilityDetail({ liability, assets, members, memberShare, fmt, 
                     {furnitureFees > 0 && <div className="loan-pl-card-detail muted"><span>− Mobilier</span><span className="w-num">{fmt(furnitureFees)}</span></div>}
                   </div>
                 </div>
-                <p className="loan-pl-footnote"><strong>Brute</strong> reflète la performance courante sur le marché. <strong>Nette</strong> sera la base imposable si tu vends — frais de notaire, d'agence et travaux justifiés se déduisent à la cession.</p>
+                <p className="loan-pl-footnote"><strong>Brute</strong> reflète la performance courante sur le marché. <strong>Nette</strong> sera la base imposable si vous vendez — frais de notaire, d'agence et travaux justifiés se déduisent à la cession.</p>
               </div>
             );
           })()}

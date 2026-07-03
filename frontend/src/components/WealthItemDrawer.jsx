@@ -3,7 +3,7 @@
 // Drawer détail unifié pour un WealthItem. 880px de large, ouvert au clic
 // d'une ligne dans la vue Patrimoine. Contenu adaptatif selon le subtype.
 //
-// Sections (eyebrow § NN cohérent avec le design system Wealthly v3) :
+// Sections (eyebrow § NN cohérent avec le design system Yotori Finance v3) :
 //   § 01 — Positions (PEA/CTO/AV/crypto)
 //   § 02 — Transactions (placeholder — branchera Transactions filtré plus tard)
 //   § 03 — Insight fiscal (PEA, Livret A — affichage du plafond avec barre)

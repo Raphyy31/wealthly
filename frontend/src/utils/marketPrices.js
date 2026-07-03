@@ -14,7 +14,7 @@ import { useMemo } from 'react';
 import { useQuotes } from '../hooks/useQuotes.js';
 
 const isDemo = () => typeof window !== 'undefined'
-  && window.localStorage.getItem('wealthly:demo') === '1';
+  && window.localStorage.getItem('yotori:demo') === '1';
 
 // Convertit un ticker crypto utilisateur (BTC, ETH, SOL…) vers le symbole
 // Yahoo. Yahoo accepte directement `BTC-EUR`, `ETH-EUR`, etc. pour les

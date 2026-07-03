@@ -74,7 +74,7 @@ export const BACKEND_TO_SUBTYPE = {
   pea: 'pea',
   life_insurance: 'av',
   credit_card: 'compte_courant',
-  // Legacy generic types from AddAccountModal manual form (line 1730 WealthlyApp.jsx)
+  // Legacy generic types from AddAccountModal manual form (line 1730 YotoriApp.jsx)
   investment: 'cto',         // "PEA / CTO / AV" picker option
   joint: 'compte_courant',
   professional: 'compte_courant',

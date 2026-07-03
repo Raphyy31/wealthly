@@ -248,7 +248,7 @@ export function Admin() {
             <h1 style={{ fontFamily: "'Geist', system-ui, sans-serif", fontSize:28, fontWeight:500, letterSpacing:'-0.025em', margin:0, color: 'var(--ink)' }}>
               Espace <em style={{ fontFamily: "'Geist', system-ui, sans-serif", fontStyle: 'italic', fontWeight: 400, color: 'var(--ink-2)', letterSpacing: '-0.035em' }}>admin.</em>
             </h1>
-            <p style={{ fontSize:13, color:'var(--ink-3)', margin:'4px 0 0' }}>Gestion de la plateforme Wealthly</p>
+            <p style={{ fontSize:13, color:'var(--ink-3)', margin:'4px 0 0' }}>Gestion de la plateforme Yotori Finance</p>
           </div>
           <button onClick={load} style={{ ...btnStyle, display:'flex', alignItems:'center', gap:6 }}>
             <RefreshCw size={13}/> Actualiser

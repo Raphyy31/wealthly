@@ -106,13 +106,13 @@ export function Monthly({
   const [showEditor, setShowEditor] = useState(false);
   const [show5030, setShow5030] = useState(false);
   const [expandedRows, setExpandedRows] = useState(() => {
-    try { return new Set(JSON.parse(localStorage.getItem('wealthly:monthly_expanded') || '[]')); }
+    try { return new Set(JSON.parse(localStorage.getItem('yotori:monthly_expanded') || '[]')); }
     catch { return new Set(); }
   });
   const isNarrow = useIsNarrow(760);
 
   useEffect(() => {
-    try { localStorage.setItem('wealthly:monthly_expanded', JSON.stringify([...expandedRows])); } catch {}
+    try { localStorage.setItem('yotori:monthly_expanded', JSON.stringify([...expandedRows])); } catch {}
   }, [expandedRows]);
 
   // Available months: 12 past + 3 future.
@@ -527,6 +527,11 @@ export function Monthly({
       }
     }
 
+    // Un Sankey sans le moindre lien (ex. mois avec uniquement des entrées,
+    // aucune dépense ni épargne) fait produire des NaN au layout recharts
+    // (rects x/height/rx/ry cassés). Dans ce cas on rend l'empty state.
+    if (!links.length) return { nodes: [], links: [] };
+
     return { nodes, links };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [monthTx, categories, savingsFromTransfers]);
@@ -764,8 +769,8 @@ export function Monthly({
             <Target size={32}/>
             <Sparkles size={14} className="mon-empty-spark mon-empty-spark-2"/>
           </div>
-          <h3>Configure ton <em>mois type.</em></h3>
-          <p>Définis ton salaire et tes dépenses habituelles — l'app comparera chaque mois pour t'aider à rester sur la bonne trajectoire.</p>
+          <h3>Configurez votre <em>mois type.</em></h3>
+          <p>Définissez votre salaire et vos dépenses habituelles — l'app comparera chaque mois pour vous aider à rester sur la bonne trajectoire.</p>
           <button className="ds-btn primary lg" onClick={() => setShowEditor(true)}>
             <Edit3 size={14}/> Générer mon mois type
           </button>
@@ -779,8 +784,8 @@ export function Monthly({
         <section className="card mon-cta-banner">
           <div className="mon-cta-banner-icon"><Target size={18}/></div>
           <div className="mon-cta-banner-body">
-            <strong>Configure ton mois type personnel</strong>
-            <span>Tu vois tes dépenses réelles ci-dessous. Définis ton plan habituel pour comparer chaque mois.</span>
+            <strong>Configurez votre mois type personnel</strong>
+            <span>Vos dépenses réelles sont ci-dessous. Définissez votre plan habituel pour comparer chaque mois.</span>
           </div>
           <button className="ds-btn primary" onClick={() => setShowEditor(true)}>
             <Edit3 size={13}/> Configurer
@@ -814,7 +819,7 @@ export function Monthly({
             kind="real"
             eyebrow="Réel"
             label={monthHumanLabel(selectedMonth)}
-            subtitle={isCurrentMonth ? 'Ce que tu as dépensé ce mois-ci' : 'Ce que tu as dépensé sur ce mois'}
+            subtitle={isCurrentMonth ? 'Ce que vous avez dépensé ce mois-ci' : 'Ce que vous avez dépensé sur ce mois'}
             data={realSankeyData}
             totals={realTotals}
             isExpanded={expandedSankey.has('real')}
@@ -1249,7 +1254,7 @@ function MonthlyCompareTable({ sections, monthTx, fmt, catFor, expandedRows, tog
               const noTarget = target <= 0;
               const barColor = noTarget ? 'var(--d6)' : (hasDelta && isOver ? 'var(--negative)' : 'var(--positive)');
               const statusText = noTarget
-                ? `${fmt(actual)} dépensé · pas dans ton mois type`
+                ? `${fmt(actual)} dépensé · pas dans votre mois type`
                 : !hasDelta
                   ? '✓ pile dans le budget'
                   : section.kind === 'expense'
@@ -1500,7 +1505,7 @@ function SankeyCard({ kind, eyebrow, label, subtitle, data, totals, isExpanded, 
           </ResponsiveContainer>
         ) : (
           <div className="mon-sankey-card-empty">
-            <span>Pas encore de données sur ce mois.</span>
+            <span>Pas encore assez de mouvements ce mois-ci pour tracer les flux.</span>
           </div>
         )}
 

@@ -16,7 +16,7 @@ import httpx
 from app.config import settings
 
 # Send logs to stdout so Railway captures them in the Logs tab.
-logger = logging.getLogger("wealthly.email")
+logger = logging.getLogger("yotori.email")
 if not logger.handlers:
     h = logging.StreamHandler(sys.stdout)
     h.setFormatter(logging.Formatter("[email] %(levelname)s: %(message)s"))
@@ -96,14 +96,14 @@ def send_password_reset_email(to: str, full_name: str | None, reset_link: str) -
     HTML support still see something useful.
     """
     name = (full_name or "").strip() or to.split("@")[0]
-    subject = "Réinitialiser votre mot de passe — Wealthly"
+    subject = "Réinitialiser votre mot de passe — Yotori Finance"
     text = (
         f"Bonjour {name},\n\n"
-        f"Vous avez demandé à réinitialiser votre mot de passe Wealthly.\n\n"
+        f"Vous avez demandé à réinitialiser votre mot de passe Yotori Finance.\n\n"
         f"Cliquez sur le lien ci-dessous pour choisir un nouveau mot de passe (valable 60 minutes) :\n"
         f"{reset_link}\n\n"
         f"Si vous n'êtes pas à l'origine de cette demande, ignorez ce message — votre mot de passe actuel reste valide.\n\n"
-        f"— Wealthly"
+        f"— Yotori Finance"
     )
     html = f"""<!DOCTYPE html>
 <html lang="fr">
@@ -115,7 +115,7 @@ def send_password_reset_email(to: str, full_name: str | None, reset_link: str) -
         <tr><td style="padding-bottom:20px;">
           <div style="display:inline-block;width:42px;height:42px;border:1px solid rgba(197,165,114,0.32);border-radius:6px;background:rgba(197,165,114,0.10);text-align:center;line-height:42px;color:#c5a572;font-weight:600;letter-spacing:0.04em;">W</div>
         </td></tr>
-        <tr><td style="font-size:11px;text-transform:uppercase;letter-spacing:0.18em;color:#c5a572;padding-bottom:6px;">Wealthly · Patrimoine privé</td></tr>
+        <tr><td style="font-size:11px;text-transform:uppercase;letter-spacing:0.18em;color:#c5a572;padding-bottom:6px;">Yotori Finance · Patrimoine privé</td></tr>
         <tr><td style="font-size:20px;font-weight:600;color:#ebe8e3;padding-bottom:6px;">Réinitialiser votre mot de passe</td></tr>
         <tr><td style="font-size:14px;color:#b5b2ab;line-height:1.6;padding-bottom:24px;">
           Bonjour {name},<br><br>

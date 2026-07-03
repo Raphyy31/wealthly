@@ -1,5 +1,5 @@
 // LearningToggle — toggle "Apprentissage automatique" pour la categorisation IA.
-// Quand active, Wealthly cree des regles regex apprises apres 2 recategorisations
+// Quand active, Yotori Finance cree des regles regex apprises apres 2 recategorisations
 // manuelles du meme marchand vers la meme categorie.
 //
 // Refondu 2026-05-21 pour utiliser le shared ToggleCard + style premium
@@ -52,8 +52,8 @@ export function LearningToggle({ showToast }) {
       </div>
       <div style={{ padding: '0 18px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
         <p style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.55, margin: 0 }}>
-          Quand tu recatégorises <strong style={{ color: 'var(--ink)' }}>2 fois le même marchand</strong> dans
-          la même catégorie, Wealthly crée automatiquement une règle apprise. Désactive si tu préfères tout
+          Quand vous recatégorisez <strong style={{ color: 'var(--ink)' }}>2 fois le même marchand</strong> dans
+          la même catégorie, Yotori Finance crée automatiquement une règle apprise. Désactivez si vous préférez tout
           gérer manuellement.
         </p>
         <ToggleCard

@@ -22,5 +22,5 @@ def rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse
     """Custom 429 handler — returns the French message users see in toasts."""
     return JSONResponse(
         status_code=429,
-        content={"detail": "Trop de tentatives. Réessaie dans quelques instants."},
+        content={"detail": "Trop de tentatives. Réessayez dans quelques instants."},
     )

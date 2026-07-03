@@ -12,7 +12,7 @@
 //     gsap.from(el, { opacity: 0, scale: 0.97, duration: 0.6, ease: 'power2.out' });
 //   });
 //
-// Direction visuelle Wealthly :
+// Direction visuelle Yotori Finance :
 //   - jamais translateY (utiliser opacity + scale + filter)
 //   - durées 180-600ms (rapide, premium)
 //   - eases power2.out / expo.out (sortie nette, pas de rebond)

@@ -5,7 +5,7 @@
 // Settings labels and the Import CSV wizard. The rest of the UI is gradually
 // migrated as we touch each view.
 //
-// Language preference lives in localStorage under `wealthly:lang` and is
+// Language preference lives in localStorage under `yotori:lang` and is
 // read on init. Defaults to `fr`. Switch via i18n.changeLanguage('en').
 // ============================================================================
 import i18n from 'i18next';
@@ -14,7 +14,7 @@ import { initReactI18next } from 'react-i18next';
 import fr from './locales/fr/translation.json';
 import en from './locales/en/translation.json';
 
-const STORAGE_KEY = 'wealthly:lang';
+const STORAGE_KEY = 'yotori:lang';
 const SUPPORTED = ['fr', 'en'];
 
 function pickInitialLang() {

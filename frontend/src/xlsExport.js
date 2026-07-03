@@ -52,7 +52,7 @@ export function exportInvestmentPositionsXlsx(rows, meta = {}) {
   const meta1 = [[`Investissements — ${accountName}`], [`Édité le ${ts()}`], []];
   const wb = XLSX.utils.book_new();
   sheetFromAoa(wb, accountName, [...meta1, header, ...body]);
-  XLSX.writeFile(wb, `Wealthly_Investissements_${slug(accountName)}_${ts()}.xlsx`);
+  XLSX.writeFile(wb, `Yotori_Investissements_${slug(accountName)}_${ts()}.xlsx`);
 }
 
 // ---------- Emprunts ----------
@@ -106,7 +106,7 @@ export function exportLoansXlsx(liabilities) {
   sheetFromAoa(wb, 'Synthèse emprunts', [['Emprunts — synthèse'], [`Édité le ${ts()}`], [], sHeader, ...sRows]);
 
   loans.forEach((l, i) => amortSheet(wb, `${i + 1}. ${l.name || 'Prêt'}`, l));
-  XLSX.writeFile(wb, `Wealthly_Emprunts_${ts()}.xlsx`);
+  XLSX.writeFile(wb, `Yotori_Emprunts_${ts()}.xlsx`);
 }
 
 // Un seul prêt (depuis la fiche détail).
@@ -117,5 +117,5 @@ export function exportLoanScheduleXlsx(l) {
   if (!wb.SheetNames.length) {
     sheetFromAoa(wb, 'Prêt', [['Échéancier indisponible'], ['Renseigne capital, taux et durée du prêt pour générer les mensualités.']]);
   }
-  XLSX.writeFile(wb, `Wealthly_Emprunt_${slug(l.name)}_${ts()}.xlsx`);
+  XLSX.writeFile(wb, `Yotori_Emprunt_${slug(l.name)}_${ts()}.xlsx`);
 }

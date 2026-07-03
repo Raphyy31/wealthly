@@ -48,7 +48,7 @@ class Settings:
     # plutôt que de tomber sur un défaut sécurisable.
     DATABASE_URL: str = _require_env(
         "DATABASE_URL",
-        dev_fallback="postgresql://wealthly:dev_only_change_me@localhost:5432/wealthly_dev",
+        dev_fallback="postgresql://yotori:dev_only_change_me@localhost:5432/yotori_dev",
     )
 
     # JWT auth — SECRET_KEY obligatoire. Ancien fallback "CHANGE_ME_IN_PRODUCTION_PLEASE"
@@ -73,27 +73,40 @@ class Settings:
         "http://localhost:3000,http://localhost:5173"
     ).split(",")
 
-    # CORS regex — matches the specific Vercel project (wealthly) preview URLs.
-    # Scoped to the "wealthly" project to prevent other Vercel accounts from
+    # CORS regex — matches the specific Vercel project preview URLs.
+    # Scoped to the project slugs to prevent other Vercel accounts from
     # registering "wealthly-attack.vercel.app" and abusing CORS (Vercel garantit
     # l'unicite du slug projet par owner).
-    # Pattern : wealthly + 0 a 3 segments alphanumeriques dash-separes :
-    #   - wealthly.vercel.app                          (owner default)
-    #   - wealthly-six.vercel.app                      (prod actuelle)
+    # Pattern : slug + 0 a 3 segments alphanumeriques dash-separes :
+    #   - wealthly-six.vercel.app                      (prod actuelle, slug historique)
+    #   - yotori.vercel.app / yotori-finance.vercel.app (rebranding Yotori Finance)
     #   - wealthly-git-main-raphyy31.vercel.app        (preview branch)
     # sec-audit 2026-05-19 + fix 2026-05-19 (la regex initiale exigeait
     # exactement 3 segments et rejetait l'URL prod wealthly-six).
+    # Rebranding 2026-07 : « yotori » ajouté SANS retirer « wealthly » — le
+    # projet Vercel actuel garde son slug tant qu'il n'est pas renommé.
     CORS_ORIGIN_REGEX: str = os.getenv(
         "CORS_ORIGIN_REGEX",
-        r"^https://wealthly(-[a-z0-9]+){0,3}\.vercel\.app$"
+        r"^https://(wealthly|yotori(-finance)?)(-[a-z0-9]+){0,3}\.vercel\.app$"
     )
 
-    # Anthropic (optional — enables AI categorization)
+    # Anthropic (optional — enables AI categorization + coach)
     ANTHROPIC_API_KEY: str | None = os.getenv("ANTHROPIC_API_KEY")
+    # OpenAI (optional — alternative provider for TRANSACTION CATEGORIZATION
+    # only ; le Coach reste sur Anthropic). BYOK : créer la clé sur
+    # https://platform.openai.com/api-keys et créditer le compte.
+    OPENAI_API_KEY: str | None = os.getenv("OPENAI_API_KEY")
+    # Sélection du provider de catégorisation :
+    #   "auto"      → Anthropic si sa clé est posée, sinon OpenAI (défaut)
+    #   "anthropic" → force Claude (échoue proprement si clé absente)
+    #   "openai"    → force OpenAI
+    AI_PROVIDER: str = os.getenv("AI_PROVIDER", "auto").strip().lower()
     # Modèles par usage (override env possible sans toucher au code).
     # Coach = Sonnet (analyses plus fines), catégorisation = Haiku (pas cher).
     AI_MODEL_COACH: str = os.getenv("AI_MODEL_COACH", "claude-sonnet-4-5-20250929")
     AI_MODEL_CATEGORIZE: str = os.getenv("AI_MODEL_CATEGORIZE", "claude-haiku-4-5-20251001")
+    # Équivalent OpenAI pour la catégorisation (petit modèle économique).
+    AI_MODEL_CATEGORIZE_OPENAI: str = os.getenv("AI_MODEL_CATEGORIZE_OPENAI", "gpt-4o-mini")
     # Plafond mensuel d'appels IA par foyer (filet anti token-burn). Au-delà →
     # fallback déterministe. Le cache du Coach (24h) limite déjà fortement.
     AI_MONTHLY_CAP: int = int(os.getenv("AI_MONTHLY_CAP", "300"))
@@ -102,7 +115,7 @@ class Settings:
     # Email service (Resend) — utilisé par forgot-password + admin reset.
     # Empty fallback → email_service.py retourne False silencieusement.
     RESEND_API_KEY: str | None = os.getenv("RESEND_API_KEY")
-    EMAIL_FROM: str = os.getenv("EMAIL_FROM", "Wealthly <onboarding@resend.dev>")
+    EMAIL_FROM: str = os.getenv("EMAIL_FROM", "Yotori Finance <onboarding@resend.dev>")
     # URL frontend utilisée dans les emails (lien reset password etc.)
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "https://wealthly-six.vercel.app")
 
@@ -141,7 +154,7 @@ class Settings:
     ]
 
     # App
-    APP_NAME: str = "Wealthly API"
+    APP_NAME: str = "Yotori Finance API"
     DEBUG: bool = _DEBUG
 
 

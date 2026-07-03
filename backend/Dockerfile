@@ -1,6 +1,6 @@
-# Dockerfile for the Wealthly backend (FastAPI + Postgres)
-# Build: docker build -t wealthly-backend ./backend
-# Run standalone: docker run -p 8000:8000 wealthly-backend
+# Dockerfile for the Yotori Finance backend (FastAPI + Postgres)
+# Build: docker build -t yotori-backend ./backend
+# Run standalone: docker run -p 8000:8000 yotori-backend
 
 FROM python:3.12-slim
 
@@ -24,8 +24,8 @@ COPY ./alembic.ini ./alembic.ini
 COPY ./alembic ./alembic
 
 # Run as non-root user for safety
-RUN useradd --create-home --shell /bin/bash wealthly && chown -R wealthly:wealthly /app
-USER wealthly
+RUN useradd --create-home --shell /bin/bash yotori && chown -R yotori:yotori /app
+USER yotori
 
 # Healthcheck used by docker-compose
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \

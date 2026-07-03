@@ -14,6 +14,7 @@ import { gsap } from '../utils/gsapSetup.js';
 import { AnimatedNumber } from '../components/AnimatedNumber.jsx';
 import { EmptyState } from '../components/EmptyState.jsx';
 import { SyncButton } from '../components/SyncButton.jsx';
+import { AddTransactionModal } from '../components/AddTransactionModal.jsx';
 import { gsap as gsapTx } from '../utils/gsapSetup.js';
 import { useIsNarrow } from '../hooks/useIsNarrow.js';
 
@@ -294,9 +295,10 @@ function TxFilterPanel({ children, onClose }) {
   );
 }
 
-export function Transactions({ transactions, accounts, categories, members = [], recurringIds, toggleRecurring, transferIds = new Set(), setTransferOverride, updateCategory, updateTags, deleteTransaction, createTransaction, fmt, initialAccountFilter, onConsumeInitialFilter, onCategorizeAI, aiCatRunning = false, onOpenAiPrompt, onAfterSync }) {
+export function Transactions({ transactions, accounts, categories, members = [], customRules = [], recurringIds, toggleRecurring, transferIds = new Set(), setTransferOverride, updateCategory, updateTags, deleteTransaction, createTransaction, fmt, initialAccountFilter, onConsumeInitialFilter, onCategorizeAI, aiCatRunning = false, onOpenAiPrompt, onAfterSync }) {
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
+  const [showAddTx, setShowAddTx] = useState(false);
   // Seed the account filter on mount if the parent passed one (e.g. coming
   // from the AccountDrawer "voir toutes les transactions" CTA).
   const [filters, setFilters] = useState(() =>
@@ -512,7 +514,7 @@ export function Transactions({ transactions, accounts, categories, members = [],
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `wealthly-transactions-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `yotori-transactions-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -526,6 +528,16 @@ export function Transactions({ transactions, accounts, categories, members = [],
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <SyncButton onAfterSync={onAfterSync}/>
+          {createTransaction && (
+            <button
+              className="ds-btn ghost tx-hdr-btn"
+              onClick={() => setShowAddTx(true)}
+              title="Saisir une transaction à la main (comptes manuels, espèces, oubli de sync…)"
+              disabled={accounts.length === 0}
+            >
+              <Plus size={14}/> <span className="tx-hdr-label">Ajouter</span>
+            </button>
+          )}
           <button className="ds-btn ghost tx-hdr-btn" onClick={exportCsv} title={`Exporter les ${filtered.length} transactions visibles en CSV`}>
             <Download size={14}/> <span className="tx-hdr-label">Export CSV</span>
           </button>
@@ -549,7 +561,7 @@ export function Transactions({ transactions, accounts, categories, members = [],
                   <button
                     className="ds-btn ghost tx-hdr-btn"
                     onClick={onOpenAiPrompt}
-                    title="Méthode gratuite, sans clé API : génère un prompt à coller dans ton Claude.ai / ChatGPT, puis recolle la réponse."
+                    title="Méthode gratuite, sans clé API : génère un prompt à coller dans votre Claude.ai / ChatGPT, puis recolle la réponse."
                     disabled={uncatCount === 0 || aiCatRunning}
                   >
                     <Copy size={14}/> <span className="tx-hdr-label">Sans clé</span>
@@ -899,12 +911,20 @@ export function Transactions({ transactions, accounts, categories, members = [],
           // (2) les filtres actifs ne renvoient rien. Le CTA change selon le cas.
           const isReallyEmpty = transactions.length === 0;
           if (isReallyEmpty) {
+            // Foyer avec au moins un compte → la saisie manuelle est le chemin
+            // le plus court (comptes manuels notamment). Sinon on oriente vers
+            // l'import CSV / la connexion bancaire.
+            const canAddManually = accounts.length > 0 && createTransaction;
             return (
               <EmptyState
                 icon={Inbox}
                 title={<>Aucune <em>transaction.</em></>}
-                description="Importe un relevé bancaire (CSV) ou connecte une banque via Open Banking pour voir tes mouvements ici."
-                cta={{ label: 'Importer un CSV', icon: Download, onClick: () => { window.location.hash = '#/settings'; } }}
+                description={canAddManually
+                  ? "Saisissez une transaction à la main, importez un relevé bancaire (CSV) ou connectez une banque via Open Banking."
+                  : "Importez un relevé bancaire (CSV) ou connectez une banque via Open Banking pour voir vos mouvements ici."}
+                cta={canAddManually
+                  ? { label: 'Ajouter une transaction', icon: Plus, onClick: () => setShowAddTx(true) }
+                  : { label: 'Importer un CSV', icon: Download, onClick: () => { window.location.hash = '#/settings'; } }}
               />
             );
           }
@@ -914,7 +934,7 @@ export function Transactions({ transactions, accounts, categories, members = [],
               tone="warning"
               compact
               title={<>Rien <em>à afficher.</em></>}
-              description="Aucune transaction ne correspond à tes filtres actuels."
+              description="Aucune transaction ne correspond à vos filtres actuels."
               cta={{ label: 'Réinitialiser les filtres', icon: RotateCcw, onClick: resetFilters }}
             />
           );
@@ -1140,10 +1160,10 @@ export function Transactions({ transactions, accounts, categories, members = [],
                             </span>
                             {tx.catSource && tx.catSource !== 'unknown' && (
                               <span className={`tx-cat-source-dot src-${tx.catSource}`} title={({
-                                'user_rule': 'Catégorisé via ta règle',
+                                'user_rule': 'Catégorisé via votre règle',
                                 'payee_default': 'Catégorie par défaut du marchand',
                                 'learned_rule': 'Règle apprise automatiquement',
-                                'builtin_rule': 'Règle intégrée Wealthly',
+                                'builtin_rule': 'Règle intégrée Yotori Finance',
                                 'llm': 'Catégorisé par l\'IA',
                               })[tx.catSource]}/>
                             )}
@@ -1290,7 +1310,7 @@ export function Transactions({ transactions, accounts, categories, members = [],
               );
             })}
             {filtered.length > 200 && (
-              <div className="tx-feed-more">+ {filtered.length - 200} transactions — affine tes filtres pour les voir.</div>
+              <div className="tx-feed-more">+ {filtered.length - 200} transactions — affinez vos filtres pour les voir.</div>
             )}
           </div>
         );
@@ -1340,6 +1360,17 @@ export function Transactions({ transactions, accounts, categories, members = [],
             // Ouvre le cat picker tout de suite
             setEditingTx(tx.id);
           }}
+        />
+      )}
+
+      {showAddTx && (
+        <AddTransactionModal
+          accounts={accounts}
+          categories={categories}
+          customRules={customRules}
+          defaultAccountId={filters.accs.length === 1 ? filters.accs[0] : null}
+          onSave={createTransaction}
+          onClose={() => setShowAddTx(false)}
         />
       )}
     </div>
@@ -1443,7 +1474,7 @@ function TransferDestPopover({ tx, anchorRect, accounts, fmt, onClose, onMark, o
             <div className="tdp-title">Compte manuel détecté</div>
             <div className="tdp-sub">
               <strong>{mirrorStep.destAcc.name || mirrorStep.destAcc.bank}</strong> n'est pas synchronisé.
-              Tu peux créer la transaction miroir maintenant pour garder ton solde à jour.
+              Vous pouvez créer la transaction miroir maintenant pour garder votre solde à jour.
             </div>
           </div>
 

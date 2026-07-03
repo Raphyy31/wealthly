@@ -1,4 +1,4 @@
-// Cinematic.jsx — Wealthly cinematic landing (port ESM 2026-05-22)
+// Cinematic.jsx — Yotori Finance cinematic landing (port ESM 2026-05-22)
 // Header minimal + démo fullscreen + 2 CTAs at end of loop
 import React, { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react';
 import { gsap } from 'gsap';
@@ -92,8 +92,8 @@ export default function Cinematic({ onSignIn, onSignUp, onShowDetails, onTryDemo
 
       <header className="cin-header">
         <div className="cin-mark">
-          <div className="cin-mark-glyph">w</div>
-          <div className="cin-mark-word">wealthly</div>
+          <div className="cin-mark-glyph">y</div>
+          <div className="cin-mark-word">yotori finance</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {onTryDemo && (
@@ -139,7 +139,7 @@ export default function Cinematic({ onSignIn, onSignUp, onShowDetails, onTryDemo
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
           </a>
           <a className="cin-cta cin-cta-ghost" href="#" onClick={(e) => { e.preventDefault(); onShowDetails?.(); }}>
-            Découvrir Wealthly
+            Découvrir Yotori Finance
           </a>
           {onTryDemo && (
             <a className="cin-cta cin-cta-ghost" href="#" onClick={(e) => { e.preventDefault(); onTryDemo(); }}>

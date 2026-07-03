@@ -1,7 +1,7 @@
 // useIncomeShift — hook React qui expose le réglage "décalage salaire"
 // (settings.enabled + settings.pivotDay) et permet de le mettre à jour.
 //
-// Backed par localStorage (key 'wealthly:income_shift'). Synchronisé entre
+// Backed par localStorage (key 'yotori:income_shift'). Synchronisé entre
 // onglets via l'événement 'storage' standard du navigateur. Default :
 // { enabled: true, pivotDay: 25 } — couvre 95% des salariés français
 // dont le virement tombe vers le 28-30 du mois pour financer le mois suivant.
@@ -14,7 +14,7 @@ export function useIncomeShift() {
   // Reload si autre onglet modifie le réglage (multi-tab sync).
   useEffect(() => {
     const onStorage = (e) => {
-      if (e.key === 'wealthly:income_shift') setSettings(readIncomeShiftSetting());
+      if (e.key === 'yotori:income_shift') setSettings(readIncomeShiftSetting());
     };
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);

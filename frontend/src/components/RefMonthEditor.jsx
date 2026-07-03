@@ -173,8 +173,8 @@ const EUR0 = (v) => new Intl.NumberFormat('fr-FR', {
 const WIZARD_STEPS = [
   { kind: 'income',  short: 'Entrées',  title: 'Tes entrées',  sub: 'Salaires, revenus et virements reçus chaque mois.', accent: 'var(--positive)' },
   { kind: 'expense', short: 'Dépenses', title: 'Tes dépenses', sub: 'Loyer, courses, factures, abonnements, transports…', accent: 'var(--negative)' },
-  { kind: 'saving',  short: 'Épargne',  title: 'Ton épargne',  sub: 'Ce que tu mets de côté automatiquement chaque mois.', accent: 'var(--accent)' },
-  { kind: null,      short: 'Bilan',    title: 'Ton bilan',    sub: 'Vérifie ton flux mensuel, puis enregistre.', accent: 'var(--accent)' },
+  { kind: 'saving',  short: 'Épargne',  title: 'Votre épargne',  sub: 'Ce que vous mettez de côté automatiquement chaque mois.', accent: 'var(--accent)' },
+  { kind: null,      short: 'Bilan',    title: 'Votre bilan',    sub: 'Vérifiez votre flux mensuel, puis enregistrez.', accent: 'var(--accent)' },
 ];
 
 // Starter template for first-time editing. Each entry creates an empty line
@@ -351,7 +351,7 @@ export function RefMonthEditor({
       onClose?.();
     } catch (err) {
       // FIX 2026-05-18 : si saveRefMonth re-throw, on NE FERME PAS la modale.
-      // Le toast d'erreur est déjà affiché par WealthlyApp.saveRefMonth.
+      // Le toast d'erreur est déjà affiché par YotoriApp.saveRefMonth.
       // Le draft local reste à l'écran → l'user peut retry ou copier ses lignes.
       console.error('[RefMonthEditor] save failed, keeping editor open:', err);
     } finally {
@@ -394,7 +394,7 @@ export function RefMonthEditor({
     return (
       <div className="rmw-lines">
         {lines.length === 0 && (
-          <p className="rmw-empty">Aucune ligne pour l'instant — ajoute ta première catégorie ci-dessous.</p>
+          <p className="rmw-empty">Aucune ligne pour l'instant — ajoutez votre première catégorie ci-dessous.</p>
         )}
         {lines.map(line => {
           const c = catFor(line.category_id);
@@ -411,7 +411,7 @@ export function RefMonthEditor({
                   <button
                     type="button"
                     className="rmw-sug"
-                    title={`Moyenne de tes 3 derniers mois : ${EUR0(sug.mean)}`}
+                    title={`Moyenne de vos 3 derniers mois : ${EUR0(sug.mean)}`}
                     onClick={() => updateLine(line.id, { amount: sug.mean })}
                   >
                     ≈ {EUR0(sug.mean)} · utiliser
@@ -491,7 +491,7 @@ export function RefMonthEditor({
               <div className={`rmw-sankey-status ${totals.balance < 0 ? 'is-neg' : 'is-pos'}`}>
                 {totals.balance < 0
                   ? <>⚠ Déficit de <strong>{EUR0(-totals.balance)}</strong> — dépenses + épargne dépassent les revenus.</>
-                  : <>Tu dégages <strong>{EUR0(totals.balance)}</strong> de reste à vivre chaque mois.</>}
+                  : <>Vous dégagez <strong>{EUR0(totals.balance)}</strong> de reste à vivre chaque mois.</>}
               </div>
               <MoisTypeBudgetSankey grouped={grouped} catFor={catFor}/>
               <div className="rmw-recap-grid">
@@ -594,7 +594,7 @@ function MoisTypeBudgetSankey({ grouped, catFor }) {
   }, [grouped, catFor]);
 
   if (empty) {
-    return <div className="rmw-sankey-empty">Renseigne tes <strong>entrées</strong> pour voir ton flux se dessiner.</div>;
+    return <div className="rmw-sankey-empty">Renseignez vos <strong>entrées</strong> pour voir votre flux se dessiner.</div>;
   }
 
   const rightCount = links.filter(l => typeof l.source === 'number').length; // approx
@@ -640,7 +640,7 @@ function MoisTypeSankey({ totals, fmt }) {
   if (income <= 0) {
     return (
       <div className="rm-sankey rm-sankey--empty">
-        <span>Renseigne tes <strong>entrées</strong> pour voir ton flux mensuel se dessiner.</span>
+        <span>Renseignez vos <strong>entrées</strong> pour voir votre flux mensuel se dessiner.</span>
       </div>
     );
   }
@@ -715,7 +715,7 @@ function MoisTypeSankey({ totals, fmt }) {
       <div className={`rm-sankey-status ${rest < 0 ? 'is-neg' : 'is-pos'}`}>
         {rest < 0
           ? <>⚠ Déficit de <strong>{eur0(-rest)}</strong> — dépenses + épargne dépassent les revenus.</>
-          : <>Tu dégages <strong>{eur0(rest)}</strong> de reste à vivre chaque mois.</>}
+          : <>Vous dégagez <strong>{eur0(rest)}</strong> de reste à vivre chaque mois.</>}
       </div>
     </div>
   );

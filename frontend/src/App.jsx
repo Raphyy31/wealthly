@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { auth, subscribeSessionExpired } from './api.js';
 import AuthScreen from './AuthScreen.jsx';
 import AuthModal from './AuthModal.jsx';
-import WealthlyApp from './WealthlyApp.jsx';
+import YotoriApp from './YotoriApp.jsx';
 import { isDemoMode, disableDemoMode, enableDemoMode } from './demoData.js';
 import { useIdleLogout } from './hooks/useIdleLogout.js';
 
@@ -27,7 +27,7 @@ export default function App() {
 
   // Session expirée en cours d'usage : un 401 sur un endpoint authentifié
   // signale que le cookie a expiré. On bascule proprement sur l'écran de
-  // connexion (ce qui démonte WealthlyApp → purge les données en cache) avec
+  // connexion (ce qui démonte YotoriApp → purge les données en cache) avec
   // un bandeau explicite, au lieu de laisser l'utilisateur sur des données
   // mortes dont chaque action échoue.
   const authStateRef = useRef(authState);
@@ -48,7 +48,7 @@ export default function App() {
   useEffect(() => {
     (async () => {
       // Demo mode wins over everything else — landing in the demo means we
-      // skip all auth wiring and feed WealthlyApp a static dataset.
+      // skip all auth wiring and feed YotoriApp a static dataset.
       if (isDemoMode()) {
         setAuthState('demo');
         return;
@@ -124,7 +124,7 @@ export default function App() {
   // Lecture de la préférence utilisateur (en minutes) — 0 / null = désactivé.
   const idleTimeoutMin = (() => {
     try {
-      const raw = localStorage.getItem('wealthly:idleTimeoutMin');
+      const raw = localStorage.getItem('yotori:idleTimeoutMin');
       if (raw === null) return DEFAULT_IDLE_TIMEOUT_MIN;
       const n = parseInt(raw, 10);
       return Number.isFinite(n) ? n : DEFAULT_IDLE_TIMEOUT_MIN;
@@ -139,7 +139,7 @@ export default function App() {
     warnAtMinutes: Math.max(1, idleTimeoutMin - 5),
     onWarn: (remainingMin) => {
       // Toast léger directement via DOM — évite de dépendre du toast pipeline
-      // de WealthlyApp qui n'est pas exposé ici.
+      // de YotoriApp qui n'est pas exposé ici.
       try {
         const el = document.createElement('div');
         el.textContent = `Déconnexion automatique dans ${remainingMin} min`;
@@ -182,7 +182,7 @@ export default function App() {
   }
 
   if (authState === 'demo') {
-    return <WealthlyApp demoMode onExitDemo={exitDemo} />;
+    return <YotoriApp demoMode onExitDemo={exitDemo} />;
   }
 
   if (authState === 'unauthed') {
@@ -207,7 +207,7 @@ export default function App() {
             onSignUp={() => { setAuthModalMode('register'); setAuthModalOpen(true); }}
             onTryDemo={() => { enableDemoMode(); setAuthState('demo'); }}
             onPresent={() => {
-              try { localStorage.setItem('wealthly:auto_demo_tour', '1'); } catch {}
+              try { localStorage.setItem('yotori:auto_demo_tour', '1'); } catch {}
               enableDemoMode();
               setAuthState('demo');
             }}
@@ -225,5 +225,5 @@ export default function App() {
     );
   }
 
-  return <WealthlyApp onLogout={() => { setAuthState('unauthed'); setUnauthedView('landing'); }} />;
+  return <YotoriApp onLogout={() => { setAuthState('unauthed'); setUnauthedView('landing'); }} />;
 }

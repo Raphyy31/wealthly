@@ -9,7 +9,7 @@ Flow :
   3. Bank redirects back to {GOCARDLESS_REDIRECT_URI}?ref={state}
   4. /complete             — fetch requisition status → accounts available
   5. /sync/{connection_id} — pull transactions for the linked accounts and
-                             import them into Wealthly accounts.
+                             import them into Yotori Finance accounts.
 
 Credentials :
   - GOCARDLESS_SECRET_ID
@@ -19,7 +19,7 @@ Both available at https://bankaccountdata.gocardless.com/user/secrets/
 Tokens :
   Access tokens last 24 h, refresh tokens 30 days. We cache the access token
   in-process (single uvicorn worker assumed) and lazily refresh on 401 or
-  scheduled expiry. The Wealthly deployment fits in a single worker so a
+  scheduled expiry. The Yotori Finance deployment fits in a single worker so a
   simple module-global cache is enough.
 """
 import asyncio
@@ -66,7 +66,7 @@ def parse_iso_date(s: str):
 
 def _dedup_hash(account_id: str, date: str, amount: float, label: str) -> str:
     """Mirror the frontend hash used for CSV imports so synced + imported
-    transactions don't double up if both happen to flow through Wealthly.
+    transactions don't double up if both happen to flow through Yotori Finance.
 
     BLAKE2b 16 octets (sécu F2 2026-05-19) — SHA-1 cassé depuis 2017,
     risque de faux positifs de dédup. BLAKE2b 128-bit suffit largement
@@ -76,7 +76,7 @@ def _dedup_hash(account_id: str, date: str, amount: float, label: str) -> str:
     payload = f"{account_id}|{date}|{amount:.2f}|{(label or '')[:60].lower()}"
     return hashlib.blake2b(payload.encode("utf-8"), digest_size=16).hexdigest()
 
-logger = logging.getLogger("wealthly.banking")
+logger = logging.getLogger("yotori.banking")
 router = APIRouter(prefix="/banking", tags=["banking"])
 
 
@@ -461,7 +461,7 @@ async def _sync_one_connection(
         gc_acc_id = acc_info.get("id")
         if not gc_acc_id:
             continue
-        # Find or create the Wealthly account (matched by external_id == gc_acc_id)
+        # Find or create the Yotori Finance account (matched by external_id == gc_acc_id)
         wl_acc = db.query(Account).filter(
             Account.household_id == household_id,
             Account.external_id == gc_acc_id,
@@ -959,7 +959,7 @@ async def delete_connection(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Supprime la connexion bancaire ET les comptes Wealthly qui en dependent.
+    """Supprime la connexion bancaire ET les comptes Yotori Finance qui en dependent.
 
     Fix 2026-05-19 (retour user) : avant on gardait les Account orphelins,
     ce qui faisait apparaitre des "comptes fantomes" en sidebar apres
@@ -1002,7 +1002,7 @@ async def delete_connection(
     deleted_accounts = 0
     deleted_transactions = 0
     if gc_account_ids:
-        # Liste les Wealthly Account a supprimer pour pouvoir aussi compter
+        # Liste les Yotori Finance Account a supprimer pour pouvoir aussi compter
         # les transactions dans la reponse.
         to_delete = db.query(Account).filter(
             Account.household_id == household_id,

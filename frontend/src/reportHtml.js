@@ -1,5 +1,5 @@
 /**
- * Wealthly — bilan patrimonial PDF (HTML/CSS → impression navigateur).
+ * Yotori Finance — bilan patrimonial PDF (HTML/CSS → impression navigateur).
  *
  * CHARTE = celle de l'app (tokens index.css) : papier chaud #F7F6F2, cobalt
  * #0E7C56, sage/terracotta, dataviz d1–d7, Geist + Newsreader (serif italique
@@ -168,7 +168,7 @@ export async function generateBilanHtmlReport(data) {
     html = await buildReportHtml(data);
   } catch (e) {
     if (w) { w.document.open(); w.document.write(`<!doctype html><meta charset="utf-8"><body style="font-family:sans-serif;padding:40px;color:#B0392B">Erreur lors de la génération du bilan : ${esc(e?.message || e)}</body>`); w.document.close(); }
-    else alert("Erreur lors de la génération du bilan. Réessaie.");
+    else alert("Erreur lors de la génération du bilan. Réessayez.");
     return;
   }
   if (w) {
@@ -356,7 +356,7 @@ async function buildReportHtml(data) {
   const scoreItems = (score.items || []).map((it) => { const w = it.max > 0 ? Math.round((it.pts / it.max) * 100) : 0; return `<div class="sc"><div class="sc-top"><span>${esc(it.label)}</span><span class="sc-v">${esc(it.value)}</span></div><div class="sc-bar"><i style="width:${w}%"></i></div></div>`; }).join('');
   const cell = (l, v) => `<div class="cell"><div class="cell-l">${esc(l)}</div><div class="cell-v">${v}</div></div>`;
 
-  return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Wealthly — Bilan patrimonial</title>
+  return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Yotori Finance — Bilan patrimonial</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Newsreader:ital,wght@1,400;1,500;1,600&display=swap" rel="stylesheet">
 <style>
@@ -460,10 +460,10 @@ async function buildReportHtml(data) {
   .pos-v{font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;color:${C.ink};}
 </style></head>
 <body>
-  <div class="run-foot"><span>Wealthly — Bilan patrimonial</span><span>${esc(ownerName)} · ${todayLong()} · Confidentiel</span></div>
+  <div class="run-foot"><span>Yotori Finance — Bilan patrimonial</span><span>${esc(ownerName)} · ${todayLong()} · Confidentiel</span></div>
 
   <div class="page1">
-    <div class="mast"><div class="mast-brand"><span class="mast-mark">W</span><b>Wealthly</b></div><div class="mast-r">Bilan patrimonial · ${esc(monthLong(currentMonth))}</div></div>
+    <div class="mast"><div class="mast-brand"><span class="mast-mark">Y</span><b>Yotori Finance</b></div><div class="mast-r">Bilan patrimonial · ${esc(monthLong(currentMonth))}</div></div>
     <div class="lead">
       <div class="eyebrow">Gestion privée</div>
       <h1>Synthèse de <span class="serif">votre patrimoine.</span></h1>
@@ -496,7 +496,7 @@ async function buildReportHtml(data) {
   </div>
 
   <div class="page2">
-    <div class="mast"><div class="mast-brand"><span class="mast-mark">W</span><b>Wealthly</b></div><div class="mast-r">Détail du patrimoine</div></div>
+    <div class="mast"><div class="mast-brand"><span class="mast-mark">Y</span><b>Yotori Finance</b></div><div class="mast-r">Détail du patrimoine</div></div>
     <div class="p2-lead"><h2>Vos <span class="serif">avoirs & engagements.</span></h2><div class="p2-sub">Au ${todayLong()}${tickers.length ? ' · positions valorisées en temps réel' : ''}</div></div>
     <div class="tiles">
       <div class="tile"><div class="t-l">Total des avoirs</div><div class="t-v">${eur(grandAvoirs)}</div></div>

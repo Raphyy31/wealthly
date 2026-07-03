@@ -12,7 +12,7 @@
 //   - "Plus tard" → ferme sans marquer (les tx restent review_status='pending')
 //
 // La modification de catégorie en ligne réutilise la fonction
-// updateTransactionCategory existante de WealthlyApp (passée en prop).
+// updateTransactionCategory existante de YotoriApp (passée en prop).
 // ============================================================================
 import { useMemo, useState } from 'react';
 import { X, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -116,8 +116,8 @@ export function PostSyncReviewModal({
             lineHeight: 1.45,
           }}
         >
-          Vérifie la catégorie attribuée automatiquement à chaque opération. Tu peux la
-          corriger en un clic — l'apprentissage retiendra ta préférence pour la prochaine fois.
+          Vérifiez la catégorie attribuée automatiquement à chaque opération. Vous pouvez la
+          corriger en un clic — l'apprentissage retiendra votre préférence pour la prochaine fois.
           {uncertainCount > 0 && (
             <>
               {' '}
