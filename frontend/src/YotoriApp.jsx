@@ -1354,12 +1354,27 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
     // `target` = vue où atterrir juste après (le « moment wow » : import/wealth).
     let createdOk = true;
     try {
+      // 1) Membres — on garde la correspondance id local → id serveur pour
+      // pouvoir assigner le compte (les memberIds du payload sont locaux).
+      const localToServerMemberId = {};
       for (const m of data.members) {
         try {
-          await api.members.create({ name: m.name, role: m.role, color: m.color });
+          const created = await api.members.create({ name: m.name, role: m.role, color: m.color });
+          if (created?.id && m.id) localToServerMemberId[m.id] = created.id;
         } catch (e) {
           createdOk = false;
           console.warn('[onboarding] member create failed', e);
+        }
+      }
+      // 2) Premier compte (optionnel) — best-effort, ne bloque jamais l'entrée.
+      if (data.account && data.account.name) {
+        try {
+          const serverMemberIds = (data.account.memberIds || [])
+            .map(id => localToServerMemberId[id])
+            .filter(Boolean);
+          await api.accounts.create(accountToApi({ ...data.account, memberIds: serverMemberIds }));
+        } catch (e) {
+          console.warn('[onboarding] account create failed', e);
         }
       }
       try {
