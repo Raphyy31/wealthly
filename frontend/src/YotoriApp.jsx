@@ -3195,7 +3195,7 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
                 <span className="ws-nav-group-label">{t('nav.group_config')}</span>
               </div>
               <div className="ws-nav-section-items">
-                <a href="#/settings"
+                <a href="#/settings" title={t('nav.settings')}
                    onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('settings'); }}
                    className={view === 'settings' ? 'on' : ''}>
                   <Settings size={16}/> <span>{t('nav.settings')}</span>

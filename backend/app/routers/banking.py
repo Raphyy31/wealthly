@@ -97,7 +97,7 @@ async def _get_access_token() -> str:
         raise HTTPException(
             status_code=503,
             detail=(
-                "Connexion bancaire non configurée. Renseigne "
+                "Connexion bancaire non configurée. Renseignez "
                 "GOCARDLESS_SECRET_ID + GOCARDLESS_SECRET_KEY dans Railway."
             ),
         )
@@ -269,6 +269,38 @@ async def list_banks(
     ]
 
 
+# Caps par institution (transaction_total_days / max_access_valid_for_days).
+# Ces valeurs ne changent pour ainsi dire jamais → cache process : la 2e
+# connexion à la même banque économise un aller-retour GoCardless (le
+# POST /connect passait 3 appels séquentiels — lent sur Railway froid,
+# au point que le client abandonnait avant la redirection).
+_INST_CAPS_CACHE: dict[str, tuple[int, int]] = {}
+
+
+def _purge_stale_pending(db: Session, household_id: str, bank_name: str | None = None) -> int:
+    """Supprime les connexions `pending` mortes du foyer.
+
+    - Même banque (si bank_name fourni) : TOUTES les pending — l'utilisateur
+      relance une connexion, les tentatives précédentes n'aboutiront plus
+      proprement et polluaient Réglages (« 4 fois la même banque non
+      synchronisée », bug user 2026-07-03).
+    - Toutes banques : les pending de plus de 48 h (consentement abandonné).
+    """
+    q = db.query(BankConnection).filter(
+        BankConnection.household_id == household_id,
+        BankConnection.status == "pending",
+    )
+    cutoff = datetime.utcnow() - timedelta(hours=48)
+    stale = [
+        c for c in q.all()
+        if (bank_name and c.bank_name == bank_name)
+        or (c.created_at and c.created_at < cutoff)
+    ]
+    for c in stale:
+        db.delete(c)
+    return len(stale)
+
+
 @router.post("/connect")
 async def connect_bank(
     body: ConnectRequest,
@@ -282,18 +314,29 @@ async def connect_bank(
     """
     state = str(uuid.uuid4())
 
+    # Nettoyage AVANT création : les pending de cette banque (tentatives
+    # précédentes abandonnées) + les pending > 48 h toutes banques. Sans ça,
+    # chaque clic laissait une ligne « non synchronisé » de plus dans Réglages.
+    purged = _purge_stale_pending(db, household_id, bank_name=body.bank_name)
+    if purged:
+        logger.info("[banking] connect: %d pending obsolète(s) purgé(s) pour %s", purged, body.bank_name)
+
     # Each institution caps how far back we can pull transactions
     # (transaction_total_days). Pulling more than that returns a 400. Read
     # the institution's caps before creating the agreement so we always
-    # request a valid window.
-    try:
-        inst = await _gc("GET", f"/institutions/{body.bank_name}/")
-    except HTTPException as e:
-        if e.status_code == 502 and "404" in str(e.detail):
-            raise HTTPException(status_code=400, detail=f"Banque inconnue: {body.bank_name}")
-        raise
-    max_hist_cap = int(inst.get("transaction_total_days") or 90)
-    max_access_cap = int(inst.get("max_access_valid_for_days") or 90)
+    # request a valid window. Caps cachés par process (cf. _INST_CAPS_CACHE).
+    if body.bank_name in _INST_CAPS_CACHE:
+        max_hist_cap, max_access_cap = _INST_CAPS_CACHE[body.bank_name]
+    else:
+        try:
+            inst = await _gc("GET", f"/institutions/{body.bank_name}/")
+        except HTTPException as e:
+            if e.status_code == 502 and "404" in str(e.detail):
+                raise HTTPException(status_code=400, detail=f"Banque inconnue: {body.bank_name}")
+            raise
+        max_hist_cap = int(inst.get("transaction_total_days") or 90)
+        max_access_cap = int(inst.get("max_access_valid_for_days") or 90)
+        _INST_CAPS_CACHE[body.bank_name] = (max_hist_cap, max_access_cap)
     max_hist = min(180, max_hist_cap)
     access_valid = min(90, max_access_cap)
 
@@ -771,6 +814,10 @@ def list_connections(
     db: Session = Depends(get_db),
 ):
     household_id = current_user.household_id
+    # Purge lazy des pending abandonnés (> 48 h) : la liste reste propre même
+    # si l'utilisateur ne relance jamais de connexion.
+    if _purge_stale_pending(db, household_id):
+        db.commit()
     rows = db.query(BankConnection).filter(
         BankConnection.household_id == household_id,
     ).order_by(BankConnection.created_at.desc()).all()

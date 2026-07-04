@@ -78,6 +78,19 @@ export function BankConnectionsSection() {
 
   useEffect(() => { reload(); }, [reload]);
 
+  // Retour d'onglet (l'utilisateur revient du consentement banque ouvert
+  // ailleurs, ou de l'app GoCardless mobile) → la liste se rafraîchit toute
+  // seule. Avant : il fallait recharger la page pour voir l'état à jour.
+  useEffect(() => {
+    const onFocus = () => { if (document.visibilityState === 'visible') reload(); };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onFocus);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onFocus);
+    };
+  }, [reload]);
+
   const handleSync = async (id) => {
     setSyncingId(id);
     setSyncMessage(null);
@@ -196,23 +209,34 @@ export function BankConnectionsSection() {
             <div className="member-card-info" style={{ flex: 1 }}>
               <div className="member-card-name">{c.bank_name}</div>
               <div className="member-card-role">
-                {c.status === 'authorized' ? t('settings.banks.connected') : c.status === 'error' ? t('settings.banks.error') : t('settings.banks.pending')}
-                {' · '}
-                {(() => {
-                  const fresh = syncFreshness(c.last_synced_at);
-                  const colors = {
-                    fresh: 'var(--positive)',
-                    stale: 'var(--warning)',
-                    critical: 'var(--negative)',
-                    never: 'var(--ink-3)',
-                  };
-                  return (
-                    <span style={{ color: colors[fresh], fontWeight: fresh === 'critical' || fresh === 'never' ? 600 : 400 }}>
-                      synchronisé {relativeTime(c.last_synced_at)}
-                    </span>
-                  );
-                })()}
-                {c.accounts?.length > 0 && ` · ${t('settings.banks.accountsCount', { count: c.accounts.length })}`}
+                {c.status === 'pending' ? (
+                  // Consentement jamais finalisé : inutile d'afficher « synchronisé
+                  // jamais » — on dit quoi faire. (Les pending d'une même banque
+                  // sont purgés automatiquement à la prochaine connexion.)
+                  <span style={{ color: 'var(--warning)' }}>
+                    Consentement non finalisé — relancez « {t('settings.banks.connect')} » ou supprimez cette ligne.
+                  </span>
+                ) : (
+                  <>
+                    {c.status === 'authorized' ? t('settings.banks.connected') : t('settings.banks.error')}
+                    {' · '}
+                    {(() => {
+                      const fresh = syncFreshness(c.last_synced_at);
+                      const colors = {
+                        fresh: 'var(--positive)',
+                        stale: 'var(--warning)',
+                        critical: 'var(--negative)',
+                        never: 'var(--ink-3)',
+                      };
+                      return (
+                        <span style={{ color: colors[fresh], fontWeight: fresh === 'critical' || fresh === 'never' ? 600 : 400 }}>
+                          synchronisé {relativeTime(c.last_synced_at)}
+                        </span>
+                      );
+                    })()}
+                    {c.accounts?.length > 0 && ` · ${t('settings.banks.accountsCount', { count: c.accounts.length })}`}
+                  </>
+                )}
               </div>
               {c.error_message && (
                 <div style={{ fontSize: 11, color: 'var(--danger-text)', marginTop: 2 }}>{c.error_message}</div>

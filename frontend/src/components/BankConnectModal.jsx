@@ -118,6 +118,17 @@ export function BankConnectModal({ onClose }) {
             />
           </div>
 
+          {connecting && (
+            <div className="bcm-connecting" role="status" aria-live="polite">
+              <Loader2 size={16} className="bcm-spin"/>
+              <span>
+                <strong>Préparation de la connexion sécurisée…</strong><br/>
+                Vous allez être redirigé vers votre banque — cela peut prendre
+                une dizaine de secondes, ne fermez pas cette fenêtre.
+              </span>
+            </div>
+          )}
+
           <div className="bcm-list">
             {filteredBanks.length === 0 && (
               <div className="bcm-empty">
@@ -199,6 +210,10 @@ const BCM_CSS = `
 
 .bcm-error { display: flex; align-items: center; gap: 8px; padding: 11px 14px; border-radius: 10px; background: var(--negative-soft); color: var(--negative); font: 400 13px var(--font-sans); }
 .bcm-error svg { flex-shrink: 0; }
+
+.bcm-connecting { display: flex; gap: 11px; align-items: flex-start; padding: 13px 15px; border-radius: 12px; background: var(--accent-soft); border: 1px solid color-mix(in oklab, var(--accent) 24%, transparent); font: 400 13px/1.5 var(--font-sans); color: var(--ink-2); }
+.bcm-connecting svg { flex-shrink: 0; color: var(--accent); margin-top: 2px; }
+.bcm-connecting strong { color: var(--ink); font-weight: 600; }
 
 .bcm-foot { display: flex; justify-content: flex-end; gap: 10px; }
 .bcm-btn { display: inline-flex; align-items: center; gap: 7px; padding: 11px 20px; border-radius: 999px; font: 600 14px var(--font-sans); cursor: pointer; border: 1px solid transparent; transition: filter .15s, background .15s, border-color .15s, color .15s; }

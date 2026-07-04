@@ -159,7 +159,7 @@ async function fetchWithTimeout(url, opts = {}, timeoutMs = REQUEST_TIMEOUT_MS) 
 // ============================================================================
 // CORE FETCH WRAPPER
 // ============================================================================
-async function request(method, path, body = null) {
+async function request(method, path, body = null, { timeoutMs } = {}) {
   // In demo mode the UI is fed from demoData.js; never hit the backend.
   if (typeof window !== 'undefined' && window.localStorage.getItem('yotori:demo') === '1') {
     if (method === 'GET') return null;
@@ -180,7 +180,12 @@ async function request(method, path, body = null) {
 
   let response;
   try {
-    response = await fetchWithTimeout(`${API_BASE}${path}`, opts);
+    // timeoutMs : certains flux légitimement lents (GoCardless : 2-3 appels
+    // upstream séquentiels + cold start Railway) dépassent les 15 s par
+    // défaut — le client abandonnait ALORS QUE le backend aboutissait
+    // (connexion « pending » créée mais jamais de redirection → l'user
+    // recliquait → duplicats). Ces appels passent un timeout dédié.
+    response = await fetchWithTimeout(`${API_BASE}${path}`, opts, timeoutMs || REQUEST_TIMEOUT_MS);
   } catch (err) {
     if (isMutation) endMutation();
     markBackendOffline();
@@ -234,8 +239,8 @@ async function request(method, path, body = null) {
   return data;
 }
 
-const get = (path) => request('GET', path);
-const post = (path, body) => request('POST', path, body);
+const get = (path, opts) => request('GET', path, null, opts);
+const post = (path, body, opts) => request('POST', path, body, opts);
 const put = (path, body) => request('PUT', path, body);
 const del = (path) => request('DELETE', path);
 
@@ -648,12 +653,15 @@ export const banking = {
   listBanks: (country = 'FR') => isDemo() ? Promise.resolve([]) : get(`/banking/banks?country=${country}`),
 
   /** Initiate connection → returns {redirect_url, connection_id, state}.
-   *  The user is then sent to redirect_url to consent at their bank. */
+   *  The user is then sent to redirect_url to consent at their bank.
+   *  Timeout étendu : 2-3 appels GoCardless séquentiels côté backend +
+   *  cold start Railway → les 15 s par défaut coupaient AVANT la réponse
+   *  (l'user croyait que « rien ne se passe » et recliquait → duplicats). */
   connect: (bankName, bankCountry = 'FR') =>
-    post('/banking/connect', { bank_name: bankName, bank_country: bankCountry }),
+    post('/banking/connect', { bank_name: bankName, bank_country: bankCountry }, { timeoutMs: 40000 }),
 
   /** Complete after the bank redirects back with ?ref={state}. */
-  complete: (state) => post('/banking/complete', { state }),
+  complete: (state) => post('/banking/complete', { state }, { timeoutMs: 40000 }),
 
   /** Sync transactions for a connection. En démo : renvoie un succès vide
    *  immédiat plutôt qu'un throw, pour que le SyncButton ait un comportement
@@ -661,10 +669,10 @@ export const banking = {
   sync: (connectionId, daysBack = 90) =>
     isDemo()
       ? Promise.resolve({ connection_id: connectionId, imported: 0, skipped: 0, errors: [], last_synced_at: new Date().toISOString(), new_tx_ids: [] })
-      : post(`/banking/sync/${connectionId}?days_back=${daysBack}`),
+      : post(`/banking/sync/${connectionId}?days_back=${daysBack}`, null, { timeoutMs: 90000 }),
 
   /** Re-poll requisition status to update accounts list */
-  refreshConnection: (id) => post(`/banking/refresh/${id}`),
+  refreshConnection: (id) => post(`/banking/refresh/${id}`, null, { timeoutMs: 40000 }),
 
   /** List all connections. En démo : lit la liste seedée par YotoriApp
    *  (mis en cache dans localStorage lors du reloadAll démo). */
