@@ -477,15 +477,13 @@ async def _sync_one_connection(
     if conn.status != "authorized" or not conn.accounts_data:
         raise HTTPException(status_code=400, detail="Connexion non autorisée")
 
-    # RLS : poser le contexte du foyer (transaction-scoped). INDISPENSABLE pour
-    # le cron nightly `cron_sync_all` (aucun user authentifié → variable non
-    # posée → sous FORCE RLS la sync ne voit/écrit aucune ligne). Aussi robuste
-    # pour l'appel user-facing. À réasserter à chaque connexion du cron.
-    try:
-        from sqlalchemy import text
-        db.execute(text("SELECT set_config('app.current_household_id', :h, true)"), {"h": str(household_id)})
-    except Exception:
-        pass
+    # RLS : poser le contexte du foyer. INDISPENSABLE pour le cron nightly
+    # `cron_sync_all` (aucun user authentifié → variable non posée → sous
+    # FORCE RLS la sync ne voit/écrit aucune ligne). set_rls_context mémorise
+    # aussi le foyer sur la session → ré-affirmé automatiquement après chaque
+    # commit (les syncs commitent plusieurs fois).
+    from app.database import set_rls_context
+    set_rls_context(db, household_id)
 
     date_from = (datetime.utcnow() - timedelta(days=days_back)).date().isoformat()
     total_new = 0

@@ -88,8 +88,10 @@ def cron_send_monthly(
     sent = 0
     for hh in households:
         try:
-            # Pose le contexte RLS pour ce foyer (transaction-scoped).
-            db.execute(text("SELECT set_config('app.current_household_id', :h, true)"), {"h": hh.id})
+            # Pose le contexte RLS pour ce foyer (ré-affirmé automatiquement
+            # après chaque commit via le listener de database.py).
+            from app.database import set_rls_context
+            set_rls_context(db, hh.id)
             if send_monthly_report(db, hh.id, month):
                 sent += 1
         except Exception as e:

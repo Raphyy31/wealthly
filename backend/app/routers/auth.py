@@ -120,16 +120,11 @@ def register(request: Request, response: Response, payload: UserCreate, db: Sess
     # RLS : la table `categories` est ENABLE+FORCE row-level security avec une
     # policy WITH CHECK sur current_setting('app.current_household_id'). À
     # l'inscription, aucun utilisateur n'est encore authentifié → on pose le
-    # contexte sur le foyer qu'on vient de créer (transaction-scoped) avant
-    # d'insérer les catégories par défaut. No-op sur SQLite (tests).
-    try:
-        from sqlalchemy import text
-        db.execute(
-            text("SELECT set_config('app.current_household_id', :hid, true)"),
-            {"hid": str(household.id)},
-        )
-    except Exception:
-        pass
+    # contexte sur le foyer qu'on vient de créer AVANT d'insérer les
+    # catégories par défaut. set_rls_context le ré-affirme aussi après chaque
+    # commit de la requête (refresh post-commit sûrs). No-op sur SQLite.
+    from app.database import set_rls_context
+    set_rls_context(db, household.id)
 
     user = User(
         email=payload.email,

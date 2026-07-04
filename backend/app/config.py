@@ -115,7 +115,9 @@ class Settings:
     # Incident prod 2026-07-03 : gpt-4o-mini indisponible sur compte neuf).
     OPENAI_MODEL_FALLBACKS: str = os.getenv(
         "OPENAI_MODEL_FALLBACKS",
-        "gpt-4o-mini,gpt-4.1-mini,gpt-5-mini,gpt-5-nano,gpt-4o,gpt-5",
+        # gpt-4.1-nano en tête : modèle accessible sur le compte OpenAI du
+        # user (2026-07-04) — les comptes récents n'exposent pas gpt-4o-mini.
+        "gpt-4.1-nano,gpt-4o-mini,gpt-4.1-mini,gpt-5-mini,gpt-5-nano,gpt-4o,gpt-5",
     )
     # Plafond mensuel d'appels IA par foyer (filet anti token-burn). Au-delà →
     # fallback déterministe. Le cache du Coach (24h) limite déjà fortement.

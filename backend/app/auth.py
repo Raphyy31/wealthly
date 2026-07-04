@@ -190,17 +190,15 @@ def get_current_user(
         raise HTTPException(status_code=401, detail="Session révoquée, reconnectez-vous")
 
     # ── RLS context (defense-in-depth) ──────────────────────────────────────
-    # Toutes les requêtes ORM qui s'exécutent ensuite dans le SAME transaction
-    # block ne verront que les lignes du foyer du user. set_config(..., true)
-    # = équivalent SET LOCAL : la variable est reset à la fin de la
-    # transaction, donc pas de fuite entre requêtes / users sur le même pool.
-    # Sur SQLite (tests), set_config n'existe pas → on swallow l'erreur.
-    if db.bind and db.bind.dialect.name == 'postgresql':
-        from sqlalchemy import text
-        db.execute(
-            text("SELECT set_config('app.current_household_id', :hid, true)"),
-            {"hid": user.household_id},
-        )
+    # set_rls_context pose set_config('app.current_household_id', ..., true)
+    # (équivalent SET LOCAL — reset à chaque fin de transaction, pas de fuite
+    # entre requêtes/users du pool) ET mémorise le foyer sur la session : le
+    # listener after_begin de database.py RÉ-AFFIRME la variable à chaque
+    # nouvelle transaction. Sans ça, tout commit en cours de requête laissait
+    # les lectures suivantes (db.refresh…) sans contexte → 0 ligne → 500
+    # (incidents ai_state + /banking/connect, 2026-07). No-op sur SQLite.
+    from app.database import set_rls_context
+    set_rls_context(db, user.household_id)
     return user
 
 

@@ -58,6 +58,7 @@ import { AccountDrawer } from './components/AccountDrawer.jsx';
 import { useTheme, ThemeToggle } from './components/ui/ThemeToggle.jsx';
 import Logo from './components/Logo.jsx';
 import { AddWealthModal } from './components/AddWealthModal.jsx';
+import { BankConnectModal } from './components/BankConnectModal.jsx';
 import { MemberEditor } from './views/settings/modals/MemberEditor.jsx';
 import { CreateRuleModal } from './components/CreateRuleModal.jsx';
 import { AiPromptModal } from './components/AiPromptModal.jsx';
@@ -502,14 +503,14 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
   const goalFromApi = (g) => ({
     id: g.id,
     name: g.name,
-    emoji: g.emoji || 'ðŸŽ¯',
+    emoji: g.emoji || '🎯',
     target: g.target_amount,
     current: g.current_amount,
     deadline: g.deadline,
   });
   const goalToApi = (g) => ({
     name: g.name,
-    emoji: g.emoji || 'ðŸŽ¯',
+    emoji: g.emoji || '🎯',
     target_amount: parseFloat(g.target) || 0,
     current_amount: parseFloat(g.current) || 0,
     deadline: g.deadline || null,
@@ -885,7 +886,7 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
   // au PDF qui détaille les lignes d'un PEA/CTO. `visibleAssets` (la liste
   // utilisée PARTOUT ailleurs) EXCLUT les filles : leur valeur est déjà portée
   // par le compte parent, donc les recompter gonflait TOUS les totaux dérivés
-  // dans les vues (bug PEA : +32 kâ‚¬ sur Wealth/Dashboard/Bilan).
+  // dans les vues (bug PEA : +32 k€ sur Wealth/Dashboard/Bilan).
   const visibleAssetsAll = useMemo(() => activeMemberId === 'all' ? livePricedAssets : livePricedAssets.filter(a => (a.memberIds || []).includes(activeMemberId)), [livePricedAssets, activeMemberId]);
   const visibleAssets = useMemo(() => visibleAssetsAll.filter(a => !a.parentAssetId), [visibleAssetsAll]);
   const visibleLiabilities = useMemo(() => activeMemberId === 'all' ? liabilities : liabilities.filter(l => (l.memberIds || []).includes(activeMemberId)), [liabilities, activeMemberId]);
@@ -979,8 +980,8 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
   );
   // Fix bug double-comptage PEA : les positions filles (parentAssetId set)
   // sont deja incluses dans la valorisation du parent (cf useWealthItems).
-  // Sans ce filtre, un PEA de 32 500 â‚¬ avec 6 positions filles ~32 400 â‚¬
-  // gonflait le patrimoine de 32 k â‚¬.
+  // Sans ce filtre, un PEA de 32 500 € avec 6 positions filles ~32 400 €
+  // gonflait le patrimoine de 32 k €.
   const assetsValue = useMemo(() => visibleAssets.filter(a => !a.parentAssetId).reduce((sum, a) => sum + (parseFloat(a.currentValue) || 0) * memberShare(a), 0), [visibleAssets, memberShare]);
   const liabilitiesValue = useMemo(() => visibleLiabilities.reduce((sum, l) => sum + (parseFloat(l.remainingCapital) || 0) * liabilityShare(l), 0), [visibleLiabilities, liabilityShare]);
   const netWorth = liquidWealth + assetsValue - liabilitiesValue;
@@ -1031,7 +1032,7 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
       .filter(l => l.type === 'mortgage')
       .reduce((s, l) => s + (parseFloat(l.remainingCapital) || 0) * liabilityShare(l), 0);
     const otherDebt = liabilitiesValue - mortgageDebt;
-    // Round to 1 â‚¬ so micro-fluctuations don't trigger noisy POSTs.
+    // Round to 1 € so micro-fluctuations don't trigger noisy POSTs.
     const key = `${month}|${Math.round(netWorth)}|${Math.round(liquidWealth)}|${Math.round(assetsValue)}|${Math.round(liabilitiesValue)}|${Math.round(realEstateValue)}|${Math.round(mortgageDebt)}`;
     if (lastSnapshotKeyRef.current === key) return;
     lastSnapshotKeyRef.current = key;
@@ -2197,7 +2198,7 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
           // Affichage du resume per-bank avant de passer a la suivante
           if (!silent) {
             const msg = imp > 0
-              ? `${bankLabel} âœ“ ${imp} nouvelle${imp > 1 ? 's' : ''} op${imp > 1 ? 's' : ''}.`
+              ? `${bankLabel} ✓ ${imp} nouvelle${imp > 1 ? 's' : ''} op${imp > 1 ? 's' : ''}.`
               : `${bankLabel} ✓ déjà à jour.`;
             setSyncStage('success', msg, { current: i + 1, total: N, progress: (i + 1) / N });
             await breathe(550);
@@ -2853,7 +2854,7 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
           <div className="backend-status-body">
             <span className="backend-status-title">Le serveur ne répond pas</span>
             <span className="backend-status-meta">
-              On retente automatiquement… Tes données restent affichées.
+              On retente automatiquement… Vos données restent affichées.
             </span>
           </div>
           <button
@@ -2867,7 +2868,7 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
       )}
       {backendStatus.status === 'restored' && (
         <div className="backend-status-banner backend-status-restored" role="status" aria-live="polite">
-          <span className="backend-status-check" aria-hidden="true">âœ“</span>
+          <span className="backend-status-check" aria-hidden="true">✓</span>
           <span className="backend-status-title">Connexion rétablie</span>
         </div>
       )}
@@ -2925,7 +2926,7 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
                           <td style={{ padding: '8px 10px', color: 'var(--ink-2)', whiteSpace: 'nowrap' }}>{d.date}</td>
                           <td style={{ padding: '8px 10px' }}>{d.label}</td>
                           <td className="num" style={{ padding: '8px 10px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                            {(d.amount >= 0 ? '+' : '') + (d.amount?.toFixed(2) ?? '0.00')} â‚¬
+                            {(d.amount >= 0 ? '+' : '') + (d.amount?.toFixed(2) ?? '0.00')} €
                           </td>
                         </tr>
                       ))}
@@ -2958,7 +2959,7 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
       {learningOffer && (
         <div className="learning-banner" role="status">
           <div className="learning-banner-text">
-            <span className="learning-banner-icon">ðŸ§ </span>
+            <span className="learning-banner-icon">🧠</span>
             <span>
               <strong>Yotori Finance a appris</strong> : « {learningOffer.payeeName} » → <strong>{learningOffer.categoryName}</strong>.
               {learningOffer.matchableCount > 0 && <> Appliquer aux <strong>{learningOffer.matchableCount}</strong> transaction{learningOffer.matchableCount > 1 ? 's' : ''} historique{learningOffer.matchableCount > 1 ? 's' : ''} de ce marchand ?</>}
@@ -3665,19 +3666,17 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
         />
       )}
 
+      {/* Connexion bancaire DSP2 — UN SEUL composant partout (2026-07-04) :
+          le BankConnectModal moderne (logos, recherche, états d'attente).
+          L'ancien step "bank-list" d'AddAccountModal (liste brute sans logos)
+          est retiré — feedback user : « vue pas au niveau ». */}
       {showBankConnect && (
-        <AddAccountModal
-          members={members}
-          onSave={createAccount}
-          onClose={() => setShowBankConnect(false)}
-          initialStep="bank-list"
-        />
+        <BankConnectModal onClose={() => setShowBankConnect(false)}/>
       )}
 
       {/* Bouton + sidebar (section Comptes) -> modal compte bancaire avec
-          choix DSP2 / manuel / CSV. Le 'choice' step affiche les 3 options
-          en cards cliquables ; le 'bank-list' skipperait direct vers les
-          banques (utilise par un autre flow). */}
+          choix DSP2 / manuel / CSV. Le choix DSP2 ouvre le BankConnectModal
+          unifié ci-dessus. */}
       {addBankAccountStep && (
         <AddAccountModal
           members={members}
@@ -3687,6 +3686,7 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
           }}
           onClose={() => setAddBankAccountStep(null)}
           onImportCsv={() => { setView('import'); setImportStep('upload'); }}
+          onOpenBankConnect={() => { setAddBankAccountStep(null); setShowBankConnect(true); }}
           initialStep={addBankAccountStep}
         />
       )}
@@ -3715,28 +3715,11 @@ const ACCOUNT_TYPES = [
   { value: 'professional', label: 'Professionnel',    role: 'professionnel',  hint: 'Entièrement exclu du patrimoine personnel et du cashflow.' },
 ];
 
-const BANK_COUNTRIES = [
-  { code: 'FR', name: 'ðŸ‡«ðŸ‡· France' },
-  { code: 'DE', name: 'ðŸ‡©ðŸ‡ª Allemagne' },
-  { code: 'ES', name: 'ðŸ‡ªðŸ‡¸ Espagne' },
-  { code: 'IT', name: 'ðŸ‡®ðŸ‡¹ Italie' },
-  { code: 'BE', name: 'ðŸ‡§ðŸ‡ª Belgique' },
-  { code: 'NL', name: 'ðŸ‡³ðŸ‡± Pays-Bas' },
-  { code: 'PT', name: 'ðŸ‡µðŸ‡¹ Portugal' },
-  { code: 'GB', name: 'ðŸ‡¬ðŸ‡§ Royaume-Uni' },
-];
-
-function AddAccountModal({ members = [], onSave, onClose, onImportCsv, initialStep = 'choice' }) {
-  // steps: 'choice' | 'bank-list' | 'manual'
-  const [step, setStep] = useState(initialStep);
-
-  // --- bank flow state ---
-  const [country, setCountry] = useState('FR');
-  const [banks, setBanks] = useState([]);
-  const [loadingBanks, setLoadingBanks] = useState(false);
-  const [connecting, setConnecting] = useState(false);
-  const [bankError, setBankError] = useState(null);
-  const [search, setSearch] = useState('');
+function AddAccountModal({ members = [], onSave, onClose, onImportCsv, onOpenBankConnect, initialStep = 'choice' }) {
+  // steps: 'choice' | 'manual' — la connexion DSP2 vit dans le BankConnectModal
+  // unifié (logos, recherche, états d'attente) ouvert via onOpenBankConnect.
+  // L'ancien step 'bank-list' (liste brute sans logos) est retiré (2026-07-04).
+  const [step, setStep] = useState(initialStep === 'bank-list' ? 'choice' : initialStep);
 
   // --- manual form state ---
   const [form, setForm] = useState({
@@ -3750,43 +3733,6 @@ function AddAccountModal({ members = [], onSave, onClose, onImportCsv, initialSt
       ...f,
       memberIds: f.memberIds.includes(id) ? f.memberIds.filter(x => x !== id) : [...f.memberIds, id],
     }));
-
-  // Bank flow
-  const loadBanks = async () => {
-    setLoadingBanks(true);
-    setBankError(null);
-    try {
-      const data = await api.banking.listBanks(country);
-      const list = data?.banks || data || [];
-      setBanks(Array.isArray(list) ? list : []);
-      setStep('bank-list');
-    } catch (err) {
-      setBankError(err.message);
-    } finally {
-      setLoadingBanks(false);
-    }
-  };
-
-  const connectBank = async (bankName) => {
-    setConnecting(true);
-    setBankError(null);
-    try {
-      const result = await api.banking.connect(bankName, country);
-      if (result?.redirect_url) {
-        window.location.href = result.redirect_url;
-      } else {
-        setBankError("Pas d'URL de redirection reçue");
-        setConnecting(false);
-      }
-    } catch (err) {
-      setBankError(err.message);
-      setConnecting(false);
-    }
-  };
-
-  const filteredBanks = banks.filter(b =>
-    (b.name || b.full_name || '').toLowerCase().includes(search.toLowerCase())
-  );
 
   // Manual form submit
   const handleSubmit = async (e) => {
@@ -3804,12 +3750,10 @@ function AddAccountModal({ members = [], onSave, onClose, onImportCsv, initialSt
 
   const titles = {
     'choice': 'Ajouter un compte',
-    'bank-list': 'Connecter ma banque',
     'manual': 'Compte manuel',
   };
 
   const backStep = {
-    'bank-list': 'choice',
     'manual': 'choice',
   };
 
@@ -3833,10 +3777,9 @@ function AddAccountModal({ members = [], onSave, onClose, onImportCsv, initialSt
               Comment souhaitez-vous ajouter ce compte ?
             </p>
 
-            {/* Bank connect card */}
+            {/* Bank connect card — délègue au BankConnectModal unifié */}
             <button
-              onClick={() => { setBankError(null); loadBanks(); }}
-              disabled={loadingBanks}
+              onClick={() => { onClose(); onOpenBankConnect && onOpenBankConnect(); }}
               style={{
                 display: 'flex', alignItems: 'center', gap: 16, padding: '18px 20px',
                 background: 'var(--bg-elevated, var(--bg-card))',
@@ -3857,23 +3800,14 @@ function AddAccountModal({ members = [], onSave, onClose, onImportCsv, initialSt
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-primary)', marginBottom: 3 }}>
-                  {loadingBanks ? 'Chargement des banques…' : 'Connecter ma banque'}
+                  Connecter ma banque
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
                   Synchronisation automatique via GoCardless (PSD2). Vos identifiants restent sur le site de votre banque.
                 </div>
               </div>
-              {loadingBanks
-                ? <RefreshCw size={16} className="spin" style={{ color: 'var(--text-tertiary)', flexShrink: 0 }}/>
-                : <ChevronRight size={16} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }}/>
-              }
+              <ChevronRight size={16} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }}/>
             </button>
-
-            {bankError && (
-              <div style={{ fontSize: 12, color: 'var(--danger)', padding: '8px 12px', background: 'rgba(196,113,88,.08)', borderRadius: 8 }}>
-                {bankError}
-              </div>
-            )}
 
             {/* Manual card */}
             <button
@@ -3949,70 +3883,7 @@ function AddAccountModal({ members = [], onSave, onClose, onImportCsv, initialSt
           </div>
         )}
 
-        {/* â”€â”€ STEP 2a: BANK LIST â”€â”€ */}
-        {step === 'bank-list' && (
-          <div className="modal-body">
-            <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center' }}>
-              <input
-                className="search-input"
-                placeholder="Chercher votre banque…"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                style={{ flex: 1 }}
-                autoFocus
-              />
-              <Combobox
-                value={country}
-                onChange={val => { setCountry(val); setBanks([]); setSearch(''); }}
-                options={BANK_COUNTRIES.map(c => ({ value: c.code, label: c.name }))}
-                placeholder="Pays…"
-              />
-            </div>
-
-            {banks.length === 0 && !loadingBanks && (
-              <div style={{ textAlign: 'center', padding: 24, color: 'var(--text-tertiary)', fontSize: 13 }}>
-                Sélectionnez un pays et cliquez sur "Charger les banques"
-              </div>
-            )}
-
-            <div style={{ maxHeight: 300, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {filteredBanks.map((bank, idx) => {
-                const bankLabel = bank.name || bank.full_name || `Banque ${idx + 1}`;
-                // GoCardless wants the institution_id (e.g. "BOURSORAMA_BOURFRPP"),
-                // not the display name. Fallback to label only as a last resort.
-                const bankId = bank.id || bank.institution_id || bankLabel;
-                return (
-                  <button
-                    key={bankId || idx}
-                    className="bank-option-btn"
-                    onClick={() => connectBank(bankId)}
-                    disabled={connecting}
-                  >
-                    <span className="bank-option-name">{bankLabel}</span>
-                    {connecting
-                      ? <RefreshCw size={13} className="spin" style={{ color: 'var(--text-tertiary)' }}/>
-                      : <ChevronRight size={14}/>
-                    }
-                  </button>
-                );
-              })}
-            </div>
-
-            {bankError && (
-              <div style={{ fontSize: 12, color: 'var(--danger)', padding: '8px 12px', marginTop: 8, background: 'rgba(196,113,88,.08)', borderRadius: 8 }}>
-                {bankError}
-              </div>
-            )}
-
-            {country && banks.length === 0 && (
-              <button className="ds-btn primary" style={{ width: '100%', marginTop: 12 }} onClick={loadBanks} disabled={loadingBanks}>
-                {loadingBanks ? <><RefreshCw size={13} className="spin"/> Chargement…</> : 'Charger les banques'}
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* â”€â”€ STEP 2b: MANUAL FORM â”€â”€ */}
+        {/* ── STEP 2: MANUAL FORM ── (la connexion DSP2 vit dans BankConnectModal) */}
         {step === 'manual' && (
           <form onSubmit={handleSubmit}>
             <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
