@@ -2030,18 +2030,21 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
       // Rafraîchit la liste (badge « en cours » → « synchronisé »).
       try { setBankConnections(await api.banking.listConnections()); } catch { /* ignore */ }
 
-      if (res.imported > 0) {
+      // On ne continue à réessayer QUE si RIEN n'a encore pu être lu (tous les
+      // comptes sont en préparation). Dès qu'au moins un compte a été lu
+      // (accounts_read > 0), on s'arrête : re-tirer un compte déjà lu juste
+      // parce qu'un compte frère reste bloqué brûlerait son quota (~4/j/compte)
+      // pour rien — le cron nightly finira les comptes encore en préparation.
+      const done = res.imported > 0 || res.status !== 'processing' || res.accounts_read > 0;
+      if (done) {
         await reloadAll();
-        unlockAchievement('first_import');
-        showToast(`${res.imported} opération${res.imported > 1 ? 's' : ''} importée${res.imported > 1 ? 's' : ''}`, 'success');
+        if (res.imported > 0) {
+          unlockAchievement('first_import');
+          showToast(`${res.imported} opération${res.imported > 1 ? 's' : ''} importée${res.imported > 1 ? 's' : ''}`, 'success');
+        }
         return;
       }
-      if (res.status !== 'processing') {
-        // Prêt mais rien de neuf (compte vide / déjà à jour) → terminé.
-        await reloadAll();
-        return;
-      }
-      // Encore en préparation côté banque → on informe une fois, puis on relance.
+      // Tout est encore en préparation côté banque → on informe une fois, puis on relance.
       if (!informed) {
         informed = true;
         showToast('Ta banque prépare tes opérations — elles apparaîtront dans quelques minutes.', 'info');

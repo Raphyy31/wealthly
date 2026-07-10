@@ -668,7 +668,7 @@ export const banking = {
    *  crédible (badge "à l'instant", pas d'erreur visible). */
   sync: (connectionId, daysBack = 90) =>
     isDemo()
-      ? Promise.resolve({ connection_id: connectionId, imported: 0, skipped: 0, errors: [], status: 'ready', pending_accounts: [], last_synced_at: new Date().toISOString(), new_tx_ids: [] })
+      ? Promise.resolve({ connection_id: connectionId, imported: 0, skipped: 0, errors: [], status: 'ready', pending_accounts: [], accounts_read: 0, last_synced_at: new Date().toISOString(), new_tx_ids: [] })
       : post(`/banking/sync/${connectionId}?days_back=${daysBack}`, null, { timeoutMs: 90000 }),
 
   /** Re-poll requisition status to update accounts list */

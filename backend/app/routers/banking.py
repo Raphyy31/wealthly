@@ -211,6 +211,15 @@ async def _gc(method: str, path: str, body: dict | None = None, params: dict | N
                 last_detail = r.json()
             except Exception:
                 last_detail = r.text[:300]
+            # 429 « quota JOURNALIER » (GoCardless : "The daily request limit set
+            # by the Institution has been exceeded") : ce n'est PAS transitoire —
+            # retenter 3× gaspille 3 appels comptés sans aucune chance de succès
+            # et accélère l'épuisement du quota (~4/jour/compte). On échoue tout
+            # de suite avec un message honnête. Les 429 sans "daily" (burst juste
+            # après une requisition) restent retentés comme avant.
+            if r.status_code == 429 and "daily" in str(last_detail).lower():
+                logger.info("[gocardless] 429 daily quota on %s %s: %s", method, path, last_detail)
+                raise HTTPException(status_code=429, detail="Limite de rafraîchissement de la banque atteinte pour aujourd'hui (quota GoCardless). Réessaie demain.")
             logger.warning("[gocardless] transient %s on %s %s, will retry", r.status_code, method, path)
             continue
 
@@ -588,6 +597,14 @@ async def _sync_one_connection(
             accounts_pending.append(acc_label)
             logger.info("[banking] account %s balances not ready yet — skip", gc_acc_id[:8])
             continue
+        except Exception as e:
+            # Erreur non-transitoire sur les SOLDES (403 scope refusé, 404,
+            # 502 après retries épuisés…) : NE PAS faire échouer toute la sync.
+            # On continue sans solde officiel — les transactions restent
+            # récupérables. (Restaure le comportement d'avant le split du bloc :
+            # sans ça, une erreur solde sur 1 compte tuait la connexion entière.)
+            logger.warning("[banking] balance fetch failed for %s: %s", gc_acc_id, e)
+            balances = []
         try:
             for kind in BALANCE_PRIORITY:
                 match = next((b for b in balances if b.get("balanceType") == kind), None)
@@ -791,6 +808,7 @@ async def _sync_one_connection(
         "skipped": total_skipped,
         "errors": errors,
         "pending_accounts": accounts_pending,
+        "accounts_read": accounts_read,
         "status": sync_status,
         "last_synced_at": _iso_utc(conn.last_synced_at),
         "new_tx_ids": new_tx_ids,
