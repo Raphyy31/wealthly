@@ -96,12 +96,17 @@ export function BankConnectionsSection() {
     setSyncMessage(null);
     try {
       const res = await api.banking.sync(id);
-      setSyncMessage({
-        kind: res.errors?.length ? 'warn' : 'ok',
-        text: res.errors?.length
-          ? t('settings.banks.syncedErrors', { imported: res.imported, skipped: res.skipped, errors: res.errors.join(', ') })
-          : t('settings.banks.syncedSummary', { count: res.imported, imported: res.imported, skipped: res.skipped }),
-      });
+      if (res.status === 'processing' && !res.imported) {
+        // GoCardless prépare encore les données côté banque → pas une erreur.
+        setSyncMessage({ kind: 'warn', text: 'Ta banque prépare encore les opérations. Réessaie dans une minute — elles arriveront aussi automatiquement.' });
+      } else {
+        setSyncMessage({
+          kind: res.errors?.length ? 'warn' : 'ok',
+          text: res.errors?.length
+            ? t('settings.banks.syncedErrors', { imported: res.imported, skipped: res.skipped, errors: res.errors.join(', ') })
+            : t('settings.banks.syncedSummary', { count: res.imported, imported: res.imported, skipped: res.skipped }),
+        });
+      }
       await reload();
     } catch (e) {
       setSyncMessage({ kind: 'error', text: e.message });
@@ -215,6 +220,15 @@ export function BankConnectionsSection() {
                   // sont purgés automatiquement à la prochaine connexion.)
                   <span style={{ color: 'var(--warning)' }}>
                     Consentement non finalisé — relancez « {t('settings.banks.connect')} » ou supprimez cette ligne.
+                  </span>
+                ) : c.status === 'authorized' && !c.last_synced_at ? (
+                  // Autorisée mais jamais synchronisée : GoCardless prépare
+                  // encore les opérations côté banque (asynchrone). Badge honnête
+                  // « en cours » plutôt que « synchronisé jamais » — elles
+                  // arriveront seules (re-sync auto / cron).
+                  <span style={{ color: 'var(--accent)', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                    <RefreshCw size={11} className="spin" />
+                    Connectée · récupération des opérations en cours…
                   </span>
                 ) : (
                   <>

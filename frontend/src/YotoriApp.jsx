@@ -2005,6 +2005,53 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
   };
 
   // ===== Banking / GoCardless =====
+  // Sync NON-BLOQUANTE des opérations après la connexion. GoCardless prépare
+  // les transactions en asynchrone côté banque (compte DISCOVERED → PROCESSING
+  // → READY) : le tout premier sync tombe très souvent sur « en cours » et
+  // ramène 0 opération. Plutôt que d'afficher un faux « Banque connectée » vide
+  // (bug user 2026-07-10), on relâche l'écran et on ré-essaie en arrière-plan,
+  // espacé, jusqu'à ce que les opérations redescendent. Délais volontairement
+  // larges pour respecter le quota GoCardless (~4 appels/jour/compte sur les
+  // données) — le backend saute les comptes pas prêts sans brûler ce quota.
+  const runBackgroundBankSync = useCallback(async (connectionId) => {
+    const DELAYS = [0, 20000, 60000, 150000];   // 0s · 20s · 1 min · 2 min 30
+    let informed = false;
+    for (let i = 0; i < DELAYS.length; i++) {
+      if (DELAYS[i] > 0) await new Promise(r => setTimeout(r, DELAYS[i]));
+      let res;
+      try {
+        res = await api.banking.sync(connectionId);
+      } catch (e) {
+        // Erreur dure (403 consentement, 429 quota, réseau…) → on arrête.
+        showToast(e?.detail || e?.message || 'Erreur de synchronisation bancaire', 'error');
+        try { setBankConnections(await api.banking.listConnections()); } catch { /* ignore */ }
+        return;
+      }
+      // Rafraîchit la liste (badge « en cours » → « synchronisé »).
+      try { setBankConnections(await api.banking.listConnections()); } catch { /* ignore */ }
+
+      if (res.imported > 0) {
+        await reloadAll();
+        unlockAchievement('first_import');
+        showToast(`${res.imported} opération${res.imported > 1 ? 's' : ''} importée${res.imported > 1 ? 's' : ''}`, 'success');
+        return;
+      }
+      if (res.status !== 'processing') {
+        // Prêt mais rien de neuf (compte vide / déjà à jour) → terminé.
+        await reloadAll();
+        return;
+      }
+      // Encore en préparation côté banque → on informe une fois, puis on relance.
+      if (!informed) {
+        informed = true;
+        showToast('Ta banque prépare tes opérations — elles apparaîtront dans quelques minutes.', 'info');
+      }
+    }
+    // Fenêtre épuisée : le cron nightly ou un « Sync » manuel finira le travail.
+    showToast('La synchronisation prend plus de temps que prévu. Tes opérations arriveront automatiquement — tu peux aussi relancer « Sync » dans Réglages → Comptes bancaires.', 'info');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reloadAll]);
+
   const completeBankCallback = useCallback(async (pending) => {
     // GoCardless ne passe PAS toujours le statut à "linked" (LN) instantanément
     // au retour de la banque : le statut peut rester GA/SA/UA (granting access /
@@ -2054,49 +2101,23 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
       return;
     }
 
-    // â”€â”€ result.status === 'authorized' â”€â”€
-    {
-      {
-        showToast(t('toasts.bankConnected'), 'success');
-        const conns = await api.banking.listConnections();
-        setBankConnections(conns);
-        // Auto-sync the freshly-connected bank so the user doesn't have to
-        // chase down a hidden Sync button to see their transactions.
-        if (result.connection_id) {
-          // Stages dedies pour la 1ere sync post-connexion (moment le plus
-          // visible — l'utilisateur vient de finir le flow OAuth banque).
-          setSyncStage('balance', 'Lecture du solde de votre compte…', { current: 1, total: 1 });
-          try {
-            // Petit delai cosmetique : laisse le user voir "Lecture du solde"
-            // avant de passer en "Récupération des opérations" — sinon le stage
-            // change si vite qu'on ne voit que le dernier.
-            await new Promise(r => setTimeout(r, 400));
-            setSyncStage('transactions', 'Récupération de vos opérations…', { current: 1, total: 1 });
-            const syncRes = await api.banking.sync(result.connection_id);
-            setSyncStage('success',
-              syncRes.imported > 0
-                ? `${syncRes.imported} opération${syncRes.imported > 1 ? 's' : ''} importée${syncRes.imported > 1 ? 's' : ''}`
-                : 'Banque connectée',
-              { current: 1, total: 1, progress: 1 }
-            );
-            await reloadAll();
-            if (syncRes.imported > 0) unlockAchievement('first_import');
-            setTimeout(() => setSyncStatus(null), 1800);
-          } catch (syncErr) {
-            setSyncStage('error',
-              syncErr?.detail || syncErr?.message || 'Erreur pendant la synchronisation',
-              { current: 1, total: 1, progress: 1 }
-            );
-            // Erreur du backend deja user-friendly grace a _gc() retry.
-            const friendly = syncErr?.detail || syncErr?.message || 'Réessayez dans quelques instants.';
-            showToast(friendly, 'error');
-            setTimeout(() => setSyncStatus(null), 3500);
-          }
-        }
-      }
+    // ── result.status === 'authorized' ──
+    showToast(t('toasts.bankConnected'), 'success');
+    try {
+      setBankConnections(await api.banking.listConnections());
+    } catch { /* ignore */ }
+
+    // On ferme l'overlay tout de suite : la récupération des opérations se fait
+    // en arrière-plan (non-bloquant). L'utilisateur reprend la main pendant que
+    // GoCardless prépare puis pousse les transactions — qui apparaissent seules.
+    setSyncStage('success', 'Banque connectée', { current: 1, total: 1, progress: 1 });
+    setTimeout(() => setSyncStatus(null), 1400);
+
+    if (result.connection_id) {
+      runBackgroundBankSync(result.connection_id);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [runBackgroundBankSync]);
 
   // Auto-complete when bankingPendingState is set (after URL callback detection)
   useEffect(() => {

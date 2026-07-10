@@ -146,6 +146,18 @@ async def _get_access_token() -> str:
         return _token_cache["access"]
 
 
+class AccountNotReady(Exception):
+    """GoCardless 409 « AccountProcessing » — les données du compte ne sont pas
+    encore prêtes côté banque. Après une connexion fraîche, GoCardless prépare
+    les balances/transactions en asynchrone (compte DISCOVERED → PROCESSING →
+    READY) : tirer les données avant READY renvoie un 409. Ce n'est PAS une
+    erreur fatale — le client doit réessayer plus tard (ou poller le status du
+    compte). On la distingue d'un vrai échec pour afficher « synchronisation en
+    cours » plutôt qu'une erreur (bug user 2026-07-10 : banque connectée, 0 tx).
+    """
+    pass
+
+
 async def _gc(method: str, path: str, body: dict | None = None, params: dict | None = None, _retry: bool = True) -> dict:
     """Authenticated GoCardless request avec retry exponentiel sur les erreurs
     transitoires (429 rate-limit, 500/502/503/504 server, network errors).
@@ -201,6 +213,18 @@ async def _gc(method: str, path: str, body: dict | None = None, params: dict | N
                 last_detail = r.text[:300]
             logger.warning("[gocardless] transient %s on %s %s, will retry", r.status_code, method, path)
             continue
+
+        # 409 AccountProcessing : données pas encore prêtes côté banque.
+        # Signal distinct (pas un échec) → la sync l'affiche « en cours » et
+        # réessaiera. Ne jamais retenter en boucle ici : ça brûlerait le quota
+        # GoCardless (≈4 appels/jour/compte sur les données).
+        if r.status_code == 409:
+            try:
+                detail = r.json()
+            except Exception:
+                detail = {}
+            logger.info("[gocardless] 409 AccountProcessing on %s %s: %s", method, path, detail)
+            raise AccountNotReady(str(detail)[:200] if detail else "AccountProcessing")
 
         if r.status_code >= 400:
             try:
@@ -492,6 +516,8 @@ async def _sync_one_connection(
     batch_hashes = set()
     new_tx_ids: list[str] = []
     errors: list[str] = []
+    accounts_pending: list[str] = []   # comptes encore en préparation côté banque
+    accounts_read = 0                  # comptes effectivement lus (données prêtes)
 
     from app.models import Member  # local import to avoid circular at module load
     household_members = db.query(Member).filter(
@@ -502,6 +528,34 @@ async def _sync_one_connection(
         gc_acc_id = acc_info.get("id")
         if not gc_acc_id:
             continue
+        acc_label = acc_info.get("name") or gc_acc_id
+
+        # ── Les données du compte sont-elles prêtes côté GoCardless ? ─────────
+        # Après une connexion fraîche le compte passe DISCOVERED → PROCESSING →
+        # READY. Tirer balances/transactions avant READY renvoie un 409
+        # AccountProcessing → l'ancienne sync remontait « Erreur banque (409) »
+        # avalée en silence, d'où « banque connectée mais 0 opération ». On lit
+        # d'abord le statut via l'endpoint métadonnées /accounts/{id}/ (NON
+        # soumis au quota des ~4 appels/jour des scopes données) et on saute
+        # proprement les comptes pas encore prêts : le re-sync (auto côté front
+        # ou cron nightly) finira le travail.
+        try:
+            acc_meta = await _gc("GET", f"/accounts/{gc_acc_id}/")
+            acc_status = (acc_meta.get("status") or "").upper()
+        except AccountNotReady:
+            acc_status = "PROCESSING"
+        except Exception as e:
+            logger.warning("[banking] account status fetch failed for %s: %s", gc_acc_id, e)
+            acc_status = ""   # inconnu → on tente quand même (best-effort)
+
+        if acc_status in ("PROCESSING", "DISCOVERED"):
+            accounts_pending.append(acc_label)
+            logger.info("[banking] account %s not ready (%s) — skip, will retry", gc_acc_id[:8], acc_status)
+            continue
+        if acc_status in ("ERROR", "SUSPENDED", "EXPIRED"):
+            errors.append(f"{acc_label} : compte {acc_status.lower()} côté banque")
+            continue
+
         # Find or create the Yotori Finance account (matched by external_id == gc_acc_id)
         wl_acc = db.query(Account).filter(
             Account.household_id == household_id,
@@ -528,6 +582,13 @@ async def _sync_one_connection(
         try:
             bal_data = await _gc("GET", f"/accounts/{gc_acc_id}/balances/")
             balances = bal_data.get("balances", []) or []
+        except AccountNotReady:
+            # Course : status READY mais l'endpoint données répond encore 409.
+            # On considère le compte "en cours" et on réessaiera plus tard.
+            accounts_pending.append(acc_label)
+            logger.info("[banking] account %s balances not ready yet — skip", gc_acc_id[:8])
+            continue
+        try:
             for kind in BALANCE_PRIORITY:
                 match = next((b for b in balances if b.get("balanceType") == kind), None)
                 if match:
@@ -588,11 +649,19 @@ async def _sync_one_connection(
         # Transactions
         try:
             tx_data = await _gc("GET", f"/accounts/{gc_acc_id}/transactions/", params={"date_from": date_from})
+        except AccountNotReady:
+            # Données transactions pas encore prêtes (course post-connexion) →
+            # on réessaiera. Le compte + solde viennent d'être créés/màj, les
+            # opérations arriveront au prochain sync.
+            accounts_pending.append(acc_label)
+            logger.info("[banking] account %s transactions not ready yet — skip", gc_acc_id[:8])
+            continue
         except Exception as e:
             logger.error("[banking] tx fetch failed for %s: %s", gc_acc_id, e)
-            errors.append(f"{(acc_info.get('name') or gc_acc_id)} : {str(e)[:60]}")
+            errors.append(f"{acc_label} : {str(e)[:60]}")
             continue
 
+        accounts_read += 1   # données lues avec succès pour ce compte
         booked = (tx_data.get("transactions") or {}).get("booked", []) or []
         pending = (tx_data.get("transactions") or {}).get("pending", []) or []
         for raw in booked + pending:
@@ -703,8 +772,17 @@ async def _sync_one_connection(
                 total_new += 1
             batch_hashes.add(dh)
 
-    conn.last_synced_at = datetime.utcnow()
+    # On n'horodate la sync que si on a effectivement lu au moins un compte.
+    # Si TOUS les comptes sont encore en préparation (PROCESSING), on laisse
+    # last_synced_at intact (None au 1er coup) → la connexion reste marquée
+    # « synchronisation en cours » côté UI et le re-sync auto/cron réessaiera.
+    if accounts_read > 0:
+        conn.last_synced_at = datetime.utcnow()
     db.commit()
+
+    # status "processing" tant qu'un compte n'a pas pu être lu → le frontend
+    # relance en arrière-plan, sans brûler le quota (délais espacés).
+    sync_status = "processing" if accounts_pending else "ready"
 
     return {
         "connection_id": conn.id,
@@ -712,6 +790,8 @@ async def _sync_one_connection(
         "updated": total_updated,
         "skipped": total_skipped,
         "errors": errors,
+        "pending_accounts": accounts_pending,
+        "status": sync_status,
         "last_synced_at": _iso_utc(conn.last_synced_at),
         "new_tx_ids": new_tx_ids,
     }
