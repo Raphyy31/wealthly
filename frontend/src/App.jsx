@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
-import { auth, subscribeSessionExpired } from './api.js';
+import { auth, subscribeSessionExpired, probeSession } from './api.js';
 import AuthScreen from './AuthScreen.jsx';
 import AuthModal from './AuthModal.jsx';
 import YotoriApp from './YotoriApp.jsx';
@@ -32,9 +32,24 @@ export default function App() {
   // mortes dont chaque action échoue.
   const authStateRef = useRef(authState);
   useEffect(() => { authStateRef.current = authState; }, [authState]);
+  const sessionCheckRef = useRef(false);
   useEffect(() => {
-    const unsub = subscribeSessionExpired(() => {
+    const unsub = subscribeSessionExpired(async () => {
       if (authStateRef.current !== 'authed') return; // déjà déconnecté / en démo
+      if (sessionCheckRef.current) return;            // vérification déjà en cours
+      sessionCheckRef.current = true;
+      // Un 401 ISOLÉ n'est pas forcément une vraie expiration : cookie
+      // cross-site momentanément non renvoyé, course au cold-start Railway,
+      // hoquet réseau… L'ancien code déconnectait + purgeait le cache dès le
+      // 1er 401 → l'app se vidait ("mes infos ont disparu") puis "revenait"
+      // au reload. On CONFIRME d'abord via /auth/me (endpoint /auth/* → ne
+      // ré-émet pas le signal, pas de boucle). On ne purge QUE si /auth/me
+      // confirme l'invalidité.
+      // 'valid' = session OK (faux positif) ; 'unknown' = timeout/réseau (on
+      // ne déconnecte PAS sur un simple hoquet) ; 'invalid' = vrai 401.
+      const verdict = await probeSession();
+      sessionCheckRef.current = false;
+      if (verdict !== 'invalid') return; // valid ou inconnu → on garde la session
       try { localStorage.removeItem('w2:current_user'); } catch {}
       setSessionExpired(true);
       setAuthModalMode('login');

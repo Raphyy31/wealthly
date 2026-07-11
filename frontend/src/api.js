@@ -131,6 +131,21 @@ const notifySessionExpired = () => {
   __sessionListeners.forEach((fn) => { try { fn(); } catch { /* noop */ } });
 };
 
+// Sonde de session SANS throw : distingue une vraie invalidation d'un simple
+// hoquet réseau. Renvoie 'valid' | 'invalid' | 'unknown'. Sert à confirmer un
+// 401 isolé avant de purger la session (cf. App.jsx) — un timeout/cold-start
+// ne doit PAS déconnecter l'utilisateur.
+export const probeSession = async () => {
+  try {
+    const res = await fetchWithTimeout(`${API_BASE}/auth/me`, { credentials: 'include' }, 8000);
+    if (res.status === 401) return 'invalid';
+    if (res.ok) return 'valid';
+    return 'unknown';
+  } catch {
+    return 'unknown';
+  }
+};
+
 // Retry manuel déclenché par le banner ("Réessayer maintenant")
 export const retryBackendNow = () => {
   if (__backendRetryTimer) { clearTimeout(__backendRetryTimer); __backendRetryTimer = null; }
