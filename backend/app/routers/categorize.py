@@ -354,10 +354,17 @@ def _categorize_with_ai(provider: str, transactions: list[TxInput], valid_slugs:
 def _call_anthropic(prompt: str) -> str:
     """Wrapper fin (monkeypatché par les tests) → services.llm."""
     from app.services.llm import call_anthropic
-    return call_anthropic(prompt, model=settings.AI_MODEL_CATEGORIZE)
+    # Jusqu'à 100 transactions sont envoyées en une fois. 1024 tokens coupait
+    # régulièrement le JSON au milieu d'un libellé (JSONDecodeError
+    # "Unterminated string"), alors même que le provider répondait 200.
+    return call_anthropic(prompt, model=settings.AI_MODEL_CATEGORIZE, max_tokens=8192)
 
 
 def _call_openai(prompt: str) -> str:
     """Wrapper fin (monkeypatché par les tests) → services.llm."""
     from app.services.llm import call_openai
-    return call_openai(prompt, model=settings.AI_MODEL_CATEGORIZE_OPENAI)
+    return call_openai(
+        prompt,
+        model=settings.AI_MODEL_CATEGORIZE_OPENAI,
+        max_tokens=8192,
+    )

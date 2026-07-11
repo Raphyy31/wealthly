@@ -140,6 +140,25 @@ def test_categorize_openai_error_falls_back(client, auth_headers, monkeypatch):
     assert body["ai_error"] == "openai_RuntimeError"
 
 
+def test_categorize_openai_has_enough_output_budget(monkeypatch):
+    """Un lot de 100 libellés doit pouvoir produire un JSON complet."""
+    from app.services import llm as llm_mod
+
+    seen = {}
+
+    def fake_call(prompt, model, max_tokens=1024, json_mode=True):
+        seen.update(model=model, max_tokens=max_tokens, json_mode=json_mode)
+        return "{}"
+
+    monkeypatch.setattr(llm_mod, "call_openai", fake_call)
+    assert cat_mod._call_openai("Réponds en JSON") == "{}"
+    assert seen == {
+        "model": settings.AI_MODEL_CATEGORIZE_OPENAI,
+        "max_tokens": 8192,
+        "json_mode": True,
+    }
+
+
 # ─── Chaîne de repli modèles OpenAI (403/404 model_not_found) ───────────────
 
 def test_openai_model_fallback_chain(monkeypatch):
