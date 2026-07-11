@@ -552,6 +552,10 @@ class BankConnection(Base):
     accounts_data = Column(JSON, nullable=True)          # enriched GoCardless accounts list
     error_message = Column(Text, nullable=True)
     last_synced_at = Column(DateTime, nullable=True)
+    # Durée de validité du consentement DSP2 demandée à la banque (90 j max).
+    # Sert à calculer la date d'expiration et à proposer une reconnexion
+    # proactive quelques jours avant l'échéance.
+    access_valid_days = Column(Integer, default=90)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     household = relationship("Household", back_populates="bank_connections")

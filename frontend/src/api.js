@@ -486,45 +486,6 @@ const DEMO_PLANNED_EVENTS = [
 ];
 
 // ============================================================================
-// DOCUMENTS — coffre-fort (upload multipart + download blob authentifié)
-// ============================================================================
-export const documents = {
-  list: () => isDemo() ? Promise.resolve([]) : get('/documents'),
-
-  // Upload via FormData (pas de Content-Type manuel — le navigateur gère le
-  // boundary multipart). Cookie d'auth envoyé via credentials:'include'.
-  upload: async ({ file, category, account_id, asset_id, notes }) => {
-    if (isDemo()) throw new Error('Mode démo : upload non enregistré');
-    const fd = new FormData();
-    fd.append('file', file);
-    if (category) fd.append('category', category);
-    if (account_id) fd.append('account_id', account_id);
-    if (asset_id) fd.append('asset_id', asset_id);
-    if (notes) fd.append('notes', notes);
-    const res = await fetch(`${API_BASE}/documents`, {
-      method: 'POST', body: fd, credentials: 'include',
-    });
-    if (!res.ok) {
-      let msg = `Erreur ${res.status}`;
-      try { const d = await res.json(); msg = d?.detail || msg; } catch {}
-      throw new Error(msg);
-    }
-    return res.json();
-  },
-
-  // Récupère les octets (avec cookie) et renvoie un object URL pour
-  // prévisualiser / télécharger sans exposer d'endpoint public.
-  fetchBlobUrl: async (id) => {
-    const res = await fetch(`${API_BASE}/documents/${id}/download`, { credentials: 'include' });
-    if (!res.ok) throw new Error(`Erreur ${res.status}`);
-    const blob = await res.blob();
-    return URL.createObjectURL(blob);
-  },
-
-  delete: (id) => del(`/documents/${id}`),
-};
-
-// ============================================================================
 // AI INSIGHTS — coach patrimoine + alertes (Claude Haiku côté backend)
 // ============================================================================
 const DEMO_INSIGHTS = {
@@ -662,6 +623,12 @@ export const banking = {
 
   /** Complete after the bank redirects back with ?ref={state}. */
   complete: (state) => post('/banking/complete', { state }, { timeoutMs: 40000 }),
+
+  /** Reconnexion en un clic d'une connexion existante (consentement DSP2
+   *  expiré/proche de l'expiration). Réutilise la banque d'origine → renvoie
+   *  {redirect_url, connection_id, state}, l'user est renvoyé chez sa banque. */
+  reconnect: (connectionId) =>
+    post(`/banking/reconnect/${connectionId}`, null, { timeoutMs: 40000 }),
 
   /** Sync transactions for a connection. En démo : renvoie un succès vide
    *  immédiat plutôt qu'un throw, pour que le SyncButton ait un comportement

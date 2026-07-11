@@ -26,6 +26,7 @@ import { useBaseCurrency } from './hooks/useBaseCurrency.js';
 import { useQuotes } from './hooks/useQuotes.js';
 import { Combobox } from './components/Combobox.jsx';
 import { Mandatory2FAOverlay } from './components/Mandatory2FAOverlay.jsx';
+import { BankReconnectModal, connectionsNeedingReconnect } from './components/BankReconnectModal.jsx';
 import { Skeleton } from './components/Skeleton.jsx';
 import { Styles } from './Styles.jsx';
 import { Toast } from './components/Toast.jsx';
@@ -52,7 +53,6 @@ import { DCAView } from './views/DCA.jsx';
 import { SubscriptionsView } from './views/Subscriptions.jsx';
 import { Projection } from './views/Projection.jsx';
 import { ImmoSimulator } from './views/ImmoSimulator.jsx';
-import { Vault } from './views/Vault.jsx';
 import { dcaApi } from './api.js';
 import { AccountDrawer } from './components/AccountDrawer.jsx';
 import { useTheme, ThemeToggle } from './components/ui/ThemeToggle.jsx';
@@ -109,7 +109,9 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
     const [path, query] = raw.split('?');
     const params = new URLSearchParams(query || '');
     // Normalise les sous-chemins (ex: "settings/securite" → "settings")
-    const view = (path || 'dashboard').split('/')[0] || 'dashboard';
+    let view = (path || 'dashboard').split('/')[0] || 'dashboard';
+    // Coffre-fort retiré : d'anciens liens/bookmarks #/vault retombent sur le dashboard.
+    if (view === 'vault') view = 'dashboard';
     return { view, memberId: params.get('m') || 'all' };
   };
   const initialHash = parseHash();
@@ -200,7 +202,6 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
   const [fixedCharges, setFixedCharges] = useState([]);
   const [dcaPlans, setDcaPlans] = useState([]);
   const [plannedEvents, setPlannedEvents] = useState([]);
-  const [documents, setDocuments] = useState([]);
   // Mois type est scoped par (foyer, membre). Map { scopeKey: refMonth }.
   // scopeKey = activeMemberId si adulte, sinon 'household' (Famille / compte joint).
   const [refMonthsByScope, setRefMonthsByScope] = useState({});
@@ -325,6 +326,10 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
   // 'bank-list' = skip directement a la liste des banques.
   const [addBankAccountStep, setAddBankAccountStep] = useState(null);
   const [showBankConnect, setShowBankConnect] = useState(false);
+  // Reconnexion proactive : connexions bancaires dont le consentement DSP2
+  // expire bientôt (ou est déjà expiré). Le modal s'affiche une fois par jour
+  // au démarrage pour éviter que l'user découvre des soldes figés.
+  const [reconnectPrompt, setReconnectPrompt] = useState(null);
   // Quand le wizard "+ Ajouter" termine en mode manuel, on stocke ici
   // { category, subtype } pour que la vue Patrimoine ouvre l'éditeur
   // canonique correspondant (LiabilityEditor / RealEstateEditor / SimpleAssetEditor).
@@ -602,7 +607,6 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
       setRefMonthsByScope({ household: d.refMonth || { version: 1, updated_at: null, lines: [] } });
       dcaApi.list().then(setDcaPlans).catch(() => {});
       api.plannedEvents.list().then(setPlannedEvents).catch(() => {});
-      setDocuments([]);
       return;
     }
     // Résilient : Promise.allSettled + application TRANCHE PAR TRANCHE. Un
@@ -683,7 +687,6 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
       if (has('plannedEvents')) setPlannedEvents(out.plannedEvents || []);
       if (has('fixedCharges')) setFixedCharges(out.fixedCharges || []);
       if (has('refMonth')) setRefMonthsByScope({ household: out.refMonth || { version: 1, updated_at: null, lines: [] } });
-      api.documents.list().then(setDocuments).catch(() => {});
 
       // Tranches "core" en échec → cold-start Railway (backend qui sort de
       // veille : les 1ers des 16 appels // partent sur un serveur froid et
@@ -828,6 +831,30 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
 
   // persist is used only for client-side UI prefs (theme, active member, recurring overrides, mappings)
   const persist = useCallback(async (key, value) => { await storage.set(key, value); }, []);
+
+  // Reconnexion proactive — au démarrage, on regarde si un consentement bancaire
+  // DSP2 expire bientôt (ou a expiré) et, si oui, on propose la reconnexion en
+  // un clic. Une seule fois par jour (dismiss mémorisé) pour ne pas harceler.
+  // Ignoré en mode démo : le bouton reconnecter y est inopérant.
+  useEffect(() => {
+    if (demoMode || loading || onboarded !== true) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const today = new Date().toISOString().slice(0, 10);
+        if (localStorage.getItem('yotori:reconnect_dismissed') === today) return;
+        const conns = await api.banking.listConnections();
+        const needing = connectionsNeedingReconnect(conns);
+        if (!cancelled && needing.length > 0) setReconnectPrompt(needing);
+      } catch { /* pas de connexion bancaire / offline → on ignore */ }
+    })();
+    return () => { cancelled = true; };
+  }, [demoMode, loading, onboarded]);
+
+  const dismissReconnectPrompt = useCallback(() => {
+    try { localStorage.setItem('yotori:reconnect_dismissed', new Date().toISOString().slice(0, 10)); } catch {}
+    setReconnectPrompt(null);
+  }, []);
 
   useEffect(() => { if (!loading) persist(STORAGE_KEYS.ACTIVE_MEMBER, activeMemberId); }, [activeMemberId, loading, persist]);
 
@@ -2913,6 +2940,12 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
           onLogoutEscape={() => { logout(); }}
         />
       )}
+      {reconnectPrompt && reconnectPrompt.length > 0 && (
+        <BankReconnectModal
+          connections={reconnectPrompt}
+          onClose={dismissReconnectPrompt}
+        />
+      )}
       {transferRecatResult && (
         <div className="modal-backdrop" onClick={() => setTransferRecatResult(null)}>
           <div
@@ -3146,7 +3179,7 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
               </div>
             </div>
 
-            {/* INVESTIR & DOCUMENTS (Coffre-fort fusionné ici) */}
+            {/* INVESTIR */}
             <div className={`ws-nav-section ${navCollapsed.invest ? 'is-collapsed' : ''}`}>
               <div role="button" tabIndex={0} className="ws-nav-group ws-nav-group-toggle"
                       onClick={() => toggleNavGroup('invest')} aria-expanded={!navCollapsed.invest}>
@@ -3168,11 +3201,6 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
                    onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('tax'); }}
                    className={view === 'tax' ? 'on' : ''}>
                   <Calculator size={16}/> <span>{t('nav.tax')}</span>
-                </a>
-                <a href="#/vault" title={t('nav.vault')}
-                   onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('vault'); }}
-                   className={view === 'vault' ? 'on' : ''}>
-                  <Lock size={16}/> <span>{t('nav.vault')}</span>
                 </a>
               </div>
             </div>
@@ -3433,14 +3461,6 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
             fmt={fmt}
             monthlyIncome={thisMonthStats?.income || 0}
             monthlyCharges={0}
-          />
-        )}
-        {view === 'vault' && (
-          <Vault
-            documents={documents} accounts={accounts}
-            onUploaded={(doc) => setDocuments(prev => [doc, ...prev])}
-            onDeleted={(id) => setDocuments(prev => prev.filter(d => d.id !== id))}
-            showToast={showToast}
           />
         )}
         {view === 'wealth' && (

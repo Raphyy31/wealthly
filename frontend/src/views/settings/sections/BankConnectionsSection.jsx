@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Cloud, Plus, RefreshCw, AlertCircle, Unlink, Activity } from 'lucide-react';
 import * as api from '../../../api.js';
 import { BankConnectModal } from '../../../components/BankConnectModal.jsx';
+import { BankReconnectModal, reconnectStatus } from '../../../components/BankReconnectModal.jsx';
 import { isDemoMode } from '../../../demoData.js';
 
 const DEMO_DISABLED_STYLE = { opacity: 0.5, pointerEvents: 'none', cursor: 'not-allowed' };
@@ -56,6 +57,7 @@ export function BankConnectionsSection() {
   const [connections, setConnections] = useState([]);
   const [loading, setLoading] = useState(false);
   const [picker, setPicker] = useState(false);
+  const [reconnectConn, setReconnectConn] = useState(null); // connexion à reconnecter (ouvre le modal)
   const [syncingId, setSyncingId] = useState(null);
   const [refreshingId, setRefreshingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
@@ -228,7 +230,7 @@ export function BankConnectionsSection() {
                   // arriveront seules (re-sync auto / cron).
                   <span style={{ color: 'var(--accent)', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                     <RefreshCw size={11} className="spin" />
-                    Connectée · récupération des opérations en cours…
+                    Connectée · première synchro…
                   </span>
                 ) : (
                   <>
@@ -249,6 +251,23 @@ export function BankConnectionsSection() {
                       );
                     })()}
                     {c.accounts?.length > 0 && ` · ${t('settings.banks.accountsCount', { count: c.accounts.length })}`}
+                    {(() => {
+                      // Expiration du consentement DSP2 : on prévient dès qu'elle
+                      // approche pour proposer la reconnexion avant la coupure.
+                      const st = reconnectStatus(c);
+                      if (st === 'ok') return null;
+                      const d = c.days_until_expiry;
+                      const label = st === 'expired'
+                        ? 'accès expiré'
+                        : d != null && d >= 1
+                          ? `expire dans ${Math.round(d)} j`
+                          : 'expire aujourd’hui';
+                      return (
+                        <span style={{ color: st === 'expired' ? 'var(--negative)' : 'var(--warning)', fontWeight: 600 }}>
+                          {' · '}{label}
+                        </span>
+                      );
+                    })()}
                   </>
                 )}
               </div>
@@ -293,6 +312,16 @@ export function BankConnectionsSection() {
                 </div>
               )}
             </div>
+            {reconnectStatus(c) !== 'ok' && c.status !== 'pending' && (
+              <button
+                className="ds-btn primary"
+                style={demo ? { ...DEMO_DISABLED_STYLE, fontSize: 11, padding: '5px 12px', whiteSpace: 'nowrap' } : { fontSize: 11, padding: '5px 12px', whiteSpace: 'nowrap' }}
+                onClick={() => !demo && setReconnectConn(c)}
+                title={demo ? DEMO_TOOLTIP : 'Reconnecter cette banque (consentement DSP2 à renouveler)'}
+              >
+                <RefreshCw size={12}/> Reconnecter
+              </button>
+            )}
             {c.status === 'authorized' && (
               <button
                 className="ds-btn"
@@ -361,6 +390,12 @@ export function BankConnectionsSection() {
       <p className="settings-footnote" dangerouslySetInnerHTML={{ __html: t('settings.banks.footnote') }} />
 
       {picker && <BankConnectModal onClose={() => { setPicker(false); reload(); }}/>}
+      {reconnectConn && (
+        <BankReconnectModal
+          connections={[reconnectConn]}
+          onClose={() => setReconnectConn(null)}
+        />
+      )}
     </section>
   );
 }

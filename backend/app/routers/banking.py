@@ -334,42 +334,39 @@ def _purge_stale_pending(db: Session, household_id: str, bank_name: str | None =
     return len(stale)
 
 
-@router.post("/connect")
-async def connect_bank(
-    body: ConnectRequest,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    household_id = current_user.household_id
-    """
-    Create an end-user agreement + requisition.
-    Returns the URL where the user must authenticate at their bank.
+async def _start_bank_link(db: Session, household_id: str, bank_name: str, bank_country: str) -> dict:
+    """Crée un end-user agreement + requisition GoCardless pour une banque et
+    persiste une BankConnection « pending ». Factorisé entre la connexion
+    initiale (/connect) et la reconnexion proactive (/reconnect) — les deux
+    passent exactement par le même flux DSP2 (SCA obligatoire côté banque).
+
+    Retourne {connection_id, redirect_url, state}.
     """
     state = str(uuid.uuid4())
 
     # Nettoyage AVANT création : les pending de cette banque (tentatives
     # précédentes abandonnées) + les pending > 48 h toutes banques. Sans ça,
     # chaque clic laissait une ligne « non synchronisé » de plus dans Réglages.
-    purged = _purge_stale_pending(db, household_id, bank_name=body.bank_name)
+    purged = _purge_stale_pending(db, household_id, bank_name=bank_name)
     if purged:
-        logger.info("[banking] connect: %d pending obsolète(s) purgé(s) pour %s", purged, body.bank_name)
+        logger.info("[banking] link: %d pending obsolète(s) purgé(s) pour %s", purged, bank_name)
 
     # Each institution caps how far back we can pull transactions
     # (transaction_total_days). Pulling more than that returns a 400. Read
     # the institution's caps before creating the agreement so we always
     # request a valid window. Caps cachés par process (cf. _INST_CAPS_CACHE).
-    if body.bank_name in _INST_CAPS_CACHE:
-        max_hist_cap, max_access_cap = _INST_CAPS_CACHE[body.bank_name]
+    if bank_name in _INST_CAPS_CACHE:
+        max_hist_cap, max_access_cap = _INST_CAPS_CACHE[bank_name]
     else:
         try:
-            inst = await _gc("GET", f"/institutions/{body.bank_name}/")
+            inst = await _gc("GET", f"/institutions/{bank_name}/")
         except HTTPException as e:
             if e.status_code == 502 and "404" in str(e.detail):
-                raise HTTPException(status_code=400, detail=f"Banque inconnue: {body.bank_name}")
+                raise HTTPException(status_code=400, detail=f"Banque inconnue: {bank_name}")
             raise
         max_hist_cap = int(inst.get("transaction_total_days") or 90)
         max_access_cap = int(inst.get("max_access_valid_for_days") or 90)
-        _INST_CAPS_CACHE[body.bank_name] = (max_hist_cap, max_access_cap)
+        _INST_CAPS_CACHE[bank_name] = (max_hist_cap, max_access_cap)
     max_hist = min(180, max_hist_cap)
     access_valid = min(90, max_access_cap)
 
@@ -380,7 +377,7 @@ async def connect_bank(
         "POST",
         "/agreements/enduser/",
         body={
-            "institution_id": body.bank_name,
+            "institution_id": bank_name,
             "max_historical_days": max_hist,
             "access_valid_for_days": access_valid,
             "access_scope": ["balances", "details", "transactions"],
@@ -393,7 +390,7 @@ async def connect_bank(
         "/requisitions/",
         body={
             "redirect": settings.GOCARDLESS_REDIRECT_URI,
-            "institution_id": body.bank_name,
+            "institution_id": bank_name,
             "agreement": agreement["id"],
             "reference": state,        # comes back as ?ref={state} on redirect
             "user_language": "fr",
@@ -403,10 +400,11 @@ async def connect_bank(
     conn = BankConnection(
         household_id=household_id,
         session_id=requisition["id"],   # repurposed for GoCardless requisition_id
-        bank_name=body.bank_name,
-        bank_country=body.bank_country.upper(),
+        bank_name=bank_name,
+        bank_country=bank_country.upper(),
         status="pending",
         state=state,
+        access_valid_days=access_valid,
     )
     db.add(conn)
     db.commit()
@@ -417,6 +415,51 @@ async def connect_bank(
         "redirect_url": requisition["link"],
         "state": state,
     }
+
+
+@router.post("/connect")
+async def connect_bank(
+    body: ConnectRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Create an end-user agreement + requisition.
+    Returns the URL where the user must authenticate at their bank.
+    """
+    return await _start_bank_link(
+        db, current_user.household_id, body.bank_name, body.bank_country,
+    )
+
+
+@router.post("/reconnect/{connection_id}")
+async def reconnect_bank(
+    connection_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Reconnexion en un clic d'une connexion existante (consentement DSP2
+    expiré ou proche de l'expiration). Réutilise la banque de la connexion
+    d'origine → l'utilisateur n'a pas à re-sélectionner pays + banque.
+
+    Une NOUVELLE requisition est créée (le SCA banque reste obligatoire, c'est
+    la loi DSP2). L'ancienne connexion est conservée tant que la nouvelle n'est
+    pas finalisée : au retour, /complete détecte le recouvrement par IBAN et
+    supprime l'ancienne ligne pour éviter les doublons.
+    """
+    household_id = current_user.household_id
+    old = db.query(BankConnection).filter(
+        BankConnection.id == connection_id,
+        BankConnection.household_id == household_id,
+    ).first()
+    if not old:
+        raise HTTPException(status_code=404, detail="Connexion introuvable")
+    if not old.bank_name:
+        raise HTTPException(status_code=400, detail="Banque inconnue pour cette connexion")
+
+    return await _start_bank_link(
+        db, household_id, old.bank_name, old.bank_country or "FR",
+    )
 
 
 @router.post("/complete")
@@ -474,6 +517,7 @@ async def complete_connection(
                 enriched.append({"id": acc_id})
         conn.status = "authorized"
         conn.accounts_data = enriched
+        _dedup_superseded_connections(db, household_id, conn, enriched)
     elif gc_status in ("RJ", "EX", "SU"):
         conn.status = "error"
         conn.error_message = f"GoCardless status: {gc_status}"
@@ -492,6 +536,26 @@ async def complete_connection(
 
 def body_to_institution_id(conn: BankConnection) -> str:
     return conn.bank_name or ""
+
+
+def _dedup_superseded_connections(db: Session, household_id: str, conn: BankConnection, enriched: list) -> None:
+    """Après qu'une connexion vient de lier ses comptes, supprime les autres
+    connexions du foyer qui pointent vers les MÊMES comptes (mêmes IBAN) — cas
+    d'une reconnexion : la nouvelle remplace l'ancienne. Ne touche pas aux
+    comptes/transactions déjà importés (tables séparées ; le sync rattache par
+    IBAN au nouvel identifiant GoCardless)."""
+    new_ibans = {a.get("iban") for a in enriched if a.get("iban")}
+    if not new_ibans:
+        return
+    siblings = db.query(BankConnection).filter(
+        BankConnection.household_id == household_id,
+        BankConnection.id != conn.id,
+    ).all()
+    for sib in siblings:
+        sib_ibans = {a.get("iban") for a in (sib.accounts_data or []) if a.get("iban")}
+        if new_ibans & sib_ibans:
+            logger.info("[banking] connexion %s remplacée par %s (IBAN communs)", sib.id, conn.id)
+            db.delete(sib)
 
 
 # ─── Sync ───────────────────────────────────────────────────────────────────
@@ -570,6 +634,21 @@ async def _sync_one_connection(
             Account.household_id == household_id,
             Account.external_id == gc_acc_id,
         ).first()
+        # Reconnexion DSP2 : après re-consentement, GoCardless réattribue
+        # souvent de NOUVEAUX identifiants pour les mêmes IBAN. Sans rattachement
+        # par IBAN, chaque reconnexion créait un compte en double. On retrouve le
+        # compte existant par IBAN et on migre son external_id vers le nouveau.
+        if not wl_acc:
+            iban = acc_info.get("iban")
+            if iban:
+                wl_acc = db.query(Account).filter(
+                    Account.household_id == household_id,
+                    Account.source == "gocardless",
+                    Account.iban == iban,
+                ).first()
+                if wl_acc:
+                    logger.info("[banking] compte %s rattaché par IBAN → nouvel external_id %s", wl_acc.id, gc_acc_id[:8])
+                    wl_acc.external_id = gc_acc_id
         # Recupere le solde officiel a CHAQUE sync, pas seulement a la creation
         # (fix 2026-05-19 : retour user "solde Revolut totalement faux").
         # Ordre de priorite ameliore base sur les usages reels :
@@ -917,8 +996,20 @@ def list_connections(
     rows = db.query(BankConnection).filter(
         BankConnection.household_id == household_id,
     ).order_by(BankConnection.created_at.desc()).all()
-    return [
-        {
+    now = datetime.utcnow()
+    out = []
+    for c in rows:
+        # Expiration du consentement DSP2 : created_at + fenêtre demandée
+        # (access_valid_days, 90 j max). Sert à proposer la reconnexion
+        # proactive AVANT que la banque coupe l'accès.
+        expires_at = None
+        days_until_expiry = None
+        if c.created_at:
+            valid_days = c.access_valid_days or 90
+            exp = c.created_at + timedelta(days=valid_days)
+            expires_at = _iso_utc(exp)
+            days_until_expiry = round((exp - now).total_seconds() / 86400, 1)
+        out.append({
             "id": c.id,
             "bank_name": c.bank_name,
             "bank_country": c.bank_country,
@@ -926,10 +1017,11 @@ def list_connections(
             "accounts": c.accounts_data or [],
             "last_synced_at": _iso_utc(c.last_synced_at),
             "created_at": _iso_utc(c.created_at),
+            "expires_at": expires_at,
+            "days_until_expiry": days_until_expiry,
             "error_message": c.error_message,
-        }
-        for c in rows
-    ]
+        })
+    return out
 
 
 @router.get("/connections/{connection_id}/diagnose")
@@ -1082,6 +1174,7 @@ async def refresh_connection(
                 enriched.append({"id": acc_id})
         conn.status = "authorized"
         conn.accounts_data = enriched
+        _dedup_superseded_connections(db, household_id, conn, enriched)
     elif gc_status in ("RJ", "EX", "SU"):
         conn.status = "error"
         conn.error_message = f"GoCardless status: {gc_status}"

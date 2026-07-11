@@ -355,6 +355,18 @@ const refMonth = buildRefMonth();
 // ── Bank connections (fake GoCardless en démo) ──────────────────────────
 // Permet a la SyncButton + Settings -> Banques d'afficher quelque chose
 // de credible plutot que "Aucune banque connectee".
+// Consentement DSP2 = 90 j. On dérive created_at / expires_at / jours restants
+// à partir de l'âge en jours pour rester cohérent avec le backend et faire
+// vivre la reconnexion proactive en démo (LCL bientôt expirée).
+const _demoConn = (ageDays) => {
+  const created = new Date(Date.now() - ageDays * 86400 * 1000);
+  const expires = new Date(created.getTime() + 90 * 86400 * 1000);
+  return {
+    created_at: created.toISOString(),
+    expires_at: expires.toISOString(),
+    days_until_expiry: Math.round(((expires.getTime() - Date.now()) / 86400000) * 10) / 10,
+  };
+};
 const bankConnections = [
   {
     id: 'demo-conn-bnp',
@@ -364,8 +376,8 @@ const bankConnections = [
     status: 'authorized',
     accounts: [{ id: 'demo-gc-bnp-alice', name: 'Compte courant', iban: 'FR76****1234', currency: 'EUR' }],
     last_synced_at: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
-    created_at: new Date(Date.now() - 45 * 86400 * 1000).toISOString(),
     error_message: null,
+    ..._demoConn(45),
   },
   {
     id: 'demo-conn-ca',
@@ -375,8 +387,8 @@ const bankConnections = [
     status: 'authorized',
     accounts: [{ id: 'demo-gc-ca-bob', name: 'Compte courant', iban: 'FR76****5678', currency: 'EUR' }],
     last_synced_at: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
-    created_at: new Date(Date.now() - 45 * 86400 * 1000).toISOString(),
     error_message: null,
+    ..._demoConn(45),
   },
   {
     id: 'demo-conn-lcl',
@@ -386,8 +398,8 @@ const bankConnections = [
     status: 'authorized',
     accounts: [{ id: 'demo-gc-joint-lcl', name: 'Compte joint', iban: 'FR76****9012', currency: 'EUR' }],
     last_synced_at: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
-    created_at: new Date(Date.now() - 60 * 86400 * 1000).toISOString(),
     error_message: null,
+    ..._demoConn(86),
   },
 ];
 
