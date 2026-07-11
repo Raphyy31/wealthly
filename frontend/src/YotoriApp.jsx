@@ -1645,10 +1645,14 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
     setAiCatRunning(true);
     try {
       const res = await api.categorizeAI.categorize(
-        candidates.map(t => ({ label: t.label, amount: t.amount }))
+        candidates.map(t => {
+          const amount = Number(t.amount);
+          return { label: t.label, amount: Number.isFinite(amount) ? amount : 0 };
+        })
       );
       if (!res || !res.ai_used) {
-        showToast("IA serveur indisponible (clé manquante ou plafond atteint). Utilise « Sans clé » pour la méthode gratuite.", 'warning');
+        const diagnostic = res?.ai_error ? ` Diagnostic : ${res.ai_error}.` : '';
+        showToast(`IA serveur indisponible (clé manquante, plafond atteint ou fournisseur indisponible).${diagnostic} Utilise « Sans clé » pour la méthode gratuite.`, 'warning');
         return;
       }
       const updates = [];
@@ -1669,7 +1673,9 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
       }));
       showToast(`${updates.length} transaction${updates.length > 1 ? 's' : ''} catégorisée${updates.length > 1 ? 's' : ''} par l'IA.`, 'success');
     } catch (err) {
-      showToast("Échec de la catégorisation IA. Réessayez dans un instant.", 'error');
+      console.error('[categorizeViaServerAI] échec:', err);
+      const detail = err?.message ? ` ${err.message}` : '';
+      showToast(`Échec de la catégorisation IA.${detail}`, 'error');
     } finally {
       setAiCatRunning(false);
     }

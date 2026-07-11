@@ -206,6 +206,13 @@ def categorize(
             # absents, modèle inconnu…). Aucun secret dans _compact_ai_error.
             logger.warning("[categorize] LLM %s failed: %s", provider, exc)
             ai_error = _compact_ai_error(provider, exc)
+            # Une erreur HTTP du provider laisse la transaction SQL saine,
+            # mais une erreur dans under_cap()/ai_state (RLS, colonne absente…)
+            # place Postgres en transaction annulée. Sans rollback, le commit
+            # final levait PendingRollbackError et transformait notre fallback
+            # volontaire en 500 — le navigateur n'affichait qu'un message
+            # générique et Railway ne montrait parfois que /auth/me.
+            db.rollback()
     for tx in unmatched:
         if tx.label not in results:
             results[tx.label] = "uncategorized"
@@ -213,7 +220,16 @@ def categorize(
     # Le moteur crée des payees à la volée (db.flush) pendant la résolution
     # builtin — on les persiste pour que les prochaines résolutions (et la
     # couche learning) s'appuient dessus.
-    db.commit()
+    try:
+        db.commit()
+    except Exception as exc:
+        # Les résultats gratuits/LLM sont déjà calculés en mémoire. Un échec de
+        # persistance des payees secondaires ne doit pas faire échouer toute la
+        # catégorisation : rollback propre + diagnostic compact dans la réponse.
+        db.rollback()
+        logger.warning("[categorize] final persistence failed: %s", exc)
+        if ai_error is None:
+            ai_error = f"database_{type(exc).__name__}"
 
     return CategorizeResponse(results=results, sources=sources, ai_used=ai_used, ai_available=ai_available, ai_error=ai_error)
 
