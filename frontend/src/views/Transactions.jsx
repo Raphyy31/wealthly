@@ -604,7 +604,7 @@ export function Transactions({ transactions, accounts, categories, members = [],
             </div>
             <p>
               {aiCatRunning
-                ? `Wealthly traite les opérations par lots, puis mène une seconde passe sur les libellés ambigus. ${aiCatSummary?.processed || 0}/${aiCatSummary?.total || uncategorizedCount} analysées.`
+                ? `Lot ${aiCatSummary?.currentBatch || 1}/${aiCatSummary?.batchCount || 1} · ${aiCatSummary?.processed || 0}/${aiCatSummary?.total || uncategorizedCount} analysées. Le premier résultat arrive généralement en quelques secondes, puis la progression avance lot par lot.`
                 : uncategorizedCount > 0
                   ? aiCatSummary?.status === 'done'
                     ? `Les restantes ont résisté aux règles et aux deux passes IA : libellé trop générique, marchand inconnu ou virement ambigu. Elles restent visibles et modifiables — rien n'est masqué.`

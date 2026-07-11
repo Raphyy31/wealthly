@@ -1656,9 +1656,15 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
       const runPass = async (input, { deep, batchSize, phase }) => {
         const stillUnresolved = [];
         let phaseProcessed = 0;
-        setAiCatSummary(s => ({ ...s, phase, total: input.length, processed: 0 }));
+        const batchCount = Math.ceil(input.length / batchSize);
+        setAiCatSummary(s => ({
+          ...s, phase, total: input.length, processed: 0,
+          currentBatch: batchCount > 0 ? 1 : 0, batchCount,
+        }));
         for (let offset = 0; offset < input.length; offset += batchSize) {
           const batch = input.slice(offset, offset + batchSize);
+          const currentBatch = Math.floor(offset / batchSize) + 1;
+          setAiCatSummary(s => ({ ...s, currentBatch, batchCount }));
           const res = await api.categorizeAI.categorize(
             batch.map(t => {
               const amount = Number(t.amount);
@@ -1701,14 +1707,14 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
 
       // Passe rapide par lots suffisamment grands pour rester sous ~30 s.
       unresolved = await runPass(unresolved, {
-        deep: false, batchSize: 100, phase: 'Classement automatique',
+        deep: false, batchSize: 32, phase: 'Classement automatique',
       });
 
       // Seconde passe « enquête » uniquement sur les résistantes : lots plus
       // petits et prompt spécialisé, sans recherche web ni donnée ajoutée.
       if (unresolved.length > 0 && !diagnostic) {
         unresolved = await runPass(unresolved, {
-          deep: true, batchSize: 25, phase: 'Enquête sur les libellés ambigus',
+          deep: true, batchSize: 16, phase: 'Enquête sur les libellés ambigus',
         });
       }
 
