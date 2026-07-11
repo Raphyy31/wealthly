@@ -51,6 +51,9 @@ function syncFreshness(isoStr) {
   return 'fresh';
 }
 
+const isRateLimitMessage = (message) => /(?:^|\s)429(?:\s|:)|temporair(?:e|ement).*d[ée]bord|quota.*(?:gocardless|banque)|limite de rafra[iî]chissement/i.test(String(message || ''));
+const RATE_LIMIT_COPY = 'GoCardless limite temporairement les mises à jour. Tes banques restent connectées et les dernières données sont conservées. Wealthly réessaiera plus tard.';
+
 export function BankConnectionsSection() {
   const { t } = useTranslation();
   const demo = isDemoMode();
@@ -98,7 +101,9 @@ export function BankConnectionsSection() {
     setSyncMessage(null);
     try {
       const res = await api.banking.sync(id);
-      if (res.status === 'processing' && !res.imported) {
+      if (res.status === 'rate_limited') {
+        setSyncMessage({ kind: 'warn', text: RATE_LIMIT_COPY });
+      } else if (res.status === 'processing' && !res.imported) {
         // GoCardless prépare encore les données côté banque → pas une erreur.
         setSyncMessage({ kind: 'warn', text: 'Ta banque prépare encore les opérations. Réessaie dans une minute — elles arriveront aussi automatiquement.' });
       } else if (res.status === 'error') {
@@ -113,7 +118,9 @@ export function BankConnectionsSection() {
       }
       await reload();
     } catch (e) {
-      setSyncMessage({ kind: 'error', text: e.message });
+      setSyncMessage(isRateLimitMessage(e?.detail || e?.message)
+        ? { kind: 'warn', text: RATE_LIMIT_COPY }
+        : { kind: 'error', text: e.message });
     } finally {
       setSyncingId(null);
     }
@@ -274,7 +281,15 @@ export function BankConnectionsSection() {
                 )}
               </div>
               {c.error_message && (
-                <div style={{ fontSize: 11, color: 'var(--danger-text)', marginTop: 2 }}>{c.error_message}</div>
+                <div style={{
+                  fontSize: 11,
+                  color: isRateLimitMessage(c.error_message) ? 'var(--warning)' : 'var(--danger-text)',
+                  marginTop: 2,
+                }}>
+                  {isRateLimitMessage(c.error_message)
+                    ? 'Mise à jour temporairement limitée · dernières données conservées'
+                    : c.error_message}
+                </div>
               )}
               {/* Diagnostic result (panneau dépliable sous la connexion) */}
               {diagResult && diagResult.connection_id === c.id && (

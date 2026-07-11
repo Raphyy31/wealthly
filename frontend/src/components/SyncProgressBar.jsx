@@ -11,7 +11,7 @@
 // Props :
 //   - status : { stage: string, label: string, progress: 0..1 | null,
 //                current: int, total: int } | null
-//     stage = 'connecting' | 'balance' | 'transactions' | 'success' | 'error'
+//     stage = 'connecting' | 'balance' | 'transactions' | 'waiting' | 'success' | 'error'
 //
 // L'orchestration (mise a jour de status) est cote YotoriApp via setSync.
 // ============================================================================
@@ -22,6 +22,7 @@ const STAGE_ICONS = {
   connecting:   <RefreshCw size={13} className="spbar-spin"/>,
   balance:      <RefreshCw size={13} className="spbar-spin"/>,
   transactions: <RefreshCw size={13} className="spbar-spin"/>,
+  waiting:      <AlertTriangle size={13}/>,
   success:      <Check size={13}/>,
   error:        <AlertTriangle size={13}/>,
 };
@@ -188,6 +189,8 @@ function SpbarStyles() {
 .spbar-pill-icon svg { width: 19px; height: 19px; }
 .spbar-pill-success { border-color: color-mix(in srgb, var(--positive) 40%, var(--border)); }
 .spbar-pill-success .spbar-pill-icon { color: var(--positive); }
+.spbar-pill-waiting { border-color: color-mix(in srgb, var(--warning) 40%, var(--border)); }
+.spbar-pill-waiting .spbar-pill-icon { color: var(--warning); }
 .spbar-pill-error { border-color: color-mix(in srgb, var(--negative) 40%, var(--border)); }
 .spbar-pill-error .spbar-pill-icon { color: var(--negative); }
 .spbar-pill-label {

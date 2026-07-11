@@ -637,7 +637,26 @@ async def _sync_one_connection(
     new_tx_ids: list[str] = []
     errors: list[str] = []
     accounts_pending: list[str] = []   # comptes encore en préparation côté banque
+    rate_limited_accounts: list[str] = []  # quota/burst GoCardless : pas une déconnexion
+    rate_limit_daily = False
     accounts_read = 0                  # comptes effectivement lus (données prêtes)
+
+    def remember_rate_limit(exc: Exception, account_label: str) -> bool:
+        """Classe un HTTP 429 sans le transformer en panne persistante.
+
+        Les quotas GoCardless portent sur les endpoints de données. Continuer
+        avec transactions puis les comptes suivants après un premier 429 crée
+        une rafale inutile et prolonge le blocage côté fournisseur.
+        """
+        nonlocal rate_limit_daily
+        if not isinstance(exc, HTTPException) or exc.status_code != 429:
+            return False
+        if account_label not in rate_limited_accounts:
+            rate_limited_accounts.append(account_label)
+        detail = str(exc.detail or "")
+        rate_limit_daily = rate_limit_daily or "aujourd" in detail.lower() or "daily" in detail.lower()
+        logger.info("[banking] rate limit on %s — stopping this connection sync", account_label)
+        return True
 
     from app.models import Member  # local import to avoid circular at module load
     household_members = db.query(Member).filter(
@@ -739,6 +758,10 @@ async def _sync_one_connection(
             # On continue sans solde officiel — les transactions restent
             # récupérables. (Restaure le comportement d'avant le split du bloc :
             # sans ça, une erreur solde sur 1 compte tuait la connexion entière.)
+            if remember_rate_limit(e, acc_label):
+                # Ne surtout pas enchaîner avec /transactions : il partage le
+                # même budget d'appels et ne ferait qu'aggraver le 429.
+                break
             logger.warning("[banking] balance fetch failed for %s: %s", gc_acc_id, e)
             balances = []
         try:
@@ -810,6 +833,8 @@ async def _sync_one_connection(
             logger.info("[banking] account %s transactions not ready yet — skip", gc_acc_id[:8])
             continue
         except Exception as e:
+            if remember_rate_limit(e, acc_label):
+                break
             logger.error("[banking] tx fetch failed for %s: %s", gc_acc_id, e)
             errors.append(f"{acc_label} : {str(e)[:60]}")
             continue
@@ -957,13 +982,18 @@ async def _sync_one_connection(
     # generic "première synchro" state.
     if errors:
         conn.error_message = " · ".join(errors)[:1000]
-    elif accounts_read > 0:
+    elif accounts_read > 0 or rate_limited_accounts:
+        # Un 429 ne signifie ni consentement expiré ni compte cassé. On garde
+        # la dernière date de succès et on efface aussi les anciens messages
+        # 429 bruts qui encombraient les cartes Réglages.
         conn.error_message = None
     db.commit()
 
     # status "processing" tant qu'un compte n'a pas pu être lu → le frontend
     # relance en arrière-plan, sans brûler le quota (délais espacés).
-    if accounts_pending:
+    if rate_limited_accounts:
+        sync_status = "rate_limited"
+    elif accounts_pending:
         sync_status = "processing"
     elif errors and accounts_read == 0:
         sync_status = "error"
@@ -978,6 +1008,8 @@ async def _sync_one_connection(
         "updated": total_updated,
         "skipped": total_skipped,
         "errors": errors,
+        "rate_limited_accounts": rate_limited_accounts,
+        "retry_after_seconds": 86400 if rate_limit_daily else (300 if rate_limited_accounts else None),
         "pending_accounts": accounts_pending,
         "accounts_read": accounts_read,
         "status": sync_status,

@@ -99,6 +99,48 @@ def test_sync_reports_transaction_failure_instead_of_ready(
     assert "Banque temporairement indisponible" in stored["error_message"]
 
 
+def test_sync_stops_cleanly_on_rate_limit_without_persisting_a_false_failure(
+    client, auth_headers, registered_user, db_session, monkeypatch,
+):
+    conn_id = _authorized_connection(
+        db_session,
+        registered_user,
+        accounts=[
+            {"id": "gc-limited", "name": "Compte limité", "currency": "EUR"},
+            {"id": "gc-must-not-run", "name": "Compte suivant", "currency": "EUR"},
+        ],
+    )
+    seen_paths = []
+
+    async def fake_gc(method, path, body=None, params=None):
+        seen_paths.append(path)
+        if path == "/institutions/TEST_BANK/":
+            return {"transaction_total_days": 90, "max_access_valid_for_days": 90}
+        if path == "/accounts/gc-limited/":
+            return {"status": "READY"}
+        if path == "/accounts/gc-limited/balances/":
+            raise HTTPException(status_code=429, detail="La banque est temporairement débordée")
+        raise AssertionError(f"no request should follow the first 429: {method} {path}")
+
+    monkeypatch.setattr(banking_mod, "_gc", fake_gc)
+    monkeypatch.setattr(banking_mod, "_INST_CAPS_CACHE", {}, raising=False)
+
+    response = client.post(f"/banking/sync/{conn_id}", headers=auth_headers)
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["status"] == "rate_limited"
+    assert payload["errors"] == []
+    assert payload["rate_limited_accounts"] == ["Compte limité"]
+    assert payload["retry_after_seconds"] == 300
+    assert "/accounts/gc-limited/transactions/" not in seen_paths
+    assert not any("gc-must-not-run" in path for path in seen_paths)
+
+    connections = client.get("/banking/connections", headers=auth_headers).json()
+    stored = next(c for c in connections if c["id"] == conn_id)
+    assert stored["status"] == "authorized"
+    assert stored["error_message"] is None
+
+
 def test_empty_initial_payload_stays_retryable_during_aggregation_grace_period(
     client, auth_headers, registered_user, db_session, monkeypatch,
 ):

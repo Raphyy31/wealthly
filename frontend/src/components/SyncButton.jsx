@@ -154,7 +154,10 @@ export function SyncButton({ onAfterSync }) {
   const handleSyncOne = async (id) => {
     try {
       const res = await syncOne(id);
-      setLastResult({ imported: res.imported || 0, skipped: res.skipped || 0, errors: res.errors || [], ts: Date.now() });
+      const errors = res.status === 'rate_limited'
+        ? ['Mise à jour temporairement limitée · dernières données conservées']
+        : (res.errors || []);
+      setLastResult({ imported: res.imported || 0, skipped: res.skipped || 0, errors, ts: Date.now() });
       await reload();
       // res inclut new_tx_ids (backend 2026-05-25) → la modale post-sync peut
       // cibler exactement les nouvelles tx à faire valider par l'utilisateur.
@@ -169,6 +172,10 @@ export function SyncButton({ onAfterSync }) {
     for (const c of connections) {
       try {
         const res = await syncOne(c.id);
+        if (res.status === 'rate_limited') {
+          totals.errors.push('GoCardless limite temporairement les mises à jour. Réessai automatique plus tard.');
+          break;
+        }
         totals.imported += res.imported || 0;
         totals.skipped += res.skipped || 0;
         if (res.errors?.length) totals.errors.push(...res.errors);

@@ -2186,6 +2186,11 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
       // Rafraîchit la liste (badge « en cours » → « synchronisé »).
       try { setBankConnections(await api.banking.listConnections()); } catch { /* ignore */ }
 
+      if (res.status === 'rate_limited') {
+        showToast('GoCardless limite temporairement les mises à jour. Tes banques restent connectées et Wealthly réessaiera automatiquement plus tard.', 'info');
+        return res;
+      }
+
       // On ne continue à réessayer QUE si RIEN n'a encore pu être lu (tous les
       // comptes sont en préparation). Dès qu'au moins un compte a été lu
       // (accounts_read > 0), on s'arrête : re-tirer un compte déjà lu juste
@@ -2203,7 +2208,7 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
           unlockAchievement('first_import');
           showToast(`${res.imported} opération${res.imported > 1 ? 's' : ''} importée${res.imported > 1 ? 's' : ''}`, 'success');
         }
-        return;
+        return res;
       }
       // Tout est encore en préparation côté banque → on informe une fois, puis on relance.
       if (!informed) {
@@ -2213,6 +2218,7 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
     }
     // Fenêtre épuisée : le cron nightly ou un « Sync » manuel finira le travail.
     showToast('La synchronisation prend plus de temps que prévu. Tes opérations arriveront automatiquement — tu peux aussi relancer « Sync » dans Réglages → Comptes bancaires.', 'info');
+    return { status: 'processing' };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reloadAll]);
 
@@ -2298,6 +2304,12 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
       await new Promise(r => setTimeout(r, 400));
       setSyncStage('transactions', `${bankLabel} — récupération des opérations…`, { current: 1, total: 1 });
       const result = await api.banking.sync(connectionId);
+      if (result.status === 'rate_limited') {
+        setSyncStage('waiting', 'Mise à jour mise en pause par GoCardless', { current: 1, total: 1, progress: 1 });
+        showToast('Tes banques restent connectées. GoCardless limite temporairement les mises à jour ; Wealthly réessaiera plus tard.', 'info');
+        setTimeout(() => setSyncStatus(null), 3500);
+        return;
+      }
       if (result.status === 'error') {
         throw new Error(result.errors?.join(' · ') || 'La banque n’a renvoyé aucune opération exploitable.');
       }
@@ -2357,6 +2369,7 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
     let totalSkipped = 0;
     let errors = 0;
     let firstError = null;
+    let rateLimited = false;
     // Log par-banque pour le retour final (et debug investisseurs).
     const perBankLog = [];
 
@@ -2385,6 +2398,17 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
         }
         try {
           const result = await api.banking.sync(conn.id);
+          if (result.status === 'rate_limited') {
+            rateLimited = true;
+            const limited = new Error('Mise à jour temporairement limitée par GoCardless');
+            limited.rateLimited = true;
+            if (!firstError) firstError = limited;
+            errors++;
+            perBankLog.push({ bank: bankLabel, imported: 0, updated: 0, skipped: 0, ok: false, error: limited.message });
+            // Le quota est partagé : solliciter les autres banques maintenant
+            // ne ferait qu'empiler les 429.
+            break;
+          }
           if (result.status === 'error') {
             throw new Error(result.errors?.join(' · ') || 'Échec de récupération des opérations');
           }
@@ -2432,7 +2456,10 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
       if (!silent) {
         // Stage final enrichi : on resume tout ce qui s'est passe en 1 ligne
         // explicite. Si N>1 banques, on inclut la repartition.
-        if (errors === 0) {
+        if (rateLimited) {
+          setSyncStage('waiting', 'Mises à jour bancaires en pause · réessai automatique', { current: 1, total: 1, progress: 1 });
+          setTimeout(() => setSyncStatus(null), 3800);
+        } else if (errors === 0) {
           let summary;
           if (totalImported > 0) {
             summary = `${totalImported} opération${totalImported > 1 ? 's' : ''} importée${totalImported > 1 ? 's' : ''}`;
@@ -2458,7 +2485,9 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
       }
     }
     if (silent) return { totalImported, errors, firstError };
-    if (errors > 0 && totalImported === 0) {
+    if (rateLimited) {
+      showToast('Tes banques restent connectées. GoCardless limite temporairement les mises à jour ; Wealthly réessaiera automatiquement plus tard.', 'info');
+    } else if (errors > 0 && totalImported === 0) {
       // Détecte les erreurs 401/403 → consentement GoCardless expiré (90j max)
       const msg = (firstError?.detail || firstError?.message || '').toLowerCase();
       const expired = /expir|401|403|reconnexion|invalid.*consent/i.test(msg);
@@ -2505,7 +2534,15 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
       // retry dédié. Le sync global ne faisait qu'un essai puis affichait à
       // tort "à jour" lorsque GoCardless était encore en préparation.
       if (neverSynced.length > 0) {
-        neverSynced.forEach(c => runBackgroundBankSync(c.id));
+        // Séquentiel : l'ancien forEach lançait toutes les nouvelles banques
+        // simultanément et provoquait précisément les rafales 429 visibles
+        // dans Réglages. On s'arrête dès que GoCardless demande une pause.
+        (async () => {
+          for (const c of neverSynced) {
+            const result = await runBackgroundBankSync(c.id);
+            if (result?.status === 'rate_limited') break;
+          }
+        })();
         return;
       }
       syncAllBankAccounts({ silent: true }).then(res => {

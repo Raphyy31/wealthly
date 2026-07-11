@@ -635,6 +635,32 @@ const DEMO_BANK_CONNECTIONS = () => {
   return [];
 };
 
+// Un 429 GoCardless concerne le budget de l'intégration, pas la connexion
+// bancaire de l'utilisateur. Mémoriser un court cooldown dans le navigateur
+// évite que les différents boutons/auto-sync relancent aussitôt une rafale.
+const BANK_SYNC_COOLDOWN_KEY = 'wealthly:bank_sync_cooldown_until';
+const getBankSyncCooldown = () => {
+  try { return Number(window?.localStorage?.getItem(BANK_SYNC_COOLDOWN_KEY) || 0); } catch { return 0; }
+};
+const setBankSyncCooldown = (seconds) => {
+  try { window?.localStorage?.setItem(BANK_SYNC_COOLDOWN_KEY, String(Date.now() + seconds * 1000)); } catch {}
+};
+
+async function syncBankingConnection(connectionId, daysBack = 90, { initialSync = false } = {}) {
+  if (isDemo()) {
+    return { connection_id: connectionId, imported: 0, skipped: 0, errors: [], status: 'ready', pending_accounts: [], accounts_read: 0, last_synced_at: new Date().toISOString(), new_tx_ids: [] };
+  }
+  const remainingSeconds = Math.ceil((getBankSyncCooldown() - Date.now()) / 1000);
+  if (remainingSeconds > 0) {
+    return { connection_id: connectionId, imported: 0, skipped: 0, errors: [], status: 'rate_limited', rate_limited_accounts: [], retry_after_seconds: remainingSeconds, pending_accounts: [], accounts_read: 0, new_tx_ids: [] };
+  }
+  const result = await post(`/banking/sync/${connectionId}?days_back=${daysBack}&initial_sync=${initialSync ? 'true' : 'false'}`, null, { timeoutMs: 90000, affectsBackendHealth: false });
+  if (result?.status === 'rate_limited') {
+    setBankSyncCooldown(Math.max(60, Number(result.retry_after_seconds) || 300));
+  }
+  return result;
+}
+
 export const banking = {
   /** List available banks in a country (default FR). Returns institutions
    *  with their GoCardless id (used as bank_name in /connect). */
@@ -660,10 +686,7 @@ export const banking = {
   /** Sync transactions for a connection. En démo : renvoie un succès vide
    *  immédiat plutôt qu'un throw, pour que le SyncButton ait un comportement
    *  crédible (badge "à l'instant", pas d'erreur visible). */
-  sync: (connectionId, daysBack = 90, { initialSync = false } = {}) =>
-    isDemo()
-      ? Promise.resolve({ connection_id: connectionId, imported: 0, skipped: 0, errors: [], status: 'ready', pending_accounts: [], accounts_read: 0, last_synced_at: new Date().toISOString(), new_tx_ids: [] })
-      : post(`/banking/sync/${connectionId}?days_back=${daysBack}&initial_sync=${initialSync ? 'true' : 'false'}`, null, { timeoutMs: 90000, affectsBackendHealth: false }),
+  sync: syncBankingConnection,
 
   /** Re-poll requisition status to update accounts list */
   refreshConnection: (id) => post(`/banking/refresh/${id}`, null, { timeoutMs: 40000, affectsBackendHealth: false }),
