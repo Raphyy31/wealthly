@@ -9,7 +9,7 @@ POST /categorize — refonte « moteur unique » (2026-07-03) :
     résolution que l'import CSV, la sync bancaire et la saisie manuelle.
     Plus AUCUNE liste de regex dupliquée ici.
   - Les libellés non résolus partent en batch vers un LLM — provider au
-    choix : Anthropic (Claude Haiku) ou OpenAI (gpt-4o-mini par défaut),
+    choix : Anthropic (Claude Haiku) ou OpenAI (gpt-4.1-nano par défaut),
     sélection via AI_PROVIDER ("auto" = Anthropic si clé posée, sinon OpenAI).
     Le prompt reçoit le marchand NORMALISÉ en indice (meilleure précision,
     moins de tokens).

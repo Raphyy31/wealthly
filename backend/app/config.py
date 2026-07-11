@@ -107,8 +107,11 @@ class Settings:
     AI_MODEL_CATEGORIZE: str = os.getenv("AI_MODEL_CATEGORIZE", "claude-haiku-4-5-20251001")
     # Équivalents OpenAI (petits modèles économiques par défaut). Le coach
     # peut monter en gamme via env (ex. gpt-4o) sans toucher au code.
-    AI_MODEL_CATEGORIZE_OPENAI: str = os.getenv("AI_MODEL_CATEGORIZE_OPENAI", "gpt-4o-mini")
-    AI_MODEL_COACH_OPENAI: str = os.getenv("AI_MODEL_COACH_OPENAI", "gpt-4o-mini")
+    # Le projet OpenAI de production autorise explicitement gpt-4.1-nano.
+    # Le demander directement évite un 403 model_not_found sur gpt-4o-mini
+    # avant chaque catégorisation, puis un fallback inutilement lent.
+    AI_MODEL_CATEGORIZE_OPENAI: str = os.getenv("AI_MODEL_CATEGORIZE_OPENAI", "gpt-4.1-nano")
+    AI_MODEL_COACH_OPENAI: str = os.getenv("AI_MODEL_COACH_OPENAI", "gpt-4.1-nano")
     # Chaîne de repli si le modèle demandé est inaccessible pour CE compte/clé
     # (BYOK : catalogue variable selon l'âge du compte et les restrictions de
     # la clé — 403/404 model_not_found → candidat suivant, cf. services/llm.py.
