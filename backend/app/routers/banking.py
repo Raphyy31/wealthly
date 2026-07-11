@@ -31,7 +31,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -1198,9 +1198,20 @@ async def refresh_connection(
     }
 
 
+async def _revoke_requisition_safe(session_id: str) -> None:
+    """Révoque une requisition GoCardless en tâche de fond (best-effort).
+    Isolé pour être planifiable APRÈS la réponse : la déconnexion locale ne doit
+    jamais attendre le réseau GoCardless (ni ses retries)."""
+    try:
+        await _gc("DELETE", f"/requisitions/{session_id}/")
+    except Exception as e:
+        logger.warning("[gocardless] delete requisition %s failed: %s", session_id, e)
+
+
 @router.delete("/connections/{connection_id}", status_code=200)
 async def delete_connection(
     connection_id: str,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -1229,14 +1240,6 @@ async def delete_connection(
     if not conn:
         raise HTTPException(status_code=404, detail="Connexion introuvable")
 
-    # Best-effort : supprime la requisition cote GoCardless. On ignore l'erreur
-    # pour ne pas bloquer la deconnexion locale si GoCardless est down.
-    if conn.session_id:
-        try:
-            await _gc("DELETE", f"/requisitions/{conn.session_id}/")
-        except Exception as e:
-            logger.warning("[gocardless] delete requisition %s failed: %s", conn.session_id, e)
-
     # Recupere les external_id des comptes lies a cette connexion via
     # accounts_data (rempli pendant /complete).
     gc_account_ids = [
@@ -1260,10 +1263,23 @@ async def delete_connection(
             db.delete(acc)
             deleted_accounts += 1
 
+    bank_label = conn.bank_name or conn.id
+    session_id = conn.session_id
     db.delete(conn)
+    # On COMMIT la suppression locale AVANT tout appel réseau : c'est l'action
+    # que l'utilisateur attend, elle doit être immédiate et fiable. Avant, la
+    # révocation GoCardless (jusqu'à 3 retries avec backoff) précédait le commit
+    # → si GoCardless lambinait, le client abandonnait au timeout (15 s) AVANT le
+    # commit et le compte « ne s'enlevait pas » (bug remonté 2026-07-11).
     db.commit()
+
+    # Révocation GoCardless best-effort, APRÈS la réponse (tâche de fond) : ne
+    # bloque jamais la déconnexion locale, même si GoCardless est lent/down.
+    if session_id:
+        background_tasks.add_task(_revoke_requisition_safe, session_id)
+
     logger.info("[banking] disconnected %s — removed %d accounts, %d transactions",
-                conn.bank_name or conn.id, deleted_accounts, deleted_transactions)
+                bank_label, deleted_accounts, deleted_transactions)
     return {
         "deleted_accounts": deleted_accounts,
         "deleted_transactions": deleted_transactions,
