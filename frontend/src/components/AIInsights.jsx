@@ -8,17 +8,20 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Sparkles, RefreshCw, AlertTriangle, Lightbulb } from 'lucide-react';
 import * as api from '../api.js';
 
-export function AIInsights({ snapshot }) {
+// scope = 'all' (foyer) ou id du membre → le coaching est calculé et mis en
+// cache PAR périmètre. hasData=false (membre sans comptes/opérations) → on
+// n'appelle pas l'IA, on affiche une invite. scopeLabel enrichit le message.
+export function AIInsights({ snapshot, scope = 'all', hasData = true, scopeLabel }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
-  const fetchedRef = useRef(false);
+  const fetchedScopeRef = useRef(null);
 
   const load = async (force = false) => {
-    if (!snapshot) return;
+    if (!snapshot || !hasData) return;
     setLoading(true); setError(false);
     try {
-      const res = await api.insights.get(snapshot, force);
+      const res = await api.insights.get(snapshot, force, scope);
       setData(res || null);
     } catch {
       setError(true);
@@ -27,16 +30,32 @@ export function AIInsights({ snapshot }) {
     }
   };
 
-  // Au montage : cache serveur (force=false). Le bouton force une analyse fraîche.
+  // Recharge quand le périmètre change (switch de membre). Cache serveur 24h
+  // par scope (force=false) ; le bouton force une analyse fraîche.
   useEffect(() => {
-    if (fetchedRef.current || !snapshot) return;
-    fetchedRef.current = true;
+    if (!snapshot || !hasData) { setData(null); return; }
+    if (fetchedScopeRef.current === scope) return;
+    fetchedScopeRef.current = scope;
     load(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [snapshot]);
+  }, [snapshot, scope, hasData]);
 
   const coach = data?.coach || [];
   const alerts = data?.alerts || [];
+
+  // Périmètre sans données (membre neuf) : invite plutôt qu'appel IA à vide.
+  if (!hasData) {
+    return (
+      <section className="card ai-insights">
+        <div className="card-header">
+          <h3 className="ai-insights-title"><Sparkles size={15}/> Coach patrimoine</h3>
+        </div>
+        <p className="ai-empty">
+          Pas encore de données{scopeLabel ? ` pour ${scopeLabel}` : ' sur ce périmètre'}. Ajoutez des comptes ou importez des opérations pour obtenir un coaching personnalisé.
+        </p>
+      </section>
+    );
+  }
 
   return (
     <section className="card ai-insights">

@@ -3375,8 +3375,13 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
 
           <main ref={contentRef} className="content">
         {view === 'dashboard' && (<>
-          {onboarded && (visibleTransactions.length > 0 || netWorth !== 0) && (
-            <AIInsights snapshot={insightsSnapshot}/>
+          {onboarded && (
+            <AIInsights
+              snapshot={insightsSnapshot}
+              scope={activeMemberId || 'all'}
+              hasData={visibleTransactions.length > 0 || netWorth !== 0}
+              scopeLabel={activeMemberId && activeMemberId !== 'all' ? (activeMember?.name || null) : null}
+            />
           )}
           <Dashboard
             netWorth={netWorth} liquidWealth={liquidWealth} assetsValue={assetsValue} liabilitiesValue={liabilitiesValue}

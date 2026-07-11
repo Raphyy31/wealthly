@@ -516,7 +516,9 @@ const DEMO_INSIGHTS = {
 
 export const insights = {
   // force=true (bouton rafraîchir) → ignore le cache serveur 24h (compte au plafond).
-  get: (snapshot, force = false) => isDemo() ? Promise.resolve(DEMO_INSIGHTS) : post('/ai/insights', { ...snapshot, force }),
+  // scope = 'all' (foyer) ou id du membre → cache Coach ventilé par scope côté serveur.
+  get: (snapshot, force = false, scope = 'all') =>
+    isDemo() ? Promise.resolve(DEMO_INSIGHTS) : post('/ai/insights', { ...snapshot, force, scope }),
 };
 
 // ============================================================================

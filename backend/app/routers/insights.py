@@ -61,6 +61,9 @@ class InsightsRequest(BaseModel):
     projection_trough_amount: Optional[float] = None
     projection_trough_date: Optional[str] = None
     force: bool = False  # true = bouton "rafraîchir" → ignore le cache (compte au plafond)
+    # Scope de l'analyse : 'all' (foyer entier) ou l'id d'un membre. Le cache
+    # Coach est ventilé par scope → chaque membre a son propre coaching.
+    scope: str = Field(default="all", max_length=64)
 
 
 class CoachItem(BaseModel):
@@ -135,9 +138,10 @@ def ai_insights(
     # 1) Cache 24h (sauf si l'utilisateur force via le bouton rafraîchir).
     # Best-effort : un souci ai_state (RLS…) ne doit pas 500 un panneau
     # secondaire — on continue vers l'appel réel ou le fallback.
+    scope = payload.scope or "all"
     if not payload.force:
         try:
-            cached = coach_cache_get(db, hh)
+            cached = coach_cache_get(db, hh, scope)
         except Exception as exc:
             logger.warning("[insights] cache read failed: %s", exc)
             cached = None
@@ -166,7 +170,7 @@ def ai_insights(
         coach_cache_set(db, hh, {
             "coach": [c.model_dump() for c in res.coach],
             "alerts": [a.model_dump() for a in res.alerts],
-        })
+        }, scope)
         return res
     except Exception as exc:
         # Jamais d'erreur 500 au client pour un panneau secondaire — fallback.
