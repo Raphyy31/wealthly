@@ -20,6 +20,22 @@ describe('backend availability tracking', () => {
     unsubscribe();
   });
 
+  test('AI categorization can finish after the global 15 second timeout', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(() => new Promise((resolve) => {
+      setTimeout(() => resolve(new Response(
+        JSON.stringify({ results: {}, sources: {}, ai_used: false, ai_available: true }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      )), 20000);
+    })));
+    const api = await import('./api.js');
+
+    const pending = api.categorizeAI.categorize([{ label: 'TEST', amount: -1 }]);
+    await vi.advanceTimersByTimeAsync(20000);
+
+    await expect(pending).resolves.toMatchObject({ ai_available: true });
+  });
+
   test('an HTTP 502 proves the backend answered and does not trigger the offline banner', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(
       JSON.stringify({ detail: 'Banque indisponible' }),
