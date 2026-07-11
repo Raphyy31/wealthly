@@ -1962,32 +1962,57 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
     // on réconcilie avec la réponse.
     const localPatch = { ...patch };
     if ('initialBalance' in localPatch) localPatch.initialBalance = parseFloat(localPatch.initialBalance) || 0;
-    setAccounts(prev => prev.map(a => a.id === accId ? { ...a, ...localPatch } : a));
+    // Snapshot de l'état AVANT patch (capturé dans l'updater pour éviter toute
+    // valeur périmée) → sert au rollback si l'enregistrement échoue.
+    let prevAccount = null;
+    setAccounts(prev => {
+      prevAccount = prev.find(a => a.id === accId) || null;
+      return prev.map(a => a.id === accId ? { ...a, ...localPatch } : a);
+    });
 
     const fieldMap = { initialBalance: 'initial_balance', memberIds: 'member_ids', isJoint: 'is_joint' };
     const apiPatch = {};
     for (const [k, v] of Object.entries(patch)) {
       apiPatch[fieldMap[k] || k] = k === 'initialBalance' ? (parseFloat(v) || 0) : v;
     }
-    try {
-      const updated = await api.accounts.update(accId, apiPatch);
-      const mapped = accountFromApi(updated);
-      // BUG FIX CRITIQUE 2026-05-21 — feedback user "en changeant le nom de
-      // son compte tout a bugé, transaction perdu, solde incohérent". Cause :
-      // si le backend PATCH renvoie une response partielle (sans certains
-      // champs comme last_known_balance, currentBalance, role...), accountFromApi
-      // produit { last_known_balance: undefined, currentBalance: undefined }.
-      // Le spread {...a, ...mapped} ecrasait alors les vraies valeurs avec
-      // undefined -> accountBalances bascule du last_known_balance (officiel
-      // banque) vers initialBalance + Î£tx (= 0 + filteredTx = mauvais solde).
-      //
-      // Fix : on filtre les champs undefined de mapped AVANT de spread, ce
-      // qui preserve les champs existants quand l'API n'en parle pas.
-      const safeMapped = Object.fromEntries(
-        Object.entries(mapped).filter(([, v]) => v !== undefined)
-      );
-      setAccounts(prev => prev.map(a => a.id === accId ? { ...a, ...safeMapped } : a));
-    } catch (err) { showToast(t('toasts.genericError', { message: err.message }), 'error'); }
+    // Retry sur échec transitoire : le PUT member_ids/role/devise est idempotent
+    // (on repose la même valeur), donc on peut réessayer sans risque. Ça évite
+    // qu'un simple hoquet serveur (cold-start Railway → timeout 15 s) fasse
+    // perdre l'enregistrement. 3 tentatives, backoff 0 / 1,5 s / 3 s.
+    let lastErr = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) await new Promise(r => setTimeout(r, 1500 * attempt));
+      try {
+        const updated = await api.accounts.update(accId, apiPatch);
+        const mapped = accountFromApi(updated);
+        // BUG FIX CRITIQUE 2026-05-21 — feedback user "en changeant le nom de
+        // son compte tout a bugé, transaction perdu, solde incohérent". Cause :
+        // si le backend PATCH renvoie une response partielle (sans certains
+        // champs comme last_known_balance, currentBalance, role...), accountFromApi
+        // produit { last_known_balance: undefined, currentBalance: undefined }.
+        // Le spread {...a, ...mapped} ecrasait alors les vraies valeurs avec
+        // undefined -> accountBalances bascule du last_known_balance (officiel
+        // banque) vers initialBalance + Î£tx (= 0 + filteredTx = mauvais solde).
+        //
+        // Fix : on filtre les champs undefined de mapped AVANT de spread, ce
+        // qui preserve les champs existants quand l'API n'en parle pas.
+        const safeMapped = Object.fromEntries(
+          Object.entries(mapped).filter(([, v]) => v !== undefined)
+        );
+        setAccounts(prev => prev.map(a => a.id === accId ? { ...a, ...safeMapped } : a));
+        return; // enregistré → on sort
+      } catch (err) {
+        lastErr = err;
+      }
+    }
+    // Les 3 tentatives ont échoué → ROLLBACK. Sans ça, l'affectation (titulaire,
+    // rôle, devise…) restait affichée alors qu'elle n'a PAS été enregistrée
+    // (serveur indisponible) → au refresh elle "disparaissait" (bug remonté
+    // 2026-07-11 « je paramètre un compte, refresh, pas pris en compte »). On
+    // restaure l'état réel + message clair pour que l'utilisateur retente.
+    if (prevAccount) setAccounts(prev => prev.map(a => a.id === accId ? prevAccount : a));
+    if (lastErr) console.warn('[updateAccount] échec après 3 tentatives:', lastErr);
+    showToast('Modification non enregistrée (serveur indisponible). Réessaie dans un instant.', 'error');
   };
 
   const deleteAccount = async (accId) => {
