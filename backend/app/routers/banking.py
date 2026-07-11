@@ -666,24 +666,34 @@ async def _sync_one_connection(
             "expected",
             "openingBooked",
         )
+        # Soldes ET transactions sont deux appels réseau INDÉPENDANTS. On les
+        # tirait l'un après l'autre → on les lance désormais EN PARALLÈLE
+        # (asyncio.gather) pour accélérer la première synchro, surtout sur les
+        # foyers multi-comptes. Le pré-check de statut ci-dessus a déjà écarté
+        # les comptes non prêts (sans brûler le quota données).
+        # return_exceptions=True : chaque échec est traité indépendamment.
         official_balance = None
-        try:
-            bal_data = await _gc("GET", f"/accounts/{gc_acc_id}/balances/")
-            balances = bal_data.get("balances", []) or []
-        except AccountNotReady:
+        bal_res, tx_res = await asyncio.gather(
+            _gc("GET", f"/accounts/{gc_acc_id}/balances/"),
+            _gc("GET", f"/accounts/{gc_acc_id}/transactions/", params={"date_from": date_from}),
+            return_exceptions=True,
+        )
+        if isinstance(bal_res, AccountNotReady):
             # Course : status READY mais l'endpoint données répond encore 409.
             # On considère le compte "en cours" et on réessaiera plus tard.
             accounts_pending.append(acc_label)
             logger.info("[banking] account %s balances not ready yet — skip", gc_acc_id[:8])
             continue
-        except Exception as e:
+        if isinstance(bal_res, Exception):
             # Erreur non-transitoire sur les SOLDES (403 scope refusé, 404,
             # 502 après retries épuisés…) : NE PAS faire échouer toute la sync.
             # On continue sans solde officiel — les transactions restent
             # récupérables. (Restaure le comportement d'avant le split du bloc :
             # sans ça, une erreur solde sur 1 compte tuait la connexion entière.)
-            logger.warning("[banking] balance fetch failed for %s: %s", gc_acc_id, e)
+            logger.warning("[banking] balance fetch failed for %s: %s", gc_acc_id, bal_res)
             balances = []
+        else:
+            balances = bal_res.get("balances", []) or []
         try:
             for kind in BALANCE_PRIORITY:
                 match = next((b for b in balances if b.get("balanceType") == kind), None)
@@ -742,20 +752,19 @@ async def _sync_one_connection(
             wl_acc.last_known_balance = official_balance
             wl_acc.last_balance_at = datetime.utcnow()
 
-        # Transactions
-        try:
-            tx_data = await _gc("GET", f"/accounts/{gc_acc_id}/transactions/", params={"date_from": date_from})
-        except AccountNotReady:
+        # Transactions — déjà récupérées en parallèle des soldes ci-dessus.
+        if isinstance(tx_res, AccountNotReady):
             # Données transactions pas encore prêtes (course post-connexion) →
             # on réessaiera. Le compte + solde viennent d'être créés/màj, les
             # opérations arriveront au prochain sync.
             accounts_pending.append(acc_label)
             logger.info("[banking] account %s transactions not ready yet — skip", gc_acc_id[:8])
             continue
-        except Exception as e:
-            logger.error("[banking] tx fetch failed for %s: %s", gc_acc_id, e)
-            errors.append(f"{acc_label} : {str(e)[:60]}")
+        if isinstance(tx_res, Exception):
+            logger.error("[banking] tx fetch failed for %s: %s", gc_acc_id, tx_res)
+            errors.append(f"{acc_label} : {str(tx_res)[:60]}")
             continue
+        tx_data = tx_res
 
         accounts_read += 1   # données lues avec succès pour ce compte
         booked = (tx_data.get("transactions") or {}).get("booked", []) or []

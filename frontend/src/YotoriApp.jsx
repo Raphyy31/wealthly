@@ -2041,7 +2041,11 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
   // larges pour respecter le quota GoCardless (~4 appels/jour/compte sur les
   // données) — le backend saute les comptes pas prêts sans brûler ce quota.
   const runBackgroundBankSync = useCallback(async (connectionId) => {
-    const DELAYS = [0, 20000, 60000, 150000];   // 0s · 20s · 1 min · 2 min 30
+    // Front-load : on retente PLUS TÔT et plus souvent au début pour que les
+    // opérations apparaissent vite dès que la banque a fini de les préparer.
+    // Sûr côté quota : un compte pas encore prêt ne coûte qu'un GET de statut
+    // (hors quota données) ; dès qu'un compte est lu, on s'arrête (cf. `done`).
+    const DELAYS = [0, 6000, 14000, 28000, 55000, 110000];   // 0s · 6s · 14s · 28s · 55s · 1 min 50
     let informed = false;
     for (let i = 0; i < DELAYS.length; i++) {
       if (DELAYS[i] > 0) await new Promise(r => setTimeout(r, DELAYS[i]));
