@@ -23,7 +23,7 @@ export function CurrencyButton({ baseCurrency = 'EUR', setBaseCurrency }) {
         title="Changer de devise d'affichage"
         aria-label="Devise"
       >
-        <span className="lang-btn-side on">CCY</span>
+        <span className="lang-btn-side on">{baseCurrency}</span>
       </button>
 
       {open && (

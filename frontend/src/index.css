@@ -3775,6 +3775,41 @@ html, body {
     radial-gradient(circle at 0 0, color-mix(in srgb, var(--warning) 11%, transparent), transparent 42%),
     var(--bg-elev);
 }
+.tx-inbox-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 14px;
+  padding: 5px;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--bg-sunk);
+  scrollbar-width: none;
+}
+.tx-inbox-tabs::-webkit-scrollbar { display: none; }
+.tx-inbox-tabs > button {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-2);
+  font: 550 12px var(--font-sans);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.tx-inbox-tabs > button strong { font: 600 10px var(--font-mono); color: var(--ink-3); }
+.tx-inbox-tabs > button.is-active { background: var(--bg-elev); color: var(--ink); box-shadow: var(--shadow-xs); }
+.tx-inbox-tabs > button.is-active strong { color: var(--accent); }
+.tx-inbox-tabs > .tx-inbox-validate { margin-left: auto; color: var(--positive); }
+@media (max-width: 700px) {
+  .tx-inbox-tabs { margin-top: 0; }
+  .tx-inbox-tabs > .tx-inbox-validate { margin-left: 0; }
+}
 .ai-review-card.done:not(:has(.ai-review-actions)) {
   border-color: color-mix(in srgb, var(--positive) 28%, var(--border));
 }

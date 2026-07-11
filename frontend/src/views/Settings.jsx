@@ -46,11 +46,21 @@ function readHashSection() {
   return null;
 }
 
-export function SettingsView({ members, accounts, accountBalances, saveMember, deleteMember, deleteAccount, updateAccount, mergeAccounts, transactions = [], transferIds, updateTags, setTransferOverride, exportData, importData, resetAllData, categories = [], reloadCategories, onCategoryCreated, onCategoryDeleted, showToast, fmt, baseCurrency = 'EUR', setBaseCurrency, rates, ratesDate, currentUser, onImport, recategorizeUncategorized, recategorizeTransfers }) {
+export function SettingsView({ members, accounts, accountBalances, saveMember, deleteMember, deleteAccount, updateAccount, mergeAccounts, transactions = [], transferIds, updateTags, setTransferOverride, exportData, importData, resetAllData, categories = [], reloadCategories, onCategoryCreated, onCategoryDeleted, showToast, fmt, baseCurrency = 'EUR', setBaseCurrency, rates, ratesDate, currentUser, onImport, recategorizeUncategorized, recategorizeTransfers, bankConnections = [], initialFocus, onConsumeInitialFocus }) {
   const { t } = useTranslation();
   const [editingMember, setEditingMember] = useState(null);
   const [activeSection, setActiveSection] = useState(() => readHashSection() || 'profil');
+  const [accountsInitialTab, setAccountsInitialTab] = useState(null);
   const COLORS = MEMBER_PALETTE;
+
+  useEffect(() => {
+    if (!initialFocus) return;
+    if (initialFocus === 'banks') {
+      setActiveSection('comptes');
+      setAccountsInitialTab('connexions');
+    }
+    onConsumeInitialFocus?.();
+  }, [initialFocus, onConsumeInitialFocus]);
 
   // Two-way sync with URL hash (#settings/securite etc.) — gives copy-pasteable deep links
   useEffect(() => {
@@ -130,11 +140,13 @@ export function SettingsView({ members, accounts, accountBalances, saveMember, d
               mergeAccounts={mergeAccounts}
               fmt={fmt}
               onImport={onImport}
+              initialTab={accountsInitialTab}
+              onConsumeInitialTab={() => setAccountsInitialTab(null)}
             />
           )}
 
           {activeSection === 'securite' && (
-            <SecuriteSection currentUser={currentUser} />
+            <SecuriteSection currentUser={currentUser} bankConnections={bankConnections} />
           )}
 
           {activeSection === 'regles' && (

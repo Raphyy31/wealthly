@@ -52,7 +52,16 @@ function syncFreshness(isoStr) {
 }
 
 const isRateLimitMessage = (message) => /(?:^|\s)429(?:\s|:)|temporair(?:e|ement).*d[ée]bord|quota.*(?:gocardless|banque)|limite de rafra[iî]chissement/i.test(String(message || ''));
-const RATE_LIMIT_COPY = 'GoCardless limite temporairement les mises à jour. Tes banques restent connectées et les dernières données sont conservées. Wealthly réessaiera plus tard.';
+const RATE_LIMIT_COPY = 'GoCardless limite temporairement les mises à jour. Tes banques restent connectées et les dernières données sont conservées. Yotori Finance réessaiera plus tard.';
+
+function connectionState(connection) {
+  if (connection.status === 'pending') return { color: 'var(--warning)', label: 'Autorisation à terminer', detail: 'Finalise le parcours bancaire pour activer la récupération.' };
+  if (['error', 'expired', 'suspended'].includes(connection.status)) return { color: 'var(--negative)', label: 'Action requise', detail: 'Reconnecte cette banque pour reprendre les mises à jour.' };
+  if (isRateLimitMessage(connection.error_message)) return { color: 'var(--warning)', label: 'Mise à jour en pause', detail: 'Dernières données conservées · nouvel essai automatique plus tard.' };
+  if (connection.error_message) return { color: 'var(--warning)', label: 'Récupération incomplète', detail: 'La connexion reste active, mais certaines opérations n’ont pas pu être actualisées.' };
+  if (!connection.last_synced_at) return { color: 'var(--accent)', label: 'Première récupération en cours', detail: 'La banque prépare encore les opérations.' };
+  return { color: 'var(--positive)', label: 'À jour', detail: `Dernier succès ${relativeTime(connection.last_synced_at)} · mise à jour automatique activée.` };
+}
 
 export function BankConnectionsSection() {
   const { t } = useTranslation();
@@ -225,61 +234,11 @@ export function BankConnectionsSection() {
             <div className="member-card-info" style={{ flex: 1 }}>
               <div className="member-card-name">{c.bank_name}</div>
               <div className="member-card-role">
-                {c.status === 'pending' ? (
-                  // Consentement jamais finalisé : inutile d'afficher « synchronisé
-                  // jamais » — on dit quoi faire. (Les pending d'une même banque
-                  // sont purgés automatiquement à la prochaine connexion.)
-                  <span style={{ color: 'var(--warning)' }}>
-                    Consentement non finalisé — relancez « {t('settings.banks.connect')} » ou supprimez cette ligne.
-                  </span>
-                ) : c.status === 'authorized' && !c.last_synced_at ? (
-                  // Autorisée mais jamais synchronisée : GoCardless prépare
-                  // encore les opérations côté banque (asynchrone). Badge honnête
-                  // « en cours » plutôt que « synchronisé jamais » — elles
-                  // arriveront seules (re-sync auto / cron).
-                  <span style={{ color: 'var(--accent)', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                    <RefreshCw size={11} className="spin" />
-                    Connectée · première synchro…
-                  </span>
-                ) : (
-                  <>
-                    {c.status === 'authorized' ? t('settings.banks.connected') : t('settings.banks.error')}
-                    {' · '}
-                    {(() => {
-                      const fresh = syncFreshness(c.last_synced_at);
-                      const colors = {
-                        fresh: 'var(--positive)',
-                        stale: 'var(--warning)',
-                        critical: 'var(--negative)',
-                        never: 'var(--ink-3)',
-                      };
-                      return (
-                        <span style={{ color: colors[fresh], fontWeight: fresh === 'critical' || fresh === 'never' ? 600 : 400 }}>
-                          synchronisé {relativeTime(c.last_synced_at)}
-                        </span>
-                      );
-                    })()}
-                    {c.accounts?.length > 0 && ` · ${t('settings.banks.accountsCount', { count: c.accounts.length })}`}
-                    {(() => {
-                      // Expiration du consentement DSP2 : on prévient dès qu'elle
-                      // approche pour proposer la reconnexion avant la coupure.
-                      const st = reconnectStatus(c);
-                      if (st === 'ok') return null;
-                      const d = c.days_until_expiry;
-                      const label = st === 'expired'
-                        ? 'accès expiré'
-                        : d != null && d >= 1
-                          ? `expire dans ${Math.round(d)} j`
-                          : 'expire aujourd’hui';
-                      return (
-                        <span style={{ color: st === 'expired' ? 'var(--negative)' : 'var(--warning)', fontWeight: 600 }}>
-                          {' · '}{label}
-                        </span>
-                      );
-                    })()}
-                  </>
-                )}
+                <span style={{ color: connectionState(c).color, fontWeight: 600 }}>{connectionState(c).label}</span>
+                {c.accounts?.length > 0 && ` · ${t('settings.banks.accountsCount', { count: c.accounts.length })}`}
+                {reconnectStatus(c) !== 'ok' && ` · ${reconnectStatus(c) === 'expired' ? 'accès expiré' : `expire dans ${Math.max(0, Math.round(c.days_until_expiry || 0))} j`}`}
               </div>
+              <div style={{ fontSize: 11.5, color: 'var(--ink-3)', marginTop: 3 }}>{connectionState(c).detail}</div>
               {c.error_message && (
                 <div style={{
                   fontSize: 11,

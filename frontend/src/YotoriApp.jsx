@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react';
-import { LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, RadialBarChart, RadialBar, ComposedChart, Sankey, Layer, Rectangle } from 'recharts';
 import { Upload, Plus, TrendingUp, TrendingDown, Wallet, Home, Coins, CreditCard, Users, Settings, Download, Trash2, Edit3, Check, X, ChevronRight, ChevronLeft, ChevronDown, AlertCircle, AlertTriangle, Repeat, Calendar, ArrowUpDown, Eye, EyeOff, Sparkles, PiggyBank, Bitcoin, Banknote, Landmark, BarChart3, Target, Heart, Sun, Moon, Zap, Activity, ArrowUp, ArrowDown, Minus, PartyPopper, Lightbulb, Bell, ChevronUp, Play, Lock, Unlock, LogOut, Cloud, RefreshCw, FileText, FileUp, Calculator, Link2, Unlink, Menu, Search, LineChart as LineChartIcon } from 'lucide-react';
 import * as api from './api.js';
 import { useTranslation } from 'react-i18next';
@@ -41,18 +40,6 @@ import { AnimatedNumber } from './components/AnimatedNumber.jsx';
 import { SyncProgressBar } from './components/SyncProgressBar.jsx';
 import { PostSyncReviewModal } from './components/PostSyncReviewModal.jsx';
 import { Onboarding } from './views/Onboarding.jsx';
-import { Transactions } from './views/Transactions.jsx';
-import { Monthly } from './views/Monthly.jsx';
-import { Cashflow } from './views/Cashflow.jsx';
-import { Dashboard } from './views/Dashboard.jsx';
-import { Wealth } from './views/Wealth.jsx';
-import { SettingsView } from './views/Settings.jsx';
-import { Admin } from './views/Admin.jsx';
-import { ImportFlow } from './views/ImportFlow.jsx';
-import { DCAView } from './views/DCA.jsx';
-import { SubscriptionsView } from './views/Subscriptions.jsx';
-import { Projection } from './views/Projection.jsx';
-import { ImmoSimulator } from './views/ImmoSimulator.jsx';
 import { dcaApi } from './api.js';
 import { AccountDrawer } from './components/AccountDrawer.jsx';
 import { useTheme, ThemeToggle } from './components/ui/ThemeToggle.jsx';
@@ -68,12 +55,18 @@ import { gsap } from './utils/gsapSetup.js';
 import { useWealthItems } from './hooks/useWealthItems.js';
 
 const TaxSimulator = lazy(() => import('./TaxSimulator.jsx'));
-
-// Disable Recharts animations globally — they cause noticeable jank on iOS Safari
-// (SVG <animate> on every render) and add no UX value for static financial data.
-[Line, Bar, Area, Pie, RadialBar, Sankey].forEach((C) => {
-  if (C) C.defaultProps = { ...(C.defaultProps || {}), isAnimationActive: false };
-});
+const Dashboard = lazy(() => import('./views/Dashboard.jsx').then(m => ({ default: m.Dashboard })));
+const Transactions = lazy(() => import('./views/Transactions.jsx').then(m => ({ default: m.Transactions })));
+const Monthly = lazy(() => import('./views/Monthly.jsx').then(m => ({ default: m.Monthly })));
+const Cashflow = lazy(() => import('./views/Cashflow.jsx').then(m => ({ default: m.Cashflow })));
+const Wealth = lazy(() => import('./views/Wealth.jsx').then(m => ({ default: m.Wealth })));
+const SettingsView = lazy(() => import('./views/Settings.jsx').then(m => ({ default: m.SettingsView })));
+const Admin = lazy(() => import('./views/Admin.jsx').then(m => ({ default: m.Admin })));
+const ImportFlow = lazy(() => import('./views/ImportFlow.jsx').then(m => ({ default: m.ImportFlow })));
+const DCAView = lazy(() => import('./views/DCA.jsx').then(m => ({ default: m.DCAView })));
+const SubscriptionsView = lazy(() => import('./views/Subscriptions.jsx').then(m => ({ default: m.SubscriptionsView })));
+const Projection = lazy(() => import('./views/Projection.jsx').then(m => ({ default: m.Projection })));
+const ImmoSimulator = lazy(() => import('./views/ImmoSimulator.jsx').then(m => ({ default: m.ImmoSimulator })));
 
 // bankColor is now in utils.js (shared with Settings → Comptes avatars).
 
@@ -304,6 +297,8 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
   // attribuées automatiquement. null = pas de modale, [] = aucune nouvelle tx
   // (donc on n'ouvre pas).
   const [postSyncReviewIds, setPostSyncReviewIds] = useState(null);
+  const [txInitialReviewMode, setTxInitialReviewMode] = useState(null);
+  const [settingsFocus, setSettingsFocus] = useState(null);
   const [sidebarMenuOpen, setSidebarMenuOpen] = useState(false);
   // Sections nav repliables (accordéon) — état persisté. Une section repliée
   // n'affiche plus ses items en mode déployé → sidebar moins entassée.
@@ -1749,10 +1744,10 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
     const tx = transactions.find(x => x.id === txId);
     const prevCategoryId = tx?.categoryId;
     // Optimistic update — UI reflects the change instantly, even if Railway is cold-starting
-    setTransactions(prev => prev.map(x => x.id === txId ? { ...x, categoryId, isManualCategory: true } : x));
+    setTransactions(prev => prev.map(x => x.id === txId ? { ...x, categoryId, isManualCategory: true, reviewStatus: 'reviewed' } : x));
     let resp;
     try {
-      resp = await api.transactions.update(txId, { category_slug: categoryId, is_manual_category: true });
+      resp = await api.transactions.update(txId, { category_slug: categoryId, is_manual_category: true, review_status: 'reviewed' });
       // Si le backend a créé/mis à jour une règle apprise (Category Learning
       // a passé le seuil de 2 observations), on propose à l'user d'appliquer
       // la règle aux transactions historiques du même marchand.
@@ -1793,6 +1788,15 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
       suggested,
       categoryName: cat?.name || categoryId,
     });
+  };
+
+  const markTransactionsReviewed = async (ids) => {
+    const validIds = (ids || []).filter(Boolean);
+    if (!validIds.length) return;
+    await api.transactions.markReviewed(validIds);
+    const idSet = new Set(validIds);
+    setTransactions(prev => prev.map(tx => idSet.has(tx.id) ? { ...tx, reviewStatus: 'reviewed' } : tx));
+    showToast(`${validIds.length} transaction${validIds.length > 1 ? 's' : ''} validée${validIds.length > 1 ? 's' : ''}.`, 'success');
   };
 
   // Confirm callback from CreateRuleModal — actually creates the rule and
@@ -2187,7 +2191,7 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
       try { setBankConnections(await api.banking.listConnections()); } catch { /* ignore */ }
 
       if (res.status === 'rate_limited') {
-        showToast('GoCardless limite temporairement les mises à jour. Tes banques restent connectées et Wealthly réessaiera automatiquement plus tard.', 'info');
+        showToast('GoCardless limite temporairement les mises à jour. Tes banques restent connectées et Yotori Finance réessaiera automatiquement plus tard.', 'info');
         return res;
       }
 
@@ -2306,7 +2310,7 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
       const result = await api.banking.sync(connectionId);
       if (result.status === 'rate_limited') {
         setSyncStage('waiting', 'Mise à jour mise en pause par GoCardless', { current: 1, total: 1, progress: 1 });
-        showToast('Tes banques restent connectées. GoCardless limite temporairement les mises à jour ; Wealthly réessaiera plus tard.', 'info');
+        showToast('Tes banques restent connectées. GoCardless limite temporairement les mises à jour ; Yotori Finance réessaiera plus tard.', 'info');
         setTimeout(() => setSyncStatus(null), 3500);
         return;
       }
@@ -2486,7 +2490,7 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
     }
     if (silent) return { totalImported, errors, firstError };
     if (rateLimited) {
-      showToast('Tes banques restent connectées. GoCardless limite temporairement les mises à jour ; Wealthly réessaiera automatiquement plus tard.', 'info');
+      showToast('Tes banques restent connectées. GoCardless limite temporairement les mises à jour ; Yotori Finance réessaiera automatiquement plus tard.', 'info');
     } else if (errors > 0 && totalImported === 0) {
       // Détecte les erreurs 401/403 → consentement GoCardless expiré (90j max)
       const msg = (firstError?.detail || firstError?.message || '').toLowerCase();
@@ -3585,15 +3589,8 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
           )}
 
           <main ref={contentRef} className="content">
+          <Suspense fallback={<div className="chart-empty"><Loader2 size={24} className="spin"/><span>Chargement de la vue…</span></div>}>
         {view === 'dashboard' && (<>
-          {onboarded && (
-            <AIInsights
-              snapshot={insightsSnapshot}
-              scope={activeMemberId || 'all'}
-              hasData={visibleTransactions.length > 0 || netWorth !== 0}
-              scopeLabel={activeMemberId && activeMemberId !== 'all' ? (activeMember?.name || null) : null}
-            />
-          )}
           <Dashboard
             netWorth={netWorth} liquidWealth={liquidWealth} assetsValue={assetsValue} liabilitiesValue={liabilitiesValue}
             thisMonthStats={thisMonthStats} monthlyEvolution={monthlyEvolution}
@@ -3614,6 +3611,17 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
             hasConnections={bankConnections.length > 0}
             baseCurrency={baseCurrency} rates={rates}
             currentUser={currentUser}
+            bankConnections={bankConnections}
+            coachPanel={onboarded ? (
+              <AIInsights
+                snapshot={insightsSnapshot}
+                scope={activeMemberId || 'all'}
+                hasData={visibleTransactions.length > 0 || netWorth !== 0}
+                scopeLabel={activeMemberId && activeMemberId !== 'all' ? (activeMember?.name || null) : null}
+              />
+            ) : null}
+            onReviewTransactions={() => { setTxInitialReviewMode('review'); setView('transactions'); }}
+            onOpenBankSettings={() => { setSettingsFocus('banks'); setView('settings'); }}
           />
         </>)}
         {['monthly','cashflow'].includes(view) && (
@@ -3711,6 +3719,9 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
             aiCatSummary={aiCatSummary}
             onOpenAiPrompt={() => setShowAiPromptModal(true)}
             onAfterSync={handleAfterSync}
+            initialReviewMode={txInitialReviewMode}
+            onConsumeInitialReviewMode={() => setTxInitialReviewMode(null)}
+            onMarkReviewed={markTransactionsReviewed}
           />
         )}
         {view === 'settings' && (
@@ -3755,6 +3766,8 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
             recategorizeUncategorized={recategorizeUncategorized}
             recategorizeTransfers={recategorizeTransfers}
             demoMode={demoMode}
+            initialFocus={settingsFocus}
+            onConsumeInitialFocus={() => setSettingsFocus(null)}
           />
         )}
         {view === 'admin' && currentUser?.is_admin && (
@@ -3772,6 +3785,7 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
             aiCategorizing={aiCategorizing} importing={importing}
           />
         )}
+          </Suspense>
           </main>
         </div>
       </div>

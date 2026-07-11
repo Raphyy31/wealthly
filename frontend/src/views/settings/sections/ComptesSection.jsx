@@ -22,7 +22,7 @@ const ROLE_TINT = {
   professionnel:  { color: 'var(--ink-3)',   bg: 'var(--bg-sunk)' },
 };
 
-export function ComptesSection({ accounts, accountBalances, members, transactions, updateAccount, deleteAccount, mergeAccounts, fmt, onImport }) {
+export function ComptesSection({ accounts, accountBalances, members, transactions, updateAccount, deleteAccount, mergeAccounts, fmt, onImport, initialTab, onConsumeInitialTab }) {
   const { t } = useTranslation();
   const [mergingId, setMergingId] = useState(null);
   const [editingId, setEditingId] = useState(null);
@@ -30,6 +30,12 @@ export function ComptesSection({ accounts, accountBalances, members, transaction
   const [editingNameVal, setEditingNameVal] = useState('');
   const [activeTab, setActiveTab] = useState('comptes');
   const tabContentRef = useRef(null);
+
+  useEffect(() => {
+    if (!initialTab) return;
+    setActiveTab(initialTab);
+    onConsumeInitialTab?.();
+  }, [initialTab, onConsumeInitialTab]);
 
   // Crossfade GSAP au changement de tab
   useEffect(() => {
@@ -347,6 +353,7 @@ function AccountEditor({ account, members, isOpen, updateAccount, onMerge, onDel
 
         {/* Actions */}
         <div className="acc-editor-row acc-editor-actions">
+          <span style={{ marginRight: 'auto', fontSize: 11, color: 'var(--positive)', alignSelf: 'center' }}>✓ Modifications enregistrées automatiquement</span>
           {canMerge && (
             <button className="ds-btn" onClick={onMerge}>
               <ArrowLeftRight size={12}/> Fusionner avec…

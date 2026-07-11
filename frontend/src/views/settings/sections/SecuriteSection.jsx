@@ -4,7 +4,7 @@
 // 2FA et idle-timeout via ToggleCard + ChoiceGrid, headers de cards explicites.
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Activity, Shield, Lock, KeyRound, Clock, Smartphone } from 'lucide-react';
+import { Activity, Shield, Lock, KeyRound, Clock, Smartphone, Building2, Eye, Database, Unplug } from 'lucide-react';
 import * as api from '../../../api.js';
 import { ChoiceGrid } from '../../../components/ui/PremiumToggle.jsx';
 import { ChangePasswordModal } from '../modals/ChangePasswordModal.jsx';
@@ -144,7 +144,7 @@ function TwoFactorRow({ t }) {
   );
 }
 
-export function SecuriteSection({ currentUser }) {
+export function SecuriteSection({ currentUser, bankConnections = [] }) {
   const { t } = useTranslation();
   const demo = isDemoMode();
   const [showPwdModal, setShowPwdModal] = useState(false);
@@ -238,6 +238,29 @@ export function SecuriteSection({ currentUser }) {
             ))}
           </div>
         )}
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <h3><Building2 size={16} style={{ color: 'var(--accent)' }}/> Sécurité bancaire</h3>
+          <span className="card-meta">DSP2 · lecture seule</span>
+        </div>
+        <div style={{ padding: '0 18px 18px', display: 'grid', gap: 10 }}>
+          {[
+            [Eye, 'Accès strictement en lecture seule', 'Yotori Finance ne peut ni initier un virement ni modifier ton compte bancaire.'],
+            [Lock, 'Identifiants bancaires non stockés', 'L’authentification se déroule sur le site de ta banque via GoCardless.'],
+            [Database, 'Données séparées par foyer', 'Les comptes, opérations et règles restent isolés des autres utilisateurs.'],
+            [Unplug, 'Accès révocable à tout moment', 'Tu peux supprimer une connexion bancaire depuis Comptes & synchronisation.'],
+          ].map(([Icon, title, detail]) => (
+            <div key={title} style={{ display: 'grid', gridTemplateColumns: '30px 1fr', gap: 10, alignItems: 'start', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+              <span style={{ width: 30, height: 30, display: 'grid', placeItems: 'center', borderRadius: 8, background: 'var(--accent-soft)', color: 'var(--accent)' }}><Icon size={14}/></span>
+              <div><strong style={{ display: 'block', fontSize: 13 }}>{title}</strong><span style={{ display: 'block', marginTop: 2, fontSize: 11.5, lineHeight: 1.45, color: 'var(--ink-3)' }}>{detail}</span></div>
+            </div>
+          ))}
+          <div style={{ marginTop: 2, padding: '10px 12px', borderRadius: 8, background: 'var(--bg-sunk)', color: 'var(--ink-2)', fontSize: 12 }}>
+            <strong>{bankConnections.length}</strong> connexion{bankConnections.length > 1 ? 's' : ''} bancaire{bankConnections.length > 1 ? 's' : ''} enregistrée{bankConnections.length > 1 ? 's' : ''}.
+          </div>
+        </div>
       </div>
 
       {showPwdModal && <ChangePasswordModal onClose={() => setShowPwdModal(false)}/>}

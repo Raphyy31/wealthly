@@ -17,6 +17,7 @@ import { SyncButton } from '../components/SyncButton.jsx';
 import { AddTransactionModal } from '../components/AddTransactionModal.jsx';
 import { gsap as gsapTx } from '../utils/gsapSetup.js';
 import { useIsNarrow } from '../hooks/useIsNarrow.js';
+import { needsTransactionReview } from '../components/ActionCenter.jsx';
 
 const EMPTY_FILTERS = {
   cats: [],          // string[] — empty means "all"
@@ -295,7 +296,7 @@ function TxFilterPanel({ children, onClose }) {
   );
 }
 
-export function Transactions({ transactions, accounts, categories, members = [], customRules = [], recurringIds, toggleRecurring, transferIds = new Set(), setTransferOverride, updateCategory, updateTags, deleteTransaction, createTransaction, fmt, initialAccountFilter, onConsumeInitialFilter, onCategorizeAI, aiCatRunning = false, aiCatSummary = null, onOpenAiPrompt, onAfterSync }) {
+export function Transactions({ transactions, accounts, categories, members = [], customRules = [], recurringIds, toggleRecurring, transferIds = new Set(), setTransferOverride, updateCategory, updateTags, deleteTransaction, createTransaction, fmt, initialAccountFilter, onConsumeInitialFilter, onCategorizeAI, aiCatRunning = false, aiCatSummary = null, onOpenAiPrompt, onAfterSync, initialReviewMode, onConsumeInitialReviewMode, onMarkReviewed }) {
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const [showAddTx, setShowAddTx] = useState(false);
@@ -306,6 +307,7 @@ export function Transactions({ transactions, accounts, categories, members = [],
   );
   const [showPanel, setShowPanel] = useState(false);
   const [catFilterSearch, setCatFilterSearch] = useState('');
+  const [reviewMode, setReviewMode] = useState(initialReviewMode || 'all'); // all | review | auto | reviewed
 
   // GSAP page-enter — fade-in du header + filtres + premieres rows
   // (sprint 2026-05-20). Cap a 20 rows pour eviter 200 anims simultanees.
@@ -327,6 +329,11 @@ export function Transactions({ transactions, accounts, categories, members = [],
     }, txRef);
     return () => ctx.revert();
   }, []);
+  useEffect(() => {
+    if (!initialReviewMode) return;
+    setReviewMode(initialReviewMode);
+    onConsumeInitialReviewMode?.();
+  }, [initialReviewMode, onConsumeInitialReviewMode]);
 
   // Consume the initial filter so it doesn't re-apply on subsequent navigations
   // back to this view.
@@ -384,6 +391,21 @@ export function Transactions({ transactions, accounts, categories, members = [],
     (tx.label || '').trim()
   ).length, [transactions, transferIds]);
 
+  const reviewCounts = useMemo(() => {
+    const counts = { all: transactions.length, review: 0, auto: 0, reviewed: 0 };
+    transactions.forEach(tx => {
+      if (needsTransactionReview(tx, transferIds)) counts.review += 1;
+      else if (tx.reviewStatus === 'reviewed' || tx.isManualCategory) counts.reviewed += 1;
+      else counts.auto += 1;
+    });
+    return counts;
+  }, [transactions, transferIds]);
+  const reviewableIds = useMemo(() => transactions.filter(tx =>
+    needsTransactionReview(tx, transferIds)
+    && tx.categoryId
+    && tx.categoryId !== 'uncategorized'
+  ).map(tx => tx.id), [transactions, transferIds]);
+
   // All tags in use across the household, with counts. Sorted by frequency desc.
   const { allTags, tagCounts } = useMemo(() => {
     const counts = {};
@@ -419,6 +441,11 @@ export function Transactions({ transactions, accounts, categories, members = [],
     const max = filters.amountMax === '' ? null : parseFloat(filters.amountMax);
     return transactions
       .filter(tx => {
+        const needsReview = needsTransactionReview(tx, transferIds);
+        if (reviewMode === 'review' && !needsReview) return false;
+        if (reviewMode === 'reviewed' && needsReview) return false;
+        if (reviewMode === 'reviewed' && tx.reviewStatus !== 'reviewed' && !tx.isManualCategory) return false;
+        if (reviewMode === 'auto' && (needsReview || tx.reviewStatus === 'reviewed' || tx.isManualCategory)) return false;
         if (q) {
           const labelHit = (tx.label || '').toLowerCase().includes(q);
           const catHit = tx.categoryId ? (catSearchIndex[tx.categoryId] || '').includes(q) : false;
@@ -460,7 +487,7 @@ export function Transactions({ transactions, accounts, categories, members = [],
         else if (sortKey === 'label') cmp = (a.label || '').localeCompare(b.label || '');
         return sortDir === 'asc' ? cmp : -cmp;
       });
-  }, [transactions, search, filters, sortKey, sortDir, accountMembers, catSearchIndex, transferIds]);
+  }, [transactions, search, filters, sortKey, sortDir, accountMembers, catSearchIndex, transferIds, reviewMode]);
 
   const toggleSort = (key) => {
     if (sortKey === key) setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
@@ -547,38 +574,25 @@ export function Transactions({ transactions, accounts, categories, members = [],
           <button className="ds-btn ghost tx-hdr-btn" onClick={exportCsv} title={`Exporter les ${filtered.length} transactions visibles en CSV`}>
             <Download size={14}/> <span className="tx-hdr-label">Export CSV</span>
           </button>
-          {(onCategorizeAI || onOpenAiPrompt) && (() => {
-            const uncatCount = uncategorizedCount;
-            return (
-              <>
-                {onCategorizeAI && (
-                  <button
-                    className={`ds-btn tx-hdr-btn ${uncatCount > 0 ? 'primary' : 'ghost'}`}
-                    onClick={onCategorizeAI}
-                    title={uncatCount > 0
-                      ? `Envoie à l'IA les ${uncatCount} transaction${uncatCount > 1 ? 's' : ''} que les règles gratuites (marchands connus, règles apprises) n'ont pas su classer.`
-                      : "Tout est catégorisé — les règles gratuites tournent automatiquement, l'IA ne sert qu'au reste."}
-                    disabled={uncatCount === 0 || aiCatRunning}
-                  >
-                    <Sparkles size={14} className={aiCatRunning ? 'spin' : ''}/>
-                    <span className="tx-hdr-label">{aiCatRunning ? 'Analyse…' : 'Classer'}</span>
-                    {uncatCount > 0 && !aiCatRunning && <span className="ds-btn-badge">{uncatCount}</span>}
-                  </button>
-                )}
-                {onOpenAiPrompt && (
-                  <button
-                    className="ds-btn ghost tx-hdr-btn"
-                    onClick={onOpenAiPrompt}
-                    title="Méthode gratuite, sans clé API : génère un prompt à coller dans votre Claude.ai / ChatGPT, puis recolle la réponse."
-                    disabled={uncatCount === 0 || aiCatRunning}
-                  >
-                    <Copy size={14}/> <span className="tx-hdr-label">Sans clé</span>
-                  </button>
-                )}
-              </>
-            );
-          })()}
         </div>
+      </div>
+
+      <div className="tx-inbox-tabs" role="tablist" aria-label="État de classement">
+        {[
+          ['all', 'Toutes'],
+          ['review', 'À vérifier'],
+          ['auto', 'Classées automatiquement'],
+          ['reviewed', 'Validées'],
+        ].map(([id, label]) => (
+          <button key={id} role="tab" aria-selected={reviewMode === id} className={reviewMode === id ? 'is-active' : ''} onClick={() => setReviewMode(id)}>
+            <span>{label}</span><strong>{reviewCounts[id]}</strong>
+          </button>
+        ))}
+        {reviewMode === 'review' && reviewableIds.length > 0 && onMarkReviewed && (
+          <button className="tx-inbox-validate" onClick={() => onMarkReviewed(reviewableIds)}>
+            <CheckCircle2 size={13}/> Valider les propositions ({reviewableIds.length})
+          </button>
+        )}
       </div>
 
       {(uncategorizedCount > 0 || aiCatSummary) && (
@@ -631,11 +645,17 @@ export function Transactions({ transactions, accounts, categories, members = [],
               <button
                 className="ds-btn ghost"
                 onClick={() => {
-                  setFilters({ ...EMPTY_FILTERS, cats: ['uncategorized'] });
+                  setReviewMode('review');
+                  setFilters(EMPTY_FILTERS);
                   setSearch('');
                 }}
               >
                 Voir la file à vérifier
+              </button>
+            )}
+            {uncategorizedCount > 0 && onOpenAiPrompt && (
+              <button className="ds-btn ghost" onClick={onOpenAiPrompt} disabled={aiCatRunning} title="Méthode sans clé API">
+                <Copy size={14}/> Méthode sans clé
               </button>
             )}
           </div>
@@ -1226,12 +1246,14 @@ export function Transactions({ transactions, accounts, categories, members = [],
                             <span className="tx-card-label-text">
                               {tx.label || 'Sans libellé'}
                               {tx.payeeName && <span className="tx-card-payee" title="Marchand canonique"> · {tx.payeeName}</span>}
-                              {(!tx.categoryId || tx.categoryId === 'uncategorized') && aiCatSummary?.status === 'done' && (
+                              {needsTransactionReview(tx, transferIds) && (
                                 <span
                                   className="tx-needs-review-badge"
-                                  title="Les règles, la première passe IA et la passe enquête n'ont pas trouvé de catégorie suffisamment fiable."
+                                  title={(!tx.categoryId || tx.categoryId === 'uncategorized')
+                                    ? "Aucune catégorie suffisamment fiable n'a été trouvée."
+                                    : 'Proposition automatique à confirmer.'}
                                 >
-                                  À vérifier · ambigu
+                                  {(!tx.categoryId || tx.categoryId === 'uncategorized') ? 'À classer' : 'À confirmer'}
                                 </span>
                               )}
                             </span>

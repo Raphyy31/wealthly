@@ -27,6 +27,7 @@ import { useHideAmounts } from '../contexts/HideAmounts.jsx';
 import { BankMark } from '../components/ui/BankMark.jsx';
 import { Sparkline } from '../components/ui/Sparkline.jsx';
 import { BilanModal } from '../components/BilanModal.jsx';
+import { ActionCenter } from '../components/ActionCenter.jsx';
 // Note: fmtAmount/formatDelta retirés du Dashboard avec la suppression
 // des multi-deltas 30j/3M/YTD (feedback user 2026-05-18 — perf % jugée
 // peu utile sur la vitrine). KPI strip réorienté patrimoine cash + immo.
@@ -189,6 +190,8 @@ export function Dashboard({
   onSyncAll, hasConnections = false,
   baseCurrency = 'EUR', rates = null,
   currentUser = null,
+  bankConnections = [], coachPanel = null,
+  onReviewTransactions, onOpenBankSettings,
 }) {
   const { t } = useTranslation();
   const formatEUR = useFormatEUR();
@@ -843,6 +846,44 @@ export function Dashboard({
         />
       </section>
 
+      <ActionCenter
+        transactions={transactions}
+        transferIds={transferIds}
+        bankConnections={bankConnections}
+        budgets={budgets}
+        categoryAnalysis={categoryAnalysis}
+        onReview={onReviewTransactions}
+        onBanks={onOpenBankSettings}
+        onBudget={() => setView?.('monthly')}
+      />
+
+      {cashflowProjection && (() => {
+        const cashNow = (visibleAccounts || []).reduce((sum, account) => sum + (accountBalances?.[account.id] || 0), 0);
+        const actualNet = (thisMonthStats?.income || 0) - (thisMonthStats?.expenses || 0);
+        const remainingNet = (cashflowProjection.projectedNet || 0) - actualNet;
+        const endBalance = cashNow + remainingNet;
+        const today = new Date().getDate();
+        const upcoming = (recurringGroups || []).filter(group => group.avgDay > today);
+        const upcomingAmount = upcoming.reduce((sum, group) => sum + Math.abs(group.avgAmount || 0), 0);
+        return (
+          <section className="forecast-card" data-dash-reveal>
+            <div>
+              <span className="dash-eyebrow-label">Prévision de fin de mois</span>
+              <strong className={`forecast-main num ${endBalance < 0 ? 'is-negative' : ''}`}>{hidden ? '···' : formatEUR(endBalance)}</strong>
+              <small>Solde estimé dans {cashflowProjection.daysLeft} jour{cashflowProjection.daysLeft > 1 ? 's' : ''}, à partir du rythme actuel.</small>
+            </div>
+            <div className="forecast-stats">
+              <div><span>Charges récurrentes attendues</span><strong>{upcoming.length}</strong></div>
+              <div><span>Montant restant estimé</span><strong>{hidden ? '···' : formatEUR(upcomingAmount)}</strong></div>
+              <div><span>Dépenses du mois projetées</span><strong>{hidden ? '···' : formatEUR(cashflowProjection.projectedExpenses || 0)}</strong></div>
+            </div>
+            <button type="button" className="link-btn" onClick={() => setView?.('projection')}>Explorer la projection →</button>
+          </section>
+        );
+      })()}
+
+      {coachPanel && <div className="dash-coach-slot" data-dash-reveal>{coachPanel}</div>}
+
       {/* ── §02 Cashflow mini — vue du mois en cours (sprint 2026-05-20) ── */}
       <div data-dash-reveal>
       <MiniCashflowCard
@@ -1347,6 +1388,17 @@ function DashStyles() {
    visuelle. Avant 1.5/1 = 7.5/4 approximatif. */
 .dash-hero-row { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
 @media (max-width: 1024px) { .dash-hero-row { grid-template-columns: 1fr; } }
+.forecast-card { display: grid; grid-template-columns: minmax(210px,.9fr) 1.6fr auto; align-items: center; gap: 22px; padding: 18px 20px; margin: 16px 0; border: 1px solid var(--border); border-radius: 12px; background: linear-gradient(120deg,color-mix(in srgb,var(--accent) 6%,var(--bg-elev)),var(--bg-elev)); }
+.forecast-main { display: block; margin-top: 6px; font-size: 28px; line-height: 1; color: var(--ink); letter-spacing: -.03em; }
+.forecast-main.is-negative { color: var(--negative); }
+.forecast-card small { display: block; margin-top: 6px; max-width: 330px; color: var(--ink-3); font-size: 11px; line-height: 1.4; }
+.forecast-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+.forecast-stats > div { min-height: 58px; padding: 9px 11px; border-radius: 8px; background: color-mix(in srgb,var(--bg-sunk) 76%,transparent); }
+.forecast-stats span { display: block; color: var(--ink-3); font-size: 10.5px; line-height: 1.25; }
+.forecast-stats strong { display: block; margin-top: 5px; color: var(--ink); font: 600 13px var(--font-mono); }
+.dash-coach-slot .ai-insights { margin: 16px 0; }
+@media(max-width:900px){.forecast-card{grid-template-columns:1fr}.forecast-card>.link-btn{justify-self:start}.forecast-stats{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:640px){.forecast-card{padding:15px;margin:12px 0}.forecast-stats{grid-template-columns:1fr}.forecast-stats>div{min-height:auto;display:flex;justify-content:space-between;align-items:center;gap:10px}.forecast-stats strong{margin-top:0}.forecast-main{font-size:25px}.dash-coach-slot .ai-insights{margin:12px 0}.hero-chart{height:145px}.hero-chart svg{height:145px}}
 
 .hero-card {
   background: var(--bg-elev);
