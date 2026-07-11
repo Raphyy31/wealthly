@@ -101,6 +101,8 @@ export function BankConnectionsSection() {
       if (res.status === 'processing' && !res.imported) {
         // GoCardless prépare encore les données côté banque → pas une erreur.
         setSyncMessage({ kind: 'warn', text: 'Ta banque prépare encore les opérations. Réessaie dans une minute — elles arriveront aussi automatiquement.' });
+      } else if (res.status === 'error') {
+        setSyncMessage({ kind: 'error', text: res.errors?.join(' · ') || 'Aucune opération n’a pu être récupérée.' });
       } else {
         setSyncMessage({
           kind: res.errors?.length ? 'warn' : 'ok',

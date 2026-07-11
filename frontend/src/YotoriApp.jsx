@@ -184,6 +184,27 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
     return unsub;
   }, []);
   const [navOpen, setNavOpen] = useState(false);
+  const mobileMenuButtonRef = useRef(null);
+  const mobileMenuCloseRef = useRef(null);
+  useEffect(() => {
+    if (!navOpen) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') setNavOpen(false);
+    };
+
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKeyDown);
+    // Move keyboard and screen-reader users into the newly opened drawer.
+    requestAnimationFrame(() => mobileMenuCloseRef.current?.focus());
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+      mobileMenuButtonRef.current?.focus();
+    };
+  }, [navOpen]);
   const [txInitialAccountFilter, setTxInitialAccountFilter] = useState(null);
   const [theme] = useTheme();
   const [members, setMembers] = useState([]);
@@ -1955,7 +1976,14 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
     } catch (err) { showToast(t('toasts.genericError', { message: err.message }), 'error'); }
   };
 
+  // Serialize writes per account. Owner chips can be clicked in quick
+  // succession (remove Alice, add Éric); two concurrent PUTs used to race and
+  // the slower, older response could overwrite the final choice.
+  const accountUpdateQueuesRef = useRef(new Map());
+  const accountUpdateVersionsRef = useRef(new Map());
   const updateAccount = async (accId, patch) => {
+    const version = (accountUpdateVersionsRef.current.get(accId) || 0) + 1;
+    accountUpdateVersionsRef.current.set(accId, version);
     // Optimistic update : applique immédiatement le patch côté UI pour que
     // le toggle réponde tout de suite. Si l'API rejette ou renvoie un état
     // différent (ex : Railway en cours de déploiement avant migration),
@@ -1975,44 +2003,48 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
     for (const [k, v] of Object.entries(patch)) {
       apiPatch[fieldMap[k] || k] = k === 'initialBalance' ? (parseFloat(v) || 0) : v;
     }
-    // Retry sur échec transitoire : le PUT member_ids/role/devise est idempotent
-    // (on repose la même valeur), donc on peut réessayer sans risque. Ça évite
-    // qu'un simple hoquet serveur (cold-start Railway → timeout 15 s) fasse
-    // perdre l'enregistrement. 3 tentatives, backoff 0 / 1,5 s / 3 s.
-    let lastErr = null;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      if (attempt > 0) await new Promise(r => setTimeout(r, 1500 * attempt));
-      try {
-        const updated = await api.accounts.update(accId, apiPatch);
-        const mapped = accountFromApi(updated);
-        // BUG FIX CRITIQUE 2026-05-21 — feedback user "en changeant le nom de
-        // son compte tout a bugé, transaction perdu, solde incohérent". Cause :
-        // si le backend PATCH renvoie une response partielle (sans certains
-        // champs comme last_known_balance, currentBalance, role...), accountFromApi
-        // produit { last_known_balance: undefined, currentBalance: undefined }.
-        // Le spread {...a, ...mapped} ecrasait alors les vraies valeurs avec
-        // undefined -> accountBalances bascule du last_known_balance (officiel
-        // banque) vers initialBalance + Î£tx (= 0 + filteredTx = mauvais solde).
-        //
-        // Fix : on filtre les champs undefined de mapped AVANT de spread, ce
-        // qui preserve les champs existants quand l'API n'en parle pas.
-        const safeMapped = Object.fromEntries(
-          Object.entries(mapped).filter(([, v]) => v !== undefined)
-        );
-        setAccounts(prev => prev.map(a => a.id === accId ? { ...a, ...safeMapped } : a));
-        return; // enregistré → on sort
-      } catch (err) {
-        lastErr = err;
+    const previousWrite = accountUpdateQueuesRef.current.get(accId) || Promise.resolve();
+    const write = previousWrite.catch(() => {}).then(async () => {
+      // Retry sur échec transitoire : le PUT est idempotent. Les erreurs de
+      // validation de titulaire ne sont pas retentées inutilement.
+      let lastErr = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        if (attempt > 0) await new Promise(r => setTimeout(r, 1500 * attempt));
+        try {
+          const updated = await api.accounts.update(accId, apiPatch);
+          const mapped = accountFromApi(updated);
+          const safeMapped = Object.fromEntries(
+            Object.entries(mapped).filter(([, v]) => v !== undefined)
+          );
+          // An older response must never repaint over a newer optimistic edit.
+          if (accountUpdateVersionsRef.current.get(accId) === version) {
+            setAccounts(prev => prev.map(a => a.id === accId ? { ...a, ...safeMapped } : a));
+          }
+          return true;
+        } catch (err) {
+          lastErr = err;
+          if (/titulaire|n.existent plus|actualisez/i.test(err?.message || '')) break;
+        }
+      }
+
+      // Roll back only when this is still the newest requested state. Rolling
+      // back an older failed write would erase a newer owner selection.
+      if (accountUpdateVersionsRef.current.get(accId) === version) {
+        if (prevAccount) setAccounts(prev => prev.map(a => a.id === accId ? prevAccount : a));
+        showToast(lastErr?.message || 'Modification non enregistrée. Réessaie dans un instant.', 'error');
+      }
+      if (lastErr) console.warn('[updateAccount] échec après tentative(s):', lastErr);
+      return false;
+    });
+
+    accountUpdateQueuesRef.current.set(accId, write);
+    try {
+      return await write;
+    } finally {
+      if (accountUpdateQueuesRef.current.get(accId) === write) {
+        accountUpdateQueuesRef.current.delete(accId);
       }
     }
-    // Les 3 tentatives ont échoué → ROLLBACK. Sans ça, l'affectation (titulaire,
-    // rôle, devise…) restait affichée alors qu'elle n'a PAS été enregistrée
-    // (serveur indisponible) → au refresh elle "disparaissait" (bug remonté
-    // 2026-07-11 « je paramètre un compte, refresh, pas pris en compte »). On
-    // restaure l'état réel + message clair pour que l'utilisateur retente.
-    if (prevAccount) setAccounts(prev => prev.map(a => a.id === accId ? prevAccount : a));
-    if (lastErr) console.warn('[updateAccount] échec après 3 tentatives:', lastErr);
-    showToast('Modification non enregistrée (serveur indisponible). Réessaie dans un instant.', 'error');
   };
 
   const deleteAccount = async (accId) => {
@@ -2076,7 +2108,7 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
       if (DELAYS[i] > 0) await new Promise(r => setTimeout(r, DELAYS[i]));
       let res;
       try {
-        res = await api.banking.sync(connectionId);
+        res = await api.banking.sync(connectionId, 90, { initialSync: true });
       } catch (e) {
         // Erreur dure (403 consentement, 429 quota, réseau…) → on arrête.
         showToast(e?.detail || e?.message || 'Erreur de synchronisation bancaire', 'error');
@@ -2091,9 +2123,14 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
       // (accounts_read > 0), on s'arrête : re-tirer un compte déjà lu juste
       // parce qu'un compte frère reste bloqué brûlerait son quota (~4/j/compte)
       // pour rien — le cron nightly finira les comptes encore en préparation.
-      const done = res.imported > 0 || res.status !== 'processing' || res.accounts_read > 0;
+      const pendingCount = res.pending_accounts?.length || 0;
+      const done = pendingCount === 0 && res.status !== 'processing';
       if (done) {
         await reloadAll();
+        if (res.status === 'error' || res.status === 'partial' || res.errors?.length) {
+          showToast(res.errors?.join(' · ') || 'Certaines opérations bancaires n’ont pas pu être récupérées.', 'error');
+          return;
+        }
         if (res.imported > 0) {
           unlockAchievement('first_import');
           showToast(`${res.imported} opération${res.imported > 1 ? 's' : ''} importée${res.imported > 1 ? 's' : ''}`, 'success');
@@ -2193,6 +2230,19 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
       await new Promise(r => setTimeout(r, 400));
       setSyncStage('transactions', `${bankLabel} — récupération des opérations…`, { current: 1, total: 1 });
       const result = await api.banking.sync(connectionId);
+      if (result.status === 'error') {
+        throw new Error(result.errors?.join(' · ') || 'La banque n’a renvoyé aucune opération exploitable.');
+      }
+      if (result.status === 'partial' || result.errors?.length) {
+        await reloadAll();
+        setSyncStage('error',
+          `${result.imported || 0} importée(s) · certaines opérations ont échoué`,
+          { current: 1, total: 1, progress: 1 }
+        );
+        showToast(result.errors?.join(' · ') || 'Synchronisation bancaire partielle.', 'info');
+        setTimeout(() => setSyncStatus(null), 3500);
+        return;
+      }
       setSyncStage('success',
         result.imported > 0
           ? `${result.imported} opération${result.imported > 1 ? 's' : ''} importée${result.imported > 1 ? 's' : ''}`
@@ -2267,20 +2317,33 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
         }
         try {
           const result = await api.banking.sync(conn.id);
+          if (result.status === 'error') {
+            throw new Error(result.errors?.join(' · ') || 'Échec de récupération des opérations');
+          }
           const imp = result.imported || 0;
           const upd = result.updated || 0;
           const skp = result.skipped || 0;
           totalImported += imp;
           totalUpdated += upd;
           totalSkipped += skp;
-          perBankLog.push({ bank: bankLabel, imported: imp, updated: upd, skipped: skp, ok: true });
+          const partial = result.status === 'partial' || result.errors?.length > 0;
+          if (partial) {
+            errors++;
+            const partialError = new Error(result.errors?.join(' · ') || 'Synchronisation partielle');
+            if (!firstError) firstError = partialError;
+            perBankLog.push({ bank: bankLabel, imported: imp, updated: upd, skipped: skp, ok: false, error: partialError.message });
+          } else {
+            perBankLog.push({ bank: bankLabel, imported: imp, updated: upd, skipped: skp, ok: true });
+          }
 
           // Affichage du resume per-bank avant de passer a la suivante
           if (!silent) {
-            const msg = imp > 0
+            const msg = partial
+              ? `${bankLabel} ⚠ ${imp} importée${imp > 1 ? 's' : ''}, récupération incomplète`
+              : imp > 0
               ? `${bankLabel} ✓ ${imp} nouvelle${imp > 1 ? 's' : ''} op${imp > 1 ? 's' : ''}.`
               : `${bankLabel} ✓ déjà à jour.`;
-            setSyncStage('success', msg, { current: i + 1, total: N, progress: (i + 1) / N });
+            setSyncStage(partial ? 'error' : 'success', msg, { current: i + 1, total: N, progress: (i + 1) / N });
             await breathe(550);
           }
         } catch (err) {
@@ -2360,6 +2423,7 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
     if (!bankConnections || bankConnections.length === 0) return;
     const STALE_HOURS = 6;
     const now = Date.now();
+    const neverSynced = bankConnections.filter(c => c.status === 'authorized' && !c.last_synced_at);
     const isStale = bankConnections.some(c => {
       if (!c.last_synced_at) return true;
       const last = new Date(c.last_synced_at).getTime();
@@ -2369,6 +2433,13 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
     autoSyncRef.current = true;
     // Délai 2s après le mount pour laisser le rendu initial respirer
     const tid = setTimeout(() => {
+      // Une première synchronisation inachevée doit conserver le mécanisme de
+      // retry dédié. Le sync global ne faisait qu'un essai puis affichait à
+      // tort "à jour" lorsque GoCardless était encore en préparation.
+      if (neverSynced.length > 0) {
+        neverSynced.forEach(c => runBackgroundBankSync(c.id));
+        return;
+      }
       syncAllBankAccounts({ silent: true }).then(res => {
         if (res?.totalImported > 0) {
           showToast(`${res.totalImported} nouvelle${res.totalImported > 1 ? 's' : ''} opération${res.totalImported > 1 ? 's' : ''} récupérée${res.totalImported > 1 ? 's' : ''} en arrière-plan.`, 'success');
@@ -2376,7 +2447,7 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
       });
     }, 2000);
     return () => clearTimeout(tid);
-  }, [loading, demoMode, bankConnections]);  // eslint-disable-line react-hooks/exhaustive-deps
+  }, [loading, demoMode, bankConnections, runBackgroundBankSync]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Passe moteur GRATUITE automatique (2026-07-03) ────────────────────────
   // « Ça catégorise sans demander » : au chargement, si des transactions sont
@@ -3095,10 +3166,10 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
         <aside className="ws-sidebar">
 
           {/* Brand block — identité app fixe, séparée du filtre membre */}
-          <div className="ws-brand-row" onClick={() => setView('dashboard')} role="button" tabIndex={0}>
+          <button type="button" className="ws-brand-row" onClick={() => setView('dashboard')} aria-label={t('nav.dashboard')}>
             <div className="ws-brand-logo"><Logo size={20} /></div>
             <div className="ws-brand-name">Yotori Finance</div>
-          </div>
+          </button>
 
           {/* Member filter — pills horizontales avec mini-avatars (C+D hybride).
               Toujours visible, scale jusqu'à ~5 membres dans 256 px. */}
@@ -3137,6 +3208,7 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
                 className="ws-pill ws-pill--add"
                 onClick={() => setEditingMember({})}
                 title={t('nav.manage_members')}
+                aria-label={t('nav.manage_members')}
               >
                 <Plus size={11}/>
               </button>
@@ -3153,12 +3225,13 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
 
             {/* PILOTAGE */}
             <div className={`ws-nav-section ${navCollapsed.pilotage ? 'is-collapsed' : ''}`}>
-              <div role="button" tabIndex={0} className="ws-nav-group ws-nav-group-toggle"
-                      onClick={() => toggleNavGroup('pilotage')} aria-expanded={!navCollapsed.pilotage}>
+              <button type="button" className="ws-nav-group ws-nav-group-toggle"
+                      onClick={() => toggleNavGroup('pilotage')} aria-expanded={!navCollapsed.pilotage}
+                      aria-controls="ws-nav-pilotage" aria-label={t('nav.group_pilotage')}>
                 <span className="ws-nav-group-label">{t('nav.group_pilotage')}</span>
                 <ChevronDown size={13} className="ws-nav-group-chev"/>
-              </div>
-              <div className="ws-nav-section-items">
+              </button>
+              <div className="ws-nav-section-items" id="ws-nav-pilotage">
                 <a href="#/dashboard" title={t('nav.dashboard')}
                    onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('dashboard'); }}
                    className={view === 'dashboard' ? 'on' : ''}>
@@ -3179,12 +3252,13 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
 
             {/* BUDGET & PRÉVISION */}
             <div className={`ws-nav-section ${navCollapsed.budget ? 'is-collapsed' : ''}`}>
-              <div role="button" tabIndex={0} className="ws-nav-group ws-nav-group-toggle"
-                      onClick={() => toggleNavGroup('budget')} aria-expanded={!navCollapsed.budget}>
+              <button type="button" className="ws-nav-group ws-nav-group-toggle"
+                      onClick={() => toggleNavGroup('budget')} aria-expanded={!navCollapsed.budget}
+                      aria-controls="ws-nav-budget" aria-label={t('nav.group_budget')}>
                 <span className="ws-nav-group-label">{t('nav.group_budget')}</span>
                 <ChevronDown size={13} className="ws-nav-group-chev"/>
-              </div>
-              <div className="ws-nav-section-items">
+              </button>
+              <div className="ws-nav-section-items" id="ws-nav-budget">
                 <a href="#/monthly" title={t('nav.monthly')}
                    onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('monthly'); }}
                    className={view === 'monthly' ? 'on' : ''}>
@@ -3210,12 +3284,13 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
 
             {/* INVESTIR */}
             <div className={`ws-nav-section ${navCollapsed.invest ? 'is-collapsed' : ''}`}>
-              <div role="button" tabIndex={0} className="ws-nav-group ws-nav-group-toggle"
-                      onClick={() => toggleNavGroup('invest')} aria-expanded={!navCollapsed.invest}>
+              <button type="button" className="ws-nav-group ws-nav-group-toggle"
+                      onClick={() => toggleNavGroup('invest')} aria-expanded={!navCollapsed.invest}
+                      aria-controls="ws-nav-invest" aria-label={t('nav.group_invest')}>
                 <span className="ws-nav-group-label">{t('nav.group_invest')}</span>
                 <ChevronDown size={13} className="ws-nav-group-chev"/>
-              </div>
-              <div className="ws-nav-section-items">
+              </button>
+              <div className="ws-nav-section-items" id="ws-nav-invest">
                 <a href="#/dca" title={t('nav.dca')}
                    onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('dca'); }}
                    className={view === 'dca' ? 'on' : ''}>
@@ -3312,6 +3387,7 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
                 className={`ws-user ${sidebarMenuOpen ? 'open' : ''}`}
                 onClick={() => setSidebarMenuOpen(o => !o)}
                 title={currentUser.email}
+                aria-label={`${currentUser.full_name || currentUser.email} · ${t('nav.settings')}`}
                 aria-expanded={sidebarMenuOpen}
                 aria-haspopup="menu"
               >
@@ -3357,17 +3433,18 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
         <div className="app-main">
           {/* Mobile-only top bar (<1024px) */}
           <header className="app-header-mobile">
-            <button className="icon-btn hamburger-btn" onClick={() => setNavOpen(true)} title="Menu">
+            <button ref={mobileMenuButtonRef} className="icon-btn hamburger-btn" onClick={() => setNavOpen(true)} title="Menu" aria-label="Menu">
               <Menu size={20}/>
             </button>
-            <div className="brand" onClick={() => setView('dashboard')} style={{ cursor: 'pointer' }}>
+            <button type="button" className="brand" onClick={() => setView('dashboard')} aria-label={t('nav.dashboard')}>
               <Logo size={22} wordmark wordmarkSize={14} />
-            </div>
+            </button>
             <div className="header-actions">
               <button className="icon-btn" onClick={() => setHideAmounts(!hideAmounts)} title="Masquer/afficher">
                 {hideAmounts ? <EyeOff size={16}/> : <Eye size={16}/>}
               </button>
-              <button className="ds-btn primary mob-icon-only" onClick={() => { setView('import'); setImportStep('upload'); }}>
+              <button className="ds-btn primary mob-icon-only" onClick={() => { setView('import'); setImportStep('upload'); }}
+                      aria-label={t('nav.import')} title={t('nav.import')}>
                 <Upload size={14}/> <span>{t('nav.import')}</span>
               </button>
             </div>
@@ -3596,12 +3673,13 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
       {/* Mobile nav drawer — slide in from left */}
       {navOpen && (
         <div className="nav-drawer-overlay" onClick={() => setNavOpen(false)}>
-          <aside className="nav-drawer" onClick={e => e.stopPropagation()}>
+          <aside className="nav-drawer" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Navigation principale">
             <div className="nav-drawer-header">
               <div className="sidebar-brand" style={{padding:'0 0 0 4px', cursor:'default'}}>
                 <Logo size={22} wordmark wordmarkSize={14} />
               </div>
-              <button className="icon-btn" onClick={() => setNavOpen(false)}><X size={18}/></button>
+              <button ref={mobileMenuCloseRef} className="icon-btn" onClick={() => setNavOpen(false)}
+                      aria-label={t('actions.close')} title={t('actions.close')}><X size={18}/></button>
             </div>
             <nav className="sidebar-nav" style={{flex:1}}>
               {[

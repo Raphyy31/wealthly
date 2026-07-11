@@ -123,6 +123,13 @@ def update_account(account_id: str, payload: AccountUpdate, db: Session = Depend
             Member.id.in_(member_ids),
             Member.household_id == user.household_id,
         ).all()
+        found_ids = {m.id for m in members}
+        missing_ids = [member_id for member_id in member_ids if member_id not in found_ids]
+        if missing_ids:
+            raise HTTPException(
+                status_code=422,
+                detail="Un ou plusieurs titulaires n'existent plus dans ce foyer. Actualisez la page puis réessayez.",
+            )
         account.members = members
     db.commit()
     db.refresh(account)

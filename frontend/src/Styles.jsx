@@ -369,7 +369,7 @@ export function Styles({ theme }) {
     border-bottom: 1px solid var(--border);
     position: sticky; top: 0; z-index: 100;
   }
-  .app-header-mobile .brand { display: flex; align-items: center; gap: 10px; cursor: pointer; min-width: 0; }
+  .app-header-mobile .brand { display: flex; align-items: center; gap: 10px; cursor: pointer; min-width: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; }
   .app-header-mobile .brand-mark { width: 32px; height: 32px; border-radius: 6px; background: var(--primary-soft); border: 1px solid ${dark ? 'rgba(65,212,155,0.32)' : 'rgba(14,124,86,0.20)'}; display: flex; align-items: center; justify-content: center; color: var(--primary); flex-shrink: 0; }
   .app-header-mobile .brand-name { font-size: 15px; font-weight: 600; letter-spacing: -0.025em; }
   .app-header-mobile .header-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }

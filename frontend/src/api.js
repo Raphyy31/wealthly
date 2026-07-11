@@ -174,7 +174,7 @@ async function fetchWithTimeout(url, opts = {}, timeoutMs = REQUEST_TIMEOUT_MS) 
 // ============================================================================
 // CORE FETCH WRAPPER
 // ============================================================================
-async function request(method, path, body = null, { timeoutMs } = {}) {
+async function request(method, path, body = null, { timeoutMs, affectsBackendHealth = true } = {}) {
   // In demo mode the UI is fed from demoData.js; never hit the backend.
   if (typeof window !== 'undefined' && window.localStorage.getItem('yotori:demo') === '1') {
     if (method === 'GET') return null;
@@ -203,21 +203,20 @@ async function request(method, path, body = null, { timeoutMs } = {}) {
     response = await fetchWithTimeout(`${API_BASE}${path}`, opts, timeoutMs || REQUEST_TIMEOUT_MS);
   } catch (err) {
     if (isMutation) endMutation();
-    markBackendOffline();
+    // Long GoCardless calls can time out while Wealthly itself is perfectly
+    // healthy. Those callers opt out of the global availability banner and
+    // surface their own banking error instead.
+    if (affectsBackendHealth) markBackendOffline();
     const timedOut = err?.name === 'AbortError';
     throw new Error(timedOut
       ? 'Le serveur ne répond pas pour le moment. Réessayez dans un instant.'
       : 'Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.');
   }
 
-  // 5xx persistants = backend en vrac (Railway cold start, crash, etc.)
-  // On marque offline pour déclencher le banner + retry polling.
-  if (response.status >= 500) {
-    markBackendOffline();
-  } else {
-    // Toute autre réponse (2xx, 3xx, 4xx) prouve que le serveur répond
-    markBackendOnline();
-  }
+  // Any HTTP response proves the Wealthly server answered. A 502/503 may be
+  // an upstream bank failure and must not trigger the misleading global
+  // "Le serveur ne répond pas" banner.
+  markBackendOnline();
 
   if (response.status === 401) {
     if (isMutation) endMutation();
@@ -628,7 +627,7 @@ const DEMO_BANK_CONNECTIONS = () => {
 export const banking = {
   /** List available banks in a country (default FR). Returns institutions
    *  with their GoCardless id (used as bank_name in /connect). */
-  listBanks: (country = 'FR') => isDemo() ? Promise.resolve([]) : get(`/banking/banks?country=${country}`),
+  listBanks: (country = 'FR') => isDemo() ? Promise.resolve([]) : get(`/banking/banks?country=${country}`, { affectsBackendHealth: false }),
 
   /** Initiate connection → returns {redirect_url, connection_id, state}.
    *  The user is then sent to redirect_url to consent at their bank.
@@ -636,27 +635,27 @@ export const banking = {
    *  cold start Railway → les 15 s par défaut coupaient AVANT la réponse
    *  (l'user croyait que « rien ne se passe » et recliquait → duplicats). */
   connect: (bankName, bankCountry = 'FR') =>
-    post('/banking/connect', { bank_name: bankName, bank_country: bankCountry }, { timeoutMs: 40000 }),
+    post('/banking/connect', { bank_name: bankName, bank_country: bankCountry }, { timeoutMs: 40000, affectsBackendHealth: false }),
 
   /** Complete after the bank redirects back with ?ref={state}. */
-  complete: (state) => post('/banking/complete', { state }, { timeoutMs: 40000 }),
+  complete: (state) => post('/banking/complete', { state }, { timeoutMs: 40000, affectsBackendHealth: false }),
 
   /** Reconnexion en un clic d'une connexion existante (consentement DSP2
    *  expiré/proche de l'expiration). Réutilise la banque d'origine → renvoie
    *  {redirect_url, connection_id, state}, l'user est renvoyé chez sa banque. */
   reconnect: (connectionId) =>
-    post(`/banking/reconnect/${connectionId}`, null, { timeoutMs: 40000 }),
+    post(`/banking/reconnect/${connectionId}`, null, { timeoutMs: 40000, affectsBackendHealth: false }),
 
   /** Sync transactions for a connection. En démo : renvoie un succès vide
    *  immédiat plutôt qu'un throw, pour que le SyncButton ait un comportement
    *  crédible (badge "à l'instant", pas d'erreur visible). */
-  sync: (connectionId, daysBack = 90) =>
+  sync: (connectionId, daysBack = 90, { initialSync = false } = {}) =>
     isDemo()
       ? Promise.resolve({ connection_id: connectionId, imported: 0, skipped: 0, errors: [], status: 'ready', pending_accounts: [], accounts_read: 0, last_synced_at: new Date().toISOString(), new_tx_ids: [] })
-      : post(`/banking/sync/${connectionId}?days_back=${daysBack}`, null, { timeoutMs: 90000 }),
+      : post(`/banking/sync/${connectionId}?days_back=${daysBack}&initial_sync=${initialSync ? 'true' : 'false'}`, null, { timeoutMs: 90000, affectsBackendHealth: false }),
 
   /** Re-poll requisition status to update accounts list */
-  refreshConnection: (id) => post(`/banking/refresh/${id}`, null, { timeoutMs: 40000 }),
+  refreshConnection: (id) => post(`/banking/refresh/${id}`, null, { timeoutMs: 40000, affectsBackendHealth: false }),
 
   /** List all connections. En démo : lit la liste seedée par YotoriApp
    *  (mis en cache dans localStorage lors du reloadAll démo). */
@@ -668,7 +667,7 @@ export const banking = {
   /** Diagnostic santé d'une connexion (ping GoCardless en temps réel) */
   diagnose: (id) => isDemo()
     ? Promise.resolve({ connection_id: id, verdict: 'ok', issues: [], recommendation: null, local_status: 'authorized', gocardless_status: 'LN', last_sync_age_hours: 2 })
-    : get(`/banking/connections/${id}/diagnose`),
+    : get(`/banking/connections/${id}/diagnose`, { affectsBackendHealth: false }),
 };
 
 // ============================================================================

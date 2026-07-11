@@ -310,6 +310,26 @@ async def list_banks(
 _INST_CAPS_CACHE: dict[str, tuple[int, int]] = {}
 
 
+async def _institution_caps(institution_id: str) -> tuple[int, int]:
+    """Return and cache the institution history/access limits.
+
+    The agreement and every later transaction request must use the same
+    history ceiling. Some institutions expose only 30 or 60 days: asking the
+    sync endpoint for the generic 90-day window makes GoCardless reject the
+    whole request with HTTP 400, leaving a linked account with no operations.
+    """
+    cached = _INST_CAPS_CACHE.get(institution_id)
+    if cached:
+        return cached
+    inst = await _gc("GET", f"/institutions/{institution_id}/")
+    caps = (
+        max(1, int(inst.get("transaction_total_days") or 90)),
+        max(1, int(inst.get("max_access_valid_for_days") or 90)),
+    )
+    _INST_CAPS_CACHE[institution_id] = caps
+    return caps
+
+
 def _purge_stale_pending(db: Session, household_id: str, bank_name: str | None = None) -> int:
     """Supprime les connexions `pending` mortes du foyer.
 
@@ -355,18 +375,12 @@ async def _start_bank_link(db: Session, household_id: str, bank_name: str, bank_
     # (transaction_total_days). Pulling more than that returns a 400. Read
     # the institution's caps before creating the agreement so we always
     # request a valid window. Caps cachés par process (cf. _INST_CAPS_CACHE).
-    if bank_name in _INST_CAPS_CACHE:
-        max_hist_cap, max_access_cap = _INST_CAPS_CACHE[bank_name]
-    else:
-        try:
-            inst = await _gc("GET", f"/institutions/{bank_name}/")
-        except HTTPException as e:
-            if e.status_code == 502 and "404" in str(e.detail):
-                raise HTTPException(status_code=400, detail=f"Banque inconnue: {bank_name}")
-            raise
-        max_hist_cap = int(inst.get("transaction_total_days") or 90)
-        max_access_cap = int(inst.get("max_access_valid_for_days") or 90)
-        _INST_CAPS_CACHE[bank_name] = (max_hist_cap, max_access_cap)
+    try:
+        max_hist_cap, max_access_cap = await _institution_caps(bank_name)
+    except HTTPException as e:
+        if e.status_code == 502 and "404" in str(e.detail):
+            raise HTTPException(status_code=400, detail=f"Banque inconnue: {bank_name}")
+        raise
     max_hist = min(180, max_hist_cap)
     access_valid = min(90, max_access_cap)
 
@@ -461,6 +475,46 @@ async def reconnect_bank(
     )
 
 
+async def _enrich_linked_accounts(conn: BankConnection, account_ids: list[str]) -> list[dict]:
+    """Build one canonical account payload for both /complete and /refresh.
+
+    Keeping these paths identical matters when the requisition becomes LN only
+    after the callback polling window: the manual refresh path must preserve
+    IBAN, product and cash-account type too. The consent duration is stored in
+    this existing JSON payload (no schema migration) so 30-day institutions are
+    not incorrectly presented as valid for 90 days.
+    """
+    access_valid_days = 90
+    if conn.bank_name:
+        try:
+            _, access_cap = await _institution_caps(conn.bank_name)
+            access_valid_days = min(90, access_cap)
+        except Exception as e:
+            logger.warning("[banking] consent cap unavailable for %s: %s", conn.bank_name, e)
+
+    enriched = []
+    for acc_id in account_ids:
+        base = {"id": acc_id, "access_valid_days": access_valid_days}
+        try:
+            meta = await _gc("GET", f"/accounts/{acc_id}/")
+            details = await _gc("GET", f"/accounts/{acc_id}/details/")
+            acc_obj = details.get("account") or {}
+            enriched.append({
+                **base,
+                "iban": meta.get("iban") or acc_obj.get("iban"),
+                "name": acc_obj.get("name") or acc_obj.get("displayName") or acc_obj.get("ownerName") or "Compte",
+                "currency": acc_obj.get("currency") or "EUR",
+                "owner_name": acc_obj.get("ownerName") or "",
+                "product": acc_obj.get("product") or "",
+                "cash_account_type": acc_obj.get("cashAccountType") or "",
+                "institution_id": meta.get("institution_id") or body_to_institution_id(conn),
+            })
+        except Exception as e:
+            logger.warning("[banking] account %s detail fetch failed: %s", acc_id, e)
+            enriched.append(base)
+    return enriched
+
+
 @router.post("/complete")
 async def complete_connection(
     body: CompleteRequest,
@@ -494,26 +548,7 @@ async def complete_connection(
     logger.info("[banking] complete %s → gc_status=%s accounts=%d", conn.id, gc_status, len(account_ids))
 
     if gc_status == "LN" and account_ids:
-        # Fetch account details to enrich what we show in the UI
-        enriched = []
-        for acc_id in account_ids:
-            try:
-                meta = await _gc("GET", f"/accounts/{acc_id}/")
-                details = await _gc("GET", f"/accounts/{acc_id}/details/")
-                acc_obj = details.get("account") or {}
-                enriched.append({
-                    "id": acc_id,
-                    "iban": meta.get("iban") or acc_obj.get("iban"),
-                    "name": acc_obj.get("name") or acc_obj.get("displayName") or acc_obj.get("ownerName") or "Compte",
-                    "currency": acc_obj.get("currency") or "EUR",
-                    "owner_name": acc_obj.get("ownerName") or "",
-                    "product": acc_obj.get("product") or "",
-                    "cash_account_type": acc_obj.get("cashAccountType") or "",
-                    "institution_id": meta.get("institution_id") or body_to_institution_id(conn),
-                })
-            except Exception as e:
-                logger.warning("[banking] account %s detail fetch failed: %s", acc_id, e)
-                enriched.append({"id": acc_id})
+        enriched = await _enrich_linked_accounts(conn, account_ids)
         conn.status = "authorized"
         conn.accounts_data = enriched
         _dedup_superseded_connections(db, household_id, conn, enriched)
@@ -564,6 +599,7 @@ async def _sync_one_connection(
     household_id: str,
     days_back: int,
     db: Session,
+    initial_sync: bool = False,
 ) -> dict:
     """Sync logic factorisée — utilisée par l'endpoint user-facing
     /sync/{connection_id} ET le cron nightly /cron/sync-all.
@@ -581,7 +617,19 @@ async def _sync_one_connection(
     from app.database import set_rls_context
     set_rls_context(db, household_id)
 
-    date_from = (datetime.utcnow() - timedelta(days=days_back)).date().isoformat()
+    # The requested window must never exceed the agreement/institution cap.
+    # Otherwise GoCardless rejects /transactions with HTTP 400 and the account
+    # remains connected but empty forever. If the metadata endpoint itself is
+    # temporarily unavailable, keep the requested value as a best-effort
+    # fallback rather than blocking every already-linked account.
+    effective_days_back = days_back
+    if conn.bank_name:
+        try:
+            max_hist_cap, _ = await _institution_caps(conn.bank_name)
+            effective_days_back = min(days_back, max_hist_cap)
+        except Exception as e:
+            logger.warning("[banking] institution caps unavailable for %s: %s", conn.bank_name, e)
+    date_from = (datetime.utcnow() - timedelta(days=effective_days_back)).date().isoformat()
     total_new = 0
     total_updated = 0
     total_skipped = 0
@@ -596,11 +644,21 @@ async def _sync_one_connection(
         Member.household_id == household_id,
     ).all()
 
-    for acc_info in conn.accounts_data:
+    # Work on fresh dicts and reassign the JSON column before commit so
+    # SQLAlchemy detects per-account initial-sync markers reliably.
+    account_entries = [dict(item) for item in (conn.accounts_data or [])]
+    for acc_info in account_entries:
         gc_acc_id = acc_info.get("id")
         if not gc_acc_id:
             continue
         acc_label = acc_info.get("name") or gc_acc_id
+
+        # Background retries after a fresh consent only revisit accounts that
+        # have not completed their first transaction pull. This prevents one
+        # READY sibling account from consuming its daily data quota again while
+        # another sibling is still PROCESSING.
+        if initial_sync and acc_info.get("initial_sync_complete"):
+            continue
 
         # ── Les données du compte sont-elles prêtes côté GoCardless ? ─────────
         # Après une connexion fraîche le compte passe DISCOVERED → PROCESSING →
@@ -756,9 +814,28 @@ async def _sync_one_connection(
             errors.append(f"{acc_label} : {str(e)[:60]}")
             continue
 
-        accounts_read += 1   # données lues avec succès pour ce compte
         booked = (tx_data.get("transactions") or {}).get("booked", []) or []
         pending = (tx_data.get("transactions") or {}).get("pending", []) or []
+
+        # A freshly linked account can briefly answer HTTP 200 with an empty
+        # transaction payload even though aggregation is not finished. Keep it
+        # retryable for a short grace period instead of stamping the connection
+        # as successfully synced and waiting six hours for the next attempt.
+        has_existing_transactions = db.query(Transaction.id).filter(
+            Transaction.account_id == wl_acc.id,
+        ).first() is not None
+        connection_age = datetime.utcnow() - (conn.created_at or datetime.utcnow())
+        if (
+            not booked and not pending and not has_existing_transactions
+            and conn.last_synced_at is None
+            and connection_age < timedelta(minutes=15)
+        ):
+            accounts_pending.append(acc_label)
+            logger.info("[banking] account %s returned an empty initial payload — retry during grace period", gc_acc_id[:8])
+            continue
+
+        accounts_read += 1   # données lues avec succès pour ce compte
+        acc_info["initial_sync_complete"] = True
         for raw in booked + pending:
             ext_id = raw.get("transactionId") or raw.get("internalTransactionId")
             if not ext_id:
@@ -873,11 +950,27 @@ async def _sync_one_connection(
     # « synchronisation en cours » côté UI et le re-sync auto/cron réessaiera.
     if accounts_read > 0:
         conn.last_synced_at = datetime.utcnow()
+    conn.accounts_data = account_entries
+
+    # Persist the last meaningful sync failure on the connection so Settings
+    # can explain why transactions are missing instead of showing an eternal
+    # generic "première synchro" state.
+    if errors:
+        conn.error_message = " · ".join(errors)[:1000]
+    elif accounts_read > 0:
+        conn.error_message = None
     db.commit()
 
     # status "processing" tant qu'un compte n'a pas pu être lu → le frontend
     # relance en arrière-plan, sans brûler le quota (délais espacés).
-    sync_status = "processing" if accounts_pending else "ready"
+    if accounts_pending:
+        sync_status = "processing"
+    elif errors and accounts_read == 0:
+        sync_status = "error"
+    elif errors:
+        sync_status = "partial"
+    else:
+        sync_status = "ready"
 
     return {
         "connection_id": conn.id,
@@ -888,6 +981,7 @@ async def _sync_one_connection(
         "pending_accounts": accounts_pending,
         "accounts_read": accounts_read,
         "status": sync_status,
+        "history_days": effective_days_back,
         "last_synced_at": _iso_utc(conn.last_synced_at),
         "new_tx_ids": new_tx_ids,
     }
@@ -899,6 +993,7 @@ async def _sync_one_connection(
 async def sync_transactions(
     connection_id: str,
     days_back: int = Query(90, ge=1, le=720),
+    initial_sync: bool = Query(False),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -910,7 +1005,7 @@ async def sync_transactions(
     ).first()
     if not conn:
         raise HTTPException(status_code=404, detail="Connexion introuvable")
-    return await _sync_one_connection(conn, household_id, days_back, db)
+    return await _sync_one_connection(conn, household_id, days_back, db, initial_sync=initial_sync)
 
 
 @router.post("/cron/sync-all")
@@ -1008,7 +1103,13 @@ def list_connections(
             # de stocker une colonne dédiée : ajouter une colonne à l'ORM sans que
             # la migration s'applique en prod fait 500 TOUTES les requêtes de la
             # table (incident 2026-07-11 : ProgrammingError sur bank_connections).
-            exp = c.created_at + timedelta(days=90)
+            account_access_days = [
+                int(a.get("access_valid_days"))
+                for a in (c.accounts_data or [])
+                if a.get("access_valid_days") is not None
+            ]
+            access_days = min(account_access_days) if account_access_days else 90
+            exp = c.created_at + timedelta(days=access_days)
             expires_at = _iso_utc(exp)
             days_until_expiry = round((exp - now).total_seconds() / 86400, 1)
         out.append({
@@ -1080,11 +1181,18 @@ async def diagnose_connection(
     # 2. Âge de la connexion (GoCardless = 90 jours max DSP2)
     if conn.created_at:
         age_days = (datetime.utcnow() - conn.created_at).total_seconds() / 86400
+        account_access_days = [
+            int(a.get("access_valid_days"))
+            for a in (conn.accounts_data or [])
+            if a.get("access_valid_days") is not None
+        ]
+        consent_days = min(account_access_days) if account_access_days else 90
         result["connection_age_days"] = int(age_days)
-        if age_days > 83:
-            result["issues"].append(f"Consentement créé il y a {int(age_days)} jours — expiration imminente (max 90 j DSP2).")
+        result["consent_valid_days"] = consent_days
+        if age_days > max(0, consent_days - 7):
+            result["issues"].append(f"Consentement créé il y a {int(age_days)} jours — expiration imminente (validité {consent_days} j).")
             result["verdict"] = "warning"
-        if age_days > 90:
+        if age_days > consent_days:
             result["issues"].append("Consentement probablement expiré.")
             result["verdict"] = "expired"
 
@@ -1158,22 +1266,7 @@ async def refresh_connection(
     account_ids = requisition.get("accounts") or []
 
     if gc_status == "LN" and account_ids:
-        enriched = []
-        for acc_id in account_ids:
-            try:
-                meta = await _gc("GET", f"/accounts/{acc_id}/")
-                details = await _gc("GET", f"/accounts/{acc_id}/details/")
-                acc_obj = details.get("account") or {}
-                enriched.append({
-                    "id": acc_id,
-                    "iban": meta.get("iban") or acc_obj.get("iban"),
-                    "name": acc_obj.get("name") or acc_obj.get("displayName") or acc_obj.get("ownerName") or "Compte",
-                    "currency": acc_obj.get("currency") or "EUR",
-                    "owner_name": acc_obj.get("ownerName") or "",
-                    "product": acc_obj.get("product") or "",
-                })
-            except Exception:
-                enriched.append({"id": acc_id})
+        enriched = await _enrich_linked_accounts(conn, account_ids)
         conn.status = "authorized"
         conn.accounts_data = enriched
         _dedup_superseded_connections(db, household_id, conn, enriched)

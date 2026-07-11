@@ -1093,6 +1093,12 @@ html, body {
   padding: 4px 10px 2px;
   cursor: pointer;
   outline: none;
+  width: 100%;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
 }
 .ws-brand-row:focus-visible {
   box-shadow: var(--focus-ring);
@@ -1405,7 +1411,14 @@ html, body {
   user-select: none;
   border-radius: 6px;
   transition: color var(--t-fast);
+  width: 100%;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
 }
+.ws-nav-group-toggle:focus-visible { box-shadow: var(--focus-ring); outline: none; }
 .ws-nav-group-toggle:hover .ws-nav-group-label { color: var(--ink-2); }
 .ws-nav-group-chev {
   margin-left: auto;
