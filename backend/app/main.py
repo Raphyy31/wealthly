@@ -68,7 +68,7 @@ if _DB_OK:
         logger.error("[startup] create_all failed (non-fatal): %s", e)
 
 
-def _run_lightweight_migrations() -> None:
+def _run_lightweight_migrations() -> bool:
     """Add columns / constraints introduced after the initial schema.
 
     Each statement uses IF [NOT] EXISTS so it's safe to run on every boot.
@@ -77,6 +77,40 @@ def _run_lightweight_migrations() -> None:
     the except clause swallows it because in dev the DB is recreated often.
     """
     is_pg = engine.dialect.name == "postgresql"
+
+    # En production l'application utilise volontairement un rôle RLS limité
+    # (`wealthly_app`). Ce rôle peut lire/écrire les données mais n'est pas
+    # propriétaire des tables, donc Postgres refusera TOUS les ALTER/CREATE
+    # ci-dessous, même avec IF NOT EXISTS. Avant ce garde-fou, chaque démarrage
+    # tentait ~70 requêtes interdites vers Supabase (environ 50 s au total),
+    # pendant lesquelles Railway paraissait indisponible au frontend.
+    #
+    # On teste une seule table représentative. Sur une base fraîche,
+    # create_all() vient de créer `accounts` avec le rôle courant : le test est
+    # alors vrai et les migrations légères peuvent s'exécuter normalement.
+    can_run_ddl = True
+    if is_pg:
+        try:
+            with engine.connect() as conn:
+                row = conn.execute(text("""
+                    SELECT
+                        c.relowner = (SELECT oid FROM pg_roles WHERE rolname = current_user)
+                        OR (SELECT rolsuper FROM pg_roles WHERE rolname = current_user)
+                    FROM pg_class c
+                    JOIN pg_namespace n ON n.oid = c.relnamespace
+                    WHERE n.nspname = 'public' AND c.relname = 'accounts'
+                    LIMIT 1
+                """)).first()
+                can_run_ddl = bool(row and row[0])
+        except Exception as e:
+            can_run_ddl = False
+            logger.warning("[migrate] impossible de vérifier le propriétaire du schéma: %s", e)
+
+        if not can_run_ddl:
+            logger.warning(
+                "[migrate] rôle applicatif non propriétaire: migrations DDL ignorées "
+                "(utiliser un rôle propriétaire/Alembic pour modifier le schéma)"
+            )
 
     statements: list[str] = []
     if is_pg:
@@ -258,10 +292,6 @@ def _run_lightweight_migrations() -> None:
             # Plan du foyer (drift de schéma : présent dans l'ORM mais absent en
             # base prod → l'INSERT à l'inscription échouait. 2026-06-08)
             "ALTER TABLE households ADD COLUMN IF NOT EXISTS plan VARCHAR DEFAULT 'solo' NOT NULL",
-            # Suppression mortgage_interest (2026-05-18) — remplacé par loan_mortgage.
-            # Reclasse les transactions existantes + les règles de catégorisation.
-            "UPDATE transactions SET category_slug = 'loan_mortgage' WHERE category_slug = 'mortgage_interest'",
-            "UPDATE categorisation_rules SET category_slug = 'loan_mortgage' WHERE category_slug = 'mortgage_interest'",
             # ── Index household_id (perf 2026-06-30) ────────────────────────
             # TOUTES les list endpoints filtrent par household_id (et la RLS
             # ajoute encore ce filtre). Sans index → scan complet de table à
@@ -297,19 +327,26 @@ def _run_lightweight_migrations() -> None:
     # Each statement runs in its own transaction so a failed DDL/DML
     # doesn't leave the connection in an aborted-transaction state and
     # block every subsequent statement (and app queries) in the same block.
+    if not can_run_ddl:
+        return False
+
+    all_succeeded = True
     for stmt in statements:
         try:
             with engine.begin() as conn:
                 conn.execute(text(stmt))
         except Exception as e:
+            all_succeeded = False
             logger.warning("[migrate] skipped statement (%s): %s", stmt[:80], e)
+    return all_succeeded
 
 
+_SCHEMA_BOOTSTRAP_OK = False
 if _DB_OK:
-    _run_lightweight_migrations()
+    _SCHEMA_BOOTSTRAP_OK = _run_lightweight_migrations()
 
 
-def _alembic_sync() -> None:
+def _alembic_sync(schema_bootstrap_ok: bool) -> None:
     """Bring the alembic_version table into agreement with the live schema.
 
     Two cases the startup hook handles automatically so deploys are safe:
@@ -363,7 +400,16 @@ def _alembic_sync() -> None:
             # boot — ce que faisait la branche `upgrade` quand la table existait
             # mais était vide (logs "Running upgrade -> 0001_baseline" à chaque
             # démarrage → redéploiements lents signalés par l'user).
-            logger.info("[alembic] pas de révision courante — stamp head (schéma déjà via create_all)")
+            if not schema_bootstrap_ok:
+                # Ne jamais prétendre que la base est à jour lorsque le rôle
+                # courant n'a pas pu appliquer les migrations. C'est ce faux
+                # stamp qui masquait jusque-là les dérives de schéma en prod.
+                logger.error(
+                    "[alembic] révision absente mais bootstrap incomplet — "
+                    "stamp head refusé; exécuter les migrations avec le rôle propriétaire"
+                )
+                return
+            logger.info("[alembic] pas de révision courante — stamp head (schéma vérifié via create_all)")
             alembic_command.stamp(cfg, "head")
         else:
             # Révision existante : on applique uniquement les migrations en
@@ -374,7 +420,7 @@ def _alembic_sync() -> None:
 
 
 if _DB_OK:
-    _alembic_sync()
+    _alembic_sync(_SCHEMA_BOOTSTRAP_OK)
 
 # Surface GoCardless config status at startup so Railway logs make it
 # obvious whether the env vars are loaded in the container.
