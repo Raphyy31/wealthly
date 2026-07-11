@@ -404,7 +404,6 @@ async def _start_bank_link(db: Session, household_id: str, bank_name: str, bank_
         bank_country=bank_country.upper(),
         status="pending",
         state=state,
-        access_valid_days=access_valid,
     )
     db.add(conn)
     db.commit()
@@ -999,14 +998,17 @@ def list_connections(
     now = datetime.utcnow()
     out = []
     for c in rows:
-        # Expiration du consentement DSP2 : created_at + fenêtre demandée
-        # (access_valid_days, 90 j max). Sert à proposer la reconnexion
-        # proactive AVANT que la banque coupe l'accès.
+        # Expiration du consentement DSP2 : created_at + 90 j (fenêtre max).
+        # Sert à proposer la reconnexion proactive AVANT que la banque coupe
+        # l'accès.
         expires_at = None
         days_until_expiry = None
         if c.created_at:
-            valid_days = c.access_valid_days or 90
-            exp = c.created_at + timedelta(days=valid_days)
+            # Fenêtre DSP2 = 90 j max. On la calcule depuis created_at plutôt que
+            # de stocker une colonne dédiée : ajouter une colonne à l'ORM sans que
+            # la migration s'applique en prod fait 500 TOUTES les requêtes de la
+            # table (incident 2026-07-11 : ProgrammingError sur bank_connections).
+            exp = c.created_at + timedelta(days=90)
             expires_at = _iso_utc(exp)
             days_until_expiry = round((exp - now).total_seconds() / 86400, 1)
         out.append({

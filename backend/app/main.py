@@ -185,9 +185,6 @@ def _run_lightweight_migrations() -> None:
             "ALTER TABLE bank_connections ADD COLUMN IF NOT EXISTS accounts_data JSON",
             "ALTER TABLE bank_connections ADD COLUMN IF NOT EXISTS error_message TEXT",
             "ALTER TABLE bank_connections ADD COLUMN IF NOT EXISTS last_synced_at TIMESTAMP",
-            # Fenêtre de validité DSP2 (jours) — sert au calcul d'expiration
-            # et à la reconnexion proactive avant échéance.
-            "ALTER TABLE bank_connections ADD COLUMN IF NOT EXISTS access_valid_days INTEGER DEFAULT 90",
             # FixedCharge kind — 'expense' (default) or 'income'. Lets users
             # plan recurring revenus alongside recurring charges in Suivi mensuel.
             "ALTER TABLE fixed_charges ADD COLUMN IF NOT EXISTS kind VARCHAR NOT NULL DEFAULT 'expense'",
