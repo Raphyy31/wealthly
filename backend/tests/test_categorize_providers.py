@@ -63,6 +63,7 @@ def test_categorize_unavailable_without_keys(client, auth_headers):
     body = resp.json()
     assert body["ai_available"] is False
     assert body["ai_used"] is False
+    assert body["ai_error"] == "provider_unavailable"
     assert body["results"][WEIRD_LABEL] == "uncategorized"
 
 
@@ -140,6 +141,20 @@ def test_categorize_openai_error_falls_back(client, auth_headers, monkeypatch):
     assert body["ai_error"] == "openai_RuntimeError"
 
 
+def test_categorize_explains_monthly_cap(client, auth_headers, monkeypatch):
+    from app.services import ai_budget
+
+    monkeypatch.setattr(settings, "OPENAI_API_KEY", "sk-proj-test", raising=False)
+    monkeypatch.setattr(ai_budget, "under_cap", lambda db, household_id: False)
+    resp = client.post("/categorize", json={
+        "transactions": [{"label": WEIRD_LABEL, "amount": -12.0}],
+    }, headers=auth_headers)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["ai_used"] is False
+    assert body["ai_error"] == "monthly_cap_reached"
+
+
 def test_categorize_openai_has_enough_output_budget(monkeypatch):
     """Un lot de 100 libellés doit pouvoir produire un JSON complet."""
     from app.services import llm as llm_mod
@@ -157,6 +172,44 @@ def test_categorize_openai_has_enough_output_budget(monkeypatch):
         "max_tokens": 8192,
         "json_mode": True,
     }
+
+
+def test_deep_pass_uses_investigation_prompt():
+    prompt = cat_mod._build_prompt(
+        [cat_mod.TxInput(label=WEIRD_LABEL, amount=-12.0)],
+        ["shopping", "uncategorized"],
+        deep=True,
+    )
+    assert "Mode enquête" in prompt
+    assert "processeurs de paiement" in prompt
+    assert "Ne fais aucune recherche web" in prompt
+
+
+def test_apply_ai_categories_persists_batch(client, auth_headers):
+    account_id = _make_account(client, auth_headers)
+    tx = client.post("/transactions", json={
+        "account_id": account_id,
+        "date": "2026-07-11",
+        "label": WEIRD_LABEL,
+        "amount": -12.0,
+    }, headers=auth_headers)
+    assert tx.status_code == 201, tx.text
+
+    categories = client.get("/categories", headers=auth_headers).json()
+    target = next(c for c in categories if c["slug"] != "uncategorized" and c["type"] == "expense")
+    applied = client.post("/categorize/apply", json={
+        "updates": [{
+            "transaction_id": tx.json()["id"],
+            "category_slug": target["slug"],
+        }],
+    }, headers=auth_headers)
+    assert applied.status_code == 200, applied.text
+    assert applied.json() == {"updated": 1, "skipped": 0}
+
+    stored = client.get("/transactions", headers=auth_headers).json()
+    row = next(item for item in stored if item["id"] == tx.json()["id"])
+    assert row["category_slug"] == target["slug"]
+    assert row["cat_source"] == "llm"
 
 
 # ─── Chaîne de repli modèles OpenAI (403/404 model_not_found) ───────────────

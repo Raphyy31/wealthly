@@ -1631,50 +1631,106 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
   // Replaces the legacy manual copy-paste prompt flow now that we run on a
   // server key. Operates on the currently visible uncategorized transactions.
   const [aiCatRunning, setAiCatRunning] = useState(false);
+  const [aiCatSummary, setAiCatSummary] = useState(null);
   const categorizeViaServerAI = async () => {
     if (aiCatRunning) return;
     const candidates = visibleTransactions.filter(tx =>
       (!tx.categoryId || tx.categoryId === 'uncategorized') &&
       !transferIds.has(tx.id) &&
       (tx.label || '').trim().length > 0
-    ).slice(0, 100);
+    );
     if (candidates.length === 0) {
       showToast('Aucune transaction à catégoriser.', 'info');
       return;
     }
     setAiCatRunning(true);
+    setAiCatSummary({
+      status: 'running', phase: 'Première passe',
+      total: candidates.length, processed: 0, categorized: 0, remaining: candidates.length,
+    });
     try {
-      const res = await api.categorizeAI.categorize(
-        candidates.map(t => {
-          const amount = Number(t.amount);
-          return { label: t.label, amount: Number.isFinite(amount) ? amount : 0 };
-        })
-      );
-      if (!res || !res.ai_used) {
-        const diagnostic = res?.ai_error ? ` Diagnostic : ${res.ai_error}.` : '';
-        showToast(`IA serveur indisponible (clé manquante, plafond atteint ou fournisseur indisponible).${diagnostic} Utilise « Sans clé » pour la méthode gratuite.`, 'warning');
-        return;
-      }
-      const updates = [];
-      candidates.forEach(t => {
-        const slug = res.results?.[t.label];
-        if (slug && slug !== 'uncategorized') updates.push({ txId: t.id, slug });
+      let categorized = 0;
+      let unresolved = [...candidates];
+      let diagnostic = null;
+
+      const runPass = async (input, { deep, batchSize, phase }) => {
+        const stillUnresolved = [];
+        let phaseProcessed = 0;
+        setAiCatSummary(s => ({ ...s, phase, total: input.length, processed: 0 }));
+        for (let offset = 0; offset < input.length; offset += batchSize) {
+          const batch = input.slice(offset, offset + batchSize);
+          const res = await api.categorizeAI.categorize(
+            batch.map(t => {
+              const amount = Number(t.amount);
+              return { label: t.label, amount: Number.isFinite(amount) ? amount : 0 };
+            }),
+            { deep },
+          );
+          diagnostic = diagnostic || res?.ai_error || null;
+          const updates = [];
+          batch.forEach(t => {
+            const slug = res?.results?.[t.label];
+            if (slug && slug !== 'uncategorized') {
+              updates.push({ transaction_id: t.id, category_slug: slug });
+            } else {
+              stillUnresolved.push(t);
+            }
+          });
+          if (updates.length > 0) {
+            await api.categorizeAI.apply(updates);
+            const byId = new Map(updates.map(u => [u.transaction_id, u.category_slug]));
+            setTransactions(prev => prev.map(tx => byId.has(tx.id)
+              ? { ...tx, categoryId: byId.get(tx.id), catSource: 'llm', aiCategorized: true }
+              : tx));
+            categorized += updates.length;
+          }
+          phaseProcessed += batch.length;
+          setAiCatSummary(s => ({
+            ...s, processed: Math.min(phaseProcessed, input.length), categorized,
+            remaining: Math.max(candidates.length - categorized, 0),
+          }));
+          // Un problème fournisseur ne sera pas résolu en répétant plusieurs
+          // lots : on conserve le reste pour la file de vérification.
+          if (res?.ai_error) {
+            stillUnresolved.push(...input.slice(offset + batchSize));
+            break;
+          }
+        }
+        return stillUnresolved;
+      };
+
+      // Passe rapide par lots suffisamment grands pour rester sous ~30 s.
+      unresolved = await runPass(unresolved, {
+        deep: false, batchSize: 100, phase: 'Classement automatique',
       });
-      if (updates.length === 0) {
-        showToast("L'IA n'a pas pu catégoriser ces transactions avec certitude.", 'info');
-        return;
+
+      // Seconde passe « enquête » uniquement sur les résistantes : lots plus
+      // petits et prompt spécialisé, sans recherche web ni donnée ajoutée.
+      if (unresolved.length > 0 && !diagnostic) {
+        unresolved = await runPass(unresolved, {
+          deep: true, batchSize: 25, phase: 'Enquête sur les libellés ambigus',
+        });
       }
-      await Promise.allSettled(updates.map(u =>
-        api.transactions.update(u.txId, { category_slug: u.slug })
-      ));
-      setTransactions(prev => prev.map(tx => {
-        const u = updates.find(x => x.txId === tx.id);
-        return u ? { ...tx, categoryId: u.slug, aiCategorized: true } : tx;
-      }));
-      showToast(`${updates.length} transaction${updates.length > 1 ? 's' : ''} catégorisée${updates.length > 1 ? 's' : ''} par l'IA.`, 'success');
+
+      const remaining = unresolved.length;
+      setAiCatSummary({
+        status: 'done', phase: remaining > 0 ? 'À vérifier' : 'Terminé',
+        total: candidates.length, processed: candidates.length,
+        categorized, remaining, diagnostic,
+      });
+      if (categorized > 0) {
+        showToast(
+          `${categorized} transaction${categorized > 1 ? 's' : ''} classée${categorized > 1 ? 's' : ''}. ${remaining > 0 ? `${remaining} reste${remaining > 1 ? 'nt' : ''} à vérifier.` : 'Tout est classé.'}`,
+          'success',
+        );
+      } else {
+        const detail = diagnostic ? ` (${diagnostic})` : '';
+        showToast(`Aucune catégorie fiable trouvée${detail}. Les opérations restent dans « À vérifier ».`, 'warning');
+      }
     } catch (err) {
       console.error('[categorizeViaServerAI] échec:', err);
       const detail = err?.message ? ` ${err.message}` : '';
+      setAiCatSummary(s => ({ ...s, status: 'error', phase: 'Interrompu', diagnostic: err?.message || null }));
       showToast(`Échec de la catégorisation IA.${detail}`, 'error');
     } finally {
       setAiCatRunning(false);
@@ -3609,6 +3665,7 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
             onConsumeInitialFilter={() => setTxInitialAccountFilter(null)}
             onCategorizeAI={categorizeViaServerAI}
             aiCatRunning={aiCatRunning}
+            aiCatSummary={aiCatSummary}
             onOpenAiPrompt={() => setShowAiPromptModal(true)}
             onAfterSync={handleAfterSync}
           />

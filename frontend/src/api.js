@@ -417,11 +417,14 @@ export const categorizeAI = {
   // fallbacks. Le timeout global de 15 s coupait alors la requête côté
   // navigateur pendant que Railway continuait le travail, d'où « Échec de la
   // catégorisation IA » sans POST visible immédiatement dans les logs.
-  categorize: (transactions) => post(
+  categorize: (transactions, { deep = false } = {}) => post(
     '/categorize',
-    { transactions },
+    { transactions, deep },
     { timeoutMs: 60000, affectsBackendHealth: false },
   ),
+  // Persistance groupée des résultats : un seul commit au lieu d'un PUT par
+  // transaction (130 opérations ne doivent pas produire 130 requêtes HTTP).
+  apply: (updates) => post('/categorize/apply', { updates }),
   // Passe GRATUITE (moteur serveur, zéro LLM) : re-résout côté backend toutes
   // les tx non catégorisées du foyer -> {updated, results: [{id, category_slug,
   // cat_source, is_transfer_override}]}. Appelée automatiquement au chargement.

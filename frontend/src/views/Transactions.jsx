@@ -8,7 +8,7 @@
 import { useState, useMemo, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { Search, ArrowUpDown, Repeat, Trash2, Filter, X, RotateCcw, Sparkles, Plus, Download, ArrowLeftRight, PiggyBank, CreditCard, Inbox, FilterX, Copy } from 'lucide-react';
+import { Search, ArrowUpDown, Repeat, Trash2, Filter, X, RotateCcw, Sparkles, Plus, Download, ArrowLeftRight, PiggyBank, CreditCard, Inbox, FilterX, Copy, CircleHelp, CheckCircle2 } from 'lucide-react';
 import { formatDate, getTransferType, getTransferDestAccountId, buildTransferDestTag, ACCOUNT_ROLES } from '../utils.js';
 import { gsap } from '../utils/gsapSetup.js';
 import { AnimatedNumber } from '../components/AnimatedNumber.jsx';
@@ -295,7 +295,7 @@ function TxFilterPanel({ children, onClose }) {
   );
 }
 
-export function Transactions({ transactions, accounts, categories, members = [], customRules = [], recurringIds, toggleRecurring, transferIds = new Set(), setTransferOverride, updateCategory, updateTags, deleteTransaction, createTransaction, fmt, initialAccountFilter, onConsumeInitialFilter, onCategorizeAI, aiCatRunning = false, onOpenAiPrompt, onAfterSync }) {
+export function Transactions({ transactions, accounts, categories, members = [], customRules = [], recurringIds, toggleRecurring, transferIds = new Set(), setTransferOverride, updateCategory, updateTags, deleteTransaction, createTransaction, fmt, initialAccountFilter, onConsumeInitialFilter, onCategorizeAI, aiCatRunning = false, aiCatSummary = null, onOpenAiPrompt, onAfterSync }) {
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const [showAddTx, setShowAddTx] = useState(false);
@@ -377,6 +377,12 @@ export function Transactions({ transactions, accounts, categories, members = [],
     });
     return c;
   }, [transactions, categories, transferIds]);
+
+  const uncategorizedCount = useMemo(() => transactions.filter(tx =>
+    (!tx.categoryId || tx.categoryId === 'uncategorized') &&
+    !transferIds.has(tx.id) &&
+    (tx.label || '').trim()
+  ).length, [transactions, transferIds]);
 
   // All tags in use across the household, with counts. Sorted by frequency desc.
   const { allTags, tagCounts } = useMemo(() => {
@@ -542,7 +548,7 @@ export function Transactions({ transactions, accounts, categories, members = [],
             <Download size={14}/> <span className="tx-hdr-label">Export CSV</span>
           </button>
           {(onCategorizeAI || onOpenAiPrompt) && (() => {
-            const uncatCount = transactions.filter(tx => (!tx.categoryId || tx.categoryId === 'uncategorized') && !transferIds.has(tx.id) && (tx.label || '').trim()).length;
+            const uncatCount = uncategorizedCount;
             return (
               <>
                 {onCategorizeAI && (
@@ -555,7 +561,7 @@ export function Transactions({ transactions, accounts, categories, members = [],
                     disabled={uncatCount === 0 || aiCatRunning}
                   >
                     <Sparkles size={14} className={aiCatRunning ? 'spin' : ''}/>
-                    <span className="tx-hdr-label">{aiCatRunning ? 'IA en cours…' : 'IA'}</span>
+                    <span className="tx-hdr-label">{aiCatRunning ? 'Analyse…' : 'Classer'}</span>
                     {uncatCount > 0 && !aiCatRunning && <span className="ds-btn-badge">{uncatCount}</span>}
                   </button>
                 )}
@@ -574,6 +580,67 @@ export function Transactions({ transactions, accounts, categories, members = [],
           })()}
         </div>
       </div>
+
+      {(uncategorizedCount > 0 || aiCatSummary) && (
+        <section className={`ai-review-card ${aiCatSummary?.status || 'idle'}`} aria-live="polite">
+          <div className="ai-review-icon">
+            {uncategorizedCount === 0
+              ? <CheckCircle2 size={20}/>
+              : <CircleHelp size={20}/>
+            }
+          </div>
+          <div className="ai-review-main">
+            <div className="ai-review-heading">
+              <strong>
+                {aiCatRunning
+                  ? aiCatSummary?.phase || 'Analyse en cours'
+                  : uncategorizedCount > 0
+                    ? `${uncategorizedCount} opération${uncategorizedCount > 1 ? 's' : ''} à éclaircir`
+                    : 'Toutes les opérations sont classées'}
+              </strong>
+              {aiCatSummary?.status === 'done' && aiCatSummary.categorized > 0 && (
+                <span className="ai-review-success">{aiCatSummary.categorized} classée{aiCatSummary.categorized > 1 ? 's' : ''}</span>
+              )}
+            </div>
+            <p>
+              {aiCatRunning
+                ? `Wealthly traite les opérations par lots, puis mène une seconde passe sur les libellés ambigus. ${aiCatSummary?.processed || 0}/${aiCatSummary?.total || uncategorizedCount} analysées.`
+                : uncategorizedCount > 0
+                  ? aiCatSummary?.status === 'done'
+                    ? `Les restantes ont résisté aux règles et aux deux passes IA : libellé trop générique, marchand inconnu ou virement ambigu. Elles restent visibles et modifiables — rien n'est masqué.`
+                    : `Une première passe classe les marchands connus. Une seconde passe plus minutieuse reprend automatiquement les cas ambigus. Les derniers cas restent dans une file à vérifier.`
+                  : `La boîte « À vérifier » est vide. Les corrections manuelles continueront d'améliorer les règles du foyer.`}
+            </p>
+            {aiCatSummary?.diagnostic && (
+              <div className="ai-review-diagnostic">Diagnostic technique : {aiCatSummary.diagnostic}</div>
+            )}
+            {aiCatRunning && (
+              <div className="ai-review-progress" role="progressbar" aria-valuemin="0" aria-valuemax={aiCatSummary?.total || 1} aria-valuenow={aiCatSummary?.processed || 0}>
+                <span style={{ width: `${Math.min(100, ((aiCatSummary?.processed || 0) / Math.max(1, aiCatSummary?.total || 1)) * 100)}%` }}/>
+              </div>
+            )}
+          </div>
+          <div className="ai-review-actions">
+            {uncategorizedCount > 0 && onCategorizeAI && (
+              <button className="ds-btn primary" onClick={onCategorizeAI} disabled={aiCatRunning}>
+                <Sparkles size={14}/>
+                {aiCatRunning ? 'Analyse en cours…' : aiCatSummary?.status === 'done' ? `Retenter les ${uncategorizedCount}` : `Analyser les ${uncategorizedCount}`}
+              </button>
+            )}
+            {uncategorizedCount > 0 && (
+              <button
+                className="ds-btn ghost"
+                onClick={() => {
+                  setFilters({ ...EMPTY_FILTERS, cats: ['uncategorized'] });
+                  setSearch('');
+                }}
+              >
+                Voir la file à vérifier
+              </button>
+            )}
+          </div>
+        </section>
+      )}
 
       <div className="filters-bar" ref={panelRef}>
         <div className={`search-box ${search ? 'has-value' : ''}`}>
@@ -1159,6 +1226,14 @@ export function Transactions({ transactions, accounts, categories, members = [],
                             <span className="tx-card-label-text">
                               {tx.label || 'Sans libellé'}
                               {tx.payeeName && <span className="tx-card-payee" title="Marchand canonique"> · {tx.payeeName}</span>}
+                              {(!tx.categoryId || tx.categoryId === 'uncategorized') && aiCatSummary?.status === 'done' && (
+                                <span
+                                  className="tx-needs-review-badge"
+                                  title="Les règles, la première passe IA et la passe enquête n'ont pas trouvé de catégorie suffisamment fiable."
+                                >
+                                  À vérifier · ambigu
+                                </span>
+                              )}
                             </span>
                             {tx.catSource && tx.catSource !== 'unknown' && (
                               <span className={`tx-cat-source-dot src-${tx.catSource}`} title={({

@@ -3763,6 +3763,75 @@ html, body {
 /* ============================================================================
    Transactions — day-grouped card feed (Mai 2026 redesign)
    ============================================================================ */
+.ai-review-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 16px 18px;
+  border: 1px solid color-mix(in srgb, var(--warning) 30%, var(--border));
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 0 0, color-mix(in srgb, var(--warning) 11%, transparent), transparent 42%),
+    var(--bg-elev);
+}
+.ai-review-card.done:not(:has(.ai-review-actions)) {
+  border-color: color-mix(in srgb, var(--positive) 28%, var(--border));
+}
+.ai-review-card.running {
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--border));
+  background:
+    radial-gradient(circle at 0 0, color-mix(in srgb, var(--accent) 12%, transparent), transparent 45%),
+    var(--bg-elev);
+}
+.ai-review-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 13%, var(--bg-elev));
+}
+.ai-review-card.running .ai-review-icon { color: var(--accent); background: var(--accent-soft); }
+.ai-review-card.done .ai-review-icon { color: var(--positive); background: color-mix(in srgb, var(--positive) 11%, var(--bg-elev)); }
+.ai-review-main { min-width: 0; }
+.ai-review-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.ai-review-heading strong { font: 650 14px var(--font-sans); color: var(--ink); }
+.ai-review-main p { margin: 4px 0 0; max-width: 760px; font: 400 12.5px/1.45 var(--font-sans); color: var(--ink-2); }
+.ai-review-success {
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--positive) 12%, transparent);
+  color: var(--positive);
+  font: 600 10px var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.ai-review-diagnostic { margin-top: 6px; font: 500 10.5px var(--font-mono); color: var(--warning); overflow-wrap: anywhere; }
+.ai-review-progress { height: 4px; margin-top: 10px; overflow: hidden; border-radius: 999px; background: var(--border); }
+.ai-review-progress span { display: block; height: 100%; border-radius: inherit; background: var(--accent); transition: width 0.35s ease; }
+.ai-review-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.tx-needs-review-badge {
+  display: inline-flex;
+  margin-left: 7px;
+  padding: 2px 6px;
+  vertical-align: middle;
+  border: 1px solid color-mix(in srgb, var(--warning) 28%, var(--border));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--warning) 8%, transparent);
+  color: var(--warning);
+  font: 600 9px var(--font-mono);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+@media (max-width: 780px) {
+  .ai-review-card { grid-template-columns: auto minmax(0, 1fr); align-items: start; }
+  .ai-review-actions { grid-column: 1 / -1; justify-content: stretch; }
+  .ai-review-actions .ds-btn { flex: 1; justify-content: center; }
+}
+
 .tx-sort-bar {
   display: flex; align-items: center; gap: 6px;
   padding: 10px 4px 14px;

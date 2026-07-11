@@ -43,6 +43,18 @@ class TxInput(BaseModel):
 
 class CategorizeRequest(BaseModel):
     transactions: list[TxInput]
+    # Seconde passe sur les cas résistants : petits lots + consignes plus
+    # poussées sur les abréviations bancaires et processeurs de paiement.
+    deep: bool = False
+
+
+class CategoryApplyItem(BaseModel):
+    transaction_id: str
+    category_slug: str
+
+
+class CategoryApplyRequest(BaseModel):
+    updates: list[CategoryApplyItem]
 
 
 class CategorizeResponse(BaseModel):
@@ -71,6 +83,48 @@ class EnginePassResult(BaseModel):
     # [{id, category_slug, cat_source, is_transfer_override}] — uniquement les
     # transactions modifiées, pour merge côté client sans reload complet.
     results: list[dict]
+
+
+@router.post("/apply")
+def apply_ai_categories(
+    payload: CategoryApplyRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Persiste un lot de résultats IA en une transaction SQL.
+
+    Remplace jusqu'à 100 PUT parallèles côté navigateur : beaucoup plus rapide,
+    atomique, et strictement limité aux transactions/catégories du foyer.
+    """
+    items = payload.updates[:500]
+    if not items:
+        return {"updated": 0, "skipped": 0}
+
+    tx_ids = {item.transaction_id for item in items}
+    slugs = {item.category_slug for item in items if item.category_slug != "uncategorized"}
+    transactions = db.query(Transaction).filter(
+        Transaction.household_id == current_user.household_id,
+        Transaction.id.in_(tx_ids),
+    ).all()
+    categories = db.query(Category).filter(
+        Category.household_id == current_user.household_id,
+        Category.slug.in_(slugs),
+    ).all() if slugs else []
+    tx_by_id = {tx.id: tx for tx in transactions}
+    cat_by_slug = {cat.slug: cat.id for cat in categories}
+
+    updated = 0
+    for item in items:
+        tx = tx_by_id.get(item.transaction_id)
+        category_id = cat_by_slug.get(item.category_slug)
+        if not tx or not category_id:
+            continue
+        tx.category_id = category_id
+        tx.cat_source = "llm"
+        tx.is_manual_category = False
+        updated += 1
+    db.commit()
+    return {"updated": updated, "skipped": len(items) - updated}
 
 
 @router.post("/engine", response_model=EnginePassResult)
@@ -184,6 +238,8 @@ def categorize(
     ai_error = None
     provider = _ai_provider()
     ai_available = provider is not None
+    if unmatched and not provider:
+        ai_error = "provider_unavailable"
 
     # ── Pass 2 : LLM (Claude Haiku ou OpenAI) pour les libellés que le
     # moteur ne résout pas — bloqué si plafond mensuel atteint. Le plafond
@@ -194,12 +250,17 @@ def categorize(
     if unmatched and provider:
         try:
             if under_cap(db, current_user.household_id):
-                ai_results = _categorize_with_ai(provider, unmatched, list(valid_slugs), slug_names)
+                ai_results = _categorize_with_ai(
+                    provider, unmatched, list(valid_slugs), slug_names,
+                    deep=payload.deep,
+                )
                 for label, slug in ai_results.items():
                     results[label] = slug
                     sources[label] = "llm"
                 ai_used = True
                 record_use(db, current_user.household_id)
+            else:
+                ai_error = "monthly_cap_reached"
         except Exception as exc:
             # Log serveur + raison compacte renvoyée au client (diagnostic
             # sans accès aux logs : 401 clé, 429 insufficient_quota = crédits
@@ -263,7 +324,12 @@ def _compact_ai_error(provider: str, exc: Exception) -> str:
     return f"{provider}_{type(exc).__name__}"
 
 
-def _build_prompt(transactions: list[TxInput], valid_slugs: list[str], slug_names: dict[str, str] | None = None) -> str:
+def _build_prompt(
+    transactions: list[TxInput],
+    valid_slugs: list[str],
+    slug_names: dict[str, str] | None = None,
+    deep: bool = False,
+) -> str:
     # Descriptions riches pour les slugs standards ; les catégories custom du
     # foyer tombent sur leur nom lisible (slug_names, depuis la DB).
     slug_descriptions = {
@@ -312,7 +378,17 @@ def _build_prompt(transactions: list[TxInput], valid_slugs: list[str], slug_name
 
     tx_lines = "\n".join(_line(i, tx) for i, tx in enumerate(transactions))
 
+    investigation = """
+Mode enquête (seconde passe) : ces opérations ont résisté au moteur et à une
+première passe IA. Analyse plus attentivement les sigles, formes juridiques,
+préfixes SEPA/CB, processeurs de paiement (Stripe, SumUp, PayPal…), villes et
+indices présents dans le marchand normalisé. Utilise aussi le signe du montant.
+N'invente pas : si plusieurs catégories restent plausibles, réponds
+"uncategorized". Ne fais aucune recherche web et ne prétends pas en avoir fait.
+""" if deep else ""
+
     return f"""Tu es un assistant de catégorisation bancaire pour des relevés français.
+{investigation}
 
 Catégories disponibles :
 {categories_desc}
@@ -341,9 +417,15 @@ def _parse_ai_json(raw: str, valid_slugs: list[str]) -> dict[str, str]:
     }
 
 
-def _categorize_with_ai(provider: str, transactions: list[TxInput], valid_slugs: list[str], slug_names: dict[str, str] | None = None) -> dict[str, str]:
+def _categorize_with_ai(
+    provider: str,
+    transactions: list[TxInput],
+    valid_slugs: list[str],
+    slug_names: dict[str, str] | None = None,
+    deep: bool = False,
+) -> dict[str, str]:
     """Dispatch vers le provider choisi. Même prompt, même contrat JSON."""
-    prompt = _build_prompt(transactions, valid_slugs, slug_names)
+    prompt = _build_prompt(transactions, valid_slugs, slug_names, deep=deep)
     if provider == "openai":
         raw = _call_openai(prompt)
     else:
