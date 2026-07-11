@@ -449,9 +449,13 @@ async def _validation_error_handler(request: Request, exc: RequestValidationErro
 async def _unhandled_exception_handler(request: Request, exc: Exception):
     tb = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
     logger.error("[unhandled] %s %s\n%s", request.method, request.url.path, tb)
+    # On expose UNIQUEMENT la CLASSE de l'exception (jamais le message, qui peut
+    # contenir des données) pour diagnostiquer un incident sans fouiller les logs
+    # Railway. Ex : « Erreur interne du serveur (OperationalError). » indique une
+    # panne DB, « (IntegrityError) » une contrainte violée, etc.
     return JSONResponse(
         status_code=500,
-        content={"detail": "Erreur interne du serveur."},
+        content={"detail": f"Erreur interne du serveur ({type(exc).__name__})."},
     )
 
 
