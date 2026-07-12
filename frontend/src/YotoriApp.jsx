@@ -1126,25 +1126,35 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
     return { transferIds: ids, transferPairs: pairs };
   }, [visibleTransactions]);
 
-  // Virements vers le compte COMMUN (option "décaler comme le salaire").
+  // Virements PERSO → COMPTE COMMUN (option "compte commun intelligent").
   // Détection GLOBALE sur TOUTES les transactions (pas le scope courant) : dans
-  // le scope perso, la jambe entrante (compte joint) n'est pas visible, donc la
-  // détection scopée ne les apparie pas. On repère ici les débits dont la
-  // contrepartie de virement atterrit sur un compte marqué joint → ce sont les
-  // « contributions au compte commun » à décaler au mois suivant.
-  const jointContribIds = useMemo(() => {
-    if (!incomeShiftSettings.shiftJointContrib) return new Set();
+  // un scope donné, l'autre jambe du virement n'est pas visible, donc la
+  // détection scopée ne les apparie pas. On classe ici asymétriquement les deux
+  // jambes d'un virement perso → joint :
+  //  - jointContribIds (le DÉBIT perso) = la contribution = une dépense du perso,
+  //    décalée au mois suivant (comme le salaire).
+  //  - jointFundingIds (le CRÉDIT entrant sur le joint) = un financement, JAMAIS
+  //    un revenu : dans la vue du compte commun, seules les dépenses détaillées
+  //    comptent, pas l'argent qui arrive du perso.
+  const { jointContribIds, jointFundingIds } = useMemo(() => {
+    const empty = { jointContribIds: new Set(), jointFundingIds: new Set() };
+    if (!incomeShiftSettings.shiftJointContrib) return empty;
     const jointAccIds = new Set(accounts.filter(a => a.isJoint).map(a => a.id));
-    if (jointAccIds.size === 0) return new Set();
+    if (jointAccIds.size === 0) return empty;
     const txById = new Map(transactions.map(t => [t.id, t]));
     const auto = detectInternalTransfers(transactions);
-    const out = new Set();
+    const contrib = new Set();
+    const funding = new Set();
     for (const p of (auto.pairs || [])) {
       const inTx = txById.get(p.inTxId);
-      // Le débit (outTx) part du perso ; l'entrée (inTx) atterrit sur le joint.
-      if (inTx && jointAccIds.has(inTx.accountId)) out.add(p.outTxId);
+      const outTx = txById.get(p.outTxId);
+      // Entrée sur un compte joint, sortie d'un compte NON joint (le perso).
+      if (inTx && jointAccIds.has(inTx.accountId) && outTx && !jointAccIds.has(outTx.accountId)) {
+        contrib.add(p.outTxId);
+        funding.add(p.inTxId);
+      }
     }
-    return out;
+    return { jointContribIds: contrib, jointFundingIds: funding };
   }, [transactions, accounts, incomeShiftSettings.shiftJointContrib]);
 
   // Auto-application des regles de virement (Phase C). Les regles sont
@@ -1257,9 +1267,11 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
         // le compte). On prend abs pour avoir un total positif d'epargne.
         const absShared = Math.abs(sharedAmount);
         if (absShared > 0) monthly[mCivil].savings += absShared;
-      } else if (!isTransfer) {
+      } else if (!isTransfer && !jointFundingIds.has(t.id)) {
         // CASHFLOW NORMAL (income/depense) — uniquement si pas un transfert
         // (les transferts non-epargne sont des arbitrages, exclus du cashflow).
+        // jointFundingIds : le crédit entrant sur le compte commun est un
+        // financement (venu du perso), jamais un revenu → exclu ici aussi.
         const isManualIncome = t.isManualCategory && cat?.type === 'income';
         const isManualExpense = t.isManualCategory && cat?.type === 'expense';
         if (t.amount > 0) {
@@ -1303,7 +1315,7 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
       cursor -= monthly[m].net;
     }
     return Object.values(monthly);
-  }, [visibleTransactions, visibleAccounts, accounts, categories, recurringIds, memberShare, transferIds, jointContribIds, accountBalances, incomeShiftSettings]);
+  }, [visibleTransactions, visibleAccounts, accounts, categories, recurringIds, memberShare, transferIds, jointContribIds, jointFundingIds, accountBalances, incomeShiftSettings]);
 
   const currentMonth = useMemo(() => {
     const now = new Date();
