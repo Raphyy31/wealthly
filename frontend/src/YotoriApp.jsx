@@ -19,7 +19,7 @@ import {
   accountIncludeInNetWorth, accountCountsAsIncome, accountCountsAsExpense,
   detectInternalTransfers, convertCurrency, ACCOUNT_ROLES, bankColor,
   fmtAmount, matchTransferRule, buildTransferDestTag, formatBankName,
-  shiftMonthForDate,
+  shiftMonthForDate, isExplicitBankTransfer,
 } from './utils.js';
 import { useRates } from './hooks/useRates.js';
 import { useBaseCurrency } from './hooks/useBaseCurrency.js';
@@ -32,6 +32,7 @@ import { Styles } from './Styles.jsx';
 import { Toast } from './components/Toast.jsx';
 import { DemoTour } from './components/DemoTour.jsx';
 import { BankMark } from './components/ui/BankMark.jsx';
+import { ResponsiveModal } from './components/ui/ResponsiveModal.jsx';
 import { useIncomeShift } from './hooks/useIncomeShift.js';
 import { effectiveMonth } from './utils.js';
 import { getTransferType } from './utils.js';
@@ -1139,7 +1140,7 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
     const jointAccIds = new Set(accounts.filter(a => a.isJoint).map(a => a.id));
     if (jointAccIds.size === 0) return new Set();
     const txById = new Map(transactions.map(t => [t.id, t]));
-    const auto = detectInternalTransfers(transactions);
+    const auto = detectInternalTransfers(transactions, { requireLabelHint: true });
     const contrib = new Set();
     for (const p of (auto.pairs || [])) {
       const inTx = txById.get(p.inTxId);
@@ -1272,7 +1273,9 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
         // source est connecté ou non (donc robuste même quand le perso du
         // conjoint n'est pas dans l'app). Une vraie recette peut toujours être
         // forcée en la catégorisant manuellement en revenu (isManualIncome).
-        const jointInflowExcluded = incomeShiftSettings.shiftJointContrib && !!acc?.isJoint;
+        const jointInflowExcluded = incomeShiftSettings.shiftJointContrib
+          && !!acc?.isJoint
+          && isExplicitBankTransfer(t);
         if (t.amount > 0) {
           // INCOME : attribue au mois COMPTABLE (effectiveMonth) -> salaire
           // d'avril verse fin du mois apparait sur mai dans le Dashboard.
@@ -3212,12 +3215,12 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
         />
       )}
       {transferRecatResult && (
-        <div className="modal-backdrop" onClick={() => setTransferRecatResult(null)}>
-          <div
-            className="modal"
-            onClick={e => e.stopPropagation()}
-            style={{ maxWidth: 640, width: '92%' }}
-          >
+        <ResponsiveModal
+          open={true}
+          onClose={() => setTransferRecatResult(null)}
+          className="transfer-recat-modal"
+          title="Détection des virements internes"
+        >
             <div className="modal-header">
               <h2 style={{ margin: 0 }}>Détection des virements internes</h2>
               <button className="ds-btn ghost" onClick={() => setTransferRecatResult(null)}>Fermer</button>
@@ -3261,8 +3264,7 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
                 Vous pouvez toujours en débloquer une manuellement (clic sur le badge ↔ dans la liste).
               </div>
             </div>
-          </div>
-        </div>
+        </ResponsiveModal>
       )}
       <SyncProgressBar status={syncStatus}/>
 
@@ -3695,6 +3697,7 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
                 activeMember={activeMember} activeMemberId={activeMemberId}
                 fiftyThirtyTwenty={fiftyThirtyTwenty}
                 transferIds={transferIds}
+                jointContribIds={jointContribIds}
                 memberShare={memberShare}
                 currentMonth={currentMonth} fmt={fmt}
                 onOpenSubscriptions={() => setView('subscriptions')}
@@ -4090,8 +4093,7 @@ function AddAccountModal({ members = [], onSave, onClose, onImportCsv, onOpenBan
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" style={{ maxWidth: 480 }} onClick={e => e.stopPropagation()}>
+    <ResponsiveModal open={true} onClose={onClose} className="add-account-modal" title={titles[step]}>
         <div className="modal-header">
           {backStep[step] && (
             <button className="icon-btn" onClick={() => setStep(backStep[step])} style={{ marginRight: 6 }}>
@@ -4295,7 +4297,6 @@ function AddAccountModal({ members = [], onSave, onClose, onImportCsv, onOpenBan
             </div>
           </form>
         )}
-      </div>
-    </div>
+    </ResponsiveModal>
   );
 }

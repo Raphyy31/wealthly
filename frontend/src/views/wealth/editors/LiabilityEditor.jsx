@@ -10,11 +10,9 @@ import { Combobox } from '../../../components/Combobox.jsx';
 import { ResponsiveModal } from '../../../components/ui/ResponsiveModal.jsx';
 
 const LIABILITY_STEPS = [
-  { key: 'main',     label: 'Infos principales' },
-  { key: 'specs',    label: 'Caractéristiques' },
-  { key: 'duration', label: 'Durée' },
-  { key: 'fees',     label: 'Frais & détention' },
-  { key: 'linked',   label: 'Actifs liés' },
+  { key: 'main',     label: 'L’essentiel' },
+  { key: 'schedule', label: 'Durée & taux' },
+  { key: 'linked',   label: 'Bien lié & notes' },
 ];
 
 export function LiabilityEditor({ liability, members, assets = [], onSave, onCancel }) {
@@ -52,7 +50,12 @@ export function LiabilityEditor({ liability, members, assets = [], onSave, onCan
   };
 
   return (
-    <ResponsiveModal open={true} onClose={onCancel}>
+    <ResponsiveModal
+      open={true}
+      onClose={onCancel}
+      className="modal--wizard liability-editor-modal"
+      title={liability.id ? 'Modifier l’emprunt' : 'Ajouter un emprunt'}
+    >
         <div className="modal-header">
           <h2>{liability.id ? 'Modifier l\'emprunt' : 'Ajouter un emprunt'}</h2>
           <button className="icon-btn-sm" onClick={onCancel}><X size={16}/></button>
@@ -99,11 +102,11 @@ export function LiabilityEditor({ liability, members, assets = [], onSave, onCan
                   </label>
                 </div>
                 <div className="field-row">
-                  <label><span>Montant emprunté ({draft.currency || 'EUR'})</span>
-                    <input type="number" value={draft.initialCapital} onChange={(e) => set('initialCapital', e.target.value)} step="any"/>
+                  <label><span>Capital restant à rembourser ({draft.currency || 'EUR'})</span>
+                    <input type="number" value={draft.remainingCapital} onChange={(e) => set('remainingCapital', e.target.value)} step="any" placeholder="218500"/>
                   </label>
-                  <label><span>Apport ({draft.currency || 'EUR'}) <em>optionnel</em></span>
-                    <input type="number" value={draft.downPayment} onChange={(e) => set('downPayment', e.target.value)} step="any"/>
+                  <label><span>Mensualité ({draft.currency || 'EUR'})</span>
+                    <input type="number" value={draft.monthlyPayment} onChange={(e) => set('monthlyPayment', e.target.value)} step="any" placeholder="1150"/>
                   </label>
                 </div>
                 <label><span>Emprunteurs</span>
@@ -120,64 +123,58 @@ export function LiabilityEditor({ liability, members, assets = [], onSave, onCan
               </>
             )}
 
-            {step === 'specs' && (
+            {step === 'schedule' && (
               <>
                 <div className="field-row">
-                  <label><span>Mensualité totale ({draft.currency || 'EUR'})</span>
-                    <input type="number" value={draft.monthlyPayment} onChange={(e) => set('monthlyPayment', e.target.value)} step="any"/>
-                  </label>
                   <label><span>Taux d'intérêt (%)</span>
                     <input type="number" value={draft.interestRate} onChange={(e) => set('interestRate', e.target.value)} step="0.01"/>
-                  </label>
-                </div>
-                <label><span>Taux d'assurance (%) <em>optionnel</em></span>
-                  <input type="number" value={draft.insuranceRate} onChange={(e) => set('insuranceRate', e.target.value)} step="0.01"/>
-                </label>
-                <label><span>Capital restant dû ({draft.currency || 'EUR'})</span>
-                  <input type="number" value={draft.remainingCapital} onChange={(e) => set('remainingCapital', e.target.value)} step="any"/>
-                </label>
-              </>
-            )}
-
-            {step === 'duration' && (
-              <>
-                <div className="field-row">
-                  <label><span>Date de première échéance</span>
-                    <input type="date" value={draft.startDate || ''} onChange={(e) => set('startDate', e.target.value)}/>
                   </label>
                   <label><span>Durée totale (mois)</span>
                     <input type="number" value={draft.durationMonths} onChange={(e) => set('durationMonths', e.target.value)} placeholder="240"/>
                   </label>
                 </div>
-                <label><span>Date de fin</span>
-                  <input type="date" value={draft.endDate || ''} onChange={(e) => set('endDate', e.target.value)}/>
-                </label>
+                <div className="field-row">
+                  <label><span>Première échéance <em>optionnel</em></span>
+                    <input type="date" value={draft.startDate || ''} onChange={(e) => set('startDate', e.target.value)}/>
+                  </label>
+                  <label><span>Date de fin <em>optionnel</em></span>
+                    <input type="date" value={draft.endDate || ''} onChange={(e) => set('endDate', e.target.value)}/>
+                  </label>
+                </div>
                 <div className="settings-info">
                   <Lightbulb size={14}/>
-                  <span>Vous pouvez soit saisir la durée totale, soit la date de fin. Yotori Finance utilise les deux pour calculer le calendrier d'amortissement.</span>
+                  <span>La durée ou la date de fin suffit. Ces informations alimentent la projection et le calendrier de remboursement.</span>
                 </div>
-              </>
-            )}
-
-            {step === 'fees' && (
-              <>
-                <div className="field-row">
-                  <label><span>Frais de dossier (€) <em>optionnel</em></span>
-                    <input type="number" value={draft.applicationFees} onChange={(e) => set('applicationFees', e.target.value)} step="any"/>
-                  </label>
-                  <label><span>Détention de l'emprunt (%) <em>optionnel</em></span>
-                    <input type="number" value={draft.ownershipPct} onChange={(e) => set('ownershipPct', e.target.value)} min="0" max="100" step="0.1"/>
-                  </label>
-                </div>
-                <label><span>Notes</span>
-                  <textarea rows={3} value={draft.notes || ''} onChange={(e) => set('notes', e.target.value)}/>
-                </label>
+                <details className="wizard-advanced">
+                  <summary>Informations avancées <span>optionnel</span></summary>
+                  <div className="wizard-advanced-body">
+                    <div className="field-row">
+                      <label><span>Montant emprunté à l’origine</span>
+                        <input type="number" value={draft.initialCapital} onChange={(e) => set('initialCapital', e.target.value)} step="any"/>
+                      </label>
+                      <label><span>Apport initial</span>
+                        <input type="number" value={draft.downPayment} onChange={(e) => set('downPayment', e.target.value)} step="any"/>
+                      </label>
+                    </div>
+                    <div className="field-row">
+                      <label><span>Taux d'assurance (%)</span>
+                        <input type="number" value={draft.insuranceRate} onChange={(e) => set('insuranceRate', e.target.value)} step="0.01"/>
+                      </label>
+                      <label><span>Frais de dossier</span>
+                        <input type="number" value={draft.applicationFees} onChange={(e) => set('applicationFees', e.target.value)} step="any"/>
+                      </label>
+                    </div>
+                    <label><span>Part détenue de l'emprunt (%)</span>
+                      <input type="number" value={draft.ownershipPct} onChange={(e) => set('ownershipPct', e.target.value)} min="0" max="100" step="0.1"/>
+                    </label>
+                  </div>
+                </details>
               </>
             )}
 
             {step === 'linked' && (
               <>
-                <label><span>Actif lié <em>optionnel</em></span>
+                <label><span>Bien ou placement financé <em>optionnel</em></span>
                   <Combobox
                     value={draft.linkedAssetId || ''}
                     onChange={(val) => set('linkedAssetId', val)}
@@ -188,9 +185,12 @@ export function LiabilityEditor({ liability, members, assets = [], onSave, onCan
                     ]}
                   />
                 </label>
+                <label><span>Notes <em>optionnel</em></span>
+                  <textarea rows={3} value={draft.notes || ''} onChange={(e) => set('notes', e.target.value)} placeholder="Banque, conditions particulières…"/>
+                </label>
                 <div className="settings-info">
                   <Lightbulb size={14}/>
-                  <span>Lier un emprunt à un actif (ex: votre crédit immobilier à votre résidence principale) permet à Yotori Finance de croiser les deux dans vos vues Patrimoine.</span>
+                  <span>Le lien permet d’afficher automatiquement la valeur nette d’un bien : sa valeur moins le capital restant de cet emprunt.</span>
                 </div>
               </>
             )}

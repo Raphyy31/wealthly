@@ -275,10 +275,57 @@ const amountsMatch = (a, b) => {
   return Math.abs(aa - ab) <= tol;
 };
 
+// A bank credit can be a household contribution even when the source account
+// is not connected. Keep this deliberately stricter than TRANSFER_LABEL_HINT:
+// card refunds and merchant reimbursements must remain real cashflow.
+const BANK_TRANSFER_CREDIT_HINT = /\b(virement|transfer|transfert|vir\.?\s|sepa)\b/i;
+const CARD_REFUND_HINT = /\b(avoir\s+carte|remboursement\s+carte|refund|chargeback|annulation\s+carte)\b/i;
+
+export const isExplicitBankTransfer = (transaction) => {
+  if (!transaction) return false;
+  const label = String(transaction.label || transaction.description || '');
+  return BANK_TRANSFER_CREDIT_HINT.test(label) && !CARD_REFUND_HINT.test(label);
+};
+
+const normalizePersonText = (value) => String(value || '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/[^A-Za-z0-9]+/g, ' ')
+  .trim()
+  .toUpperCase();
+
+// Returns a friendly contributor name for a transfer credited to a joint
+// account. Prefer household members, then fall back to the bank-provided name.
+export const extractTransferContributor = (transaction, members = []) => {
+  if (!isExplicitBankTransfer(transaction)) return null;
+  const normalized = normalizePersonText(transaction.label || transaction.description || '');
+  const labelWords = normalized.split(' ');
+  for (const member of members) {
+    const tokens = normalizePersonText(member?.name).split(' ').filter(token => token.length >= 2);
+    const tokenMatches = (token) => normalized.includes(token)
+      // Some banks truncate first names (e.g. CAR for Carla). Three letters
+      // are accepted only inside an explicit bank-transfer label.
+      || (token.length >= 4 && labelWords.some(word => word.length >= 3 && token.startsWith(word)));
+    if (tokens.length && tokens.every(tokenMatches)) return member.name;
+  }
+
+  const source = normalized
+    .replace(/^.*?\b(?:FAVEUR|PROVENANCE|EMETTEUR|ORDRE)\s+(?:DE|DU|D)\s+/, '')
+    .replace(/^.*?\b(?:DE|FROM)\s+/, '')
+    .replace(/\b(?:MONSIEUR|MADAME|MELLE|MLLE|MR|MME|M\s+OU\s+MME)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!source || source === normalized || source.length < 2) return 'Autre contributeur';
+  return source.toLocaleLowerCase('fr-FR').replace(/(^|[ '-])\p{L}/gu, c => c.toLocaleUpperCase('fr-FR'));
+};
+
 export const detectInternalTransfers = (transactions, options = {}) => {
   // C15 (2026-05-18) : fenêtre élargie 3j → 5j pour couvrir les virements
   // bancaires lents (SEPA 24-72h, weekend, jours fériés).
-  const { windowDays = 5, requireLabelHint = false } = options;
+  // A label hint is now required by default. Amount/date-only matching caused
+  // real card expenses to disappear when an unrelated credit had the same
+  // amount on another account. Callers can still opt out explicitly.
+  const { windowDays = 5, requireLabelHint = true } = options;
   const transferIds = new Set();
   const pairs = []; // [{ outTxId, inTxId, fromAccountId, toAccountId, amount, date }]
   if (!Array.isArray(transactions) || transactions.length < 2) {
@@ -626,9 +673,9 @@ export const dayOfMonth = (dateStr) => {
 // pivotDay: 25 }).
 // shiftJointContrib : décale AUSSI au mois suivant les virements de fin de mois
 // vers le compte commun (traités comme une dépense du perso qui finance le mois
-// suivant — même logique que le salaire). Opt-in (false par défaut) pour ne pas
-// changer les chiffres historiques des utilisateurs existants.
-export const INCOME_SHIFT_DEFAULTS = { enabled: true, pivotDay: 25, shiftJointContrib: false };
+// suivant — même logique que le salaire). Activé par défaut : l’utilisateur
+// peut toujours décocher l’option ou retirer le statut « joint » du compte.
+export const INCOME_SHIFT_DEFAULTS = { enabled: true, pivotDay: 25, shiftJointContrib: true };
 
 // Mois d'attribution d'une date selon le jour pivot : si le jour >= pivot, on
 // bascule au mois suivant (le flux de fin de mois finance le mois d'après).
@@ -678,7 +725,7 @@ export const readIncomeShiftSetting = () => {
     return {
       enabled: parsed.enabled !== false, // default true si absent
       pivotDay: Math.min(31, Math.max(1, parseInt(parsed.pivotDay) || INCOME_SHIFT_DEFAULTS.pivotDay)),
-      shiftJointContrib: parsed.shiftJointContrib === true, // opt-in, default false
+      shiftJointContrib: parsed.shiftJointContrib !== false, // default true si absent
     };
   } catch {
     return INCOME_SHIFT_DEFAULTS;

@@ -2244,7 +2244,10 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 
 /* MODAL */
 .modal-backdrop { position: fixed; inset: 0; background: rgba(15,14,12,0.55); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); animation: modalFadeIn .15s ease-out; }
-.modal { background: var(--bg-card); border-radius: 16px; max-width: 540px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-xl); border: 1px solid var(--border-strong); animation: modalSlideIn .18s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.modal { background: var(--bg-card); border-radius: 16px; max-width: 540px; width: 100%; max-height: 90vh; overflow-y: auto; overscroll-behavior: contain; box-shadow: var(--shadow-xl); border: 1px solid var(--border-strong); animation: modalSlideIn .18s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.modal .modal-header { position: sticky; top: 0; z-index: 20; background: var(--bg-card); }
+.modal .modal-footer,
+.modal .modal-foot { position: sticky; bottom: 0; z-index: 20; background: var(--bg-card); }
 @keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
 /* Modal entry refondue C11 — scale-only (no translateY) conforme direction visuelle */
 @keyframes modalSlideIn { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
@@ -2253,6 +2256,8 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 }
 .modal--wizard { max-width: 720px; }
 .modal--detail { max-width: 1100px; }
+.transfer-recat-modal { max-width: 640px; width: 92%; }
+.add-account-modal { max-width: 480px; }
 /* En-tête de fiche détail : reste collé en haut pendant le scroll (pattern
    haut de gamme — le titre + bouton fermer suivent, seul le corps défile).
    Le conteneur .modal clippe déjà ses coins arrondis via overflow, donc pas
@@ -2280,6 +2285,20 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .wizard-pane { padding: 24px 28px; display: flex; flex-direction: column; gap: 14px; }
 .wizard-pane label > span em { font-style: normal; font-weight: 400; color: var(--text-tertiary); margin-left: 6px; font-size: 11px; }
 .wizard-footer { gap: 8px; align-items: center; }
+.wizard-advanced { border: 1px solid var(--border); border-radius: 10px; background: var(--bg-subtle); overflow: hidden; }
+.wizard-advanced summary { cursor: pointer; padding: 12px 14px; color: var(--text-secondary); font-size: 13px; font-weight: 600; }
+.wizard-advanced summary span { color: var(--text-tertiary); font-size: 11px; font-weight: 400; margin-left: 5px; }
+.wizard-advanced-body { padding: 4px 14px 14px; display: flex; flex-direction: column; gap: 14px; }
+@media (max-width: 640px) {
+  .wizard-body { display: flex; flex-direction: column; min-height: 0; }
+  .wizard-steps { flex-direction: row; border-right: 0; border-bottom: 1px solid var(--border); padding: 8px; overflow-x: auto; flex-shrink: 0; }
+  .wizard-step { flex: 1 1 0; min-width: 0; justify-content: center; gap: 5px; padding: 8px 6px; }
+  .wizard-step-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11.5px; }
+  .wizard-pane { padding: 18px 16px 22px; }
+  .wizard-pane .field-row { grid-template-columns: 1fr; }
+  .wizard-footer { padding-left: 12px !important; padding-right: 12px !important; }
+  .wizard-footer .ds-btn { padding-left: 11px; padding-right: 11px; }
+}
 
 /* Loan detail */
 .liability-card-v2.clickable { cursor: pointer; transition: border-color 0.15s, background 0.15s; }

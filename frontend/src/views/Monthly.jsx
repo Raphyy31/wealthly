@@ -25,7 +25,10 @@ import {
   ChevronDown, ChevronRight, X, BarChart3, Calendar,
   ChevronLeft, Coins, Sparkles, Maximize2,
 } from 'lucide-react';
-import { formatCurrency, formatDate, monthKey, effectiveMonth, getTransferType } from '../utils.js';
+import {
+  formatCurrency, formatDate, monthKey, effectiveMonth, getTransferType,
+  shiftMonthForDate, isExplicitBankTransfer, extractTransferContributor,
+} from '../utils.js';
 import { useIncomeShift } from '../hooks/useIncomeShift.js';
 import { useIsNarrow } from '../hooks/useIsNarrow.js';
 import { RefMonthEditor } from '../components/RefMonthEditor.jsx';
@@ -85,6 +88,7 @@ export function Monthly({
   activeMemberId = 'all',
   fiftyThirtyTwenty,
   transferIds = new Set(),
+  jointContribIds = new Set(),
   memberShare,
   currentMonth, fmt,
   onOpenSubscriptions,
@@ -126,7 +130,9 @@ export function Monthly({
     return arr;
   }, [currentMonth]);
 
-  const catFor = (id) => categories.find(c => c.id === id || c.slug === id);
+  const catFor = (id) => id === 'joint-contribution'
+    ? { id, slug: id, name: 'Contribution au compte commun', icon: '👥', color: 'var(--accent)', type: 'expense' }
+    : categories.find(c => c.id === id || c.slug === id);
 
   // Mois type, parsed and grouped by (kind, category_id).
   const refLines = refMonth?.lines || [];
@@ -154,19 +160,63 @@ export function Monthly({
 
   const hasRefMonth = refLines.length > 0;
 
+  const isHouseholdScope = refMonthScope === 'household';
+
+  const isJointFunding = (tx) => {
+    const acc = accounts.find(a => a.id === tx.accountId);
+    const cat = catFor(tx.categoryId);
+    const manuallyKeptAsIncome = tx.isManualCategory && cat?.type === 'income';
+    return incomeShift.shiftJointContrib && isHouseholdScope && tx.amount > 0
+      && !!acc?.isJoint && isExplicitBankTransfer(tx) && !manuallyKeptAsIncome;
+  };
+
   // Real month: aggregate transactions by (kind, categoryId).
   // Utilise effectiveMonth pour gerer les salaires verses fin du mois precedent :
   // un salaire date 28/04 finance le budget de mai -> attribue a "2026-05".
   const monthTx = useMemo(() => {
     return transactions
-      .filter(t => effectiveMonth(t, incomeShift, categories) === selectedMonth)
-      .filter(t => !transferIds.has(t.id))
+      .filter(t => {
+        if (jointContribIds.has(t.id) && !isHouseholdScope) {
+          return shiftMonthForDate(t.date, incomeShift.pivotDay ?? 25) === selectedMonth;
+        }
+        return effectiveMonth(t, incomeShift, categories) === selectedMonth;
+      })
+      .filter(t => !isJointFunding(t))
+      .filter(t => !transferIds.has(t.id) || (jointContribIds.has(t.id) && !isHouseholdScope))
       .map(t => {
         const acc = accounts.find(a => a.id === t.accountId);
         const share = acc ? memberShare(acc) : 1;
-        return { ...t, sharedAmount: (t.amount || 0) * share };
+        const isJointContribution = jointContribIds.has(t.id) && !isHouseholdScope;
+        return {
+          ...t,
+          sharedAmount: (t.amount || 0) * share,
+          budgetKind: isJointContribution ? 'expense' : undefined,
+          budgetCategoryId: isJointContribution ? 'joint-contribution' : undefined,
+        };
       });
-  }, [transactions, accounts, memberShare, transferIds, selectedMonth, incomeShift, categories]);
+  // isJointFunding is intentionally local: its dependencies are listed here.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [transactions, accounts, memberShare, transferIds, jointContribIds, selectedMonth, incomeShift, categories, isHouseholdScope]);
+
+  // Credits which finance a joint account are shown as sources, but never
+  // added to household income. It also works when the source account is not
+  // connected because the contributor is extracted from the bank label.
+  const jointFunding = useMemo(() => {
+    if (!isHouseholdScope || !incomeShift.shiftJointContrib) return { total: 0, breakdown: [] };
+    const bySource = new Map();
+    transactions
+      .filter(t => isJointFunding(t))
+      .filter(t => shiftMonthForDate(t.date, incomeShift.pivotDay ?? 25) === selectedMonth)
+      .forEach(t => {
+        const source = extractTransferContributor(t, members) || 'Autre contributeur';
+        bySource.set(source, (bySource.get(source) || 0) + Math.max(0, t.amount || 0));
+      });
+    const breakdown = [...bySource.entries()]
+      .map(([label, amount]) => ({ label, amount }))
+      .sort((a, b) => b.amount - a.amount);
+    return { total: breakdown.reduce((sum, item) => sum + item.amount, 0), breakdown };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [transactions, accounts, categories, members, selectedMonth, incomeShift, isHouseholdScope]);
 
   // Virements internes typés 'savings' du mois sélectionné. On les sort du
   // bucket "neutralisé" et on les compte comme epargne (cas Livret A pas
@@ -197,9 +247,9 @@ export function Monthly({
   const realByCat = useMemo(() => {
     const map = new Map();
     for (const t of monthTx) {
-      const catId = t.categoryId || 'uncategorized';
+      const catId = t.budgetCategoryId || t.categoryId || 'uncategorized';
       const cat = catFor(catId);
-      const kind = cat?.type === 'income' ? 'income' : isSavingCategory(catId, categories) ? 'saving' : 'expense';
+      const kind = t.budgetKind || (cat?.type === 'income' ? 'income' : isSavingCategory(catId, categories) ? 'saving' : 'expense');
       const k = `${kind}::${catId}`;
       if (!map.has(k)) map.set(k, { kind, category_id: catId, total: 0, count: 0 });
       const v = map.get(k);
@@ -351,16 +401,17 @@ export function Monthly({
   const realSankeyData = useMemo(() => {
     const incomeTx = monthTx.filter(t => {
       const cat = catFor(t.categoryId);
-      return cat?.type === 'income' && (t.sharedAmount || 0) > 0;
+      return (t.budgetKind || cat?.type) === 'income' && (t.sharedAmount || 0) > 0;
     });
     // spendTx = vraies dépenses uniquement. Les tx categorisees comme
     // épargne/virement/transfert sont gerees a part par la branche
     // savings (ci-dessous) pour ne pas ecraser le Sankey (3900€ de Livret
     // dwarferaient les autres categories sinon).
     const spendTx = monthTx.filter(t => {
-      const cat = catFor(t.categoryId);
-      if (isSavingCategory(t.categoryId, categories)) return false;
-      const isExpenseTx = cat?.type !== 'income';
+      const catId = t.budgetCategoryId || t.categoryId;
+      const cat = catFor(catId);
+      if (!t.budgetKind && isSavingCategory(catId, categories)) return false;
+      const isExpenseTx = (t.budgetKind || cat?.type) !== 'income';
       return isExpenseTx && -t.sharedAmount > 0;
     });
 
@@ -368,7 +419,7 @@ export function Monthly({
     // Distinct de monthSavingsTransfers qui pioche dans transferIds (paires
     // detectees automatiquement). Ici on attrape aussi les tx isolees sans
     // pair detectee mais clairement categorisees comme epargne.
-    const savingTx = monthTx.filter(t => isSavingCategory(t.categoryId, categories));
+    const savingTx = monthTx.filter(t => !t.budgetKind && isSavingCategory(t.categoryId, categories));
     const savingsFromCategorized = savingTx.reduce(
       (s, t) => s + Math.abs(t.sharedAmount || 0), 0
     );
@@ -384,6 +435,9 @@ export function Monthly({
 
     const parentSlug = (cat) => (cat?.parent || cat?.parent_slug || null);
     const topLevelFor = (cid) => {
+      if (cid === 'joint-contribution') {
+        return { id: cid, slug: cid, name: 'Compte commun', icon: '👥', color: 'var(--accent)' };
+      }
       const cat = catFor(cid);
       const ps = parentSlug(cat);
       return ps ? catFor(ps) : cat;
@@ -402,7 +456,12 @@ export function Monthly({
       incomeAgg.get(key).amount += t.sharedAmount;
     });
     const incomeBreakdown = [...incomeAgg.values()];
-    const incomeAggregatedTotal = incomeBreakdown.reduce((s, v) => s + v.amount, 0);
+    const actualIncomeTotal = incomeBreakdown.reduce((s, v) => s + v.amount, 0);
+    const sourceBreakdown = [
+      ...jointFunding.breakdown,
+      ...incomeBreakdown.map(v => ({ label: v.name, amount: v.amount })),
+    ];
+    const incomeAggregatedTotal = actualIncomeTotal + jointFunding.total;
 
     // Mode "Entrées discrètes" — quand Entrées << Dépenses (début de mois,
     // salaire pas encore arrivé, juste des remboursements...), le node
@@ -418,13 +477,13 @@ export function Monthly({
     const incomeNodeSingleIdx = incomeShortfall ? -1 : nodes.length;
     if (!incomeShortfall) {
       nodes.push({
-        name: incomeBreakdown.length > 1 ? 'Entrées' : (incomeBreakdown[0]?.name || 'Salaire'),
-        icon: incomeBreakdown.length > 1 ? '💰' : incomeBreakdown[0]?.icon,
+        name: jointFunding.total > 0 ? 'Financement du compte commun' : (incomeBreakdown.length > 1 ? 'Entrées' : (incomeBreakdown[0]?.name || 'Salaire')),
+        icon: jointFunding.total > 0 ? '👥' : (incomeBreakdown.length > 1 ? '💰' : incomeBreakdown[0]?.icon),
         level: 0,
         kind: 'income',
         amount: incomeAggregatedTotal,
         color: 'var(--positive)',
-        breakdown: incomeBreakdown.length > 1 ? incomeBreakdown.map(v => ({ label: v.name, amount: v.amount })) : null,
+        breakdown: sourceBreakdown.length ? sourceBreakdown : null,
       });
     }
 
@@ -433,7 +492,7 @@ export function Monthly({
     const topTotals = {};
     const topTxByLeaf = new Map(); // for level 3
     spendTx.forEach(t => {
-      const top = topLevelFor(t.categoryId || 'uncategorized');
+      const top = topLevelFor(t.budgetCategoryId || t.categoryId || 'uncategorized');
       const topId = top?.id || top?.slug || 'uncategorized';
       if (!(topId in topNodeIdx)) {
         topNodeIdx[topId] = nodes.length;
@@ -453,9 +512,10 @@ export function Monthly({
     // Level 3 — leaf per sub-category (group tx by categoryId under their top)
     const leafAgg = new Map(); // `${topId}::${catId}` → { name, icon, color, amount }
     spendTx.forEach(t => {
-      const top = topLevelFor(t.categoryId || 'uncategorized');
+      const effectiveCatId = t.budgetCategoryId || t.categoryId || 'uncategorized';
+      const top = topLevelFor(effectiveCatId);
       const topId = top?.id || top?.slug || 'uncategorized';
-      const cat = catFor(t.categoryId);
+      const cat = effectiveCatId === 'joint-contribution' ? top : catFor(effectiveCatId);
       const sameTop = (cat?.id || cat?.slug) === topId;
       const leafKey = `${topId}::${cat?.id || cat?.slug || 'uncategorized'}`;
       if (!leafAgg.has(leafKey)) {
@@ -532,9 +592,9 @@ export function Monthly({
     // (rects x/height/rx/ry cassés). Dans ce cas on rend l'empty state.
     if (!links.length) return { nodes: [], links: [] };
 
-    return { nodes, links };
+    return { nodes, links, fundingTotal: jointFunding.total, fundingBreakdown: jointFunding.breakdown };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [monthTx, categories, savingsFromTransfers]);
+  }, [monthTx, categories, savingsFromTransfers, jointFunding]);
 
   // UI state — quelles cartes Sankey sont expanded ? Set ('type' et/ou 'real').
   // Vide = 50/50 teaser. Une seule = 60/40. Les deux = 50/50 expanded.
@@ -744,6 +804,19 @@ export function Monthly({
           currentMonth={currentMonth}
           availableMonths={availableMonths}
           onChange={setSelectedMonth}
+        />
+      )}
+
+      {!isChildScope && (hasRefMonth || monthTx.length > 0) && (
+        <Kpi
+          realTotals={realTotals}
+          refTotals={refTotals}
+          hasRefMonth={hasRefMonth}
+          restToLive={restToLive}
+          dailyBudget={dailyBudget}
+          daysLeft={daysLeft}
+          isCurrentMonth={isCurrentMonth}
+          fmt={fmt}
         />
       )}
 
@@ -975,12 +1048,14 @@ function Kpi({ realTotals, refTotals, hasRefMonth, restToLive, dailyBudget, days
       <div className="mon-kpi mon-kpi-rest">
         <div className="mon-kpi-head">
           <span className="mon-kpi-icon"><Wallet size={14}/></span>
-          <span className="ds-micro">{isCurrentMonth ? 'Reste à vivre' : 'Balance mois'}</span>
+          <span className="ds-micro">Solde du mois</span>
         </div>
-        <span className="num mon-kpi-value">{fmt(isCurrentMonth ? restToLive : realTotals.balance)}</span>
-        {isCurrentMonth && daysLeft > 0
+        <span className={`num mon-kpi-value ${realTotals.balance < 0 ? 'neg' : ''}`}>{fmt(realTotals.balance)}</span>
+        {isCurrentMonth && daysLeft > 0 && restToLive > 0
           ? <span className="ds-micro num">{fmt(dailyBudget)}/jour · {daysLeft}j restants</span>
-          : null}
+          : realTotals.balance < 0
+            ? <span className="ds-micro neg">Dépenses et épargne dépassent les revenus</span>
+            : null}
       </div>
     </section>
   );
@@ -1433,6 +1508,16 @@ function SankeyCard({ kind, eyebrow, label, subtitle, data, totals, isExpanded, 
           {eyebrow && <span className={`mon-sankey-card-eyebrow mon-sankey-card-eyebrow--${kind}`}>{eyebrow}</span>}
           <h3>{label}</h3>
           <span className="mon-sankey-card-subtitle">{subtitle}</span>
+          {kind === 'real' && data.fundingBreakdown?.length > 0 && (
+            <div className="mon-funding-sources" aria-label="Financement du compte commun">
+              {data.fundingBreakdown.map(source => (
+                <span className="mon-funding-source" key={source.label}>
+                  <span>{source.label}</span>
+                  <strong>{fmt(source.amount)}</strong>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
         {isExpanded && hasData && onMaximize && (
           <button
@@ -1447,11 +1532,16 @@ function SankeyCard({ kind, eyebrow, label, subtitle, data, totals, isExpanded, 
         )}
         {isExpanded && hasData && (
           <div className="mon-sankey-card-stats">
-            <div className="mon-sankey-stat">
+            {data.fundingTotal > 0 && <div className="mon-sankey-stat">
+              <span className="mon-sankey-stat-dot" style={{ background: 'var(--accent)' }}/>
+              <span className="mon-sankey-stat-label">Financé</span>
+              <span className="mon-sankey-stat-val">{fmt(data.fundingTotal)}</span>
+            </div>}
+            {totals.income > 0 && <div className="mon-sankey-stat">
               <span className="mon-sankey-stat-dot" style={{ background: 'var(--positive)' }}/>
-              <span className="mon-sankey-stat-label">Entrées</span>
+              <span className="mon-sankey-stat-label">Revenus</span>
               <span className="mon-sankey-stat-val">{fmt(totals.income)}</span>
-            </div>
+            </div>}
             <span className="mon-sankey-stat-arrow">→</span>
             <div className="mon-sankey-stat">
               <span className="mon-sankey-stat-dot" style={{ background: 'var(--negative)' }}/>
@@ -1558,12 +1648,26 @@ function SankeyFullscreenModal({ kind, data, totals, label, eyebrow, fmt, onClos
           <div className="sankey-fullscreen-titles">
             {eyebrow && <span className={`mon-sankey-card-eyebrow mon-sankey-card-eyebrow--${kind}`}>{eyebrow}</span>}
             <h2>{label}</h2>
-            <div className="sankey-fullscreen-stats">
-              <div className="mon-sankey-stat">
-                <span className="mon-sankey-stat-dot" style={{ background: 'var(--positive)' }}/>
-                <span className="mon-sankey-stat-label">Entrées</span>
-                <span className="mon-sankey-stat-val">{fmt(totals.income)}</span>
+            {data.fundingBreakdown?.length > 0 && (
+              <div className="mon-funding-sources">
+                {data.fundingBreakdown.map(source => (
+                  <span className="mon-funding-source" key={source.label}>
+                    <span>{source.label}</span><strong>{fmt(source.amount)}</strong>
+                  </span>
+                ))}
               </div>
+            )}
+            <div className="sankey-fullscreen-stats">
+              {data.fundingTotal > 0 && <div className="mon-sankey-stat">
+                <span className="mon-sankey-stat-dot" style={{ background: 'var(--accent)' }}/>
+                <span className="mon-sankey-stat-label">Financé</span>
+                <span className="mon-sankey-stat-val">{fmt(data.fundingTotal)}</span>
+              </div>}
+              {totals.income > 0 && <div className="mon-sankey-stat">
+                <span className="mon-sankey-stat-dot" style={{ background: 'var(--positive)' }}/>
+                <span className="mon-sankey-stat-label">Revenus</span>
+                <span className="mon-sankey-stat-val">{fmt(totals.income)}</span>
+              </div>}
               <span className="mon-sankey-stat-arrow">→</span>
               <div className="mon-sankey-stat">
                 <span className="mon-sankey-stat-dot" style={{ background: 'var(--negative)' }}/>

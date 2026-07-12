@@ -1,5 +1,9 @@
 import { describe, expect, test } from 'vitest';
-import { formatBankName, shiftMonthForDate, effectiveMonth } from './utils.js';
+import {
+  formatBankName, shiftMonthForDate, effectiveMonth,
+  isExplicitBankTransfer, extractTransferContributor,
+  detectInternalTransfers,
+} from './utils.js';
 
 describe('shiftMonthForDate (décalage fin de mois)', () => {
   test('un flux au jour pivot ou après bascule au mois suivant', () => {
@@ -37,5 +41,45 @@ describe('formatBankName', () => {
 
   test('nettoie les identifiants inconnus sans exposer leur BIC', () => {
     expect(formatBankName('BANQUE_EXEMPLE_ABCDEFGH')).toBe('Banque Exemple');
+  });
+});
+
+describe('financement du compte commun', () => {
+  test('reconnaît un virement bancaire mais pas un remboursement carte', () => {
+    expect(isExplicitBankTransfer({ label: 'VIREMENT EN VOTRE FAVEUR DE MONSIEUR MARTIN LEO' })).toBe(true);
+    expect(isExplicitBankTransfer({ label: 'AVOIR CARTE 10/07 SUPERMARCHE' })).toBe(false);
+  });
+
+  test('attribue le versement à un membre connu', () => {
+    const tx = { label: 'VIREMENT EN VOTRE FAVEUR DE MONSIEUR MARTIN LEO' };
+    expect(extractTransferContributor(tx, [{ name: 'Léo' }, { name: 'Anna' }])).toBe('Léo');
+  });
+
+  test('reconnaît un prénom tronqué par la banque', () => {
+    const tx = { label: 'VIREMENT RECU PARTOUCHE MARTIN CAR' };
+    expect(extractTransferContributor(tx, [{ name: 'Carla' }])).toBe('Carla');
+  });
+
+  test('conserve une source bancaire lisible quand le compte source est absent', () => {
+    const tx = { label: 'VIREMENT EN VOTRE FAVEUR DE MADAME DUPONT ANNA' };
+    expect(extractTransferContributor(tx, [])).toBe('Dupont Anna');
+  });
+});
+
+describe('détection prudente des virements internes', () => {
+  test('apparie deux jambes portant un libellé de virement', () => {
+    const detected = detectInternalTransfers([
+      { id: 'out', accountId: 'personal', date: '2026-07-01', amount: -500, label: 'VIREMENT EMIS WEB COMPTE COMMUN' },
+      { id: 'in', accountId: 'joint', date: '2026-07-01', amount: 500, label: 'VIREMENT EN VOTRE FAVEUR' },
+    ]);
+    expect([...detected].sort()).toEqual(['in', 'out']);
+  });
+
+  test('ne neutralise pas deux opérations sans indice de virement', () => {
+    const detected = detectInternalTransfers([
+      { id: 'card', accountId: 'secondary', date: '2026-07-01', amount: -42, label: 'CARTE RESTAURANT' },
+      { id: 'refund', accountId: 'joint', date: '2026-07-01', amount: 42, label: 'AVOIR CARTE SUPERMARCHE' },
+    ]);
+    expect([...detected]).toEqual([]);
   });
 });

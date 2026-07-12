@@ -43,9 +43,16 @@ export function ResponsiveModal({ open, onClose, children, className = '', title
   React.useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') onClose?.();
+    };
     document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = prev; };
-  }, [open]);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = prev;
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open, onClose]);
 
   if (!open) return null;
 
@@ -82,7 +89,7 @@ export function ResponsiveModal({ open, onClose, children, className = '', title
   // .modal-backdrop / .modal preserve a la lettre.
   return createPortal(
     <div className="modal-backdrop" onClick={onClose}>
-      <div className={`modal ${className}`} onClick={(e) => e.stopPropagation()}>
+      <div className={`modal ${className}`} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={title || 'Fenêtre'}>
         {children}
       </div>
     </div>,
@@ -149,6 +156,13 @@ function ensureRmCss() {
       -webkit-overflow-scrolling: touch;
       flex: 1;
       min-height: 0;
+    }
+    /* Les éditeurs Patrimoine utilisent wizard-body plutôt que modal-body. */
+    .rm-vaul-inner > .wizard-body {
+      overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch;
+      flex: 1;
+      min-height: 0 !important;
     }
     /* Footer reste collant en bas avec safe-area */
     .rm-vaul-inner .modal-footer {
