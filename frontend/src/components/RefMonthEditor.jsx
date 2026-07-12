@@ -8,7 +8,8 @@
 // Suggestion d'historique : médiane sur les 3 derniers mois complets,
 // par (category_id, kind). Min 2 mois avec ≥1 tx pour suggérer.
 // ============================================================================
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Sankey, Layer, Rectangle, Tooltip, ResponsiveContainer } from 'recharts';
 import { X, RotateCcw, RefreshCw, Lock, Unlock, Plus, Trash2, TrendingUp, TrendingDown, PiggyBank, Check, ArrowLeft, ArrowRight } from 'lucide-react';
@@ -241,13 +242,29 @@ export function RefMonthEditor({
   const lastStep = WIZARD_STEPS.length - 1;
 
   // Intercept close: if dirty, ask confirmation before discarding edits.
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     const currentSerialized = JSON.stringify(draft);
     if (currentSerialized !== initialSnapshot.current) {
       if (!window.confirm('Vous avez des modifications non sauvegardées. Les abandonner ?')) return;
     }
     onClose && onClose();
-  };
+  }, [draft, onClose]);
+
+  // Le parent de la page est animé avec transform par GSAP. Sans portail,
+  // un élément `position: fixed` se cale sur ce parent et peut apparaître
+  // sous l'écran. Le verrouillage évite aussi que la page défile derrière.
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') handleClose();
+    };
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [handleClose]);
 
   // Re-sync draft if refMonth prop changes from outside (after save).
   useEffect(() => {
@@ -444,14 +461,16 @@ export function RefMonthEditor({
   const current = WIZARD_STEPS[step];
   const isRecap = current.kind === null;
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <div className="modal-backdrop rm-backdrop" onClick={handleClose}>
-      <div className="modal rmw" onClick={e => e.stopPropagation()} role="dialog" aria-label="Configurer mon mois type">
+      <div className="modal rmw" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Configurer le budget mois type">
 
         {/* En-tête : titre + fermeture */}
         <div className="rmw-head">
           <div className="rmw-head-titles">
-            <span className="rmw-eyebrow">Mois type · {scopeLabel}</span>
+            <span className="rmw-eyebrow">Budget mois type · {scopeLabel}</span>
             <h2 className="rmw-title">{current.title}</h2>
             <p className="rmw-sub">{current.sub}</p>
           </div>
@@ -524,7 +543,8 @@ export function RefMonthEditor({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

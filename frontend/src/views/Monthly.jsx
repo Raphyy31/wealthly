@@ -720,7 +720,7 @@ export function Monthly({
           </button>
           {!isChildScope && (
             <button className="ds-btn primary" onClick={() => setShowEditor(true)}>
-              <Edit3 size={14}/> {isNarrow ? 'Mois type' : 'Générer mois type'}
+              <Edit3 size={14}/> {isNarrow ? 'Mois type' : (hasRefMonth ? 'Modifier le mois type' : 'Créer le mois type')}
             </button>
           )}
         </div>
@@ -769,10 +769,10 @@ export function Monthly({
             <Target size={32}/>
             <Sparkles size={14} className="mon-empty-spark mon-empty-spark-2"/>
           </div>
-          <h3>Configurez votre <em>mois type.</em></h3>
-          <p>Définissez votre salaire et vos dépenses habituelles — l'app comparera chaque mois pour vous aider à rester sur la bonne trajectoire.</p>
+          <h3>Créez votre <em>mois type.</em></h3>
+          <p>Le mois type est votre budget habituel : revenus, dépenses et épargne de référence. Yotori Finance le comparera ensuite au mois réel.</p>
           <button className="ds-btn primary lg" onClick={() => setShowEditor(true)}>
-            <Edit3 size={14}/> Générer mon mois type
+            <Edit3 size={14}/> Créer mon mois type
           </button>
         </section>
       )}
@@ -784,11 +784,11 @@ export function Monthly({
         <section className="card mon-cta-banner">
           <div className="mon-cta-banner-icon"><Target size={18}/></div>
           <div className="mon-cta-banner-body">
-            <strong>Configurez votre mois type personnel</strong>
-            <span>Vos dépenses réelles sont ci-dessous. Définissez votre plan habituel pour comparer chaque mois.</span>
+            <strong>Créez votre mois type personnel</strong>
+            <span>Vos dépenses réelles sont déjà visibles. Ajoutez votre budget habituel pour savoir immédiatement où vous dépassez ou économisez.</span>
           </div>
           <button className="ds-btn primary" onClick={() => setShowEditor(true)}>
-            <Edit3 size={13}/> Configurer
+            <Edit3 size={13}/> Créer mon mois type
           </button>
         </section>
       )}
@@ -1639,4 +1639,3 @@ function SankeyLink({ sourceX, targetX, sourceY, targetY, sourceControlX, target
     </g>
   );
 }
-

@@ -141,7 +141,7 @@
     "monthly": {
       "title": "Budget",
       "titleAccent": "mensuel.",
-      "subtitle": "Votre mois type vs. le mois réel — où va vraiment votre argent.",
+      "subtitle": "Votre mois type (budget habituel) comparé au mois réel.",
       "emptyFixed": "Aucune charge fixe enregistrée",
       "emptySubs": "Aucun abonnement",
       "emptyVariable": "Aucune dépense variable",
