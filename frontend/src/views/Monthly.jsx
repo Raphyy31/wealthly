@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 import {
   formatCurrency, formatDate, monthKey, effectiveMonth, getTransferType,
-  shiftMonthForDate, isExplicitBankTransfer, extractTransferContributor,
+  shiftMonthForDate, extractTransferContributor, isJointAccountFunding,
 } from '../utils.js';
 import { useIncomeShift } from '../hooks/useIncomeShift.js';
 import { useIsNarrow } from '../hooks/useIsNarrow.js';
@@ -130,9 +130,11 @@ export function Monthly({
     return arr;
   }, [currentMonth]);
 
-  const catFor = (id) => id === 'joint-contribution'
-    ? { id, slug: id, name: 'Contribution au compte commun', icon: '👥', color: 'var(--accent)', type: 'expense' }
-    : categories.find(c => c.id === id || c.slug === id);
+  const catFor = (id) => {
+    if (id === 'joint-contribution') return { id, slug: id, name: 'Contribution au compte commun', icon: '👥', color: 'var(--accent)', type: 'expense' };
+    if (id === 'joint-funding') return { id, slug: id, name: 'Financement du compte commun', icon: '👥', color: 'var(--positive)', type: 'funding' };
+    return categories.find(c => c.id === id || c.slug === id);
+  };
 
   // Mois type, parsed and grouped by (kind, category_id).
   const refLines = refMonth?.lines || [];
@@ -165,9 +167,10 @@ export function Monthly({
   const isJointFunding = (tx) => {
     const acc = accounts.find(a => a.id === tx.accountId);
     const cat = catFor(tx.categoryId);
-    const manuallyKeptAsIncome = tx.isManualCategory && cat?.type === 'income';
-    return incomeShift.shiftJointContrib && isHouseholdScope && tx.amount > 0
-      && !!acc?.isJoint && isExplicitBankTransfer(tx) && !manuallyKeptAsIncome;
+    // Un libellé de virement entrant sur un compte commun reste un financement,
+    // même s'il a été rangé manuellement dans « Revenus ». Pour le forcer en
+    // vrai revenu, l'utilisateur doit aussi indiquer « ce n'est pas un virement ».
+    return isHouseholdScope && isJointAccountFunding(tx, acc, cat, incomeShift.shiftJointContrib);
   };
 
   // Real month: aggregate transactions by (kind, categoryId).
@@ -202,19 +205,29 @@ export function Monthly({
   // added to household income. It also works when the source account is not
   // connected because the contributor is extracted from the bank label.
   const jointFunding = useMemo(() => {
-    if (!isHouseholdScope || !incomeShift.shiftJointContrib) return { total: 0, breakdown: [] };
+    if (!isHouseholdScope || !incomeShift.shiftJointContrib) return { total: 0, breakdown: [], transactions: [] };
     const bySource = new Map();
-    transactions
+    const fundingTransactions = transactions
       .filter(t => isJointFunding(t))
-      .filter(t => shiftMonthForDate(t.date, incomeShift.pivotDay ?? 25) === selectedMonth)
-      .forEach(t => {
+      .filter(t => (t.effective_month_override || shiftMonthForDate(t.date, incomeShift.pivotDay ?? 25)) === selectedMonth);
+    fundingTransactions.forEach(t => {
         const source = extractTransferContributor(t, members) || 'Autre contributeur';
         bySource.set(source, (bySource.get(source) || 0) + Math.max(0, t.amount || 0));
       });
     const breakdown = [...bySource.entries()]
       .map(([label, amount]) => ({ label, amount }))
       .sort((a, b) => b.amount - a.amount);
-    return { total: breakdown.reduce((sum, item) => sum + item.amount, 0), breakdown };
+    return {
+      total: breakdown.reduce((sum, item) => sum + item.amount, 0),
+      breakdown,
+      transactions: fundingTransactions.map(t => ({
+        ...t,
+        sharedAmount: t.amount || 0,
+        budgetKind: 'funding',
+        budgetCategoryId: 'joint-funding',
+        fundingSource: extractTransferContributor(t, members) || 'Autre contributeur',
+      })),
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transactions, accounts, categories, members, selectedMonth, incomeShift, isHouseholdScope]);
 
@@ -277,7 +290,8 @@ export function Monthly({
   const [sy, sm] = selectedMonth.split('-').map(Number);
   const daysInMonth = new Date(sy, sm, 0).getDate();
   const daysLeft = isCurrentMonth ? Math.max(0, daysInMonth - today.getDate()) : 0;
-  const restToLive = isCurrentMonth ? Math.max(0, realTotals.income - realTotals.expense - realTotals.saving) : 0;
+  const budgetBalance = realTotals.income + (isHouseholdScope ? jointFunding.total : 0) - realTotals.expense - realTotals.saving;
+  const restToLive = isCurrentMonth ? Math.max(0, budgetBalance) : 0;
   const dailyBudget = daysLeft > 0 ? restToLive / daysLeft : 0;
 
   // Sankey data — Mois type only. 3 levels :
@@ -621,6 +635,7 @@ export function Monthly({
   // Enfants...), avec sums roll-ups des enfants. Sous-cats visibles a l'expand.
   const parentGroupedSections = useMemo(() => {
     const sections = [
+      ...(isHouseholdScope ? [{ kind: 'funding', title: 'Financement du compte commun', parents: new Map() }] : []),
       { kind: 'income',  title: 'Entrées',  parents: new Map() },
       { kind: 'expense', title: 'Dépenses', parents: new Map() },
       { kind: 'saving',  title: 'Épargne',  parents: new Map() },
@@ -650,8 +665,16 @@ export function Monthly({
 
     // Walk refByCat (Mois type)
     for (const val of refByCat.values()) {
-      const section = getSection(val.kind);
+      // Sur le budget Famille, les entrées prévues représentent le montant à
+      // verser sur le compte commun, pas un salaire reçu par le foyer.
+      const routedKind = isHouseholdScope && val.kind === 'income' ? 'funding' : val.kind;
+      const section = getSection(routedKind);
       if (!section) continue;
+      if (routedKind === 'funding') {
+        const fundingCat = catFor('joint-funding');
+        ensureGroup(section, fundingCat, 'joint-funding').ref_total += val.total;
+        continue;
+      }
       const cat = catFor(val.category_id);
       const isChild = !!cat?.parent;
       const parentCat = isChild ? catFor(cat.parent) : cat;
@@ -681,6 +704,22 @@ export function Monthly({
       }
     }
 
+    if (isHouseholdScope && jointFunding.total > 0) {
+      const fundingSection = getSection('funding');
+      const fundingCat = catFor('joint-funding');
+      const group = ensureGroup(fundingSection, fundingCat, 'joint-funding');
+      group.real_total += jointFunding.total;
+      jointFunding.breakdown.forEach(source => {
+        const childId = `funding-source:${source.label}`;
+        group.children.set(childId, {
+          cat: { id: childId, name: source.label, icon: '👤', color: 'var(--positive)' },
+          child_id: childId,
+          ref_total: 0,
+          real_total: source.amount,
+        });
+      });
+    }
+
     return sections
       .map(s => ({
         kind: s.kind,
@@ -695,7 +734,7 @@ export function Monthly({
       }))
       .filter(s => s.parents.length > 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refByCat, realByCat, categories]);
+  }, [refByCat, realByCat, categories, isHouseholdScope, jointFunding]);
 
   // Comparison table — sections: income / expense / saving.
   const tableSections = useMemo(() => {
@@ -807,7 +846,7 @@ export function Monthly({
         />
       )}
 
-      {!isChildScope && (hasRefMonth || monthTx.length > 0) && (
+      {!isChildScope && (hasRefMonth || monthTx.length > 0 || jointFunding.total > 0) && (
         <Kpi
           realTotals={realTotals}
           refTotals={refTotals}
@@ -816,6 +855,9 @@ export function Monthly({
           dailyBudget={dailyBudget}
           daysLeft={daysLeft}
           isCurrentMonth={isCurrentMonth}
+          isHouseholdScope={isHouseholdScope}
+          fundingTotal={jointFunding.total}
+          budgetBalance={budgetBalance}
           fmt={fmt}
         />
       )}
@@ -927,7 +969,7 @@ export function Monthly({
       {!isChildScope && hasRefMonth && (
         <MonthlyCompareTable
           sections={parentGroupedSections}
-          monthTx={monthTx}
+          monthTx={[...monthTx, ...(jointFunding.transactions || [])]}
           fmt={fmt}
           catFor={catFor}
           expandedRows={expandedRows}
@@ -1007,7 +1049,7 @@ function FiftyThirtyTwentyStrip({ ftt, onOpenDetails, fmt }) {
 }
 
 // ──────────────────────────────────────────────────────────────────────
-function Kpi({ realTotals, refTotals, hasRefMonth, restToLive, dailyBudget, daysLeft, isCurrentMonth, fmt }) {
+function Kpi({ realTotals, refTotals, hasRefMonth, restToLive, dailyBudget, daysLeft, isCurrentMonth, isHouseholdScope, fundingTotal, budgetBalance, fmt }) {
   const renderDelta = (real, ref, invert = false) => {
     if (!hasRefMonth || !ref) return null;
     const d = real - ref;
@@ -1024,10 +1066,10 @@ function Kpi({ realTotals, refTotals, hasRefMonth, restToLive, dailyBudget, days
       <div className="mon-kpi mon-kpi-income">
         <div className="mon-kpi-head">
           <span className="mon-kpi-icon"><TrendingUp size={14}/></span>
-          <span className="ds-micro">Revenus</span>
+          <span className="ds-micro">{isHouseholdScope ? 'Financement' : 'Revenus'}</span>
         </div>
-        <span className="num mon-kpi-value">{fmt(realTotals.income)}</span>
-        {renderDelta(realTotals.income, refTotals.income, true)}
+        <span className="num mon-kpi-value">{fmt(isHouseholdScope ? fundingTotal : realTotals.income)}</span>
+        {renderDelta(isHouseholdScope ? fundingTotal : realTotals.income, refTotals.income, true)}
       </div>
       <div className="mon-kpi mon-kpi-expense">
         <div className="mon-kpi-head">
@@ -1050,11 +1092,11 @@ function Kpi({ realTotals, refTotals, hasRefMonth, restToLive, dailyBudget, days
           <span className="mon-kpi-icon"><Wallet size={14}/></span>
           <span className="ds-micro">Solde du mois</span>
         </div>
-        <span className={`num mon-kpi-value ${realTotals.balance < 0 ? 'neg' : ''}`}>{fmt(realTotals.balance)}</span>
+        <span className={`num mon-kpi-value ${budgetBalance < 0 ? 'neg' : ''}`}>{fmt(budgetBalance)}</span>
         {isCurrentMonth && daysLeft > 0 && restToLive > 0
           ? <span className="ds-micro num">{fmt(dailyBudget)}/jour · {daysLeft}j restants</span>
-          : realTotals.balance < 0
-            ? <span className="ds-micro neg">Dépenses et épargne dépassent les revenus</span>
+          : budgetBalance < 0
+            ? <span className="ds-micro neg">Dépenses et épargne dépassent les ressources</span>
             : null}
       </div>
     </section>
@@ -1338,7 +1380,7 @@ function MonthlyCompareTable({ sections, monthTx, fmt, catFor, expandedRows, tog
                       <span className="mon-compare-row-chevron" aria-hidden="true"><ChevronRight size={15}/></span>
                     </div>
                     <div className="mon-budget-card-value num">{fmt(actual)}</div>
-                    <div className="mon-budget-card-value-label">{section.kind === 'income' ? 'reçus' : section.kind === 'saving' ? 'épargnés' : 'dépensés'}</div>
+                    <div className="mon-budget-card-value-label">{section.kind === 'funding' ? 'versés sur le compte commun' : section.kind === 'income' ? 'reçus' : section.kind === 'saving' ? 'épargnés' : 'dépensés'}</div>
                     <div className="mon-budget-card-foot">
                       <span className="num">Prévu&nbsp;: {noTarget ? '—' : fmt(target)}</span>
                       <span className={`mcr-status-pill ${noTarget ? 'new' : hasDelta && isOver ? 'over' : 'ok'}`}>{statusText}</span>

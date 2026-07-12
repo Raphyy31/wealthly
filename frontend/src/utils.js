@@ -287,6 +287,14 @@ export const isExplicitBankTransfer = (transaction) => {
   return BANK_TRANSFER_CREDIT_HINT.test(label) && !CARD_REFUND_HINT.test(label);
 };
 
+export const isJointAccountFunding = (transaction, account, category, enabled = true) => {
+  if (!enabled || !account?.isJoint || (transaction?.amount || 0) <= 0) return false;
+  if (!isExplicitBankTransfer(transaction)) return false;
+  // The only explicit escape hatch: the user marked the operation as NOT a
+  // transfer while it belongs to an income category.
+  return !(transaction?.isTransferOverride === false && category?.type === 'income');
+};
+
 const normalizePersonText = (value) => String(value || '')
   .normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '')

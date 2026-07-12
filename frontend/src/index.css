@@ -2425,6 +2425,7 @@ html, body {
   color: var(--ink-2);
 }
 .mon-compare-section--income .mon-compare-section-title { color: var(--positive); }
+.mon-compare-section--funding .mon-compare-section-title { color: var(--positive); }
 .mon-compare-section--expense .mon-compare-section-title { color: var(--negative); }
 .mon-compare-section--saving .mon-compare-section-title { color: var(--accent); }
 .mon-compare-section-count {

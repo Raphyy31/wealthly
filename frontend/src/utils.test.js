@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest';
 import {
   formatBankName, shiftMonthForDate, effectiveMonth,
   isExplicitBankTransfer, extractTransferContributor,
-  detectInternalTransfers,
+  detectInternalTransfers, isJointAccountFunding,
 } from './utils.js';
 
 describe('shiftMonthForDate (décalage fin de mois)', () => {
@@ -63,6 +63,16 @@ describe('financement du compte commun', () => {
   test('conserve une source bancaire lisible quand le compte source est absent', () => {
     const tx = { label: 'VIREMENT EN VOTRE FAVEUR DE MADAME DUPONT ANNA' };
     expect(extractTransferContributor(tx, [])).toBe('Dupont Anna');
+  });
+
+  test('un virement entrant joint reste un financement même classé en revenu', () => {
+    const tx = { amount: 3000, label: 'VIREMENT EN VOTRE FAVEUR DE MADAME MARTIN CAR', isManualCategory: true };
+    expect(isJointAccountFunding(tx, { isJoint: true }, { type: 'income' })).toBe(true);
+  });
+
+  test('un choix explicite « pas un virement » autorise un vrai revenu', () => {
+    const tx = { amount: 3000, label: 'VIREMENT EN VOTRE FAVEUR DE SOCIETE X', isTransferOverride: false };
+    expect(isJointAccountFunding(tx, { isJoint: true }, { type: 'income' })).toBe(false);
   });
 });
 

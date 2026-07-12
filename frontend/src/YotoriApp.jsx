@@ -19,7 +19,7 @@ import {
   accountIncludeInNetWorth, accountCountsAsIncome, accountCountsAsExpense,
   detectInternalTransfers, convertCurrency, ACCOUNT_ROLES, bankColor,
   fmtAmount, matchTransferRule, buildTransferDestTag, formatBankName,
-  shiftMonthForDate, isExplicitBankTransfer,
+  shiftMonthForDate, isJointAccountFunding,
 } from './utils.js';
 import { useRates } from './hooks/useRates.js';
 import { useBaseCurrency } from './hooks/useBaseCurrency.js';
@@ -1266,20 +1266,21 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
       } else if (!isTransfer) {
         // CASHFLOW NORMAL (income/depense) — uniquement si pas un transfert
         // (les transferts non-epargne sont des arbitrages, exclus du cashflow).
-        const isManualIncome = t.isManualCategory && cat?.type === 'income';
         const isManualExpense = t.isManualCategory && cat?.type === 'expense';
         // Compte COMMUN (option activée) : ses ENTRÉES sont des contributions des
         // conjoints (toi + ta femme), JAMAIS un revenu — peu importe si le compte
         // source est connecté ou non (donc robuste même quand le perso du
         // conjoint n'est pas dans l'app). Une vraie recette peut toujours être
-        // forcée en la catégorisant manuellement en revenu (isManualIncome).
-        const jointInflowExcluded = incomeShiftSettings.shiftJointContrib
-          && !!acc?.isJoint
-          && isExplicitBankTransfer(t);
+        // forcée en la marquant explicitement « ce n'est pas un virement ».
+        const jointInflowExcluded = isJointAccountFunding(t, acc, cat, incomeShiftSettings.shiftJointContrib);
+        // Catégoriser un virement en « Revenus » ne suffit pas à en faire un
+        // vrai revenu : c'était la source de l'incohérence Carla/Raphaël.
+        // Il faut également avoir explicitement désactivé le statut virement.
+        const explicitlyRealIncome = cat?.type === 'income' && t.isTransferOverride === false;
         if (t.amount > 0) {
           // INCOME : attribue au mois COMPTABLE (effectiveMonth) -> salaire
           // d'avril verse fin du mois apparait sur mai dans le Dashboard.
-          if (((accountCountsAsIncome(role) && !jointInflowExcluded) || isManualIncome) && monthly[mIncome]) {
+          if (((accountCountsAsIncome(role) && !jointInflowExcluded) || explicitlyRealIncome) && monthly[mIncome]) {
             monthly[mIncome].income += sharedAmount;
           }
         } else {
