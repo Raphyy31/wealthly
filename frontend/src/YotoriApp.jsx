@@ -1640,20 +1640,23 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
     }
     setAiCatRunning(true);
     setAiCatSummary({
-      status: 'running', phase: 'Première passe',
-      total: candidates.length, processed: 0, categorized: 0, remaining: candidates.length,
+      status: 'running', phase: 'Reconnaissance des marchands',
+      phaseIndex: 1, phaseCount: 2, progress: 0,
+      total: candidates.length, phaseTotal: candidates.length, phaseProcessed: 0,
+      categorized: 0, remaining: candidates.length,
     });
     try {
       let categorized = 0;
       let unresolved = [...candidates];
       let diagnostic = null;
 
-      const runPass = async (input, { deep, batchSize, phase }) => {
+      const runPass = async (input, { deep, batchSize, phase, phaseIndex }) => {
         const stillUnresolved = [];
         let phaseProcessed = 0;
         const batchCount = Math.ceil(input.length / batchSize);
         setAiCatSummary(s => ({
-          ...s, phase, total: input.length, processed: 0,
+          ...s, phase, phaseIndex, phaseCount: 2,
+          phaseTotal: input.length, phaseProcessed: 0,
           currentBatch: batchCount > 0 ? 1 : 0, batchCount,
         }));
         for (let offset = 0; offset < input.length; offset += batchSize) {
@@ -1686,8 +1689,13 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
             categorized += updates.length;
           }
           phaseProcessed += batch.length;
+          const phaseRatio = Math.min(1, phaseProcessed / Math.max(1, input.length));
+          const progress = phaseIndex === 1
+            ? phaseRatio * 70
+            : 70 + phaseRatio * 30;
           setAiCatSummary(s => ({
-            ...s, processed: Math.min(phaseProcessed, input.length), categorized,
+            ...s, phaseProcessed: Math.min(phaseProcessed, input.length), progress,
+            categorized,
             remaining: Math.max(candidates.length - categorized, 0),
           }));
           // Un problème fournisseur ne sera pas résolu en répétant plusieurs
@@ -1702,21 +1710,22 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
 
       // Passe rapide par lots suffisamment grands pour rester sous ~30 s.
       unresolved = await runPass(unresolved, {
-        deep: false, batchSize: 32, phase: 'Classement automatique',
+        deep: false, batchSize: 32, phase: 'Reconnaissance des marchands', phaseIndex: 1,
       });
 
       // Seconde passe « enquête » uniquement sur les résistantes : lots plus
       // petits et prompt spécialisé, sans recherche web ni donnée ajoutée.
       if (unresolved.length > 0 && !diagnostic) {
         unresolved = await runPass(unresolved, {
-          deep: true, batchSize: 16, phase: 'Enquête sur les libellés ambigus',
+          deep: true, batchSize: 16, phase: 'Analyse approfondie des libellés ambigus', phaseIndex: 2,
         });
       }
 
       const remaining = unresolved.length;
       setAiCatSummary({
         status: 'done', phase: remaining > 0 ? 'À vérifier' : 'Terminé',
-        total: candidates.length, processed: candidates.length,
+        phaseIndex: 2, phaseCount: 2, progress: 100,
+        total: candidates.length, phaseTotal: remaining, phaseProcessed: remaining,
         categorized, remaining, diagnostic,
       });
       if (categorized > 0) {
@@ -1731,7 +1740,7 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
     } catch (err) {
       console.error('[categorizeViaServerAI] échec:', err);
       const detail = err?.message ? ` ${err.message}` : '';
-      setAiCatSummary(s => ({ ...s, status: 'error', phase: 'Interrompu', diagnostic: err?.message || null }));
+      setAiCatSummary(s => ({ ...s, status: 'error', phase: 'Analyse interrompue', diagnostic: err?.message || null }));
       showToast(`Échec de la catégorisation IA.${detail}`, 'error');
     } finally {
       setAiCatRunning(false);

@@ -32,6 +32,10 @@ const EMPTY_FILTERS = {
   month: '',         // YYYY-MM
 };
 
+const isUnclassifiedTransaction = (tx, transferIds = new Set()) => Boolean(
+  tx && !transferIds.has(tx.id) && (!tx.categoryId || tx.categoryId === 'uncategorized')
+);
+
 // Generic per-column header filter popover. Renders a small filter icon next
 // to the sort arrow; click → popover anchored to the header cell. The icon
 // turns accent if `active` is true (i.e. the column has an active filter).
@@ -307,7 +311,9 @@ export function Transactions({ transactions, accounts, categories, members = [],
   );
   const [showPanel, setShowPanel] = useState(false);
   const [catFilterSearch, setCatFilterSearch] = useState('');
-  const [reviewMode, setReviewMode] = useState(initialReviewMode || 'all'); // all | review | auto | reviewed
+  const [reviewMode, setReviewMode] = useState(() => initialReviewMode === 'review'
+    ? (transactions.some(tx => isUnclassifiedTransaction(tx, transferIds)) ? 'unclassified' : 'confirm')
+    : (initialReviewMode || 'all'));
 
   // GSAP page-enter — fade-in du header + filtres + premieres rows
   // (sprint 2026-05-20). Cap a 20 rows pour eviter 200 anims simultanees.
@@ -331,9 +337,11 @@ export function Transactions({ transactions, accounts, categories, members = [],
   }, []);
   useEffect(() => {
     if (!initialReviewMode) return;
-    setReviewMode(initialReviewMode);
+    setReviewMode(initialReviewMode === 'review'
+      ? (transactions.some(tx => isUnclassifiedTransaction(tx, transferIds)) ? 'unclassified' : 'confirm')
+      : initialReviewMode);
     onConsumeInitialReviewMode?.();
-  }, [initialReviewMode, onConsumeInitialReviewMode]);
+  }, [initialReviewMode, onConsumeInitialReviewMode, transactions, transferIds]);
 
   // Consume the initial filter so it doesn't re-apply on subsequent navigations
   // back to this view.
@@ -386,22 +394,23 @@ export function Transactions({ transactions, accounts, categories, members = [],
   }, [transactions, categories, transferIds]);
 
   const uncategorizedCount = useMemo(() => transactions.filter(tx =>
-    (!tx.categoryId || tx.categoryId === 'uncategorized') &&
-    !transferIds.has(tx.id) &&
+    isUnclassifiedTransaction(tx, transferIds) &&
     (tx.label || '').trim()
   ).length, [transactions, transferIds]);
 
   const reviewCounts = useMemo(() => {
-    const counts = { all: transactions.length, review: 0, auto: 0, reviewed: 0 };
+    const counts = { all: transactions.length, unclassified: 0, confirm: 0, auto: 0, reviewed: 0 };
     transactions.forEach(tx => {
-      if (needsTransactionReview(tx, transferIds)) counts.review += 1;
+      if (isUnclassifiedTransaction(tx, transferIds)) counts.unclassified += 1;
+      else if (needsTransactionReview(tx, transferIds)) counts.confirm += 1;
       else if (tx.reviewStatus === 'reviewed' || tx.isManualCategory) counts.reviewed += 1;
       else counts.auto += 1;
     });
     return counts;
   }, [transactions, transferIds]);
   const reviewableIds = useMemo(() => transactions.filter(tx =>
-    needsTransactionReview(tx, transferIds)
+    !isUnclassifiedTransaction(tx, transferIds)
+    && needsTransactionReview(tx, transferIds)
     && tx.categoryId
     && tx.categoryId !== 'uncategorized'
   ).map(tx => tx.id), [transactions, transferIds]);
@@ -442,10 +451,12 @@ export function Transactions({ transactions, accounts, categories, members = [],
     return transactions
       .filter(tx => {
         const needsReview = needsTransactionReview(tx, transferIds);
-        if (reviewMode === 'review' && !needsReview) return false;
-        if (reviewMode === 'reviewed' && needsReview) return false;
-        if (reviewMode === 'reviewed' && tx.reviewStatus !== 'reviewed' && !tx.isManualCategory) return false;
-        if (reviewMode === 'auto' && (needsReview || tx.reviewStatus === 'reviewed' || tx.isManualCategory)) return false;
+        const isUnclassified = isUnclassifiedTransaction(tx, transferIds);
+        if (reviewMode === 'review' && !isUnclassified && !needsReview) return false;
+        if (reviewMode === 'unclassified' && !isUnclassified) return false;
+        if (reviewMode === 'confirm' && (isUnclassified || !needsReview)) return false;
+        if (reviewMode === 'reviewed' && (isUnclassified || needsReview || (tx.reviewStatus !== 'reviewed' && !tx.isManualCategory))) return false;
+        if (reviewMode === 'auto' && (isUnclassified || needsReview || tx.reviewStatus === 'reviewed' || tx.isManualCategory)) return false;
         if (q) {
           const labelHit = (tx.label || '').toLowerCase().includes(q);
           const catHit = tx.categoryId ? (catSearchIndex[tx.categoryId] || '').includes(q) : false;
@@ -580,17 +591,18 @@ export function Transactions({ transactions, accounts, categories, members = [],
       <div className="tx-inbox-tabs" role="tablist" aria-label="État de classement">
         {[
           ['all', 'Toutes'],
-          ['review', 'À vérifier'],
-          ['auto', 'Classées automatiquement'],
+          ['unclassified', 'À classer'],
+          ['confirm', 'À confirmer'],
+          ['auto', 'Automatiques'],
           ['reviewed', 'Validées'],
         ].map(([id, label]) => (
           <button key={id} role="tab" aria-selected={reviewMode === id} className={reviewMode === id ? 'is-active' : ''} onClick={() => setReviewMode(id)}>
             <span>{label}</span><strong>{reviewCounts[id]}</strong>
           </button>
         ))}
-        {reviewMode === 'review' && reviewableIds.length > 0 && onMarkReviewed && (
+        {reviewMode === 'confirm' && reviewableIds.length > 0 && onMarkReviewed && (
           <button className="tx-inbox-validate" onClick={() => onMarkReviewed(reviewableIds)}>
-            <CheckCircle2 size={13}/> Valider les propositions ({reviewableIds.length})
+            <CheckCircle2 size={13}/> Tout valider ({reviewableIds.length})
           </button>
         )}
       </div>
@@ -616,9 +628,20 @@ export function Transactions({ transactions, accounts, categories, members = [],
                 <span className="ai-review-success">{aiCatSummary.categorized} classée{aiCatSummary.categorized > 1 ? 's' : ''}</span>
               )}
             </div>
+            <div className="ai-review-breakdown" aria-label="État du classement">
+              <button type="button" onClick={() => setReviewMode('unclassified')}>
+                <strong>{reviewCounts.unclassified}</strong><span>à classer</span>
+              </button>
+              <button type="button" onClick={() => setReviewMode('confirm')}>
+                <strong>{reviewCounts.confirm}</strong><span>à confirmer</span>
+              </button>
+              <button type="button" onClick={() => setReviewMode('reviewed')}>
+                <strong>{reviewCounts.reviewed}</strong><span>validées</span>
+              </button>
+            </div>
             <p>
               {aiCatRunning
-                ? `Lot ${aiCatSummary?.currentBatch || 1}/${aiCatSummary?.batchCount || 1} · ${aiCatSummary?.processed || 0}/${aiCatSummary?.total || uncategorizedCount} analysées. Le premier résultat arrive généralement en quelques secondes, puis la progression avance lot par lot.`
+                ? `Passe ${aiCatSummary?.phaseIndex || 1}/${aiCatSummary?.phaseCount || 2} · lot ${aiCatSummary?.currentBatch || 1}/${aiCatSummary?.batchCount || 1} · ${aiCatSummary?.phaseProcessed || 0}/${aiCatSummary?.phaseTotal || uncategorizedCount} examinées dans cette passe.`
                 : uncategorizedCount > 0
                   ? aiCatSummary?.status === 'done'
                     ? `Les restantes ont résisté aux règles et aux deux passes IA : libellé trop générique, marchand inconnu ou virement ambigu. Elles restent visibles et modifiables — rien n'est masqué.`
@@ -626,11 +649,11 @@ export function Transactions({ transactions, accounts, categories, members = [],
                   : `La boîte « À vérifier » est vide. Les corrections manuelles continueront d'améliorer les règles du foyer.`}
             </p>
             {aiCatSummary?.diagnostic && (
-              <div className="ai-review-diagnostic">Diagnostic technique : {aiCatSummary.diagnostic}</div>
+              <div className="ai-review-diagnostic">L’analyse automatique est momentanément indisponible. Les opérations restent modifiables et pourront être relancées.</div>
             )}
             {aiCatRunning && (
-              <div className="ai-review-progress" role="progressbar" aria-valuemin="0" aria-valuemax={aiCatSummary?.total || 1} aria-valuenow={aiCatSummary?.processed || 0}>
-                <span style={{ width: `${Math.min(100, ((aiCatSummary?.processed || 0) / Math.max(1, aiCatSummary?.total || 1)) * 100)}%` }}/>
+              <div className="ai-review-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow={Math.round(aiCatSummary?.progress || 0)}>
+                <span style={{ width: `${Math.min(100, aiCatSummary?.progress || 0)}%` }}/>
               </div>
             )}
           </div>
@@ -645,12 +668,12 @@ export function Transactions({ transactions, accounts, categories, members = [],
               <button
                 className="ds-btn ghost"
                 onClick={() => {
-                  setReviewMode('review');
+                  setReviewMode('unclassified');
                   setFilters(EMPTY_FILTERS);
                   setSearch('');
                 }}
               >
-                Voir la file à vérifier
+                Classer manuellement
               </button>
             )}
             {uncategorizedCount > 0 && onOpenAiPrompt && (
@@ -1207,11 +1230,13 @@ export function Transactions({ transactions, accounts, categories, members = [],
                       const isTransfer = transferIds.has(tx.id);
                       const topCat = cat?.parent ? categories.find(c => c.id === cat.parent) : cat;
                       const display = topCat || cat;
+                      const isUnclassified = isUnclassifiedTransaction(tx, transferIds);
+                      const needsReview = isUnclassified || needsTransactionReview(tx, transferIds);
                       const tileBg = isTransfer ? 'var(--bg-sunk)' : ((display?.color || '#9ca3af') + '22');
                       const tileFg = isTransfer ? 'var(--ink-2)' : (display?.color || '#6b7280');
                       const amtCls = isTransfer ? 'transfer' : (tx.amount >= 0 ? 'positive' : 'negative');
                       return (
-                        <div key={tx.id} className={`tx-card ${isTransfer ? 'tx-card-transfer' : ''}`}>
+                        <div key={tx.id} className={`tx-card ${isTransfer ? 'tx-card-transfer' : ''} ${needsReview ? 'tx-card-needs-review' : ''}`}>
                           <button
                             className="tx-card-icon"
                             style={{ background: tileBg, color: tileFg }}
@@ -1246,14 +1271,14 @@ export function Transactions({ transactions, accounts, categories, members = [],
                             <span className="tx-card-label-text">
                               {tx.label || 'Sans libellé'}
                               {tx.payeeName && <span className="tx-card-payee" title="Marchand canonique"> · {tx.payeeName}</span>}
-                              {needsTransactionReview(tx, transferIds) && (
+                              {needsReview && (
                                 <span
                                   className="tx-needs-review-badge"
-                                  title={(!tx.categoryId || tx.categoryId === 'uncategorized')
+                                  title={isUnclassified
                                     ? "Aucune catégorie suffisamment fiable n'a été trouvée."
                                     : 'Proposition automatique à confirmer.'}
                                 >
-                                  {(!tx.categoryId || tx.categoryId === 'uncategorized') ? 'À classer' : 'À confirmer'}
+                                  {isUnclassified ? 'À classer' : 'À confirmer'}
                                 </span>
                               )}
                             </span>
@@ -1369,6 +1394,16 @@ export function Transactions({ transactions, accounts, categories, members = [],
                             {acc ? <span className="tx-card-acc">{acc.name || acc.bank}</span> : <span className="tx-card-col-empty">—</span>}
                           </div>
                           <div className="tx-card-actions">
+                            {!isUnclassified && needsTransactionReview(tx, transferIds) && onMarkReviewed && (
+                              <button
+                                className="tx-card-action review-confirm"
+                                onClick={() => onMarkReviewed([tx.id])}
+                                title="Confirmer cette catégorie"
+                                aria-label="Confirmer cette catégorie"
+                              >
+                                <CheckCircle2 size={13}/>
+                              </button>
+                            )}
                             {/* C14 (2026-05-18) : bouton "récurrent" manuel retiré.
                                 Le badge auto-détecté reste affiché en lecture seule (isRecurring),
                                 et un toast propose la création de FixedCharge après 3 occurrences. */}

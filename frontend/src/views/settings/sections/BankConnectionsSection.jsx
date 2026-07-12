@@ -1,7 +1,7 @@
 // Source: Settings.jsx lines 1391-1576 — BankConnectionsSection
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Cloud, Plus, RefreshCw, AlertCircle, Unlink, Activity } from 'lucide-react';
+import { Cloud, Plus, RefreshCw, AlertCircle, Unlink, Activity, Clock3, CheckCircle2 } from 'lucide-react';
 import * as api from '../../../api.js';
 import { BankConnectModal } from '../../../components/BankConnectModal.jsx';
 import { BankReconnectModal, reconnectStatus } from '../../../components/BankReconnectModal.jsx';
@@ -54,10 +54,41 @@ function syncFreshness(isoStr) {
 const isRateLimitMessage = (message) => /(?:^|\s)429(?:\s|:)|temporair(?:e|ement).*d[ée]bord|quota.*(?:gocardless|banque)|limite de rafra[iî]chissement/i.test(String(message || ''));
 const RATE_LIMIT_COPY = 'GoCardless limite temporairement les mises à jour. Tes banques restent connectées et les dernières données sont conservées. Yotori Finance réessaiera plus tard.';
 
-function connectionState(connection) {
+function retryDelayLabel(seconds) {
+  if (!seconds || seconds <= 0) return null;
+  if (seconds < 60) return 'moins d’une minute';
+  const minutes = Math.ceil(seconds / 60);
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.ceil(minutes / 60);
+  return `${hours} h`;
+}
+
+const diagnosticTitle = (verdict) => ({
+  ok: 'Connexion opérationnelle',
+  warning: 'Une vérification est conseillée',
+  expired: 'Accès bancaire expiré',
+  error: 'Reconnexion nécessaire',
+})[verdict] || 'État de la connexion';
+
+function friendlyDiagnosticIssue(issue) {
+  const text = String(issue || '');
+  if (/jamais synchronis/i.test(text)) return 'Aucune opération n’a encore été récupérée.';
+  if (/dernière sync/i.test(text)) return text.replace('sync', 'mise à jour');
+  if (/consentement.*expir/i.test(text)) return 'L’autorisation bancaire doit être renouvelée.';
+  if (/statut.*(?:RJ|SU)|refus|suspend/i.test(text)) return 'La banque a refusé ou suspendu l’accès.';
+  if (/impossible de joindre/i.test(text)) return 'Le service bancaire ne répond pas pour le moment.';
+  if (/aucun session_id|jamais été complétée/i.test(text)) return 'Le parcours de connexion bancaire n’a pas été terminé.';
+  if (/incohérence/i.test(text)) return 'L’état local a été remis à jour automatiquement.';
+  return text.replace(/GoCardless\s*:\s*/i, '').replace(/\s*\(status\s+[A-Z]+\)/i, '');
+}
+
+function connectionState(connection, cooldownSeconds = 0) {
   if (connection.status === 'pending') return { color: 'var(--warning)', label: 'Autorisation à terminer', detail: 'Finalise le parcours bancaire pour activer la récupération.' };
   if (['error', 'expired', 'suspended'].includes(connection.status)) return { color: 'var(--negative)', label: 'Action requise', detail: 'Reconnecte cette banque pour reprendre les mises à jour.' };
-  if (isRateLimitMessage(connection.error_message)) return { color: 'var(--warning)', label: 'Mise à jour en pause', detail: 'Dernières données conservées · nouvel essai automatique plus tard.' };
+  if (isRateLimitMessage(connection.error_message)) {
+    const delay = retryDelayLabel(cooldownSeconds);
+    return { color: 'var(--warning)', label: 'Mise à jour en pause', detail: `Dernières données conservées · ${delay ? `nouvel essai dans ${delay}` : 'nouvel essai automatique plus tard'}.` };
+  }
   if (connection.error_message) return { color: 'var(--warning)', label: 'Récupération incomplète', detail: 'La connexion reste active, mais certaines opérations n’ont pas pu être actualisées.' };
   if (!connection.last_synced_at) return { color: 'var(--accent)', label: 'Première récupération en cours', detail: 'La banque prépare encore les opérations.' };
   return { color: 'var(--positive)', label: 'À jour', detail: `Dernier succès ${relativeTime(connection.last_synced_at)} · mise à jour automatique activée.` };
@@ -77,6 +108,7 @@ export function BankConnectionsSection() {
   const [syncMessage, setSyncMessage] = useState(null);
   const [diagId, setDiagId] = useState(null);          // connection actuellement en cours de diagnostic
   const [diagResult, setDiagResult] = useState(null);  // { connection_id, verdict, issues[], recommendation }
+  const [cooldownSeconds, setCooldownSeconds] = useState(() => api.banking.getSyncCooldownSeconds?.() || 0);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -91,6 +123,14 @@ export function BankConnectionsSection() {
   }, []);
 
   useEffect(() => { reload(); }, [reload]);
+
+  useEffect(() => {
+    if (cooldownSeconds <= 0) return undefined;
+    const timer = window.setInterval(() => {
+      setCooldownSeconds(api.banking.getSyncCooldownSeconds?.() || 0);
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [cooldownSeconds]);
 
   // Retour d'onglet (l'utilisateur revient du consentement banque ouvert
   // ailleurs, ou de l'app GoCardless mobile) → la liste se rafraîchit toute
@@ -111,7 +151,9 @@ export function BankConnectionsSection() {
     try {
       const res = await api.banking.sync(id);
       if (res.status === 'rate_limited') {
-        setSyncMessage({ kind: 'warn', text: RATE_LIMIT_COPY });
+        const remaining = Number(res.retry_after_seconds) || api.banking.getSyncCooldownSeconds?.() || 300;
+        setCooldownSeconds(remaining);
+        setSyncMessage({ kind: 'warn', text: `${RATE_LIMIT_COPY} Nouvel essai possible dans ${retryDelayLabel(remaining)}.` });
       } else if (res.status === 'processing' && !res.imported) {
         // GoCardless prépare encore les données côté banque → pas une erreur.
         setSyncMessage({ kind: 'warn', text: 'Ta banque prépare encore les opérations. Réessaie dans une minute — elles arriveront aussi automatiquement.' });
@@ -234,11 +276,11 @@ export function BankConnectionsSection() {
             <div className="member-card-info" style={{ flex: 1 }}>
               <div className="member-card-name">{c.bank_name}</div>
               <div className="member-card-role">
-                <span style={{ color: connectionState(c).color, fontWeight: 600 }}>{connectionState(c).label}</span>
+                <span style={{ color: connectionState(c, cooldownSeconds).color, fontWeight: 600 }}>{connectionState(c, cooldownSeconds).label}</span>
                 {c.accounts?.length > 0 && ` · ${t('settings.banks.accountsCount', { count: c.accounts.length })}`}
                 {reconnectStatus(c) !== 'ok' && ` · ${reconnectStatus(c) === 'expired' ? 'accès expiré' : `expire dans ${Math.max(0, Math.round(c.days_until_expiry || 0))} j`}`}
               </div>
-              <div style={{ fontSize: 11.5, color: 'var(--ink-3)', marginTop: 3 }}>{connectionState(c).detail}</div>
+              <div style={{ fontSize: 11.5, color: 'var(--ink-3)', marginTop: 3 }}>{connectionState(c, cooldownSeconds).detail}</div>
               {c.error_message && (
                 <div style={{
                   fontSize: 11,
@@ -263,26 +305,28 @@ export function BankConnectionsSection() {
                   fontSize: 12,
                   color: 'var(--ink)',
                 }}>
-                  <div style={{ fontWeight: 600, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em', fontSize: 10.5 }}>
-                    Diagnostic · {diagResult.verdict}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 650, marginBottom: 7 }}>
+                    {diagResult.verdict === 'ok' ? <CheckCircle2 size={14}/> : <AlertCircle size={14}/>}
+                    {diagnosticTitle(diagResult.verdict)}
                   </div>
                   {diagResult.last_sync_age_hours != null && (
-                    <div>Dernière sync : il y a {diagResult.last_sync_age_hours} h</div>
+                    <div>Dernière mise à jour réussie : il y a {diagResult.last_sync_age_hours} h</div>
                   )}
                   {diagResult.connection_age_days != null && (
-                    <div>Consentement âgé de {diagResult.connection_age_days} j (max 90 j DSP2)</div>
-                  )}
-                  {diagResult.gocardless_status && (
-                    <div>Status GoCardless : <code style={{ background: 'var(--bg-sunk)', padding: '1px 4px', borderRadius: 3 }}>{diagResult.gocardless_status}</code></div>
+                    <div>Autorisation bancaire active depuis {diagResult.connection_age_days} j.</div>
                   )}
                   {diagResult.issues?.length > 0 && (
                     <ul style={{ margin: '6px 0 0 18px', padding: 0 }}>
-                      {diagResult.issues.map((iss, i) => <li key={i}>{iss}</li>)}
+                      {diagResult.issues.map((iss, i) => <li key={i}>{friendlyDiagnosticIssue(iss)}</li>)}
                     </ul>
                   )}
                   {diagResult.recommendation && (
                     <div style={{ marginTop: 8, fontStyle: 'italic', fontFamily: 'Geist, system-ui, sans-serif' }}>
-                      → {diagResult.recommendation}
+                      → {diagResult.verdict === 'expired' || diagResult.verdict === 'error'
+                        ? 'Utilise le bouton « Reconnecter » pour rétablir les mises à jour.'
+                        : diagResult.verdict === 'warning'
+                          ? 'Lance une mise à jour. Si elle échoue encore, reconnecte la banque.'
+                          : 'Aucune action nécessaire.'}
                     </div>
                   )}
                 </div>
@@ -304,9 +348,9 @@ export function BankConnectionsSection() {
                 style={{ fontSize: 11, padding: '5px 10px', whiteSpace: 'nowrap' }}
                 onClick={() => handleDiagnose(c.id)}
                 disabled={diagId === c.id}
-                title="Diagnostiquer la connexion (ping GoCardless en temps réel)"
+                title="Vérifier si la connexion et l’autorisation bancaire fonctionnent"
               >
-                <Activity size={12} className={diagId === c.id ? 'spin' : ''}/> Diagnostic
+                <Activity size={12} className={diagId === c.id ? 'spin' : ''}/> Vérifier l’état
               </button>
             )}
             {c.status === 'authorized' && (!c.accounts || c.accounts.length === 0) && (
@@ -325,9 +369,10 @@ export function BankConnectionsSection() {
                 className="ds-btn"
                 style={{ fontSize: 11, padding: '5px 10px', whiteSpace: 'nowrap' }}
                 onClick={() => handleSync(c.id)}
-                disabled={syncingId === c.id}
+                disabled={syncingId === c.id || cooldownSeconds > 0}
+                title={cooldownSeconds > 0 ? `Nouvel essai dans ${retryDelayLabel(cooldownSeconds)}` : 'Récupérer les dernières opérations'}
               >
-                <RefreshCw size={12} className={syncingId === c.id ? 'spin' : ''}/> Sync
+                {cooldownSeconds > 0 ? <Clock3 size={12}/> : <RefreshCw size={12} className={syncingId === c.id ? 'spin' : ''}/>} {cooldownSeconds > 0 ? `Pause ${retryDelayLabel(cooldownSeconds)}` : 'Mettre à jour'}
               </button>
             )}
             {confirmDeleteId === c.id ? (

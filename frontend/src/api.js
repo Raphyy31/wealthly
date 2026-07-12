@@ -662,6 +662,9 @@ async function syncBankingConnection(connectionId, daysBack = 90, { initialSync 
 }
 
 export const banking = {
+  /** Délai restant avant qu'une nouvelle lecture bancaire soit autorisée. */
+  getSyncCooldownSeconds: () => Math.max(0, Math.ceil((getBankSyncCooldown() - Date.now()) / 1000)),
+
   /** List available banks in a country (default FR). Returns institutions
    *  with their GoCardless id (used as bank_name in /connect). */
   listBanks: (country = 'FR') => isDemo() ? Promise.resolve([]) : get(`/banking/banks?country=${country}`, { affectsBackendHealth: false }),

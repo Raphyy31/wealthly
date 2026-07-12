@@ -3833,6 +3833,14 @@ html, body {
 .ai-review-main { min-width: 0; }
 .ai-review-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .ai-review-heading strong { font: 650 14px var(--font-sans); color: var(--ink); }
+.ai-review-breakdown { display: flex; align-items: center; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.ai-review-breakdown button {
+  display: inline-flex; align-items: baseline; gap: 5px; padding: 4px 7px;
+  border: 1px solid var(--border); border-radius: 7px; background: var(--bg-sunk);
+  color: var(--ink-2); cursor: pointer; font: 500 10.5px var(--font-sans);
+}
+.ai-review-breakdown button:hover { border-color: var(--border-strong); background: var(--bg); }
+.ai-review-breakdown button strong { color: var(--ink); font: 650 11px var(--font-mono); }
 .ai-review-main p { margin: 4px 0 0; max-width: 760px; font: 400 12.5px/1.45 var(--font-sans); color: var(--ink-2); }
 .ai-review-success {
   padding: 3px 7px;
@@ -3860,6 +3868,9 @@ html, body {
   letter-spacing: 0.02em;
   white-space: nowrap;
 }
+.tx-card.tx-card-needs-review { box-shadow: inset 3px 0 0 color-mix(in srgb, var(--warning) 72%, transparent); }
+.tx-card-action.review-confirm { color: var(--positive); background: color-mix(in srgb, var(--positive) 9%, transparent); }
+.tx-card-action.review-confirm:hover { background: color-mix(in srgb, var(--positive) 16%, transparent); }
 
 @media (max-width: 780px) {
   .ai-review-card { grid-template-columns: auto minmax(0, 1fr); align-items: start; }
