@@ -277,6 +277,42 @@ function IncomeShiftCard({ incomeShift, updateIncomeShift }) {
             un salaire viré le 28 avril sera attribué à <strong style={{ color: 'var(--ink-2)' }}>mai</strong> dans
             Budget mensuel et Dashboard.
           </p>
+
+          {/* Sous-option : décaler aussi les virements vers le compte commun */}
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => updateIncomeShift({ shiftJointContrib: !incomeShift.shiftJointContrib })}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); updateIncomeShift({ shiftJointContrib: !incomeShift.shiftJointContrib }); } }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 12, marginTop: 14,
+              padding: '11px 12px', borderRadius: 8, cursor: 'pointer',
+              border: '1px solid ' + (incomeShift.shiftJointContrib ? 'color-mix(in srgb, var(--accent) 40%, transparent)' : 'var(--border)'),
+              background: incomeShift.shiftJointContrib ? 'color-mix(in srgb, var(--accent-soft) 45%, transparent)' : 'var(--bg-elev)',
+              transition: 'background 160ms ease, border-color 160ms ease',
+            }}
+          >
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>
+                Décaler aussi les virements vers le compte commun
+              </div>
+              <div style={{ fontSize: 11.5, color: 'var(--ink-3)', marginTop: 3, lineHeight: 1.4 }}>
+                Un virement vers un compte marqué <strong style={{ color: 'var(--ink-2)' }}>joint</strong> fait à partir du
+                jour pivot compte comme une dépense du mois suivant (comme le salaire).
+              </div>
+            </div>
+            <div style={{
+              position: 'relative', width: 40, height: 23, borderRadius: 12, flexShrink: 0,
+              background: incomeShift.shiftJointContrib ? 'var(--accent)' : 'color-mix(in srgb, var(--ink-3) 55%, transparent)',
+              transition: 'background 180ms ease', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.18)',
+            }}>
+              <span style={{
+                position: 'absolute', top: 2, left: incomeShift.shiftJointContrib ? 19 : 2,
+                width: 19, height: 19, borderRadius: '50%', background: '#fff',
+                transition: 'left 180ms ease', boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
+              }}/>
+            </div>
+          </div>
         </div>
       </div>
     </div>

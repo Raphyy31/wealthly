@@ -19,6 +19,7 @@ import {
   accountIncludeInNetWorth, accountCountsAsIncome, accountCountsAsExpense,
   detectInternalTransfers, convertCurrency, ACCOUNT_ROLES, bankColor,
   fmtAmount, matchTransferRule, buildTransferDestTag, formatBankName,
+  shiftMonthForDate,
 } from './utils.js';
 import { useRates } from './hooks/useRates.js';
 import { useBaseCurrency } from './hooks/useBaseCurrency.js';
@@ -1125,6 +1126,27 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
     return { transferIds: ids, transferPairs: pairs };
   }, [visibleTransactions]);
 
+  // Virements vers le compte COMMUN (option "décaler comme le salaire").
+  // Détection GLOBALE sur TOUTES les transactions (pas le scope courant) : dans
+  // le scope perso, la jambe entrante (compte joint) n'est pas visible, donc la
+  // détection scopée ne les apparie pas. On repère ici les débits dont la
+  // contrepartie de virement atterrit sur un compte marqué joint → ce sont les
+  // « contributions au compte commun » à décaler au mois suivant.
+  const jointContribIds = useMemo(() => {
+    if (!incomeShiftSettings.shiftJointContrib) return new Set();
+    const jointAccIds = new Set(accounts.filter(a => a.isJoint).map(a => a.id));
+    if (jointAccIds.size === 0) return new Set();
+    const txById = new Map(transactions.map(t => [t.id, t]));
+    const auto = detectInternalTransfers(transactions);
+    const out = new Set();
+    for (const p of (auto.pairs || [])) {
+      const inTx = txById.get(p.inTxId);
+      // Le débit (outTx) part du perso ; l'entrée (inTx) atterrit sur le joint.
+      if (inTx && jointAccIds.has(inTx.accountId)) out.add(p.outTxId);
+    }
+    return out;
+  }, [transactions, accounts, incomeShiftSettings.shiftJointContrib]);
+
   // Auto-application des regles de virement (Phase C). Les regles sont
   // persistees backend (table categorisation_rules, rule_type='transfer').
   // Walk les tx apres chaque change : si une tx match ET n'a pas encore
@@ -1182,6 +1204,10 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
     sortedTx.forEach(t => {
       months.add(monthKey(t.date));
       months.add(effectiveMonth(t, incomeShiftSettings, categories));
+      // Le bucket cible d'un virement compte-commun décalé doit exister aussi.
+      if (incomeShiftSettings.shiftJointContrib && jointContribIds.has(t.id)) {
+        months.add(shiftMonthForDate(t.date, incomeShiftSettings.pivotDay ?? 25));
+      }
     });
     const sortedMonths = Array.from(months).sort();
     // Fix 2026-05-19 : avant on partait de initialBalance puis on ajoutait
@@ -1243,12 +1269,22 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
             monthly[mIncome].income += sharedAmount;
           }
         } else {
-          // EXPENSE : reste sur le mois CIVIL — les depenses ne shiftent pas.
+          // EXPENSE : reste sur le mois CIVIL — SAUF un virement vers le compte
+          // commun (option shiftJointContrib) qui, fait en fin de mois, finance
+          // le mois suivant → décalé comme le salaire. Le double comptage reste
+          // impossible : en scope Famille ce flux est un transfert interne
+          // (isTransfer=true) donc exclu ; ce décalage ne s'applique qu'au scope
+          // perso, où seule la jambe débit est visible et compte déjà en dépense.
           if (accountCountsAsExpense(role) || isManualExpense) {
             const absShared = Math.abs(sharedAmount);
-            monthly[mCivil].expenses += absShared;
-            if (recurringIds.has(t.id)) monthly[mCivil].fixed += absShared;
-            else monthly[mCivil].variable += absShared;
+            const isJointContrib = incomeShiftSettings.shiftJointContrib && jointContribIds.has(t.id);
+            const mExpense = isJointContrib
+              ? shiftMonthForDate(t.date, incomeShiftSettings.pivotDay ?? 25)
+              : mCivil;
+            const bucket = monthly[mExpense] || monthly[mCivil];
+            bucket.expenses += absShared;
+            if (recurringIds.has(t.id)) bucket.fixed += absShared;
+            else bucket.variable += absShared;
           }
         }
       }
@@ -1267,7 +1303,7 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
       cursor -= monthly[m].net;
     }
     return Object.values(monthly);
-  }, [visibleTransactions, visibleAccounts, accounts, categories, recurringIds, memberShare, transferIds, accountBalances, incomeShiftSettings]);
+  }, [visibleTransactions, visibleAccounts, accounts, categories, recurringIds, memberShare, transferIds, jointContribIds, accountBalances, incomeShiftSettings]);
 
   const currentMonth = useMemo(() => {
     const now = new Date();

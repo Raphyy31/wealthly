@@ -624,7 +624,20 @@ export const dayOfMonth = (dateStr) => {
 // `settings` = { enabled: boolean, pivotDay: 1..31 } — typiquement lu
 // depuis localStorage 'yotori:income_shift' (default { enabled: true,
 // pivotDay: 25 }).
-export const INCOME_SHIFT_DEFAULTS = { enabled: true, pivotDay: 25 };
+// shiftJointContrib : décale AUSSI au mois suivant les virements de fin de mois
+// vers le compte commun (traités comme une dépense du perso qui finance le mois
+// suivant — même logique que le salaire). Opt-in (false par défaut) pour ne pas
+// changer les chiffres historiques des utilisateurs existants.
+export const INCOME_SHIFT_DEFAULTS = { enabled: true, pivotDay: 25, shiftJointContrib: false };
+
+// Mois d'attribution d'une date selon le jour pivot : si le jour >= pivot, on
+// bascule au mois suivant (le flux de fin de mois finance le mois d'après).
+export const shiftMonthForDate = (dateStr, pivotDay) => {
+  const d = new Date(dateStr);
+  if (d.getDate() < pivotDay) return monthKey(dateStr);
+  const next = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`;
+};
 
 export const effectiveMonth = (tx, settings, categories) => {
   if (!tx?.date) return null;
@@ -638,16 +651,12 @@ export const effectiveMonth = (tx, settings, categories) => {
   // le jour pivot ou après, quelle que soit sa catégorie. C'est plus
   // robuste que filtrer par cat.type === 'income' qui ratait les salaires
   // mal categorises (auto-detectes comme "Virements internes" par exemple).
-  // Les dépenses (montant négatif) ne shiftent JAMAIS.
+  // Les dépenses (montant négatif) ne shiftent JAMAIS (sauf virement au compte
+  // commun, géré à part dans monthlyEvolution via shiftMonthForDate).
   const amount = tx.sharedAmount ?? tx.amount ?? 0;
   if (amount <= 0) return monthKey(tx.date);
 
-  const d = new Date(tx.date);
-  if (d.getDate() < cfg.pivotDay) return monthKey(tx.date);
-
-  // Shift au mois suivant
-  const next = new Date(d.getFullYear(), d.getMonth() + 1, 1);
-  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`;
+  return shiftMonthForDate(tx.date, cfg.pivotDay);
 };
 
 // Helper pour savoir si une tx est SHIFTÉE par rapport à sa date civile.
@@ -669,6 +678,7 @@ export const readIncomeShiftSetting = () => {
     return {
       enabled: parsed.enabled !== false, // default true si absent
       pivotDay: Math.min(31, Math.max(1, parseInt(parsed.pivotDay) || INCOME_SHIFT_DEFAULTS.pivotDay)),
+      shiftJointContrib: parsed.shiftJointContrib === true, // opt-in, default false
     };
   } catch {
     return INCOME_SHIFT_DEFAULTS;
