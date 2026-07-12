@@ -8,6 +8,7 @@ import { LIABILITY_TYPES } from '../../../constants.js';
 import { ChipSelect } from '../../../components/ChipSelect.jsx';
 import { Combobox } from '../../../components/Combobox.jsx';
 import { ResponsiveModal } from '../../../components/ui/ResponsiveModal.jsx';
+import { AiPlannerChat } from '../../../components/AiPlannerChat.jsx';
 
 const LIABILITY_STEPS = [
   { key: 'main',     label: 'Infos principales' },
@@ -36,6 +37,24 @@ export function LiabilityEditor({ liability, members, assets = [], onSave, onCan
   const step = LIABILITY_STEPS[stepIdx].key;
 
   const set = (k, v) => setDraft({ ...draft, [k]: v });
+
+  // Assistant IA : pré-remplit le formulaire depuis une phrase (« prêt auto
+  // 15 000 € sur 48 mois à 3,5 % »). L'utilisateur vérifie/ajuste puis valide
+  // le wizard normalement. student_loan → other_loan (pas de type dédié ici).
+  const applyAiLoan = (loan) => {
+    const typeMap = { student_loan: 'other_loan' };
+    setDraft(d => ({
+      ...d,
+      name: loan.name || d.name,
+      type: typeMap[loan.type] || loan.type || d.type,
+      initialCapital: loan.initial_capital != null && loan.initial_capital !== '' ? loan.initial_capital : d.initialCapital,
+      remainingCapital: (d.remainingCapital === '' || d.remainingCapital == null) && loan.initial_capital ? loan.initial_capital : d.remainingCapital,
+      interestRate: loan.interest_rate != null ? loan.interest_rate : d.interestRate,
+      durationMonths: loan.duration_months != null ? loan.duration_months : d.durationMonths,
+      monthlyPayment: loan.monthly_payment != null ? loan.monthly_payment : d.monthlyPayment,
+      startDate: loan.start_date || d.startDate,
+    }));
+  };
   const toggleMember = (mid) => {
     const ids = draft.memberIds || [];
     set('memberIds', ids.includes(mid) ? ids.filter(i => i !== mid) : [...ids, mid]);
@@ -73,6 +92,7 @@ export function LiabilityEditor({ liability, members, assets = [], onSave, onCan
           <div className="wizard-pane">
             {step === 'main' && (
               <>
+                {!liability.id && <AiPlannerChat mode="loan" onConfirmLoan={applyAiLoan}/>}
                 <label><span>Nom</span>
                   <input value={draft.name} onChange={(e) => set('name', e.target.value)} placeholder="Emprunt RP, Auto, …" autoFocus/>
                 </label>

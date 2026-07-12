@@ -524,6 +524,19 @@ const DEMO_INSIGHTS = {
   ai_used: false, ai_available: false,
 };
 
+// Assistant IA « planificateur » — extraction langage naturel → objets à valider.
+// Renvoie { available, events|loan, note }. En démo : indisponible (pas d'appel).
+export const aiPlanner = {
+  parseEvents: (message, accounts = [], today = null) =>
+    isDemo()
+      ? Promise.resolve({ available: false, events: [], note: 'Assistant IA indisponible en mode démo.' })
+      : post('/ai/plan/events', { message, accounts, today }, { timeoutMs: 40000 }),
+  parseLoan: (message) =>
+    isDemo()
+      ? Promise.resolve({ available: false, loan: null, note: 'Assistant IA indisponible en mode démo.' })
+      : post('/ai/plan/loan', { message }, { timeoutMs: 40000 }),
+};
+
 export const insights = {
   // force=true (bouton rafraîchir) → ignore le cache serveur 24h (compte au plafond).
   // scope = 'all' (foyer) ou id du membre → cache Coach ventilé par scope côté serveur.

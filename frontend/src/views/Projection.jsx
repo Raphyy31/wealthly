@@ -17,6 +17,7 @@ import {
 import { LineChart as LineChartIcon, AlertTriangle, Plus, Trash2, Pencil, X, Check, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
 import { ResponsiveModal } from '../components/ui/ResponsiveModal.jsx';
 import { AnimatedNumber } from '../components/AnimatedNumber.jsx';
+import { AiPlannerChat } from '../components/AiPlannerChat.jsx';
 import { usePageEnter } from '../hooks/usePageEnter.js';
 
 const prefersReducedMotion = () =>
@@ -234,6 +235,23 @@ export function Projection({
     finally { setDeletingId(null); }
   };
 
+  // Assistant IA : crée les événements validés (l'IA a proposé, l'utilisateur
+  // a confirmé/corrigé dans les cartes). On enchaîne les créations.
+  const handleAiEvents = async (events) => {
+    for (const ev of events) {
+      try {
+        await savePlannedEvent({
+          label: ev.label,
+          amount: ev.amount,
+          direction: ev.direction,
+          date: ev.date,
+          account_id: ev.account_id || null,
+          notes: '',
+        });
+      } catch { /* une création qui échoue ne bloque pas les autres */ }
+    }
+  };
+
   const fmtShort = (v) => {
     try { return fmt(v); } catch { return `${Math.round(v)} €`; }
   };
@@ -252,6 +270,11 @@ export function Projection({
         <button className="ds-btn primary" onClick={() => setEditor({})}>
           <Plus size={16}/> Ajouter un événement
         </button>
+      </div>
+
+      {/* Assistant IA — décrire en langage naturel ce qui va arriver */}
+      <div data-reveal>
+        <AiPlannerChat mode="events" accounts={liquidAccounts} onConfirmEvents={handleAiEvents}/>
       </div>
 
       {/* Controls */}
