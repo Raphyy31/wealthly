@@ -48,7 +48,7 @@ function readHashSection() {
   return null;
 }
 
-export function SettingsView({ members, accounts, accountBalances, saveMember, deleteMember, deleteAccount, updateAccount, mergeAccounts, transactions = [], transferIds, updateTags, setTransferOverride, exportData, importData, resetAllData, categories = [], reloadCategories, onCategoryCreated, onCategoryDeleted, showToast, fmt, baseCurrency = 'EUR', setBaseCurrency, rates, ratesDate, currentUser, onImport, recategorizeUncategorized, recategorizeTransfers, bankConnections = [], initialFocus, onConsumeInitialFocus }) {
+export function SettingsView({ members, accounts, accountBalances, saveMember, deleteMember, deleteAccount, updateAccount, mergeAccounts, transactions = [], transferIds, updateTags, setTransferOverride, exportData, importData, resetAllData, categories = [], reloadCategories, onCategoryCreated, onCategoryUpdated, onCategoryDeleted, showToast, fmt, baseCurrency = 'EUR', setBaseCurrency, rates, ratesDate, currentUser, onImport, recategorizeUncategorized, recategorizeTransfers, bankConnections = [], initialFocus, onConsumeInitialFocus }) {
   const { t } = useTranslation();
   const [editingMember, setEditingMember] = useState(null);
   const [activeSection, setActiveSection] = useState(() => readHashSection() || 'overview');
@@ -173,6 +173,7 @@ export function SettingsView({ members, accounts, accountBalances, saveMember, d
               setTransferOverride={setTransferOverride}
               reloadCategories={reloadCategories}
               onCategoryCreated={onCategoryCreated}
+              onCategoryUpdated={onCategoryUpdated}
               onCategoryDeleted={onCategoryDeleted}
               showToast={showToast}
               recategorizeUncategorized={recategorizeUncategorized}
@@ -272,7 +273,7 @@ function SettingsOverview({ currentUser, members = [], accounts = [], bankConnec
 // veut voir. Crossfade GSAP entre tabs. Compteurs en chip sur chaque tab.
 function RegLesPanel({
   t, categories, accounts, transactions, transferIds, updateTags, setTransferOverride,
-  reloadCategories, onCategoryCreated, onCategoryDeleted, showToast,
+  reloadCategories, onCategoryCreated, onCategoryUpdated, onCategoryDeleted, showToast,
   recategorizeUncategorized, recategorizeTransfers,
 }) {
   const [activeTab, setActiveTab] = useState('payees');
@@ -408,8 +409,10 @@ function RegLesPanel({
             <LearningToggle showToast={showToast} />
             <MyCategoriesSection
               categories={categories}
+              transactions={transactions}
               reloadCategories={reloadCategories}
               onCategoryCreated={onCategoryCreated}
+              onCategoryUpdated={onCategoryUpdated}
               onCategoryDeleted={onCategoryDeleted}
               showToast={showToast}
             />

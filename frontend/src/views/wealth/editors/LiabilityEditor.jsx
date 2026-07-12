@@ -8,6 +8,7 @@ import { LIABILITY_TYPES } from '../../../constants.js';
 import { ChipSelect } from '../../../components/ChipSelect.jsx';
 import { Combobox } from '../../../components/Combobox.jsx';
 import { ResponsiveModal } from '../../../components/ui/ResponsiveModal.jsx';
+import { AiPlannerChat } from '../../../components/AiPlannerChat.jsx';
 
 const LIABILITY_STEPS = [
   { key: 'main',     label: 'L’essentiel' },
@@ -34,6 +35,29 @@ export function LiabilityEditor({ liability, members, assets = [], onSave, onCan
   const step = LIABILITY_STEPS[stepIdx].key;
 
   const set = (k, v) => setDraft({ ...draft, [k]: v });
+  const applyAiLoan = (loan) => {
+    const capital = Number(loan.initial_capital) || 0;
+    const months = Number(loan.duration_months) || 0;
+    const annualRate = Number(loan.interest_rate);
+    let estimatedPayment = Number(loan.monthly_payment) || 0;
+    if (!estimatedPayment && capital > 0 && months > 0) {
+      const monthlyRate = Number.isFinite(annualRate) ? annualRate / 1200 : 0;
+      estimatedPayment = monthlyRate > 0
+        ? capital * monthlyRate / (1 - Math.pow(1 + monthlyRate, -months))
+        : capital / months;
+    }
+    setDraft((current) => ({
+      ...current,
+      name: loan.name || current.name,
+      type: loan.type === 'student_loan' ? 'other_loan' : (loan.type || current.type),
+      initialCapital: capital || current.initialCapital,
+      remainingCapital: capital || current.remainingCapital,
+      interestRate: loan.interest_rate ?? current.interestRate,
+      durationMonths: loan.duration_months ?? current.durationMonths,
+      monthlyPayment: estimatedPayment ? estimatedPayment.toFixed(2) : current.monthlyPayment,
+      startDate: loan.start_date || current.startDate,
+    }));
+  };
   const toggleMember = (mid) => {
     const ids = draft.memberIds || [];
     set('memberIds', ids.includes(mid) ? ids.filter(i => i !== mid) : [...ids, mid]);
@@ -79,6 +103,7 @@ export function LiabilityEditor({ liability, members, assets = [], onSave, onCan
           <div className="wizard-pane">
             {step === 'main' && (
               <>
+                {!liability.id && <AiPlannerChat mode="loan" onConfirmLoan={applyAiLoan}/>}
                 <label><span>Nom</span>
                   <input value={draft.name} onChange={(e) => set('name', e.target.value)} placeholder="Emprunt RP, Auto, …" autoFocus/>
                 </label>

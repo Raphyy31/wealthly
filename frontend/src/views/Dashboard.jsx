@@ -435,9 +435,13 @@ export function Dashboard({
   const countUpDone = useRef(false);
   useEffect(() => {
     if (countUpDone.current) return;
-    countUpDone.current = true;
     const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     if (reduce || typeof heroValue !== 'number' || !Number.isFinite(heroValue)) return;
+    // Les données arrivent après le premier rendu. Ne jamais consommer
+    // l'animation sur la valeur de chargement (0), sinon le grand total reste
+    // visuellement bloqué à zéro malgré une décomposition correcte dessous.
+    if (Math.abs(heroValue) < 0.005) return;
+    countUpDone.current = true;
     const target = heroValue, start = performance.now(), dur = 1100;
     let raf;
     setCountUp(0);
@@ -448,20 +452,14 @@ export function Dashboard({
       if (p < 1) raf = requestAnimationFrame(tick); else setCountUp(null);
     };
     raf = requestAnimationFrame(tick);
-    return () => { if (raf) cancelAnimationFrame(raf); };
-  }, []); // mount once — count up vers la valeur initiale (financier)
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      setCountUp(null);
+    };
+  }, [heroValue]);
   const heroDisplay = hover?.balance ?? (countUp != null ? countUp : heroValue);
 
   const kpis = [
-    {
-      label: 'Patrimoine financier net',
-      sub: otherDebtLabel
-        ? `Liquidités + Placements − ${otherDebtLabel}`
-        : 'Liquidités + Placements',
-      value: financialNet,
-      delta: null,
-      negative: financialNet < 0,
-    },
     {
       label: 'Patrimoine immo net',
       sub: 'Immobilier − Crédit immo',
@@ -1653,7 +1651,7 @@ function DashStyles() {
 }
 
 .kpi-strip {
-  display: grid; grid-template-columns: repeat(3, 1fr);
+  display: grid; grid-template-columns: repeat(2, 1fr);
   margin: 0 -28px;
   border-top: 1px solid var(--border);
 }

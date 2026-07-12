@@ -17,6 +17,7 @@ import {
 import { LineChart as LineChartIcon, AlertTriangle, Plus, Trash2, Pencil, X, Check, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
 import { ResponsiveModal } from '../components/ui/ResponsiveModal.jsx';
 import { AnimatedNumber } from '../components/AnimatedNumber.jsx';
+import { AiPlannerChat } from '../components/AiPlannerChat.jsx';
 import { usePageEnter } from '../hooks/usePageEnter.js';
 
 const prefersReducedMotion = () =>
@@ -234,6 +235,20 @@ export function Projection({
     finally { setDeletingId(null); }
   };
 
+  const handleAiEvents = async (events) => {
+    const failed = [];
+    let created = 0;
+    for (const event of events) {
+      try {
+        await savePlannedEvent({ ...event, notes: '' });
+        created += 1;
+      } catch {
+        failed.push(event);
+      }
+    }
+    return { created, failed };
+  };
+
   const fmtShort = (v) => {
     try { return fmt(v); } catch { return `${Math.round(v)} €`; }
   };
@@ -252,6 +267,10 @@ export function Projection({
         <button className="ds-btn primary" onClick={() => setEditor({})}>
           <Plus size={16}/> Ajouter un événement
         </button>
+      </div>
+
+      <div data-reveal>
+        <AiPlannerChat mode="events" accounts={liquidAccounts} onConfirmEvents={handleAiEvents}/>
       </div>
 
       {/* Controls */}

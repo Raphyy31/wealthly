@@ -1,11 +1,11 @@
 {
   "nav": {
-    "dashboard": "Vue d'ensemble",
+    "dashboard": "Accueil",
     "wealth": "Patrimoine",
-    "monthly": "Budget mensuel",
+    "monthly": "Budget",
     "monthlyShort": "Budget",
-    "transactions": "Transactions",
-    "transactionsShort": "Transactions",
+    "transactions": "Opérations",
+    "transactionsShort": "Opérations",
     "subscriptions": "Abonnements",
     "analysis": "Analyse",
     "goals": "Budgets",
@@ -134,9 +134,9 @@
     },
     "transactions": {
       "title": "Vos",
-      "titleAccent": "transactions.",
-      "subtitle": "Toutes vos opérations bancaires. Cliquez une catégorie pour la modifier.",
-      "searchPlaceholder": "Rechercher dans les libellés…"
+      "titleAccent": "opérations.",
+      "subtitle": "Suivez, classez et retrouvez chaque mouvement en un coup d’œil.",
+      "searchPlaceholder": "Rechercher un marchand, un libellé…"
     },
     "monthly": {
       "title": "Budget",
@@ -426,7 +426,7 @@
     "rules": {
       "title": "Catégories &",
       "titleAccent": "règles.",
-      "intro": "Définissez des règles de catégorisation pour vos transactions. Chaque règle est une regex insensible à la casse, testée sur le libellé.",
+      "intro": "Choisissez comment Yotori range vos opérations : marchands, catégories, sous-catégories et virements internes.",
       "cardTitle": "Règles de catégorisation",
       "rules_one": "{{count}} règle",
       "rules_other": "{{count}} règles",

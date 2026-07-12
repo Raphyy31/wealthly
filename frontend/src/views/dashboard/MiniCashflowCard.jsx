@@ -75,8 +75,8 @@ export function MiniCashflowCard({ thisMonthStats, onOpenMonthly, currentMonth, 
               if (saving > 0) {
                 return <>Vous épargnez <em>{formatEUR(saving, { abbr: false })}</em>.</>;
               }
-              if (deficit > 0 && income > 0) {
-                return <>Budget dépassé de <em>{formatEUR(deficit, { abbr: false })}</em>.</>;
+              if (deficit > 0) {
+                return <>Solde provisoire de <em>−{formatEUR(deficit, { abbr: false })}</em>.</>;
               }
               if (income - expenses > 0) {
                 return <>Excédent de <em>{formatEUR(income - expenses, { abbr: false })}</em> ce mois-ci.</>;

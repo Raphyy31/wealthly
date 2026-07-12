@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest';
 import {
   formatBankName, shiftMonthForDate, effectiveMonth,
   isExplicitBankTransfer, extractTransferContributor,
-  detectInternalTransfers, isJointAccountFunding,
+  buildBudgetAllocation, detectInternalTransfers, isJointAccount, isJointAccountFunding,
 } from './utils.js';
 
 describe('shiftMonthForDate (décalage fin de mois)', () => {
@@ -16,6 +16,31 @@ describe('shiftMonthForDate (décalage fin de mois)', () => {
   });
   test('gère le passage décembre → janvier', () => {
     expect(shiftMonthForDate('2026-12-30', 25)).toBe('2027-01');
+  });
+});
+
+describe('ventilation budget du mois affiché', () => {
+  const categories = [
+    { id: 'loan', kind: 'needs' },
+    { id: 'restaurant', kind: 'wants' },
+    { id: 'saving', kind: 'savings' },
+    { id: 'uncategorized', kind: 'wants' },
+  ];
+
+  test('réconcilie les montants préparés par la vue mensuelle', () => {
+    const result = buildBudgetAllocation([
+      { sharedAmount: -3814.37, categoryId: 'loan' },
+      { sharedAmount: -124, categoryId: 'restaurant' },
+      { sharedAmount: -50, categoryId: 'saving' },
+      { sharedAmount: 3000, categoryId: 'loan' },
+    ], categories);
+    expect(result).toEqual({ needs: 3814.37, wants: 124, savings: 50, unclassified: 0, total: 3988.37 });
+  });
+
+  test('n’invente pas une envie pour une transaction non catégorisée', () => {
+    const result = buildBudgetAllocation([{ sharedAmount: -42, categoryId: 'uncategorized' }], categories);
+    expect(result.unclassified).toBe(42);
+    expect(result.wants).toBe(0);
   });
 });
 
@@ -68,6 +93,13 @@ describe('financement du compte commun', () => {
   test('un virement entrant joint reste un financement même classé en revenu', () => {
     const tx = { amount: 3000, label: 'VIREMENT EN VOTRE FAVEUR DE MADAME MARTIN CAR', isManualCategory: true };
     expect(isJointAccountFunding(tx, { isJoint: true }, { type: 'income' })).toBe(true);
+  });
+
+  test('un ancien compte à plusieurs titulaires est reconnu comme compte commun', () => {
+    const account = { isJoint: false, memberIds: ['raphael', 'carla'] };
+    const tx = { amount: 3000, label: 'VIREMENT EN VOTRE FAVEUR DE MADAME MARTIN CAR' };
+    expect(isJointAccount(account)).toBe(true);
+    expect(isJointAccountFunding(tx, account, { type: 'income' })).toBe(true);
   });
 
   test('un choix explicite « pas un virement » autorise un vrai revenu', () => {

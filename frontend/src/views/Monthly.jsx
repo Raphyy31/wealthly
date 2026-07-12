@@ -23,11 +23,11 @@ import {
 import {
   Edit3, Target, TrendingUp, TrendingDown, PiggyBank, Wallet,
   ChevronDown, ChevronRight, X, BarChart3, Calendar,
-  ChevronLeft, Coins, Sparkles, Maximize2,
+  ChevronLeft, Coins, Sparkles, Maximize2, CalendarClock, ArrowRight,
 } from 'lucide-react';
 import {
   formatCurrency, formatDate, monthKey, effectiveMonth, getTransferType,
-  shiftMonthForDate, extractTransferContributor, isJointAccountFunding,
+  shiftMonthForDate, extractTransferContributor, isJointAccountFunding, buildBudgetAllocation,
 } from '../utils.js';
 import { useIncomeShift } from '../hooks/useIncomeShift.js';
 import { useIsNarrow } from '../hooks/useIsNarrow.js';
@@ -86,12 +86,12 @@ export function Monthly({
   refMonthScope = 'household',
   activeMember = null,
   activeMemberId = 'all',
-  fiftyThirtyTwenty,
   transferIds = new Set(),
   jointContribIds = new Set(),
   memberShare,
   currentMonth, fmt,
   onOpenSubscriptions,
+  onOpenTransactions,
 }) {
   // Le scope détermine le libellé affiché et désactive l'édition pour les
   // enfants (qui n'ont pas leur propre Mois type — leurs dépenses sont
@@ -190,9 +190,14 @@ export function Monthly({
         const acc = accounts.find(a => a.id === t.accountId);
         const share = acc ? memberShare(acc) : 1;
         const isJointContribution = jointContribIds.has(t.id) && !isHouseholdScope;
+        const budgetMonth = isJointContribution
+          ? shiftMonthForDate(t.date, incomeShift.pivotDay ?? 25)
+          : effectiveMonth(t, incomeShift, categories);
         return {
           ...t,
           sharedAmount: (t.amount || 0) * share,
+          budgetMonth,
+          civilMonth: monthKey(t.date),
           budgetKind: isJointContribution ? 'expense' : undefined,
           budgetCategoryId: isJointContribution ? 'joint-contribution' : undefined,
         };
@@ -223,11 +228,41 @@ export function Monthly({
       transactions: fundingTransactions.map(t => ({
         ...t,
         sharedAmount: t.amount || 0,
+        budgetMonth: t.effective_month_override || shiftMonthForDate(t.date, incomeShift.pivotDay ?? 25),
+        civilMonth: monthKey(t.date),
         budgetKind: 'funding',
         budgetCategoryId: 'joint-funding',
         fundingSource: extractTransferContributor(t, members) || 'Autre contributeur',
       })),
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [transactions, accounts, categories, members, selectedMonth, incomeShift, isHouseholdScope]);
+
+  const monthAttribution = useMemo(() => {
+    const shiftedIn = [];
+    const shiftedOut = [];
+    for (const transaction of transactions) {
+      if ((transaction.amount || 0) <= 0) continue;
+      const account = accounts.find(a => a.id === transaction.accountId);
+      const category = catFor(transaction.categoryId);
+      const funding = isHouseholdScope && isJointAccountFunding(transaction, account, category, incomeShift.shiftJointContrib);
+      if (!funding && category?.type !== 'income') continue;
+      const civilMonth = monthKey(transaction.date);
+      const targetMonth = transaction.effective_month_override || (funding
+        ? shiftMonthForDate(transaction.date, incomeShift.pivotDay ?? 25)
+        : effectiveMonth(transaction, incomeShift, categories));
+      if (targetMonth === civilMonth) continue;
+      const item = {
+        id: transaction.id,
+        date: transaction.date,
+        amount: Math.abs(transaction.amount || 0),
+        targetMonth,
+        label: funding ? (extractTransferContributor(transaction, members) || 'Versement') : (category?.name || transaction.label || 'Revenu'),
+      };
+      if (targetMonth === selectedMonth) shiftedIn.push(item);
+      if (civilMonth === selectedMonth) shiftedOut.push(item);
+    }
+    return { shiftedIn, shiftedOut };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transactions, accounts, categories, members, selectedMonth, incomeShift, isHouseholdScope]);
 
@@ -283,6 +318,14 @@ export function Monthly({
     t.balance = t.income - t.expense - t.saving;
     return t;
   }, [realByCat, savingsFromTransfers]);
+
+  // Même mois, même scope et mêmes exclusions que les cartes et le Sankey.
+  // Avant, cette barre venait de YotoriApp et restait bloquée sur le mois
+  // courant même lorsque l'utilisateur consultait mars, avril, etc.
+  const fiftyThirtyTwenty = useMemo(
+    () => buildBudgetAllocation(monthTx, categories),
+    [monthTx, categories]
+  );
 
   // KPI strip
   const isCurrentMonth = selectedMonth === currentMonth;
@@ -815,7 +858,7 @@ export function Monthly({
         </div>
         <div className="mon-actions">
           <button className="ds-btn" onClick={() => setShow5030(true)}>
-            <Target size={14}/> {isNarrow ? '' : '50 / 30 / 20'}
+            <Target size={14}/> {isNarrow ? 'Répartition' : '50 / 30 / 20'}
           </button>
           {!isChildScope && (
             <button className="ds-btn primary" onClick={() => setShowEditor(true)}>
@@ -846,6 +889,10 @@ export function Monthly({
         />
       )}
 
+      {!isChildScope && (monthAttribution.shiftedIn.length > 0 || monthAttribution.shiftedOut.length > 0) && (
+        <MonthAttributionNotice attribution={monthAttribution} selectedMonth={selectedMonth} fmt={fmt}/>
+      )}
+
       {!isChildScope && (hasRefMonth || monthTx.length > 0 || jointFunding.total > 0) && (
         <Kpi
           realTotals={realTotals}
@@ -866,8 +913,8 @@ export function Monthly({
            Surfacé en haut pour que la lecture besoins/envies/épargne soit
            immédiate. Le détail (recos + comparaison mois type) reste dans
            la modale via le bouton du header. */}
-      {!isChildScope && fiftyThirtyTwenty && (fiftyThirtyTwenty.needs || fiftyThirtyTwenty.wants || fiftyThirtyTwenty.savings) > 0 && (
-        <FiftyThirtyTwentyStrip ftt={fiftyThirtyTwenty} onOpenDetails={() => setShow5030(true)} fmt={fmt}/>
+      {!isChildScope && fiftyThirtyTwenty && (fiftyThirtyTwenty.needs || fiftyThirtyTwenty.wants || fiftyThirtyTwenty.savings || fiftyThirtyTwenty.unclassified) > 0 && (
+        <FiftyThirtyTwentyStrip ftt={fiftyThirtyTwenty} onOpenDetails={() => setShow5030(true)} onOpenTransactions={onOpenTransactions} fmt={fmt}/>
       )}
 
       {/* Bloc abonnements — argument de vente mis en scène dans le budget mensuel */}
@@ -1001,6 +1048,7 @@ export function Monthly({
           refMonth={refMonth}
           fiftyThirtyTwenty={fiftyThirtyTwenty}
           categories={categories}
+          periodLabel={monthLabel(selectedMonth)}
           fmt={fmt}
           onClose={() => setShow5030(false)}
         />
@@ -1013,14 +1061,16 @@ export function Monthly({
 // ──────────────────────────────────────────────────────────────────────
 // Strip 50/30/20 inline — résumé compact sous le picker. Pour le détail
 // (cibles, recommandations, comparaison mois type vs courant) → modale.
-function FiftyThirtyTwentyStrip({ ftt, onOpenDetails, fmt }) {
-  const total = (ftt?.needs || 0) + (ftt?.wants || 0) + (ftt?.savings || 0);
+function FiftyThirtyTwentyStrip({ ftt, onOpenDetails, onOpenTransactions, fmt }) {
+  const total = (ftt?.needs || 0) + (ftt?.wants || 0) + (ftt?.savings || 0) + (ftt?.unclassified || 0);
   if (!total) return null;
   const pct = (v) => Math.round((v / total) * 100);
   const pN = pct(ftt.needs || 0);
   const pW = pct(ftt.wants || 0);
-  const pS = 100 - pN - pW;
-  const onTarget = pN <= 55 && pW <= 35 && pS >= 15;
+  const pU = pct(ftt.unclassified || 0);
+  const pS = Math.max(0, 100 - pN - pW - pU);
+  const onTarget = !ftt.unclassified && pN <= 55 && pW <= 35 && pS >= 15;
+  const status = ftt.unclassified ? 'à compléter' : onTarget ? 'dans la cible' : 'à ajuster';
   return (
     <section
       className="mon-5030-strip"
@@ -1031,18 +1081,50 @@ function FiftyThirtyTwentyStrip({ ftt, onOpenDetails, fmt }) {
       title="Voir l'analyse détaillée"
     >
       <div className="mon-5030-head">
-        <span className="ds-micro">50 / 30 / 20 · {onTarget ? 'dans la cible' : 'à ajuster'}</span>
+        <span className="ds-micro">50 / 30 / 20 · {status}</span>
         <span className="mon-5030-detail-link">détails →</span>
       </div>
       <div className="mon-5030-bar" aria-hidden>
         <div className="mon-5030-seg needs" style={{ width: pN + '%' }}>{pN >= 8 && <span>{pN}%</span>}</div>
         <div className="mon-5030-seg wants" style={{ width: pW + '%' }}>{pW >= 8 && <span>{pW}%</span>}</div>
         <div className="mon-5030-seg savings" style={{ width: pS + '%' }}>{pS >= 8 && <span>{pS}%</span>}</div>
+        {pU > 0 && <div className="mon-5030-seg unclassified" style={{ width: pU + '%' }}>{pU >= 8 && <span>{pU}%</span>}</div>}
       </div>
       <div className="mon-5030-legend ds-micro">
         <span><i className="dot needs"/> Besoins {fmt(ftt.needs || 0)}</span>
         <span><i className="dot wants"/> Envies {fmt(ftt.wants || 0)}</span>
         <span><i className="dot savings"/> Épargne {fmt(ftt.savings || 0)}</span>
+        {!!ftt.unclassified && <button className="mon-5030-classify" onClick={(event) => { event.stopPropagation(); onOpenTransactions?.(); }}><i className="dot unclassified"/> À classer {fmt(ftt.unclassified)} <ArrowRight size={12}/></button>}
+      </div>
+    </section>
+  );
+}
+
+function MonthAttributionNotice({ attribution, selectedMonth, fmt }) {
+  const renderItems = (items) => items.slice(0, 3).map(item => (
+    <span className="mon-attribution-chip" key={item.id}>
+      <strong>{item.label}</strong>
+      <span>{(item.date || '').slice(8, 10)}/{(item.date || '').slice(5, 7)}</span>
+      <span className="num">{fmt(item.amount)}</span>
+    </span>
+  ));
+  const inTotal = attribution.shiftedIn.reduce((sum, item) => sum + item.amount, 0);
+  const outTotal = attribution.shiftedOut.reduce((sum, item) => sum + item.amount, 0);
+  return (
+    <section className="mon-attribution" data-reveal>
+      <div className="mon-attribution-heading">
+        <CalendarClock size={16}/>
+        <div><strong>Comment {monthHumanLabel(selectedMonth)} est calculé</strong><span>Les versements reçus à partir du jour pivot financent le mois suivant.</span></div>
+      </div>
+      <div className="mon-attribution-rows">
+        {attribution.shiftedIn.length > 0 && <div className="mon-attribution-row is-in">
+          <span className="mon-attribution-label">Ajouté à ce mois <strong className="num">+{fmt(inTotal)}</strong></span>
+          <div className="mon-attribution-chips">{renderItems(attribution.shiftedIn)}</div>
+        </div>}
+        {attribution.shiftedOut.length > 0 && <div className="mon-attribution-row is-out">
+          <span className="mon-attribution-label">Finance {monthHumanLabel(attribution.shiftedOut[0].targetMonth)} <strong className="num">{fmt(outTotal)}</strong></span>
+          <div className="mon-attribution-chips">{renderItems(attribution.shiftedOut)}</div>
+        </div>}
       </div>
     </section>
   );
@@ -1437,7 +1519,12 @@ function MonthlyCompareTable({ sections, monthTx, fmt, catFor, expandedRows, tog
                                 <span className="mon-compare-tx-date">
                                   {(t.date || '').slice(8, 10)}/{(t.date || '').slice(5, 7)}
                                 </span>
-                                <span className="mon-compare-tx-label" title={t.label}>{t.label || t.merchant || '—'}</span>
+                                <span className="mon-compare-tx-label" title={t.label}>
+                                  <span>{t.label || t.merchant || '—'}</span>
+                                  {t.budgetMonth && t.civilMonth && t.budgetMonth !== t.civilMonth && (
+                                    <span className="mon-compare-tx-shift">Affecté à {monthHumanLabel(t.budgetMonth)}</span>
+                                  )}
+                                </span>
                                 {isSubCat && txCat && (
                                   <span className="mon-compare-tx-subtag" title={txCat.name}>
                                     {txCat.icon} {txCat.name}

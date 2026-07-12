@@ -1431,6 +1431,10 @@ html, body {
    masque ses items. En rail réduit, toutes les icônes restent visibles,
    séparées par le header (gap) → navigation claire au petit format. */
 .ws-sidebar:hover .ws-nav-section.is-collapsed .ws-nav-section-items { display: none; }
+/* Le rail fermé reste volontairement minimal : les outils avancés et les
+   comptes apparaissent seulement quand l'utilisateur ouvre la navigation. */
+.ws-sidebar:not(:hover) .ws-nav-section--secondary,
+.ws-sidebar:not(:hover) .ws-nav-section--accounts { display: none; }
 /* Chevron caché en rail (pas de label lisible de toute façon) */
 .ws-nav-group-chev { display: none; }
 .ws-sidebar:hover .ws-nav-group-chev { display: block; }
@@ -1450,6 +1454,8 @@ html, body {
   transition: background var(--t-fast), color var(--t-fast);
 }
 .ws-nav-group-cta:hover { background: var(--bg-hover); color: var(--accent); }
+.ws-account-add { color: var(--accent) !important; border: 1px dashed var(--border) !important; margin-bottom: 3px; }
+.ws-account-add:hover { border-color: var(--accent) !important; background: var(--accent-soft) !important; }
 
 /* Mes banques (sidebar 2026-05-21) — section retiree au profit de
    l'enrichissement direct des badges COMPTES via BankMark. CSS gardee
@@ -2628,10 +2634,11 @@ html, body {
   font-variant-numeric: tabular-nums;
 }
 .mon-compare-tx-label {
+  display: flex; align-items: center; gap: 7px; min-width: 0;
   font: 400 13px/1.3 var(--font-sans);
   color: var(--ink);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.mon-compare-tx-label > span:first-child { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mon-compare-tx-amount {
   font: 500 13px/1 var(--font-sans);
   font-variant-numeric: tabular-nums;
@@ -3624,12 +3631,14 @@ html, body {
 .ftt-seg.needs { background: var(--d2, var(--positive)); }
 .ftt-seg.wants { background: var(--d3, var(--warning)); }
 .ftt-seg.savings { background: var(--accent); }
+.ftt-seg.unclassified { background: var(--ink-3); }
 .ftt-bar-amounts { display: flex; gap: 6px; margin-top: 4px; color: var(--ink-3); }
 .ftt-legend { display: flex; gap: 16px; margin: 12px 0 8px; color: var(--ink-3); }
 .ftt-legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
 .ftt-legend .dot.needs { background: var(--d2, var(--positive)); }
 .ftt-legend .dot.wants { background: var(--d3, var(--warning)); }
 .ftt-legend .dot.savings { background: var(--accent); }
+.ftt-legend .dot.unclassified { background: var(--ink-3); }
 .ftt-reco {
   background: var(--bg-sunk); border: 1px solid var(--border); border-radius: var(--radius-md);
   padding: 12px 14px; margin-top: 14px;
@@ -3675,6 +3684,7 @@ html, body {
 .mon-5030-seg.needs    { background: var(--d2); }
 .mon-5030-seg.wants    { background: var(--d3); }
 .mon-5030-seg.savings  { background: var(--accent); }
+.mon-5030-seg.unclassified { background: var(--ink-3); }
 .mon-5030-legend {
   display: flex; gap: 16px; flex-wrap: wrap;
   margin-top: 9px; color: var(--ink-3);
@@ -3686,6 +3696,88 @@ html, body {
 .mon-5030-legend .dot.needs   { background: var(--d2); }
 .mon-5030-legend .dot.wants   { background: var(--d3); }
 .mon-5030-legend .dot.savings { background: var(--accent); }
+.mon-5030-legend .dot.unclassified { background: var(--ink-3); }
+.mon-5030-classify { display: inline-flex; align-items: center; gap: 4px; padding: 3px 7px; border: 1px solid var(--border); border-radius: 999px; background: var(--bg-sunk); color: var(--ink-2); font: inherit; cursor: pointer; }
+.mon-5030-classify:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Explication des flux décalés par le jour pivot */
+.mon-attribution { margin: 0 0 14px; padding: 13px 15px; border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border)); border-radius: 12px; background: color-mix(in srgb, var(--accent-soft) 35%, var(--bg-elev)); }
+.mon-attribution-heading { display: flex; align-items: flex-start; gap: 9px; color: var(--accent); }
+.mon-attribution-heading > div { display: flex; flex-direction: column; gap: 2px; }
+.mon-attribution-heading strong { color: var(--ink); font-size: 12.5px; }
+.mon-attribution-heading span { color: var(--ink-3); font-size: 11px; }
+.mon-attribution-rows { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; margin-top: 10px; }
+.mon-attribution-row { min-width: 0; padding: 9px 10px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg-elev); }
+.mon-attribution-row:only-child { grid-column: 1 / -1; }
+.mon-attribution-label { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 7px; color: var(--ink-2); font-size: 11px; }
+.mon-attribution-row.is-in .mon-attribution-label strong { color: var(--positive); }
+.mon-attribution-row.is-out .mon-attribution-label strong { color: var(--ink); }
+.mon-attribution-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.mon-attribution-chip { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; padding: 4px 6px; border-radius: 6px; background: var(--bg-sunk); color: var(--ink-3); font-size: 10px; }
+.mon-attribution-chip strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-2); }
+.mon-compare-tx-shift { padding: 3px 6px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 9.5px; white-space: nowrap; }
+@media (max-width: 720px) {
+  .mon-attribution-rows { grid-template-columns: 1fr; }
+  .mon-attribution-heading span { line-height: 1.35; }
+  .mon-compare-tx-label { align-items: flex-start; flex-direction: column; gap: 3px; }
+}
+
+/* Réglages — gestion lisible des catégories et sous-catégories */
+.settings-categories { margin-bottom: 16px; overflow: hidden; }
+.settings-categories-header { align-items: flex-start; }
+.settings-categories-header h3 { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.settings-categories-header h3 svg { color: var(--accent); }
+.settings-categories-header p { margin: 0; max-width: 620px; color: var(--ink-3); font-size: 12.5px; line-height: 1.45; }
+.settings-categories-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 14px 0 10px; }
+.settings-categories-search { flex: 1; min-width: 260px; display: flex; align-items: center; gap: 8px; padding: 0 10px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg-elev); color: var(--ink-3); }
+.settings-categories-search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.settings-categories-search input { flex: 1; min-width: 0; height: 38px; padding: 0; border: 0; outline: 0; background: transparent; color: var(--ink); font: 400 13px var(--font-sans); }
+.settings-categories-search button { display: inline-flex; border: 0; background: transparent; color: var(--ink-3); cursor: pointer; }
+.settings-categories-filters { display: inline-flex; gap: 3px; padding: 3px; border-radius: 9px; background: var(--bg-sunk); }
+.settings-categories-filters button { padding: 7px 9px; border: 0; border-radius: 7px; background: transparent; color: var(--ink-3); font: 500 11.5px var(--font-sans); cursor: pointer; }
+.settings-categories-filters button.is-active { background: var(--bg-elev); color: var(--accent); box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+.settings-category-summary { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; color: var(--ink-3); font-size: 11.5px; }
+.settings-category-summary span { display: inline-flex; align-items: center; gap: 5px; }
+.settings-category-summary strong { color: var(--ink-2); }
+.settings-category-list { display: flex; flex-direction: column; gap: 7px; }
+.settings-category-group { border: 1px solid var(--border); border-radius: 11px; overflow: hidden; background: var(--bg-elev); }
+.settings-category-parent { display: flex; align-items: center; gap: 8px; padding: 9px 10px; }
+.settings-category-expand { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 0; border: 0; background: transparent; color: var(--ink); text-align: left; cursor: pointer; }
+.settings-category-expand > svg { color: var(--ink-3); transition: transform .16s ease; }
+.settings-category-expand > svg.is-open { transform: rotate(180deg); }
+.settings-category-icon { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 9px; font-size: 17px; flex-shrink: 0; }
+.settings-category-copy { display: flex; flex: 1; min-width: 135px; flex-direction: column; gap: 2px; }
+.settings-category-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; }
+.settings-category-copy small { color: var(--ink-3); font-size: 10.5px; }
+.settings-category-kind { display: inline-flex; padding: 3px 7px; border-radius: 999px; background: var(--bg-sunk); color: var(--ink-2); font: 600 9.5px var(--font-sans); text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
+.settings-category-kind.is-needs { background: color-mix(in srgb, var(--d2) 14%, transparent); color: var(--positive); }
+.settings-category-kind.is-wants { background: color-mix(in srgb, var(--d3) 14%, transparent); color: var(--warning-text, #8a5b00); }
+.settings-category-kind.is-savings { background: var(--accent-soft); color: var(--accent); }
+.settings-category-usage { min-width: 75px; color: var(--ink-3); font-size: 10.5px; text-align: right; white-space: nowrap; }
+.settings-category-actions, .settings-subcategory-actions { display: flex; align-items: center; gap: 4px; }
+.settings-category-actions .ds-btn.sm { padding: 6px 9px; font-size: 10.5px; }
+.settings-subcategory-list { padding: 4px 10px 9px 54px; border-top: 1px solid var(--border); background: var(--bg-sunk); }
+.settings-subcategory-row { min-height: 38px; display: flex; align-items: center; gap: 8px; padding: 5px 7px; border-bottom: 1px dashed var(--border); }
+.settings-subcategory-row:last-child { border-bottom: 0; }
+.settings-subcategory-icon { width: 22px; text-align: center; }
+.settings-subcategory-name { flex: 1; min-width: 120px; color: var(--ink-2); font-size: 12.5px; }
+.settings-category-protected { display: inline-flex; align-items: center; gap: 4px; min-width: 58px; color: var(--ink-3); font-size: 9.5px; text-transform: uppercase; letter-spacing: .04em; }
+.settings-subcategory-empty { width: 100%; padding: 9px; display: flex; align-items: center; justify-content: center; gap: 6px; border: 1px dashed var(--border-strong); border-radius: 8px; background: transparent; color: var(--accent); font: 500 11.5px var(--font-sans); cursor: pointer; }
+.settings-categories-empty { min-height: 130px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; border: 1px dashed var(--border); border-radius: 11px; color: var(--ink-3); font-size: 12px; }
+.settings-categories-empty strong { color: var(--ink); font-size: 13px; }
+@media (max-width: 760px) {
+  .settings-categories-header { flex-direction: column; }
+  .settings-categories-header .ds-btn { width: 100%; justify-content: center; }
+  .settings-categories-search { min-width: 100%; }
+  .settings-categories-filters { width: 100%; overflow-x: auto; }
+  .settings-category-parent { align-items: flex-start; flex-wrap: wrap; }
+  .settings-category-expand { width: 100%; }
+  .settings-category-expand .settings-category-kind, .settings-category-expand .settings-category-usage { display: none; }
+  .settings-category-actions { width: 100%; justify-content: flex-end; }
+  .settings-subcategory-list { padding-left: 12px; }
+  .settings-subcategory-row { flex-wrap: wrap; }
+  .settings-subcategory-row .settings-category-usage { display: none; }
+}
 
 /* Month picker (replaces the long carousel) */
 .mon-picker-wrap { position: relative; align-self: flex-start; }
@@ -3984,6 +4076,25 @@ html, body {
   color: var(--accent);
   border-color: var(--accent-line);
 }
+.tx-sort-select,
+.tx-sort-direction {
+  min-height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg-elev);
+  color: var(--ink-2);
+  font: 500 12px var(--font-sans);
+}
+.tx-sort-select { padding: 6px 30px 6px 10px; cursor: pointer; }
+.tx-sort-direction {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.tx-sort-select:hover,
+.tx-sort-direction:hover { border-color: var(--border-strong); color: var(--ink); }
 .tx-sort-meta {
   margin-left: auto;
   font: 500 11px var(--font-mono);
@@ -4052,18 +4163,15 @@ html, body {
 .tx-day-rows {
   display: flex; flex-direction: column;
 }
-/* Shared grid template — applied to col-head AND each card so columns align.
-   44px icon · 1fr libellé · 170px cat · 150px sub · 120px acc · 80px actions · 110px amount.
-   Actions column reserves a fixed slot so columns never shift between rows. */
+/* Journal bancaire : le libellé et son compte forment un bloc, la
+   classification un second. On évite ainsi l'effet tableur à sept colonnes. */
 .tx-feed-colhead,
 .tx-card {
   display: grid;
   grid-template-columns:
     44px
     minmax(0, 1fr)
-    170px
-    150px
-    120px
+    minmax(220px, 300px)
     80px
     110px;
   align-items: center;
@@ -4092,6 +4200,13 @@ html, body {
 .tx-card-transfer { opacity: 0.78; }
 .tx-card-col { min-width: 0; display: flex; align-items: center; }
 .tx-card-col-empty { color: var(--ink-mute); font-size: 12px; padding-left: 4px; }
+.tx-card-classification {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
 
 .tx-card-icon {
   width: 44px; height: 44px;
@@ -4118,6 +4233,15 @@ html, body {
      Truncation happens on the inner .tx-card-label-text span. */
 }
 .tx-card-payee { color: var(--ink-3); font-weight: 400; }
+.tx-card-account {
+  display: block;
+  margin-top: 5px;
+  color: var(--ink-3);
+  font: 500 11px var(--font-sans);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .tx-cat-source-dot {
   display: inline-block;
   width: 6px; height: 6px;
@@ -5140,7 +5264,7 @@ html, body {
   }
   .tx-card-col-cat,
   .tx-card-col-sub,
-  .tx-card-col-acc,
+  .tx-card-classification,
   .tx-card-actions { display: none; }
   .tx-card-icon { width: 40px; height: 40px; font-size: 16px; }
   .tx-card-label { font-size: 13px; }

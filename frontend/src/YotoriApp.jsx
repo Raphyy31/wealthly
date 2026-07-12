@@ -19,7 +19,7 @@ import {
   accountIncludeInNetWorth, accountCountsAsIncome, accountCountsAsExpense,
   detectInternalTransfers, convertCurrency, ACCOUNT_ROLES, bankColor,
   fmtAmount, matchTransferRule, buildTransferDestTag, formatBankName,
-  shiftMonthForDate, isJointAccountFunding,
+  shiftMonthForDate, isJointAccount, isJointAccountFunding,
 } from './utils.js';
 import { useRates } from './hooks/useRates.js';
 import { useBaseCurrency } from './hooks/useBaseCurrency.js';
@@ -305,8 +305,9 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
   // Sections nav repliables (accordéon) — état persisté. Une section repliée
   // n'affiche plus ses items en mode déployé → sidebar moins entassée.
   const [navCollapsed, setNavCollapsed] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('yotori:nav_collapsed') || '{}') || {}; }
-    catch { return {}; }
+    const defaults = { explore: true, accounts: true };
+    try { return { ...defaults, ...(JSON.parse(localStorage.getItem('yotori:nav_collapsed') || '{}') || {}) }; }
+    catch { return defaults; }
   });
   const toggleNavGroup = useCallback((key) => {
     setNavCollapsed((prev) => {
@@ -315,6 +316,15 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
       return next;
     });
   }, []);
+  useEffect(() => {
+    if (!['subscriptions', 'projection', 'dca', 'immo', 'tax'].includes(view)) return;
+    setNavCollapsed((prev) => {
+      if (!prev.explore) return prev;
+      const next = { ...prev, explore: false };
+      try { localStorage.setItem('yotori:nav_collapsed', JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, [view]);
   // C4 — workspace switcher (member dropdown, kept for fallback / future)
   const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
   // Mode Presentation auto-tour (pitch investisseurs 2026-05). Trigger via
@@ -895,13 +905,13 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
   //     joints (= ses comptes perso). Les comptes joints restent en Famille.
   const visibleAccountIds = useMemo(() => {
     if (activeMemberId === 'all') {
-      const joints = accounts.filter(a => a.isJoint);
+      const joints = accounts.filter(isJointAccount);
       const pool = joints.length > 0 ? joints : accounts;
       return new Set(pool.map(a => a.id));
     }
     return new Set(
       accounts
-        .filter(a => !a.isJoint && (a.memberIds || []).includes(activeMemberId))
+        .filter(a => !isJointAccount(a) && (a.memberIds || []).includes(activeMemberId))
         .map(a => a.id)
     );
   }, [accounts, activeMemberId]);
@@ -1137,7 +1147,7 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
   // contribution du conjoint dont le compte source n'est pas dans l'app.
   const jointContribIds = useMemo(() => {
     if (!incomeShiftSettings.shiftJointContrib) return new Set();
-    const jointAccIds = new Set(accounts.filter(a => a.isJoint).map(a => a.id));
+    const jointAccIds = new Set(accounts.filter(isJointAccount).map(a => a.id));
     if (jointAccIds.size === 0) return new Set();
     const txById = new Map(transactions.map(t => [t.id, t]));
     const auto = detectInternalTransfers(transactions, { requireLabelHint: true });
@@ -1326,25 +1336,6 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
   }, []);
 
   const thisMonthStats = useMemo(() => monthlyEvolution.find(x => x.month === currentMonth) || { income: 0, expenses: 0, net: 0, fixed: 0, variable: 0, savings: 0 }, [monthlyEvolution, currentMonth]);
-
-  // 50/30/20 breakdown
-  const fiftyThirtyTwenty = useMemo(() => {
-    const breakdown = { needs: 0, wants: 0, savings: 0, total: 0 };
-    visibleTransactions.forEach(t => {
-      if (monthKey(t.date) !== currentMonth) return;
-      const acc = accounts.find(a => a.id === t.accountId);
-      const share = acc ? memberShare(acc) : 1;
-      const cat = categories.find(c => c.id === t.categoryId);
-      if (t.amount < 0) {
-        const abs = Math.abs(t.amount) * share;
-        if (cat?.kind === 'needs') breakdown.needs += abs;
-        else if (cat?.kind === 'wants') breakdown.wants += abs;
-        else if (cat?.kind === 'savings') breakdown.savings += abs;
-        breakdown.total += abs;
-      }
-    });
-    return breakdown;
-  }, [visibleTransactions, accounts, categories, currentMonth, memberShare]);
 
   // Category breakdown for current month, with previous 3-month avg
   const categoryAnalysis = useMemo(() => {
@@ -3387,47 +3378,20 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
           <nav className="ws-nav" aria-label="Navigation principale" ref={navRef}>
             <span className="ws-nav-indicator" ref={navIndicatorRef} aria-hidden="true"/>
 
-            {/* Sections repliables (accordéon) — header cliquable + chevron.
-                En rail réduit, seules les icônes des items s'affichent,
-                séparées par section. Nav links en <a href> pour supporter
-                Cmd/Ctrl/Middle-click "ouvrir dans un nouvel onglet". */}
-
-            {/* PILOTAGE */}
-            <div className={`ws-nav-section ${navCollapsed.pilotage ? 'is-collapsed' : ''}`}>
-              <button type="button" className="ws-nav-group ws-nav-group-toggle"
-                      onClick={() => toggleNavGroup('pilotage')} aria-expanded={!navCollapsed.pilotage}
-                      aria-controls="ws-nav-pilotage" aria-label={t('nav.group_pilotage')}>
-                <span className="ws-nav-group-label">{t('nav.group_pilotage')}</span>
-                <ChevronDown size={13} className="ws-nav-group-chev"/>
-              </button>
-              <div className="ws-nav-section-items" id="ws-nav-pilotage">
+            {/* Quatre intentions principales, toujours visibles. */}
+            <div className="ws-nav-section ws-nav-section--core">
+              <div className="ws-nav-group"><span className="ws-nav-group-label">Essentiel</span></div>
+              <div className="ws-nav-section-items">
                 <a href="#/dashboard" title={t('nav.dashboard')}
                    onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('dashboard'); }}
                    className={view === 'dashboard' ? 'on' : ''}>
                   <Activity size={16}/> <span>{t('nav.dashboard')}</span>
-                </a>
-                <a href="#/wealth" title={t('nav.wealth')}
-                   onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('wealth'); }}
-                   className={view === 'wealth' ? 'on' : ''}>
-                  <Landmark size={16}/> <span>{t('nav.wealth')}</span>
                 </a>
                 <a href="#/transactions" title={t('nav.transactions')}
                    onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('transactions'); }}
                    className={view === 'transactions' ? 'on' : ''}>
                   <BarChart3 size={16}/> <span>{t('nav.transactions')}</span>
                 </a>
-              </div>
-            </div>
-
-            {/* BUDGET & PRÉVISION */}
-            <div className={`ws-nav-section ${navCollapsed.budget ? 'is-collapsed' : ''}`}>
-              <button type="button" className="ws-nav-group ws-nav-group-toggle"
-                      onClick={() => toggleNavGroup('budget')} aria-expanded={!navCollapsed.budget}
-                      aria-controls="ws-nav-budget" aria-label={t('nav.group_budget')}>
-                <span className="ws-nav-group-label">{t('nav.group_budget')}</span>
-                <ChevronDown size={13} className="ws-nav-group-chev"/>
-              </button>
-              <div className="ws-nav-section-items" id="ws-nav-budget">
                 <a href="#/monthly" title={t('nav.monthly')}
                    onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('monthly'); }}
                    className={view === 'monthly' ? 'on' : ''}>
@@ -3438,6 +3402,23 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
                     </span>
                   )}
                 </a>
+                <a href="#/wealth" title={t('nav.wealth')}
+                   onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('wealth'); }}
+                   className={view === 'wealth' ? 'on' : ''}>
+                  <Landmark size={16}/> <span>{t('nav.wealth')}</span>
+                </a>
+              </div>
+            </div>
+
+            {/* Fonctions avancées : présentes, mais hors du chemin principal. */}
+            <div className={`ws-nav-section ws-nav-section--secondary ${navCollapsed.explore ? 'is-collapsed' : ''}`}>
+              <button type="button" className="ws-nav-group ws-nav-group-toggle"
+                      onClick={() => toggleNavGroup('explore')} aria-expanded={!navCollapsed.explore}
+                      aria-controls="ws-nav-explore" aria-label="Explorer">
+                <span className="ws-nav-group-label">Explorer</span>
+                <ChevronDown size={13} className="ws-nav-group-chev"/>
+              </button>
+              <div className="ws-nav-section-items" id="ws-nav-explore">
                 <a href="#/subscriptions" title={t('nav.subscriptions')}
                    onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('subscriptions'); }}
                    className={view === 'subscriptions' ? 'on' : ''}>
@@ -3448,18 +3429,6 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
                    className={view === 'projection' ? 'on' : ''}>
                   <LineChartIcon size={16}/> <span>{t('nav.projection')}</span>
                 </a>
-              </div>
-            </div>
-
-            {/* INVESTIR */}
-            <div className={`ws-nav-section ${navCollapsed.invest ? 'is-collapsed' : ''}`}>
-              <button type="button" className="ws-nav-group ws-nav-group-toggle"
-                      onClick={() => toggleNavGroup('invest')} aria-expanded={!navCollapsed.invest}
-                      aria-controls="ws-nav-invest" aria-label={t('nav.group_invest')}>
-                <span className="ws-nav-group-label">{t('nav.group_invest')}</span>
-                <ChevronDown size={13} className="ws-nav-group-chev"/>
-              </button>
-              <div className="ws-nav-section-items" id="ws-nav-invest">
                 <a href="#/dca" title={t('nav.dca')}
                    onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); setView('dca'); }}
                    className={view === 'dca' ? 'on' : ''}>
@@ -3478,21 +3447,17 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
               </div>
             </div>
 
-            {/* COMPTES — non repliable (bouton + d'ajout) */}
-            <div className="ws-nav-section">
-              <div className="ws-nav-group ws-nav-group--with-cta">
+            <div className={`ws-nav-section ws-nav-section--accounts ${navCollapsed.accounts ? 'is-collapsed' : ''}`}>
+              <button type="button" className="ws-nav-group ws-nav-group-toggle"
+                      onClick={() => toggleNavGroup('accounts')} aria-expanded={!navCollapsed.accounts}
+                      aria-controls="ws-nav-accounts" aria-label={t('nav.group_accounts')}>
                 <span className="ws-nav-group-label">{t('nav.group_accounts')}</span>
-                <button
-                  type="button"
-                  className="ws-nav-group-cta"
-                  onClick={() => setAddBankAccountStep('choice')}
-                  title="Ajouter un compte bancaire (DSP2 ou manuel)"
-                  aria-label="Ajouter un compte bancaire"
-                >
-                  <Plus size={11}/>
+                <ChevronDown size={13} className="ws-nav-group-chev"/>
+              </button>
+              <div className="ws-nav-section-items" id="ws-nav-accounts">
+                <button className="ws-account-add" onClick={() => setAddBankAccountStep('choice')}>
+                  <Plus size={15}/><span>Ajouter un compte</span>
                 </button>
-              </div>
-              <div className="ws-nav-section-items">
                 {(accounts || []).map(a => {
                   const balance = accountBalances?.[a.id];
                   return (
@@ -3515,8 +3480,7 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
               </div>
             </div>
 
-            {/* CONFIGURATION — non repliable */}
-            <div className="ws-nav-section">
+            <div className="ws-nav-section ws-nav-section--settings">
               <div className="ws-nav-group">
                 <span className="ws-nav-group-label">{t('nav.group_config')}</span>
               </div>
@@ -3697,12 +3661,12 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
                 refMonth={refMonth} saveRefMonth={saveRefMonth}
                 refMonthScope={refMonthScope}
                 activeMember={activeMember} activeMemberId={activeMemberId}
-                fiftyThirtyTwenty={fiftyThirtyTwenty}
                 transferIds={transferIds}
                 jointContribIds={jointContribIds}
                 memberShare={memberShare}
                 currentMonth={currentMonth} fmt={fmt}
                 onOpenSubscriptions={() => setView('subscriptions')}
+                onOpenTransactions={() => setView('transactions')}
               />
             )}
             {view === 'cashflow' && (
@@ -3810,6 +3774,11 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
                 return [...prev, mapped];
               });
             }}
+            onCategoryUpdated={(apiCat) => {
+              if (!apiCat) return;
+              const mapped = categoryFromApi(apiCat);
+              setCategories(prev => prev.map(category => category.id === mapped.id ? mapped : category));
+            }}
             onCategoryDeleted={(slug) => {
               setCategories(prev => prev.filter(c => c.id !== slug && c.parent !== slug));
             }}
@@ -3863,12 +3832,26 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
                       aria-label={t('actions.close')} title={t('actions.close')}><X size={18}/></button>
             </div>
             <nav className="sidebar-nav" style={{flex:1}}>
+              <div className="sidebar-section">Essentiel</div>
               {[
                 { v: 'dashboard', icon: <Activity size={16}/>, label: t('nav.dashboard') },
-                { v: 'wealth',    icon: <Landmark size={16}/>,  label: t('nav.wealth') },
+                { v: 'transactions', icon: <ArrowUpDown size={16}/>, label: t('nav.transactions') },
                 { v: 'monthly',   icon: <Calendar size={16}/>,  label: t('nav.monthly'), badge: budgetsOverCount },
+                { v: 'wealth',    icon: <Landmark size={16}/>,  label: t('nav.wealth') },
+              ].map(({ v, icon, label, badge }) => (
+                <button key={v}
+                  className={view === v || (v === 'monthly' && ['monthly','cashflow'].includes(view)) ? 'active' : ''}
+                  onClick={() => { setView(v); setNavOpen(false); }}>
+                  {icon} <span>{label}</span>
+                  {badge > 0 && <span className="nav-alert-dot">{badge}</span>}
+                </button>
+              ))}
+              <div className="sidebar-section">Explorer</div>
+              {[
                 { v: 'subscriptions', icon: <Repeat size={16}/>, label: 'Abonnements' },
-                { v: 'transactions', icon: <BarChart3 size={16}/>, label: t('nav.transactions') },
+                { v: 'projection', icon: <LineChartIcon size={16}/>, label: t('nav.projection') },
+                { v: 'dca', icon: <TrendingUp size={16}/>, label: t('nav.dca') },
+                { v: 'immo', icon: <Home size={16}/>, label: t('nav.immo') },
                 { v: 'tax',       icon: <Calculator size={16}/>, label: t('nav.tax') },
                 { v: 'settings',  icon: <Settings size={16}/>,  label: t('nav.settings') },
               ].map(({ v, icon, label, badge }) => (
@@ -3904,12 +3887,12 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
       {/* Mobile bottom nav (<768px) — fixed bottom bar, 5 items max */}
       <nav className="bottom-nav">
         <button onClick={() => setView('dashboard')} className={view === 'dashboard' ? 'active' : ''}><Activity size={18}/> <span>{t('nav.dashboard')}</span></button>
-        <button onClick={() => setView('wealth')} className={view === 'wealth' ? 'active' : ''}><Landmark size={18}/> <span>{t('nav.wealth')}</span></button>
+        <button onClick={() => setView('transactions')} className={view === 'transactions' ? 'active' : ''}><ArrowUpDown size={18}/> <span>{t('nav.transactionsShort')}</span></button>
         <button onClick={() => setView('monthly')} className={['monthly','cashflow'].includes(view) ? 'active' : ''}>
           <Calendar size={18}/> <span>{t('nav.monthlyShort')}</span>
           {budgetsOverCount > 0 && <span className="nav-alert-dot">{budgetsOverCount}</span>}
         </button>
-        <button onClick={() => setView('transactions')} className={view === 'transactions' ? 'active' : ''}><BarChart3 size={18}/> <span>{t('nav.transactionsShort')}</span></button>
+        <button onClick={() => setView('wealth')} className={view === 'wealth' ? 'active' : ''}><Landmark size={18}/> <span>{t('nav.wealth')}</span></button>
         <button onClick={() => setView('settings')} className={view === 'settings' ? 'active' : ''}><Settings size={18}/> <span>{t('nav.settings')}</span></button>
       </nav>
 

@@ -1,11 +1,11 @@
 {
   "nav": {
-    "dashboard": "Overview",
+    "dashboard": "Home",
     "wealth": "Wealth",
-    "monthly": "Monthly Budget",
+    "monthly": "Budget",
     "monthlyShort": "Budget",
-    "transactions": "Transactions",
-    "transactionsShort": "Transactions",
+    "transactions": "Activity",
+    "transactionsShort": "Activity",
     "subscriptions": "Subscriptions",
     "analysis": "Analysis",
     "goals": "Budgets",
@@ -134,9 +134,9 @@
     },
     "transactions": {
       "title": "Your",
-      "titleAccent": "transactions.",
-      "subtitle": "All your bank activity. Click a category to change it.",
-      "searchPlaceholder": "Search descriptions…"
+      "titleAccent": "activity.",
+      "subtitle": "Track, classify and find every movement at a glance.",
+      "searchPlaceholder": "Search a merchant or description…"
     },
     "monthly": {
       "title": "Monthly",
@@ -426,7 +426,7 @@
     "rules": {
       "title": "Categories &",
       "titleAccent": "rules.",
-      "intro": "Define categorization rules for your transactions. Each rule is a case-insensitive regex tested against the description.",
+      "intro": "Choose how Yotori organizes your transactions: merchants, categories, subcategories, and internal transfers.",
       "cardTitle": "Categorization rules",
       "rules_one": "{{count}} rule",
       "rules_other": "{{count}} rules",

@@ -513,22 +513,56 @@ const DEMO_PLANNED_EVENTS = [
 // ============================================================================
 // AI INSIGHTS — coach patrimoine + alertes (Claude Haiku côté backend)
 // ============================================================================
-const DEMO_INSIGHTS = {
-  coach: [
-    { title: 'Épargne solide', body: 'Vous épargnez 24 % de vos revenus ce mois-ci — au-dessus du repère des 20 %.' },
-    { title: 'Patrimoine net', body: 'Votre patrimoine net progresse régulièrement sur les 12 derniers mois.' },
-  ],
-  alerts: [
-    { severity: 'warn', text: 'Restaurants : 320 € ce mois (+45 % vs votre moyenne).' },
-  ],
-  ai_used: false, ai_available: false,
+const buildDemoInsights = (snapshot = {}) => {
+  const rate = snapshot.savings_rate_pct;
+  const coach = [];
+  if (rate != null) {
+    coach.push({
+      title: rate >= 20 ? 'Épargne solide' : rate >= 0 ? 'Épargne du mois' : 'Solde du mois à surveiller',
+      body: rate >= 20
+        ? `Vous avez mis de côté ${rate} % de vos revenus ce mois-ci, au-dessus du repère des 20 %.`
+        : rate >= 0
+          ? `Vous avez mis de côté ${rate} % de vos revenus ce mois-ci.`
+          : `Votre épargne du mois représente ${rate} % de vos revenus. Vérifiez les dépenses inhabituelles.`,
+    });
+  } else if ((snapshot.month_expenses || 0) > 0) {
+    coach.push({
+      title: 'Mois en cours',
+      body: 'Aucun revenu n’est encore enregistré ce mois-ci. Le taux d’épargne sera calculé dès la prochaine entrée.',
+    });
+  }
+  if (snapshot.net_worth != null) {
+    coach.push({
+      title: 'Vue consolidée',
+      body: `Votre patrimoine net suivi dans Yotori Finance est de ${Number(snapshot.net_worth).toLocaleString('fr-FR')} € aujourd’hui.`,
+    });
+  }
+  return {
+    coach,
+    alerts: (snapshot.alert_signals || []).map(signal => ({ severity: signal.severity || 'info', text: signal.label })),
+    ai_used: false,
+    ai_available: false,
+  };
+};
+
+// L'assistant ne crée rien : il transforme une phrase en propositions que
+// l'utilisateur peut corriger avant de les enregistrer.
+export const aiPlanner = {
+  parseEvents: (message, accounts = [], today = null) =>
+    isDemo()
+      ? Promise.resolve({ available: false, events: [], note: 'Assistant IA indisponible en mode démo.' })
+      : post('/ai/plan/events', { message, accounts, today }, { timeoutMs: 40000 }),
+  parseLoan: (message) =>
+    isDemo()
+      ? Promise.resolve({ available: false, loan: null, note: 'Assistant IA indisponible en mode démo.' })
+      : post('/ai/plan/loan', { message }, { timeoutMs: 40000 }),
 };
 
 export const insights = {
   // force=true (bouton rafraîchir) → ignore le cache serveur 24h (compte au plafond).
   // scope = 'all' (foyer) ou id du membre → cache Coach ventilé par scope côté serveur.
   get: (snapshot, force = false, scope = 'all') =>
-    isDemo() ? Promise.resolve(DEMO_INSIGHTS) : post('/ai/insights', { ...snapshot, force, scope }),
+    isDemo() ? Promise.resolve(buildDemoInsights(snapshot)) : post('/ai/insights', { ...snapshot, force, scope }),
 };
 
 // ============================================================================

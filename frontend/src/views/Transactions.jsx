@@ -302,13 +302,19 @@ function TxFilterPanel({ children, onClose }) {
 
 export function Transactions({ transactions, accounts, categories, members = [], customRules = [], recurringIds, toggleRecurring, transferIds = new Set(), setTransferOverride, updateCategory, updateTags, deleteTransaction, createTransaction, fmt, initialAccountFilter, onConsumeInitialFilter, onCategorizeAI, aiCatRunning = false, aiCatSummary = null, onOpenAiPrompt, onAfterSync, initialReviewMode, onConsumeInitialReviewMode, onMarkReviewed }) {
   const { t } = useTranslation();
+  const latestTransactionMonth = transactions.reduce((latest, tx) => {
+    const month = tx.date?.slice(0, 7) || '';
+    return month > latest ? month : latest;
+  }, '');
   const [search, setSearch] = useState('');
   const [showAddTx, setShowAddTx] = useState(false);
   // Seed the account filter on mount if the parent passed one (e.g. coming
   // from the AccountDrawer "voir toutes les transactions" CTA).
-  const [filters, setFilters] = useState(() =>
-    initialAccountFilter ? { ...EMPTY_FILTERS, accs: [initialAccountFilter] } : EMPTY_FILTERS
-  );
+  const [filters, setFilters] = useState(() => ({
+    ...EMPTY_FILTERS,
+    month: initialReviewMode ? '' : latestTransactionMonth,
+    accs: initialAccountFilter ? [initialAccountFilter] : [],
+  }));
   const [showPanel, setShowPanel] = useState(false);
   const [catFilterSearch, setCatFilterSearch] = useState('');
   const [reviewMode, setReviewMode] = useState(() => initialReviewMode === 'review'
@@ -513,7 +519,10 @@ export function Transactions({ transactions, accounts, categories, members = [],
   };
 
   const setField = (key, value) => setFilters(f => ({ ...f, [key]: value }));
-  const resetFilters = () => { setFilters(EMPTY_FILTERS); setSearch(''); };
+  const resetFilters = () => {
+    setFilters({ ...EMPTY_FILTERS, month: latestTransactionMonth });
+    setSearch('');
+  };
 
   // Active filter count for the badge.
   const activeCount =
@@ -525,8 +534,7 @@ export function Transactions({ transactions, accounts, categories, members = [],
     (filters.dateTo ? 1 : 0) +
     (filters.amountMin !== '' ? 1 : 0) +
     (filters.amountMax !== '' ? 1 : 0) +
-    (filters.type !== 'all' ? 1 : 0) +
-    (filters.month ? 1 : 0);
+    (filters.type !== 'all' ? 1 : 0);
 
   const catSearchQ = catFilterSearch.toLowerCase();
   const expenseCats = categories.filter(c => c.type === 'expense' && (catSearchQ === '' || c.name.toLowerCase().includes(catSearchQ)));
@@ -588,16 +596,17 @@ export function Transactions({ transactions, accounts, categories, members = [],
         </div>
       </div>
 
+      {(reviewCounts.unclassified > 0 || reviewCounts.confirm > 0 || reviewMode !== 'all') && (
       <div className="tx-inbox-tabs" role="tablist" aria-label="État de classement">
         {[
           ['all', 'Toutes'],
-          ['unclassified', 'À classer'],
-          ['confirm', 'À confirmer'],
-          ['auto', 'Automatiques'],
-          ['reviewed', 'Validées'],
+          ...(reviewCounts.unclassified > 0 || reviewMode === 'unclassified' ? [['unclassified', 'À classer']] : []),
+          ...(reviewCounts.confirm > 0 || reviewMode === 'confirm' ? [['confirm', 'À confirmer']] : []),
+          ...(reviewMode === 'auto' ? [['auto', 'Automatiques']] : []),
+          ...(reviewMode === 'reviewed' ? [['reviewed', 'Validées']] : []),
         ].map(([id, label]) => (
           <button key={id} role="tab" aria-selected={reviewMode === id} className={reviewMode === id ? 'is-active' : ''} onClick={() => setReviewMode(id)}>
-            <span>{label}</span><strong>{reviewCounts[id]}</strong>
+            <span>{label}</span>{id !== 'all' && <strong>{reviewCounts[id]}</strong>}
           </button>
         ))}
         {reviewMode === 'confirm' && reviewableIds.length > 0 && onMarkReviewed && (
@@ -606,6 +615,7 @@ export function Transactions({ transactions, accounts, categories, members = [],
           </button>
         )}
       </div>
+      )}
 
       {(uncategorizedCount > 0 || reviewCounts.confirm > 0 || aiCatSummary) && (
         <section className={`ai-review-card ${aiCatSummary?.status || 'idle'}`} aria-live="polite">
@@ -894,11 +904,6 @@ export function Transactions({ transactions, accounts, categories, members = [],
               {filters.type === 'income' ? 'Revenus' : 'Dépenses'} <X size={11}/>
             </button>
           )}
-          {filters.month && (
-            <button className="tx-active-chip" onClick={() => setField('month', '')}>
-              {new Intl.DateTimeFormat('fr-FR', { month: 'short', year: '2-digit' }).format(new Date(filters.month + '-02'))} <X size={11}/>
-            </button>
-          )}
           {filters.accs.map(accId => {
             const acc = accounts.find(a => a.id === accId);
             return acc ? (
@@ -935,19 +940,19 @@ export function Transactions({ transactions, accounts, categories, members = [],
 
       {availableMonths.length > 0 && (
         <div className="tx-month-bar">
-          <button
-            className={`tx-month-chip ${!filters.month ? 'active' : ''}`}
-            onClick={() => setField('month', '')}
-          >Tous</button>
           {availableMonths.slice(0, 18).map(m => (
             <button
               key={m}
               className={`tx-month-chip ${filters.month === m ? 'active' : ''}`}
-              onClick={() => setField('month', filters.month === m ? '' : m)}
+              onClick={() => setField('month', m)}
             >
               {new Intl.DateTimeFormat('fr-FR', { month: 'short', year: '2-digit' }).format(new Date(m + '-02'))}
             </button>
           ))}
+          <button
+            className={`tx-month-chip ${!filters.month ? 'active' : ''}`}
+            onClick={() => setField('month', '')}
+          >Tout l’historique</button>
         </div>
       )}
 
@@ -1011,17 +1016,27 @@ export function Transactions({ transactions, accounts, categories, members = [],
 
       {/* Sort toolbar */}
       <div className="tx-sort-bar">
-        <span className="tx-sort-label">Trier par</span>
-        <button className={`tx-sort-btn ${sortKey === 'date' ? 'active' : ''}`} onClick={() => toggleSort('date')}>
-          Date <ArrowUpDown size={11}/>
+        <span className="tx-sort-label">Afficher par</span>
+        <select
+          className="tx-sort-select"
+          value={sortKey}
+          onChange={(event) => {
+            setSortKey(event.target.value);
+            setSortDir('desc');
+          }}
+          aria-label="Trier les opérations"
+        >
+          <option value="date">Date</option>
+          <option value="amount">Montant</option>
+          <option value="label">Libellé</option>
+        </select>
+        <button className="tx-sort-direction" onClick={() => setSortDir(sortDir === 'desc' ? 'asc' : 'desc')}>
+          <ArrowUpDown size={12}/>
+          {sortKey === 'date'
+            ? (sortDir === 'desc' ? 'Plus récentes' : 'Plus anciennes')
+            : (sortDir === 'desc' ? 'Décroissant' : 'Croissant')}
         </button>
-        <button className={`tx-sort-btn ${sortKey === 'amount' ? 'active' : ''}`} onClick={() => toggleSort('amount')}>
-          Montant <ArrowUpDown size={11}/>
-        </button>
-        <button className={`tx-sort-btn ${sortKey === 'label' ? 'active' : ''}`} onClick={() => toggleSort('label')}>
-          Libellé <ArrowUpDown size={11}/>
-        </button>
-        <span className="tx-sort-meta">{sortDir === 'desc' ? '↓' : '↑'}</span>
+        <span className="tx-sort-meta">{filtered.length} opération{filtered.length > 1 ? 's' : ''}</span>
       </div>
 
       {/* Day-grouped feed */}
@@ -1085,141 +1100,6 @@ export function Transactions({ transactions, accounts, categories, members = [],
 
         return (
           <div className="tx-feed">
-            <div className="tx-feed-colhead">
-              <span/>
-              <span className="tx-colhead-cell">Libellé</span>
-              <span className="tx-colhead-cell">
-                Catégorie
-                <HeaderFilter
-                  active={filters.cats.some(id => { const c = categories.find(x => x.id === id); return c && !c.parent; }) || filters.cats.includes('uncategorized')}
-                  onReset={() => {
-                    const sub = filters.cats.filter(id => { const c = categories.find(x => x.id === id); return c && c.parent; });
-                    setField('cats', sub);
-                  }}
-                >
-                  {() => (
-                    <div className="th-filter-section">
-                      <input
-                        className="th-filter-search"
-                        placeholder="Filtrer…"
-                        value={catFilterSearch}
-                        onChange={e => setCatFilterSearch(e.target.value)}
-                      />
-                      {categories.filter(c => !c.parent && c.id !== 'uncategorized' && (catFilterSearch === '' || c.name.toLowerCase().includes(catFilterSearch))).map(c => (
-                        <label key={c.id} className={`th-filter-chk ${filters.cats.includes(c.id) ? 'active' : ''}`}>
-                          <input type="checkbox" checked={filters.cats.includes(c.id)} onChange={() => toggleInList('cats', c.id)}/>
-                          <span className="th-filter-chk-icon">{c.icon}</span>
-                          <span>{c.name}</span>
-                          <span className="th-filter-chk-count">{catCounts[c.id] || 0}</span>
-                        </label>
-                      ))}
-                      {(catFilterSearch === '' || 'non catégorisé'.includes(catFilterSearch) || 'non categorise'.includes(catFilterSearch)) && (
-                        <label className={`th-filter-chk ${filters.cats.includes('uncategorized') ? 'active' : ''}`}>
-                          <input type="checkbox" checked={filters.cats.includes('uncategorized')} onChange={() => toggleInList('cats', 'uncategorized')}/>
-                          <span className="th-filter-chk-icon">❓</span>
-                          <span>Non catégorisé</span>
-                          <span className="th-filter-chk-count">{catCounts['uncategorized'] || 0}</span>
-                        </label>
-                      )}
-                    </div>
-                  )}
-                </HeaderFilter>
-              </span>
-              <span className="tx-colhead-cell">
-                Détail
-                <HeaderFilter
-                  active={filters.cats.some(id => { const c = categories.find(x => x.id === id); return c && c.parent; })}
-                  onReset={() => {
-                    const top = filters.cats.filter(id => { const c = categories.find(x => x.id === id); return c && !c.parent; });
-                    setField('cats', top);
-                  }}
-                >
-                  {() => {
-                    const subs = categories.filter(c => c.parent && (catFilterSearch === '' || c.name.toLowerCase().includes(catFilterSearch)));
-                    const byParent = new Map();
-                    subs.forEach(s => {
-                      const p = categories.find(c => c.id === s.parent);
-                      if (!p) return;
-                      if (!byParent.has(p.id)) byParent.set(p.id, { parent: p, subs: [] });
-                      byParent.get(p.id).subs.push(s);
-                    });
-                    return (
-                      <div className="th-filter-section">
-                        <input
-                          className="th-filter-search"
-                          placeholder="Filtrer…"
-                          value={catFilterSearch}
-                          onChange={e => setCatFilterSearch(e.target.value)}
-                        />
-                        {[...byParent.values()].map(({ parent, subs }) => (
-                          <div key={parent.id}>
-                            <div className="th-filter-group">{parent.icon} {parent.name}</div>
-                            {subs.map(s => (
-                              <label key={s.id} className={`th-filter-chk ${filters.cats.includes(s.id) ? 'active' : ''}`}>
-                                <input type="checkbox" checked={filters.cats.includes(s.id)} onChange={() => toggleInList('cats', s.id)}/>
-                                <span className="th-filter-chk-icon">{s.icon}</span>
-                                <span>{s.name}</span>
-                                <span className="th-filter-chk-count">{catCounts[s.id] || 0}</span>
-                              </label>
-                            ))}
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  }}
-                </HeaderFilter>
-              </span>
-              <span className="tx-colhead-cell">
-                Compte
-                <HeaderFilter
-                  active={filters.accs.length > 0}
-                  onReset={() => setField('accs', [])}
-                >
-                  {() => (
-                    <div className="th-filter-section">
-                      {accounts.map(a => (
-                        <label key={a.id} className={`th-filter-chk ${filters.accs.includes(a.id) ? 'active' : ''}`}>
-                          <input type="checkbox" checked={filters.accs.includes(a.id)} onChange={() => toggleInList('accs', a.id)}/>
-                          <span>{a.name || a.bank}{a.bank && a.name !== a.bank ? ` — ${a.bank}` : ''}</span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </HeaderFilter>
-              </span>
-              <span/>
-              <span className="tx-colhead-cell right">
-                Montant
-                <HeaderFilter
-                  align="right"
-                  active={filters.type !== 'all' || filters.amountMin !== '' || filters.amountMax !== ''}
-                  onReset={() => { setField('type', 'all'); setField('amountMin', ''); setField('amountMax', ''); }}
-                >
-                  {() => (
-                    <div className="th-filter-section">
-                      <div className="th-filter-segmented">
-                        {[['all', 'Tout'], ['income', 'Recettes'], ['expense', 'Dépenses']].map(([id, label]) => (
-                          <button
-                            key={id}
-                            type="button"
-                            className={`th-filter-seg ${filters.type === id ? 'active' : ''}`}
-                            onClick={() => setField('type', id)}
-                          >{label}</button>
-                        ))}
-                      </div>
-                      <label className="th-filter-row">
-                        <span>Min €</span>
-                        <input type="number" value={filters.amountMin} onChange={e => setField('amountMin', e.target.value)} placeholder="0"/>
-                      </label>
-                      <label className="th-filter-row">
-                        <span>Max €</span>
-                        <input type="number" value={filters.amountMax} onChange={e => setField('amountMax', e.target.value)} placeholder="∞"/>
-                      </label>
-                    </div>
-                  )}
-                </HeaderFilter>
-              </span>
-            </div>
             {groups.map(({ date, txs }) => {
               const total = txs.reduce((s, t) => s + (t.amount || 0), 0);
               const totalCls = total > 0.005 ? 'positive' : total < -0.005 ? 'negative' : 'neutral';
@@ -1300,6 +1180,7 @@ export function Transactions({ transactions, accounts, categories, members = [],
                                 'llm': 'Catégorisé par l\'IA',
                               })[tx.catSource]}/>
                             )}
+                            {acc && <span className="tx-card-account">{acc.name || acc.bank}</span>}
                             {/* Mobile-only: category shown as second line below label */}
                             {!isTransfer && (
                               <button
@@ -1314,6 +1195,7 @@ export function Transactions({ transactions, accounts, categories, members = [],
                               </button>
                             )}
                           </div>
+                          <div className="tx-card-classification">
                           <div className="tx-card-col tx-card-col-cat">
                             {isTransfer ? (() => {
                               const txfType = getTransferType(tx, accounts);
@@ -1392,15 +1274,13 @@ export function Transactions({ transactions, accounts, categories, members = [],
                                     onClose={() => setEditingSubcat(null)}
                                   />
                                 ) : (
-                                  <button className="tx-card-sub-add" onClick={() => setEditingSubcat(tx.id)} title="Ajouter un détail">
-                                    <Plus size={11}/> Ajouter
+                                  <button className="tx-card-sub-add" onClick={() => setEditingSubcat(tx.id)} title="Préciser la sous-catégorie">
+                                    <Plus size={11}/> détail
                                   </button>
                                 )
                               ) : <span className="tx-card-col-empty">—</span>
                             )) : <span className="tx-card-col-empty">—</span>}
                           </div>
-                          <div className="tx-card-col tx-card-col-acc">
-                            {acc ? <span className="tx-card-acc">{acc.name || acc.bank}</span> : <span className="tx-card-col-empty">—</span>}
                           </div>
                           <div className="tx-card-actions">
                             {!isUnclassified && needsTransactionReview(tx, transferIds) && onMarkReviewed && (

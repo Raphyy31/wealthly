@@ -132,6 +132,12 @@ def delete_category(slug: str, db: Session = Depends(get_db), user: User = Depen
     cat = db.query(Category).filter(Category.slug == slug, Category.household_id == user.household_id).first()
     if not cat:
         raise HTTPException(status_code=404, detail="Catégorie non trouvée")
+    default_slugs = {item["slug"] for item in DEFAULT_CATEGORIES}
+    if slug in default_slugs:
+        raise HTTPException(
+            status_code=400,
+            detail="Cette catégorie est incluse dans Yotori. Vous pouvez la modifier, mais pas la supprimer.",
+        )
 
     # Drop child sub-categories first (recursively, but the model is 2-level so one pass).
     children = db.query(Category).filter(

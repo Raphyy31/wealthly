@@ -10,21 +10,22 @@ const CATEGORY_PALETTE = [
 ];
 const COMMON_ICONS = ['🏷️', '🛒', '🍽️', '🚗', '🏠', '💡', '📱', '🎬', '🎵', '🏥', '🎁', '✈️', '🎓', '👶', '💼', '💰', '☕', '🐶', '🎨', '🛠️'];
 
-export function CategoryCreateModal({ parent, parentName, forcedType, onSave, onCancel }) {
+export function CategoryCreateModal({ parent, parentName, forcedType, initial = null, onSave, onCancel }) {
   const [draft, setDraft] = useState({
-    name: '',
-    color: CATEGORY_PALETTE[0],
-    icon: COMMON_ICONS[0],
-    type: forcedType || 'expense',
-    kind: 'needs',
+    name: initial?.name || '',
+    color: initial?.color || CATEGORY_PALETTE[0],
+    icon: initial?.icon || COMMON_ICONS[0],
+    type: initial?.type || forcedType || 'expense',
+    kind: initial?.kind || 'needs',
     parent_slug: parent || null,
   });
+  const isEditing = !!initial;
   const canSave = draft.name.trim().length >= 2;
 
   return (
     <ResponsiveModal open={true} onClose={onCancel}>
         <div className="modal-header">
-          <h2>{parent ? <>Nouveau <em>détail</em></> : <>Nouvelle <em>catégorie</em></>}</h2>
+          <h2>{isEditing ? <>Modifier <em>{initial.name}</em></> : parent ? <>Nouveau <em>détail</em></> : <>Nouvelle <em>catégorie</em></>}</h2>
           <button className="icon-btn" onClick={onCancel}><X size={18}/></button>
         </div>
         <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -75,11 +76,23 @@ export function CategoryCreateModal({ parent, parentName, forcedType, onSave, on
               </select>
             </label>
           )}
+
+          {draft.type === 'expense' && (
+            <label>
+              <span style={{ fontSize: 11, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Rôle dans le budget</span>
+              <select value={draft.kind} onChange={e => setDraft({ ...draft, kind: e.target.value })} style={{ width: '100%' }}>
+                <option value="needs">Besoin essentiel</option>
+                <option value="wants">Envie</option>
+                <option value="savings">Épargne</option>
+              </select>
+              <small style={{ color: 'var(--ink-3)' }}>Utilisé dans l’analyse 50 / 30 / 20.</small>
+            </label>
+          )}
         </div>
         <div className="modal-footer">
           <button className="ds-btn" onClick={onCancel}>Annuler</button>
           <button className="ds-btn primary" disabled={!canSave} onClick={() => onSave(draft)}>
-            <Check size={14}/> Créer
+            <Check size={14}/> {isEditing ? 'Enregistrer' : 'Créer'}
           </button>
         </div>
       </ResponsiveModal>

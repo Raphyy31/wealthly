@@ -49,17 +49,16 @@ function bucketRefMonth(refMonth, categories) {
 }
 
 function bucketReal(fiftyThirtyTwenty) {
-  // Reuse existing computation that lives in YotoriApp.
   return {
     needs: fiftyThirtyTwenty?.needs || 0,
     wants: fiftyThirtyTwenty?.wants || 0,
     savings: fiftyThirtyTwenty?.savings || 0,
-    income: fiftyThirtyTwenty?.total || 0,
+    unclassified: fiftyThirtyTwenty?.unclassified || 0,
   };
 }
 
 function Bar({ label, buckets, fmt }) {
-  const total = buckets.needs + buckets.wants + buckets.savings;
+  const total = buckets.needs + buckets.wants + buckets.savings + (buckets.unclassified || 0);
   if (!total) {
     return (
       <div className="ftt-bar-wrap">
@@ -71,7 +70,8 @@ function Bar({ label, buckets, fmt }) {
   const pct = (v) => Math.round((v / total) * 100);
   const pNeeds = pct(buckets.needs);
   const pWants = pct(buckets.wants);
-  const pSavings = 100 - pNeeds - pWants;
+  const pUnclassified = pct(buckets.unclassified || 0);
+  const pSavings = Math.max(0, 100 - pNeeds - pWants - pUnclassified);
   return (
     <div className="ftt-bar-wrap">
       <div className="ftt-bar-label">{label}</div>
@@ -85,19 +85,26 @@ function Bar({ label, buckets, fmt }) {
         <div className="ftt-seg savings" style={{ width: pSavings + '%' }} title={`Épargne ${fmt(buckets.savings)}`}>
           {pSavings >= 10 && <span>{pSavings}%</span>}
         </div>
+        {pUnclassified > 0 && <div className="ftt-seg unclassified" style={{ width: pUnclassified + '%' }} title={`À classer ${fmt(buckets.unclassified)}`}>
+          {pUnclassified >= 10 && <span>{pUnclassified}%</span>}
+        </div>}
       </div>
       <div className="ftt-bar-amounts num ds-micro">
         <span>{fmt(buckets.needs)}</span><span>·</span>
         <span>{fmt(buckets.wants)}</span><span>·</span>
         <span>{fmt(buckets.savings)}</span>
+        {!!buckets.unclassified && <><span>·</span><span>{fmt(buckets.unclassified)} à classer</span></>}
       </div>
     </div>
   );
 }
 
 function Recommandation({ buckets, label }) {
-  const total = buckets.needs + buckets.wants + buckets.savings;
+  const total = buckets.needs + buckets.wants + buckets.savings + (buckets.unclassified || 0);
   if (!total) return null;
+  if (buckets.unclassified > 0) {
+    return <div className="ftt-reco"><div className="ftt-reco-head ds-micro">À vérifier · {label}</div><p>{buckets.unclassified.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} € ne sont pas encore classés. Le ratio deviendra fiable après catégorisation.</p></div>;
+  }
   const pNeeds = Math.round((buckets.needs / total) * 100);
   const pWants = Math.round((buckets.wants / total) * 100);
   const pSavings = Math.round((buckets.savings / total) * 100);
@@ -114,7 +121,7 @@ function Recommandation({ buckets, label }) {
   );
 }
 
-export function FiftyThirtyTwentyModal({ refMonth, fiftyThirtyTwenty, categories = [], fmt, onClose }) {
+export function FiftyThirtyTwentyModal({ refMonth, fiftyThirtyTwenty, categories = [], periodLabel = 'Mois sélectionné', fmt, onClose }) {
   const refBuckets = useMemo(() => bucketRefMonth(refMonth, categories), [refMonth, categories]);
   const realBuckets = useMemo(() => bucketReal(fiftyThirtyTwenty), [fiftyThirtyTwenty]);
   return (
@@ -138,15 +145,16 @@ export function FiftyThirtyTwentyModal({ refMonth, fiftyThirtyTwenty, categories
         </div>
 
         <Bar label="Mois type" buckets={refBuckets} fmt={fmt}/>
-        <Bar label="Mois courant" buckets={realBuckets} fmt={fmt}/>
+        <Bar label={periodLabel} buckets={realBuckets} fmt={fmt}/>
 
         <div className="ftt-legend ds-micro">
           <span><span className="dot needs"/> Besoins essentiels</span>
           <span><span className="dot wants"/> Envies</span>
           <span><span className="dot savings"/> Épargne</span>
+          {!!realBuckets.unclassified && <span><span className="dot unclassified"/> À classer</span>}
         </div>
 
-        <Recommandation buckets={realBuckets} label="mois courant"/>
+        <Recommandation buckets={realBuckets} label={periodLabel.toLowerCase()}/>
         <Recommandation buckets={refBuckets} label="mois type"/>
       </div>
     </div>

@@ -287,12 +287,36 @@ export const isExplicitBankTransfer = (transaction) => {
   return BANK_TRANSFER_CREDIT_HINT.test(label) && !CARD_REFUND_HINT.test(label);
 };
 
+// Compatibilité avec les comptes créés avant l'ajout du flag `is_joint` : un
+// compte ayant plusieurs titulaires est, fonctionnellement, déjà commun.
+export const isJointAccount = (account) =>
+  !!account && (account.isJoint === true || (account.memberIds || []).length > 1);
+
 export const isJointAccountFunding = (transaction, account, category, enabled = true) => {
-  if (!enabled || !account?.isJoint || (transaction?.amount || 0) <= 0) return false;
+  if (!enabled || !isJointAccount(account) || (transaction?.amount || 0) <= 0) return false;
   if (!isExplicitBankTransfer(transaction)) return false;
   // The only explicit escape hatch: the user marked the operation as NOT a
   // transfer while it belongs to an income category.
   return !(transaction?.isTransferOverride === false && category?.type === 'income');
+};
+
+// Ventilation 50/30/20 à partir de transactions DÉJÀ filtrées pour le mois
+// et le scope affichés. Les montants non catégorisés restent visibles au lieu
+// d'être rangés arbitrairement dans « envies ».
+export const buildBudgetAllocation = (transactions = [], categories = []) => {
+  const result = { needs: 0, wants: 0, savings: 0, unclassified: 0, total: 0 };
+  for (const transaction of transactions) {
+    const amount = Number(transaction.sharedAmount ?? transaction.amount ?? 0);
+    if (amount >= 0 || transaction.budgetKind === 'funding' || transaction.budgetKind === 'income') continue;
+    const value = Math.abs(amount);
+    const categoryId = transaction.budgetCategoryId || transaction.categoryId;
+    const category = categories.find(c => c.id === categoryId || c.slug === categoryId);
+    let bucket = transaction.budgetKind === 'saving' ? 'savings' : category?.kind;
+    if (categoryId === 'uncategorized' || !['needs', 'wants', 'savings'].includes(bucket)) bucket = 'unclassified';
+    result[bucket] += value;
+    result.total += value;
+  }
+  return result;
 };
 
 const normalizePersonText = (value) => String(value || '')
