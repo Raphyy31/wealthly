@@ -1259,7 +1259,7 @@ function MonthlyCompareTable({ sections, monthTx, fmt, catFor, expandedRows, tog
   const txByCategoryId = useMemo(() => {
     const m = new Map();
     for (const t of monthTx) {
-      const cid = t.categoryId || 'uncategorized';
+      const cid = t.budgetCategoryId || t.categoryId || 'uncategorized';
       if (!m.has(cid)) m.set(cid, []);
       m.get(cid).push(t);
     }
@@ -1286,8 +1286,8 @@ function MonthlyCompareTable({ sections, monthTx, fmt, catFor, expandedRows, tog
     <section className="card mon-compare">
       <div className="mon-compare-head">
         <div>
-          <h3>Comparaison par catégorie</h3>
-          <p className="mon-compare-sub">Clique sur une catégorie pour voir le détail des sous-catégories et transactions.</p>
+          <h3>Où en est votre budget ?</h3>
+          <p className="mon-compare-sub">Une lecture simple du prévu, du dépensé et de ce qu’il reste. Ouvrez une ligne seulement si vous voulez le détail.</p>
         </div>
       </div>
 
@@ -1310,7 +1310,7 @@ function MonthlyCompareTable({ sections, monthTx, fmt, catFor, expandedRows, tog
           </div>
 
           <ul className="mon-compare-rows">
-            {section.parents.map((group, gi) => {
+            {section.parents.map((group) => {
               const cat = group.parent_cat;
               const rowKey = `${section.kind}::${group.parent_id}`;
               const isExpanded = expandedRows.has(rowKey);
@@ -1319,22 +1319,16 @@ function MonthlyCompareTable({ sections, monthTx, fmt, catFor, expandedRows, tog
               const isOver = section.kind === 'expense' ? delta > 0 : delta < 0;
               const txs = isExpanded ? txForParent(group.parent_id) : [];
 
-              // Jauge : le réel se remplit contre la cible (mois type). Trait =
-              // cible. Couleur = vert si dans le budget, rose si dépassé.
               const target = group.ref_total || 0;
               const actual = group.real_total || 0;
-              const scale = Math.max(target, actual, 1);
-              const fillPct = Math.min(100, (actual / scale) * 100);
-              const targetPct = target > 0 ? Math.min(100, (target / scale) * 100) : null;
               const noTarget = target <= 0;
-              const barColor = noTarget ? 'var(--d6)' : (hasDelta && isOver ? 'var(--negative)' : 'var(--positive)');
               const statusText = noTarget
-                ? `${fmt(actual)} dépensé · pas dans votre mois type`
+                ? 'Non prévu'
                 : !hasDelta
-                  ? '✓ pile dans le budget'
+                  ? 'Conforme'
                   : section.kind === 'expense'
-                    ? (isOver ? `↑ +${fmt(Math.abs(delta))} au-dessus` : `↓ ${fmt(Math.abs(delta))} sous le budget`)
-                    : (isOver ? `↓ ${fmt(Math.abs(delta))} sous l'objectif` : `↑ +${fmt(Math.abs(delta))} au-dessus de l'objectif`);
+                    ? (isOver ? `+${fmt(Math.abs(delta))} dépassé` : `${fmt(Math.abs(delta))} disponible`)
+                    : (isOver ? `${fmt(Math.abs(delta))} manquant` : `+${fmt(Math.abs(delta))} d’avance`);
 
               return (
                 <li key={rowKey} className={`mon-compare-row ${isExpanded ? 'is-expanded' : ''}`}>
@@ -1360,17 +1354,11 @@ function MonthlyCompareTable({ sections, monthTx, fmt, catFor, expandedRows, tog
                         {group.is_unexpected && <span className="mon-compare-badge">Nouveau</span>}
                       </span>
                       <span className="mcr-amounts num">
-                        <span style={{ color: barColor, fontWeight: 600 }}>{fmt(actual)}</span>
-                        {!noTarget && <span className="mcr-amounts-target"> / {fmt(target)}</span>}
+                        <span className="mcr-amount"><small>Réel</small><strong>{fmt(actual)}</strong></span>
+                        <span className="mcr-amount"><small>Prévu</small><strong>{noTarget ? '—' : fmt(target)}</strong></span>
                       </span>
+                      <span className={`mcr-status-pill ${noTarget ? 'new' : hasDelta && isOver ? 'over' : 'ok'}`}>{statusText}</span>
                     </div>
-
-                    <div className="mcr-bar" role="img" aria-label={statusText}>
-                      <span className="mcr-bar-fill" style={{ width: `${fillPct}%`, background: barColor, animationDelay: `${gi * 0.04}s` }}/>
-                      {targetPct != null && <span className="mcr-bar-target" style={{ left: `${targetPct}%` }}/>}
-                    </div>
-
-                    <div className="mcr-status" style={{ color: barColor }}>{statusText}</div>
                   </button>
 
                   {isExpanded && (

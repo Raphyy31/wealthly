@@ -1847,6 +1847,7 @@ html, body {
   flex-wrap: wrap;
   flex: 1;
 }
+.acc-editor-help { width: 100%; margin: -4px 0 0 104px; color: var(--ink-3); font-size: 11.5px; line-height: 1.45; }
 .acc-editor-actions { padding-top: 4px; }
 .acc-editor-actions .secondary-btn,
 .acc-editor-actions .danger-btn {
@@ -2466,10 +2467,17 @@ html, body {
   grid-template-columns: none;
   padding: 14px 20px;
 }
-.mcr-top { display: flex; align-items: center; gap: 10px; width: 100%; }
+.mcr-top { display: grid; grid-template-columns: minmax(180px, 1fr) auto minmax(125px, auto); align-items: center; gap: 16px; width: 100%; }
 .mcr-top .mon-compare-row-cat { flex: 1; min-width: 0; }
-.mcr-amounts { flex-shrink: 0; font-size: 13.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mcr-amounts { display: grid; grid-template-columns: repeat(2, minmax(78px, auto)); gap: 18px; flex-shrink: 0; font-size: 13.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .mcr-amounts-target { color: var(--ink-3); }
+.mcr-amount { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.mcr-amount small { color: var(--ink-3); font: 500 9.5px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
+.mcr-amount strong { color: var(--ink); font-size: 13px; }
+.mcr-status-pill { justify-self: end; min-width: 120px; padding: 6px 9px; border-radius: 999px; text-align: center; font: 600 10.5px/1.2 var(--font-sans); white-space: nowrap; }
+.mcr-status-pill.ok { color: var(--positive); background: color-mix(in srgb, var(--positive) 10%, transparent); }
+.mcr-status-pill.over { color: var(--negative); background: color-mix(in srgb, var(--negative) 10%, transparent); }
+.mcr-status-pill.new { color: var(--warning); background: color-mix(in srgb, var(--warning) 11%, transparent); }
 .mcr-bar {
   position: relative;
   height: 10px; border-radius: 6px;
@@ -2492,6 +2500,12 @@ html, body {
 }
 .mcr-status { margin-left: 24px; font: 500 11.5px/1.3 var(--font-sans); }
 @media (prefers-reduced-motion: reduce) { .mcr-bar-fill { animation: none; } }
+@media (max-width: 720px) {
+  .mcr-top { grid-template-columns: 1fr auto; gap: 10px; }
+  .mcr-amounts { grid-column: 1 / -1; grid-row: 2; justify-content: start; padding-left: 24px; }
+  .mcr-amount { align-items: flex-start; }
+  .mcr-status-pill { grid-column: 2; grid-row: 1; min-width: 0; max-width: 132px; overflow: hidden; text-overflow: ellipsis; }
+}
 
 .mon-compare-row-chevron {
   display: inline-flex;

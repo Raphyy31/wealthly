@@ -90,7 +90,7 @@ export function AccountDrawer({ account, transactions, members = [], accountBala
             <div className="drawer-subtitle">
               {account.bank || 'Compte'}
               {ownerLabel ? ` · ${ownerLabel}` : ''}
-              {isJoint ? ' · joint' : ''}
+              {isJoint ? ' · compte commun' : ''}
             </div>
           </div>
           <button className="icon-btn-sm" onClick={onClose} aria-label="Fermer"><X size={16}/></button>

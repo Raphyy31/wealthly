@@ -18,6 +18,7 @@ import { NetWorthChart } from '../components/NetWorthChart.jsx';
 import { useWealthItems } from '../hooks/useWealthItems.js';
 import { WealthItemDrawer } from '../components/WealthItemDrawer.jsx';
 import { ImportPositionsModal } from '../components/ImportPositionsModal.jsx';
+import { portfolioValueAfterImport } from '../utils/positionsImport.js';
 import * as api from '../api.js';
 // Sub-components — extracted from Wealth.jsx during découpe
 import { CompletePatrimoinePicker } from './wealth/components/CompletePatrimoinePicker.jsx';
@@ -613,8 +614,28 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
           }}
         />
       )}
-      {editingAsset && <AssetEditor asset={editingAsset} members={members} liabilities={visibleLiabilities} onSave={async (a) => { const saved = await saveAsset(a); setEditingAsset(null); return saved; }} onCancel={() => setEditingAsset(null)}/>}
-      {editingLia && <LiabilityEditor liability={editingLia} members={members} assets={assets} onSave={(l) => { saveLiability(l); setEditingLia(null); }} onCancel={() => setEditingLia(null)}/>}
+      {editingAsset && <AssetEditor asset={editingAsset} members={members} liabilities={visibleLiabilities} onSave={async (a) => {
+        const wasNew = !a.id;
+        const saved = await saveAsset(a);
+        if (!saved) throw new Error("L'actif n'a pas pu être enregistré.");
+        setEditingAsset(null);
+        if (wasNew && saved?.id && ['pea', 'stocks', 'life_insurance', 'per'].includes(saved.type || a.type)) {
+          setImportingTo({
+            sourceId: saved.id,
+            currency: saved.currency || a.currency || 'EUR',
+            memberIds: saved.memberIds || a.memberIds || [],
+            name: saved.name || a.name,
+            initialMode: 'choice',
+          });
+        }
+        return saved;
+      }} onCancel={() => setEditingAsset(null)}/>}
+      {editingLia && <LiabilityEditor liability={editingLia} members={members} assets={assets} onSave={async (l) => {
+        const saved = await saveLiability(l);
+        if (!saved) throw new Error("L'emprunt n'a pas pu être enregistré.");
+        setEditingLia(null);
+        return saved;
+      }} onCancel={() => setEditingLia(null)}/>}
       {viewingLia && (
         <LiabilityDetail
           liability={viewingLia}
@@ -662,11 +683,11 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
           members={members}
           fmt={fmt}
           onEdit={() => { setEditingAsset(viewingInv); setViewingInv(null); }}
-          onImportCSV={(a) => {
+          onImportCSV={(a, mode = 'choice') => {
             // Convertit l'asset en WealthItem compatible avec ImportPositionsModal
             // (qui attend `sourceId` + `currency` + `memberIds`).
             const item = allItems.find(it => it.sourceTable === 'asset' && it.sourceId === a.id);
-            setImportingTo(item || { sourceId: a.id, currency: a.currency || 'EUR', memberIds: a.memberIds || [], name: a.name });
+            setImportingTo({ ...(item || { sourceId: a.id, currency: a.currency || 'EUR', memberIds: a.memberIds || [], name: a.name }), initialMode: mode });
             setViewingInv(null);
           }}
           onUpdatePosition={async (positionId, patch) => {
@@ -771,34 +792,61 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
               console.error('Failed to delete wealth item:', err);
             }
           }}
-          onImportCSV={(it) => setImportingTo(it)}
+          onImportCSV={(it) => setImportingTo({ ...it, initialMode: 'choice' })}
         />
       )}
       {importingTo && (
         <ImportPositionsModal
           parentAsset={importingTo}
           fmt={fmt}
+          initialMode={importingTo.initialMode}
           onClose={() => setImportingTo(null)}
-          onConfirm={async (positions) => {
-            for (const p of positions) {
-              await api.assets.create({
-                type: 'stocks',
-                name: p.name,
-                current_value: p.amount || p.quantity * p.lastPrice,
-                currency: importingTo.currency || 'EUR',
-                quantity: p.quantity,
-                purchase_price: p.buyingPrice,
-                parent_asset_id: importingTo.sourceId,
-                member_ids: importingTo.memberIds || [],
-                // Stocke ISIN + ticker Yahoo si détectés — base pour les cours
-                // live dans InvestmentDetail. Le backend peut ignorer ces
-                // champs s'il ne les supporte pas encore (forward-compat).
-                ...(p.isin && { isin: p.isin }),
-                ...(p.ticker && { ticker: p.ticker }),
-                ...(p.tickerYahoo && { ticker_yahoo: p.tickerYahoo }),
+          onConfirm={async (positions, { mode = 'replace' } = {}) => {
+            const existing = assets.filter(a => a.parentAssetId === importingTo.sourceId || a.parent_asset_id === importingTo.sourceId);
+            const parent = assets.find(a => a.id === importingTo.sourceId);
+            const created = [];
+            try {
+              for (const p of positions) {
+                const createdPosition = await api.assets.create({
+                  type: 'stocks',
+                  name: p.name,
+                  current_value: p.amount || p.quantity * p.lastPrice,
+                  currency: importingTo.currency || 'EUR',
+                  quantity: p.quantity,
+                  purchase_price: p.buyingPrice,
+                  parent_asset_id: importingTo.sourceId,
+                  member_ids: importingTo.memberIds || [],
+                  // Stocke ISIN + ticker Yahoo si détectés — base pour les cours
+                  // live dans InvestmentDetail. Le backend peut ignorer ces
+                  // champs s'il ne les supporte pas encore (forward-compat).
+                  ...(p.isin && { isin: p.isin }),
+                  ...(p.ticker && { ticker: p.ticker }),
+                  ...(p.tickerYahoo && { ticker_yahoo: p.tickerYahoo }),
+                });
+                if (createdPosition?.id) created.push(createdPosition.id);
+              }
+              const nextPortfolioValue = portfolioValueAfterImport({
+                mode,
+                parentValue: parent?.currentValue || 0,
+                existingPositions: existing,
+                importedPositions: positions,
               });
+              if (parent) {
+                const updatedParent = await saveAsset({ ...parent, currentValue: nextPortfolioValue });
+                if (!updatedParent) throw new Error('La valorisation globale du portefeuille n’a pas pu être mise à jour.');
+              }
+              if (mode === 'replace') {
+                for (const old of existing) await api.assets.delete(old.id);
+              }
+              if (reload) await reload();
+            } catch (error) {
+              // Si la création échoue avant le remplacement, on retire les
+              // nouvelles lignes afin de conserver le portefeuille précédent.
+              for (const id of created) {
+                try { await api.assets.delete(id); } catch {}
+              }
+              throw error;
             }
-            if (reload) await reload();
           }}
         />
       )}

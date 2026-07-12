@@ -67,10 +67,12 @@ export function RealEstateEditor({ asset, members, liabilities, onSave, onCancel
   const availableLoans = (liabilities || []).filter(l => !loanLinks.has(l.id));
 
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
   const canSave = draft.name && (draft.memberIds || []).length > 0;
   const submit = async () => {
     if (!canSave) { alert('Renseigne un nom et au moins un propriétaire.'); return; }
     if (saving) return;
+    setError(null);
     setSaving(true);
     try {
       const saved = await onSave({ ...draft, updatedAt: new Date().toISOString() });
@@ -81,6 +83,8 @@ export function RealEstateEditor({ asset, members, liabilities, onSave, onCancel
           [...loanLinks].map(lid => api.liabilities.update(lid, { linked_asset_id: newId }).catch(() => {}))
         );
       }
+    } catch (err) {
+      setError(err?.message || "L'enregistrement a échoué.");
     } finally { setSaving(false); }
   };
 
@@ -93,7 +97,7 @@ export function RealEstateEditor({ asset, members, liabilities, onSave, onCancel
   })();
 
   return (
-    <ResponsiveModal open={true} onClose={onCancel}>
+    <ResponsiveModal open={true} onClose={onCancel} className="modal--wizard real-estate-editor-modal" title={asset.id ? 'Modifier mon immobilier' : 'Ajouter mon immobilier'}>
         <div className="modal-header">
           <h2>{asset.id ? 'Modifier mon immobilier' : 'Ajouter mon immobilier'}</h2>
           <button className="icon-btn-sm" onClick={onCancel}><X size={16}/></button>
@@ -257,6 +261,7 @@ export function RealEstateEditor({ asset, members, liabilities, onSave, onCancel
         </div>
         <div className="modal-footer wizard-footer">
           <button className="ds-btn" onClick={onCancel} disabled={saving}>Annuler</button>
+          {error && <span className="modal-inline-error">{error}</span>}
           <div style={{ flex: 1 }}/>
           {stepIdx > 0 && <button className="ds-btn" onClick={() => setStepIdx(stepIdx - 1)} disabled={saving}><ChevronLeft size={14}/> Retour</button>}
           {stepIdx < RE_STEPS.length - 1 ? (

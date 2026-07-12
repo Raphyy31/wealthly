@@ -120,19 +120,18 @@ function IncomeShiftCard({ incomeShift, updateIncomeShift }) {
       <div className="card-header">
         <h3>
           <CalendarClock size={16} style={{ color: 'var(--accent)' }}/>
-          Décalage salaire fin de mois
+          Règles du budget
         </h3>
         <span className="card-meta">
           <Sparkles size={11} style={{ display: 'inline-block', marginRight: 4, verticalAlign: '-1px' }}/>
-          Cas standard FR
+          Automatique
         </span>
       </div>
 
       <div style={{ padding: '0 18px 18px', display: 'flex', flexDirection: 'column', gap: 18 }}>
         <p style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.55, margin: 0 }}>
-          En France, le salaire est généralement viré <strong style={{ color: 'var(--ink)' }}>fin du mois M-1</strong> pour
-          financer le mois M. Active cette option pour que les revenus reçus à partir d'un jour pivot soient
-          comptabilisés sur le mois suivant.
+          Yotori classe chaque mouvement dans le mois qu’il finance réellement. Ces deux règles évitent les
+          faux revenus et les dépenses placées dans le mauvais mois.
         </p>
 
         {/* ── Toggle premium ──────────────────────────────────────── */}
@@ -160,7 +159,7 @@ function IncomeShiftCard({ incomeShift, updateIncomeShift }) {
               fontSize: 13.5, fontWeight: 600, color: 'var(--ink)',
               display: 'flex', alignItems: 'center', gap: 8,
             }}>
-              Décalage automatique
+              Salaire de fin de mois → mois suivant
               {incomeShift.enabled && (
                 <span style={{
                   fontSize: 9.5, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase',
@@ -171,8 +170,8 @@ function IncomeShiftCard({ incomeShift, updateIncomeShift }) {
             </div>
             <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 4, lineHeight: 1.4 }}>
               {incomeShift.enabled
-                ? <>Revenus reçus le <strong style={{ color: 'var(--ink-2)' }}>{incomeShift.pivotDay} du mois</strong> ou après <span style={{ color: 'var(--accent)' }}>→</span> mois suivant</>
-                : 'Désactivé — chaque transaction est attribuée à son mois civil'}
+                ? <>Un revenu reçu le <strong style={{ color: 'var(--ink-2)' }}>{incomeShift.pivotDay}</strong> ou après finance le mois suivant.</>
+                : 'Désactivé — le revenu reste dans son mois de réception.'}
             </div>
           </div>
 
@@ -218,10 +217,10 @@ function IncomeShiftCard({ incomeShift, updateIncomeShift }) {
               fontSize: 10, fontWeight: 600, letterSpacing: '0.14em',
               textTransform: 'uppercase', color: 'var(--ink-3)',
             }}>
-              Jour pivot
+              À partir du
             </span>
             <span style={{ fontSize: 11, color: 'var(--ink-3)', fontStyle: 'italic' }}>
-              à partir de ce jour, le revenu glisse au mois suivant
+              choisissez le jour habituel de versement
             </span>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 7 }}>
@@ -273,9 +272,7 @@ function IncomeShiftCard({ incomeShift, updateIncomeShift }) {
               display: 'inline-block', marginRight: 6, verticalAlign: '-1px',
               color: 'var(--accent)',
             }}/>
-            Avec pivot <strong style={{ color: 'var(--accent)' }}>{incomeShift.pivotDay}</strong>,
-            un salaire viré le 28 avril sera attribué à <strong style={{ color: 'var(--ink-2)' }}>mai</strong> dans
-            Budget mensuel et Dashboard.
+            Exemple : un salaire viré le 28 avril apparaît dans le budget de <strong style={{ color: 'var(--ink-2)' }}>mai</strong>.
           </p>
 
           {/* Sous-option : décaler aussi les virements vers le compte commun */}
@@ -294,11 +291,12 @@ function IncomeShiftCard({ incomeShift, updateIncomeShift }) {
           >
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>
-                Décaler aussi les virements vers le compte commun
+                Compte commun intelligent
               </div>
               <div style={{ fontSize: 11.5, color: 'var(--ink-3)', marginTop: 3, lineHeight: 1.4 }}>
-                Un virement vers un compte marqué <strong style={{ color: 'var(--ink-2)' }}>joint</strong> fait à partir du
-                jour pivot compte comme une dépense du mois suivant (comme le salaire).
+                Côté personnel : <strong style={{ color: 'var(--ink-2)' }}>contribution</strong>. Côté famille :
+                <strong style={{ color: 'var(--ink-2)' }}> financement reçu par membre</strong>, jamais un faux revenu.
+                <span style={{ display: 'block', marginTop: 3 }}>S’applique aux comptes marqués « Compte commun » dans Réglages → Comptes.</span>
               </div>
             </div>
             <div style={{

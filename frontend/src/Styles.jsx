@@ -2285,6 +2285,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .wizard-pane { padding: 24px 28px; display: flex; flex-direction: column; gap: 14px; }
 .wizard-pane label > span em { font-style: normal; font-weight: 400; color: var(--text-tertiary); margin-left: 6px; font-size: 11px; }
 .wizard-footer { gap: 8px; align-items: center; }
+.modal-inline-error { color: var(--negative); font-size: 11.5px; line-height: 1.35; max-width: 240px; }
 .wizard-advanced { border: 1px solid var(--border); border-radius: 10px; background: var(--bg-subtle); overflow: hidden; }
 .wizard-advanced summary { cursor: pointer; padding: 12px 14px; color: var(--text-secondary); font-size: 13px; font-weight: 600; }
 .wizard-advanced summary span { color: var(--text-tertiary); font-size: 11px; font-weight: 400; margin-left: 5px; }

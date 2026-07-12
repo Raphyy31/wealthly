@@ -40,12 +40,15 @@ export function LiabilityEditor({ liability, members, assets = [], onSave, onCan
   };
 
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
   const canSave = draft.name && (draft.memberIds || []).length > 0;
   const submit = async () => {
     if (!canSave) { alert('Renseigne au moins un nom et un emprunteur.'); return; }
     if (saving) return;
+    setError(null);
     setSaving(true);
     try { await onSave(draft); }
+    catch (err) { setError(err?.message || "L'enregistrement a échoué."); }
     finally { setSaving(false); }
   };
 
@@ -198,6 +201,7 @@ export function LiabilityEditor({ liability, members, assets = [], onSave, onCan
         </div>
         <div className="modal-footer wizard-footer">
           <button className="ds-btn" onClick={onCancel} disabled={saving}>Annuler</button>
+          {error && <span className="modal-inline-error">{error}</span>}
           <div style={{ flex: 1 }}/>
           {stepIdx > 0 && <button className="ds-btn" onClick={() => setStepIdx(stepIdx - 1)} disabled={saving}><ChevronLeft size={14}/> Retour</button>}
           {stepIdx < LIABILITY_STEPS.length - 1 ? (

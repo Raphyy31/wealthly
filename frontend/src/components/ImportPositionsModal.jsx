@@ -12,7 +12,7 @@
 //   4. done    : confirmation
 // ============================================================================
 import { useState, useMemo } from 'react';
-import { X, Upload, CheckCircle2, AlertCircle } from 'lucide-react';
+import { X, Upload, CheckCircle2, AlertCircle, Plus, RefreshCw } from 'lucide-react';
 import {
   parsePositionsFile,
   applyPositionsMapping,
@@ -22,8 +22,9 @@ import {
 } from '../utils/positionsImport.js';
 import { ResponsiveModal } from './ui/ResponsiveModal.jsx';
 
-export function ImportPositionsModal({ parentAsset, fmt, onConfirm, onClose }) {
-  const [step, setStep] = useState('upload');     // upload → mapping → preview → done
+export function ImportPositionsModal({ parentAsset, fmt, onConfirm, onClose, initialMode = 'choice' }) {
+  const [step, setStep] = useState(initialMode === 'manual' ? 'manual' : initialMode === 'replace' ? 'upload' : 'choice');
+  const [importMode, setImportMode] = useState(initialMode === 'manual' ? 'append' : 'replace');
   const [headers, setHeaders] = useState([]);
   const [dataRows, setDataRows] = useState([]);
   const [mapping, setMapping] = useState({});
@@ -33,6 +34,7 @@ export function ImportPositionsModal({ parentAsset, fmt, onConfirm, onClose }) {
   const [rememberMapping, setRememberMapping] = useState(true);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [manual, setManual] = useState({ name: '', isin: '', ticker: '', quantity: '', buyingPrice: '', lastPrice: '', amount: '' });
 
   const handleFile = async (file) => {
     setError(null);
@@ -71,34 +73,71 @@ export function ImportPositionsModal({ parentAsset, fmt, onConfirm, onClose }) {
   };
 
   const confirm = async () => {
+    if (positions.length === 0) {
+      setError('Aucune position exploitable : vérifiez les colonnes et les quantités avant de remplacer le portefeuille.');
+      return;
+    }
+    setError(null);
     setSubmitting(true);
     try {
-      await onConfirm(positions);
+      await onConfirm(positions, { mode: importMode });
       setStep('done');
+    } catch (err) {
+      setError(err?.message || 'La mise à jour a échoué. Votre ancien portefeuille a été conservé.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const confirmManual = async () => {
+    const quantity = parseFloat(manual.quantity) || 0;
+    const lastPrice = parseFloat(manual.lastPrice) || 0;
+    const amount = parseFloat(manual.amount) || quantity * lastPrice;
+    if (!manual.name.trim() || amount <= 0) {
+      setError('Renseignez au moins un nom et une valorisation (ou quantité × cours).');
+      return;
+    }
+    setPositions([{
+      name: manual.name.trim(), isin: manual.isin.trim(), ticker: manual.ticker.trim(),
+      tickerYahoo: manual.ticker.trim(), quantity, buyingPrice: parseFloat(manual.buyingPrice) || 0,
+      lastPrice, amount,
+    }]);
+    setImportMode('append');
+    setError(null);
+    setSubmitting(true);
+    try {
+      await onConfirm([{
+        name: manual.name.trim(), isin: manual.isin.trim(), ticker: manual.ticker.trim(),
+        tickerYahoo: manual.ticker.trim(), quantity, buyingPrice: parseFloat(manual.buyingPrice) || 0,
+        lastPrice, amount,
+      }], { mode: 'append' });
+      setStep('done');
+    } catch (err) {
+      setError(err?.message || "L'ajout a échoué. Réessayez dans un instant.");
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <ResponsiveModal open={true} onClose={onClose}>
+    <ResponsiveModal open={true} onClose={onClose} className="import-positions-v3" title="Gérer le portefeuille">
         <ImportPositionsStyles/>
 
         <div className="ipv3-head">
           <div>
             <h2 className="ipv3-title">
-              Importer un <em>portefeuille.</em>
+              {step === 'manual' ? <>Ajouter une <em>position.</em></> : step === 'choice' ? <>Gérer le <em>portefeuille.</em></> : <>Mettre à jour le <em>portefeuille.</em></>}
             </h2>
             <div className="ipv3-sub">
-              {parentAsset?.name && <>vers <strong>{parentAsset.name}</strong> · </>}
-              CSV ou XLSX, toutes banques
+              {parentAsset?.name && <><strong>{parentAsset.name}</strong> · </>}
+              {step === 'manual' ? 'ajout manuel' : step === 'choice' ? 'choisissez la méthode la plus simple' : 'relevé complet CSV ou XLSX'}
             </div>
           </div>
           <button className="ipv3-close" onClick={onClose} aria-label="Fermer"><X size={18}/></button>
         </div>
 
-        {/* Stepper */}
-        <div className="ipv3-stepper">
+        {/* Stepper — inutile sur le choix initial et l'ajout manuel. */}
+        {!['choice', 'manual'].includes(step) && <div className="ipv3-stepper">
           {[
             { id: 'upload', label: 'Fichier' },
             { id: 'mapping', label: 'Colonnes' },
@@ -113,7 +152,47 @@ export function ImportPositionsModal({ parentAsset, fmt, onConfirm, onClose }) {
               </div>
             );
           })}
-        </div>
+        </div>}
+
+        {step === 'choice' && (
+          <div className="ipv3-body">
+            <p className="ipv3-choice-intro">Que souhaitez-vous faire sur <strong>{parentAsset?.name || 'ce portefeuille'}</strong> ?</p>
+            <div className="ipv3-choice-grid">
+              <button type="button" className="ipv3-choice" onClick={() => { setImportMode('replace'); setStep('upload'); }}>
+                <span className="ipv3-choice-icon"><RefreshCw size={22}/></span>
+                <strong>Mettre à jour tout le portefeuille</strong>
+                <span>Réimportez le relevé complet. Les anciennes lignes seront remplacées après votre confirmation.</span>
+                <em>Recommandé après un achat ou une vente</em>
+              </button>
+              <button type="button" className="ipv3-choice" onClick={() => { setImportMode('append'); setStep('manual'); }}>
+                <span className="ipv3-choice-icon"><Plus size={22}/></span>
+                <strong>Ajouter une position</strong>
+                <span>Saisissez une nouvelle ligne manuellement sans toucher aux positions existantes.</span>
+                <em>Rapide pour un achat isolé</em>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === 'manual' && (
+          <div className="ipv3-body">
+            <p className="ipv3-banner">Ajoutez uniquement la nouvelle position. Les lignes déjà présentes restent inchangées.</p>
+            <div className="ipv3-manual-grid">
+              <label className="ipv3-manual-wide"><span>Nom de la position *</span><input autoFocus value={manual.name} onChange={e => setManual({ ...manual, name: e.target.value })} placeholder="Ex. Air Liquide"/></label>
+              <label><span>ISIN <em>optionnel</em></span><input value={manual.isin} onChange={e => setManual({ ...manual, isin: e.target.value })} placeholder="FR0000120073"/></label>
+              <label><span>Ticker <em>optionnel</em></span><input value={manual.ticker} onChange={e => setManual({ ...manual, ticker: e.target.value })} placeholder="AI.PA"/></label>
+              <label><span>Quantité</span><input type="number" step="any" value={manual.quantity} onChange={e => setManual({ ...manual, quantity: e.target.value })} placeholder="10"/></label>
+              <label><span>Prix de revient unitaire</span><input type="number" step="any" value={manual.buyingPrice} onChange={e => setManual({ ...manual, buyingPrice: e.target.value })} placeholder="145"/></label>
+              <label><span>Cours actuel</span><input type="number" step="any" value={manual.lastPrice} onChange={e => setManual({ ...manual, lastPrice: e.target.value })} placeholder="178"/></label>
+              <label><span>Valorisation totale</span><input type="number" step="any" value={manual.amount} onChange={e => setManual({ ...manual, amount: e.target.value })} placeholder="Calculée si vide"/></label>
+            </div>
+            {error && <div className="ipv3-error"><AlertCircle size={14}/> {error}</div>}
+            <div className="ipv3-foot">
+              <button className="ds-btn" onClick={() => setStep('choice')}>Retour</button>
+              <button className="ds-btn primary" disabled={submitting} onClick={confirmManual}>{submitting ? 'Ajout…' : 'Ajouter la position'}</button>
+            </div>
+          </div>
+        )}
 
         {step === 'upload' && (
           <div className="ipv3-body">
@@ -215,6 +294,7 @@ export function ImportPositionsModal({ parentAsset, fmt, onConfirm, onClose }) {
               <strong>{positions.length}</strong> position{positions.length > 1 ? 's' : ''} reconstituée{positions.length > 1 ? 's' : ''}
               {autoDetected && <span className="ipv3-tag-ok"> · format reconnu automatiquement</span>}
               {fromLearned && <span className="ipv3-tag-ok"> · mapping appris</span>}
+              <span style={{ display: 'block', marginTop: 5 }}>Après confirmation, ces lignes remplaceront les anciennes. Les liquidités déjà présentes sur l’enveloppe seront conservées.</span>
             </p>
 
             <div className="ipv3-preview-table-wrap">
@@ -252,10 +332,11 @@ export function ImportPositionsModal({ parentAsset, fmt, onConfirm, onClose }) {
               <button className="ds-btn" onClick={() => setStep(autoDetected ? 'upload' : 'mapping')}>
                 Retour
               </button>
-              <button className="ds-btn primary" disabled={submitting} onClick={confirm}>
-                {submitting ? 'Import en cours…' : `Importer ${positions.length} positions`}
+              <button className="ds-btn primary" disabled={submitting || positions.length === 0} onClick={confirm}>
+                {submitting ? 'Mise à jour…' : `Remplacer par ces ${positions.length} positions`}
               </button>
             </div>
+            {error && <div className="ipv3-error"><AlertCircle size={14}/> {error}</div>}
           </div>
         )}
 
@@ -263,7 +344,7 @@ export function ImportPositionsModal({ parentAsset, fmt, onConfirm, onClose }) {
           <div className="ipv3-body ipv3-done">
             <CheckCircle2 size={36}/>
             <p className="ipv3-done-title">
-              {positions.length} position{positions.length > 1 ? 's' : ''} importée{positions.length > 1 ? 's' : ''}
+              {positions.length} position{positions.length > 1 ? 's' : ''} {importMode === 'replace' ? 'mise' : 'ajoutée'}{positions.length > 1 ? 's' : ''} {importMode === 'replace' ? 'à jour' : ''}
             </p>
             <p className="ipv3-done-sub">
               Les cours live seront récupérés automatiquement pour les positions reconnues.
@@ -373,6 +454,25 @@ function ImportPositionsStyles() {
 }
 
 .ipv3-body { padding: 20px 24px; overflow-y: auto; flex: 1; }
+.ipv3-choice-intro { margin: 2px 0 16px; color: var(--ink-2); font-size: 14px; }
+.ipv3-choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.ipv3-choice {
+  min-height: 210px; padding: 22px; border: 1px solid var(--border); border-radius: var(--radius-lg);
+  background: var(--bg-sunk); color: var(--ink); text-align: left; cursor: pointer;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 10px; font-family: inherit;
+  transition: border-color var(--t-fast), background var(--t-fast), transform var(--t-fast);
+}
+.ipv3-choice:hover { border-color: var(--accent); background: var(--accent-soft); transform: translateY(-1px); }
+.ipv3-choice-icon { width: 42px; height: 42px; display: inline-flex; align-items: center; justify-content: center; border-radius: 12px; background: var(--bg-elev); color: var(--accent); border: 1px solid var(--border); }
+.ipv3-choice strong { font-size: 15px; }
+.ipv3-choice > span:not(.ipv3-choice-icon) { color: var(--ink-2); font-size: 12.5px; line-height: 1.5; }
+.ipv3-choice em { margin-top: auto; color: var(--accent); font-size: 11px; font-style: normal; font-weight: 600; }
+.ipv3-manual-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.ipv3-manual-grid label { display: flex; flex-direction: column; gap: 6px; color: var(--ink-2); font-size: 12px; font-weight: 600; }
+.ipv3-manual-grid label span em { color: var(--ink-3); font-size: 10.5px; font-style: normal; font-weight: 400; }
+.ipv3-manual-grid input { width: 100%; padding: 11px 12px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--bg-elev); color: var(--ink); font: inherit; }
+.ipv3-manual-grid input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.ipv3-manual-wide { grid-column: 1 / -1; }
 .ipv3-banner {
   background: var(--accent-soft);
   color: var(--accent-2);
@@ -420,6 +520,14 @@ function ImportPositionsStyles() {
   border-radius: 4px;
   padding: 1px 5px;
   font: 500 11px/1 var(--font-mono);
+}
+@media (max-width: 640px) {
+  .ipv3-choice-grid, .ipv3-manual-grid { grid-template-columns: 1fr; }
+  .ipv3-choice { min-height: 0; }
+  .ipv3-manual-wide { grid-column: auto; }
+  .ipv3-head { padding-left: 16px; padding-right: 16px; }
+  .ipv3-body { padding: 16px; }
+  .ipv3-stepper { gap: 10px; padding-left: 16px; padding-right: 16px; }
 }
 
 .ipv3-info {

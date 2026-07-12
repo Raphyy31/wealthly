@@ -4,7 +4,7 @@
 // telles quelles (styles inv-v3-* injectés dans le corps).
 // ============================================================================
 import React, { useState, useMemo } from 'react';
-import { BarChart3, RefreshCw, Upload, PieChart, TrendingUp } from 'lucide-react';
+import { BarChart3, RefreshCw, Upload, PieChart, TrendingUp, Plus } from 'lucide-react';
 import { ownersList, positionColor, formatQty } from '../utils.js';
 import { InvestmentDetailStyles } from '../styles.jsx';
 import { LivePricesFooter } from '../components/LivePricesFooter.jsx';
@@ -123,7 +123,8 @@ export function InvestmentDetail({ asset, assets = [], members = [], fmt, onEdit
       delta={invested > 0 ? { text: `${plLatente >= 0 ? '+' : ''}${fmt(plLatente)} · ${pct(plLatentePct)}`, positive: plLatente >= 0 } : null}
       kpis={kpis}
       footer={<>
-        {onImportCSV && <button className="ds-btn primary" onClick={() => onImportCSV(asset)} title="Importer un relevé de positions (CSV / XLSX)"><Upload size={14}/> Importer des positions</button>}
+        {onImportCSV && <button className="ds-btn primary" onClick={() => onImportCSV(asset, 'replace')} title="Réimporter le portefeuille complet"><RefreshCw size={14}/> Mettre à jour le portefeuille</button>}
+        {onImportCSV && <button className="ds-btn" onClick={() => onImportCSV(asset, 'manual')}><Plus size={14}/> Ajouter une position</button>}
         {liveRowsToSync.length > 0 && (
           <button className="ds-btn" onClick={handleSync} disabled={syncing} title={`Pousser le cours live dans ${liveRowsToSync.length} position(s)`}>
             <RefreshCw size={13} className={syncing || liveLoading ? 'spin' : ''}/> {syncing ? 'Sync…' : `Synchroniser ${liveRowsToSync.length} position${liveRowsToSync.length > 1 ? 's' : ''}`}
@@ -145,7 +146,7 @@ export function InvestmentDetail({ asset, assets = [], members = [], fmt, onEdit
         </DetailSection>
       )}
       {hasPositions ? (
-        <DetailSection title="Positions" aside={onImportCSV ? <button className="ds-btn" onClick={() => onImportCSV(asset)} title="Importer un relevé (CSV / XLSX)">Importer</button> : null}>
+        <DetailSection title="Positions" aside={onImportCSV ? <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}><button className="ds-btn" onClick={() => onImportCSV(asset, 'manual')}><Plus size={13}/> Ajouter</button><button className="ds-btn" onClick={() => onImportCSV(asset, 'replace')} title="Remplacer toutes les lignes depuis un relevé"><Upload size={13}/> Réimporter tout</button></div> : null}>
           <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: -6, marginBottom: 10 }}>Triées par valorisation décroissante</div>
           <div className="inv-v3-table-wrap">
             <div className="inv-v3-cols ds-micro">
@@ -190,7 +191,7 @@ export function InvestmentDetail({ asset, assets = [], members = [], fmt, onEdit
             <BarChart3 size={28}/>
             <h3 style={{ margin: '12px 0 4px', fontSize: 15, color: 'var(--text-primary)' }}>Aucune position importée</h3>
             <p style={{ margin: '0 auto', maxWidth: 440, fontSize: 13, lineHeight: 1.5 }}>Importez le relevé de positions de votre broker (CSV / XLSX) pour voir le détail ligne à ligne et activer les cours live. La valorisation globale du compte reste à <strong>{fmt(currentValue)}</strong>.</p>
-            {onImportCSV && <button className="ds-btn primary" onClick={() => onImportCSV(asset)} style={{ marginTop: 16 }}>Importer un portefeuille</button>}
+            {onImportCSV && <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap', marginTop: 16 }}><button className="ds-btn primary" onClick={() => onImportCSV(asset, 'replace')}>Importer un portefeuille</button><button className="ds-btn" onClick={() => onImportCSV(asset, 'manual')}><Plus size={13}/> Ajouter manuellement</button></div>}
           </div>
         </DetailSection>
       )}

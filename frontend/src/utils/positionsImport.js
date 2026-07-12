@@ -241,6 +241,26 @@ export function applyPositionsMapping(headers, dataRows, mapping) {
   return positions;
 }
 
+export function importedPositionValue(position) {
+  return parseNumber(position?.amount)
+    || parseNumber(position?.quantity) * parseNumber(position?.lastPrice);
+}
+
+// Keeps the cash already present on the envelope while replacing or appending
+// security lines. This is the number that must be persisted on the PEA/CTO
+// parent after an import so the update is immediately visible.
+export function portfolioValueAfterImport({ mode = 'replace', parentValue = 0, existingPositions = [], importedPositions = [] }) {
+  const existingValue = existingPositions.reduce((sum, p) => sum + importedPositionValue({
+    amount: p.currentValue ?? p.current_value,
+    quantity: p.quantity,
+    lastPrice: p.lastPrice,
+  }), 0);
+  const preservedCash = Math.max(0, parseNumber(parentValue) - existingValue);
+  const importedValue = importedPositions.reduce((sum, p) => sum + importedPositionValue(p), 0);
+  const positionsValue = mode === 'append' ? existingValue + importedValue : importedValue;
+  return Math.round((positionsValue + preservedCash) * 100) / 100;
+}
+
 // ─────────────────────────────────────────────────────────────────────────
 // Persistance des mappings par signature de fichier (set des headers)
 // → la 2e import depuis la même banque utilise le mapping appris.

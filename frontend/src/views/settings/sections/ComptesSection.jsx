@@ -169,7 +169,7 @@ export function ComptesSection({ accounts, accountBalances, members, transaction
                       >
                         {ACCOUNT_ROLES[role]?.label || role}
                       </span>
-                      {a.isJoint && <span className="acc-joint-chip">👪 Joint</span>}
+                      {a.isJoint && <span className="acc-joint-chip">👪 Compte commun</span>}
                     </div>
                     <div className="acc-row-line2">
                       <span className="acc-bank">{a.bank}</span>
@@ -328,9 +328,9 @@ function AccountEditor({ account, members, isOpen, updateAccount, onMerge, onDel
               type="button"
               className={`acc-joint-toggle ${account.isJoint ? 'is-on' : ''}`}
               onClick={() => updateAccount(account.id, { isJoint: !account.isJoint })}
-              title={account.isJoint ? 'Retirer le statut joint' : 'Marquer comme compte joint'}
+              title={account.isJoint ? 'Ce compte est commun au foyer' : 'Définir comme compte commun du foyer'}
             >
-              👪 Joint
+              👪 Compte commun
             </button>
             <Combobox
               width={170}
@@ -349,6 +349,9 @@ function AccountEditor({ account, members, isOpen, updateAccount, onMerge, onDel
               options={SUPPORTED_CURRENCIES.map(c => ({ value: c, label: `${CURRENCY_FLAGS[c]} ${c}` }))}
             />
           </div>
+          {account.isJoint && (
+            <p className="acc-editor-help">Les versements des membres financeront le compte commun sans gonfler les revenus du foyer.</p>
+          )}
         </div>
 
         {/* Actions */}

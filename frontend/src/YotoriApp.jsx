@@ -2720,6 +2720,7 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
       const mapped = liaFromApi(saved);
       setLiabilities(prev => lia.id ? prev.map(l => l.id === lia.id ? mapped : l) : [...prev, mapped]);
       showToast(t('toasts.loanSaved'), 'success');
+      return mapped;
     } catch (err) { showToast(t('toasts.genericError', { message: err.message }), 'error'); }
   };
 

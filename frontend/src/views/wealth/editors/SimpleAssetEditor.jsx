@@ -12,12 +12,15 @@ import { ResponsiveModal } from '../../../components/ui/ResponsiveModal.jsx';
 export function SimpleAssetEditor({ asset, members, onSave, onCancel }) {
   const [draft, setDraft] = useState(asset);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
   const handleSave = async () => {
     if (!draft.name) { alert('Donnez un nom à cet actif'); return; }
     if (!draft.memberIds || draft.memberIds.length === 0) { alert('Assignez à au moins un membre'); return; }
     if (saving) return;
+    setError(null);
     setSaving(true);
     try { await onSave({ ...draft, updatedAt: new Date().toISOString() }); }
+    catch (err) { setError(err?.message || "L'enregistrement a échoué."); }
     finally { setSaving(false); }
   };
   const toggleMember = (mid) => {
@@ -25,8 +28,10 @@ export function SimpleAssetEditor({ asset, members, onSave, onCancel }) {
     setDraft({ ...draft, memberIds: ids.includes(mid) ? ids.filter(i => i !== mid) : [...ids, mid] });
   };
   const type = ASSET_TYPES.find(t => t.id === draft.type);
+  const isPortfolio = ['stocks', 'pea', 'life_insurance', 'per'].includes(draft.type);
+  const portfolioLabel = ({ pea: 'PEA', stocks: 'CTO', life_insurance: 'assurance-vie', per: 'PER' })[draft.type] || 'portefeuille';
   return (
-    <ResponsiveModal open={true} onClose={onCancel}>
+    <ResponsiveModal open={true} onClose={onCancel} title={asset.id ? 'Modifier un actif' : 'Ajouter un actif'}>
         <div className="modal-header">
           <h2>{asset.id ? 'Modifier' : 'Nouvel actif'}</h2>
           <button className="icon-btn-sm" onClick={onCancel}><X size={16}/></button>
@@ -55,6 +60,11 @@ export function SimpleAssetEditor({ asset, members, onSave, onCancel }) {
             </label>
           </div>
           {type && <div className="field-help">{type.description}</div>}
+          {isPortfolio && (
+            <div className="settings-info" style={{ marginBottom: 4 }}>
+              <span>Créez d’abord l’enveloppe {portfolioLabel}. Ensuite, vous pourrez importer le portefeuille complet ou ajouter vos positions une par une.</span>
+            </div>
+          )}
           <label><span>Nom</span>
             <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="ex: Appartement Paris 11e, AV Linxea Spirit"/>
           </label>
@@ -74,8 +84,8 @@ export function SimpleAssetEditor({ asset, members, onSave, onCancel }) {
             ) : null}
           </label>
 
-          {/* Live-pricing block — visible for market-traded asset types */}
-          {['stocks', 'pea', 'crypto', 'life_insurance'].includes(draft.type) && (
+          {/* Le ticker décrit un actif unique, jamais une enveloppe PEA/CTO. */}
+          {draft.type === 'crypto' && (
             <div style={{ padding: 12, background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: 10, marginBottom: 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
                 ⚡ Suivi en temps réel <span style={{ fontWeight: 400, color: 'var(--text-tertiary)', fontSize: 11 }}>(optionnel)</span>
@@ -106,7 +116,7 @@ export function SimpleAssetEditor({ asset, members, onSave, onCancel }) {
           )}
 
           <div className="field-row">
-            <label><span>Prix de revient ({draft.currency || 'EUR'}) <span className="hint">optionnel</span></span>
+            <label><span>{isPortfolio ? 'Total versé' : 'Prix de revient'} ({draft.currency || 'EUR'}) <span className="hint">optionnel</span></span>
               <input type="number" value={draft.purchasePrice ?? ''} onChange={(e) => setDraft({ ...draft, purchasePrice: e.target.value })} step="any" placeholder="ex: 12 500"/>
             </label>
             <label><span>Date d'acquisition <span className="hint">optionnel</span></span>
@@ -130,6 +140,7 @@ export function SimpleAssetEditor({ asset, members, onSave, onCancel }) {
           </label>
         </div>
         <div className="modal-footer">
+          {error && <span className="modal-inline-error">{error}</span>}
           <button className="ds-btn" onClick={onCancel} disabled={saving}>Annuler</button>
           <button className="ds-btn primary" onClick={handleSave} disabled={saving}>
             {saving ? <><Loader2 size={14} className="spin"/> Enregistrement…</> : <><Check size={14}/> Enregistrer</>}
