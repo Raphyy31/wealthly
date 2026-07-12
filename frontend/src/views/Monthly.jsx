@@ -1286,20 +1286,10 @@ function MonthlyCompareTable({ sections, monthTx, fmt, catFor, expandedRows, tog
     <section className="card mon-compare">
       <div className="mon-compare-head">
         <div>
-          <h3>Où en est votre budget ?</h3>
-          <p className="mon-compare-sub">Une lecture simple du prévu, du dépensé et de ce qu’il reste. Ouvrez une ligne seulement si vous voulez le détail.</p>
+          <h3>Le mois, catégorie par catégorie</h3>
+          <p className="mon-compare-sub">Les montants importants d’abord. Cliquez sur une carte pour retrouver les transactions.</p>
         </div>
-      </div>
-
-      {/* Column headers — clarifie quelle colonne est Mois type vs reel */}
-      <div className="mon-compare-cols">
-        <span className="mon-compare-cols-cat">Catégorie</span>
-        <span className="mon-compare-cols-amounts">
-          <span className="mon-compare-cols-ref">Mois type</span>
-          <span className="mon-compare-cols-arrow">→</span>
-          <span className="mon-compare-cols-real">{selectedMonthLabel}</span>
-        </span>
-        <span className="mon-compare-cols-delta">Écart</span>
+        <span className="mon-compare-period">{selectedMonthLabel}</span>
       </div>
 
       {sections.map(section => (
@@ -1309,7 +1299,7 @@ function MonthlyCompareTable({ sections, monthTx, fmt, catFor, expandedRows, tog
             <span className="mon-compare-section-count">{section.parents.length} {section.parents.length > 1 ? 'catégories' : 'catégorie'}</span>
           </div>
 
-          <ul className="mon-compare-rows">
+          <ul className="mon-compare-rows mon-budget-card-grid">
             {section.parents.map((group) => {
               const cat = group.parent_cat;
               const rowKey = `${section.kind}::${group.parent_id}`;
@@ -1331,32 +1321,26 @@ function MonthlyCompareTable({ sections, monthTx, fmt, catFor, expandedRows, tog
                     : (isOver ? `${fmt(Math.abs(delta))} manquant` : `+${fmt(Math.abs(delta))} d’avance`);
 
               return (
-                <li key={rowKey} className={`mon-compare-row ${isExpanded ? 'is-expanded' : ''}`}>
+                <li key={rowKey} className={`mon-compare-row mon-budget-card ${isExpanded ? 'is-expanded' : ''}`}>
                   <button
-                    className="mon-compare-row-head mcr"
+                    className="mon-budget-card-button"
                     onClick={() => toggleRow(rowKey)}
                     aria-expanded={isExpanded}
                   >
-                    <div className="mcr-top">
-                      <span className="mon-compare-row-chevron" aria-hidden="true">
-                        <ChevronRight size={14}/>
-                      </span>
+                    <div className="mon-budget-card-head">
                       <span className="mon-compare-row-cat">
                         <span className="mon-compare-row-icon" style={{ background: cat?.color || 'var(--ink-3)' }}>
                           {cat?.icon || '•'}
                         </span>
                         <span className="mon-compare-row-name">{cat?.name || group.parent_id}</span>
-                        {group.children.length > 0 && (
-                          <span className="mon-compare-row-childcount" title={`${group.children.length} sous-catégorie(s)`}>
-                            {group.children.length}
-                          </span>
-                        )}
                         {group.is_unexpected && <span className="mon-compare-badge">Nouveau</span>}
                       </span>
-                      <span className="mcr-amounts num">
-                        <span className="mcr-amount"><small>Réel</small><strong>{fmt(actual)}</strong></span>
-                        <span className="mcr-amount"><small>Prévu</small><strong>{noTarget ? '—' : fmt(target)}</strong></span>
-                      </span>
+                      <span className="mon-compare-row-chevron" aria-hidden="true"><ChevronRight size={15}/></span>
+                    </div>
+                    <div className="mon-budget-card-value num">{fmt(actual)}</div>
+                    <div className="mon-budget-card-value-label">{section.kind === 'income' ? 'reçus' : section.kind === 'saving' ? 'épargnés' : 'dépensés'}</div>
+                    <div className="mon-budget-card-foot">
+                      <span className="num">Prévu&nbsp;: {noTarget ? '—' : fmt(target)}</span>
                       <span className={`mcr-status-pill ${noTarget ? 'new' : hasDelta && isOver ? 'over' : 'ok'}`}>{statusText}</span>
                     </div>
                   </button>
