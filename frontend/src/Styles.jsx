@@ -887,6 +887,78 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 
 /* WEALTH */
 .wealth-view { display: flex; flex-direction: column; gap: 20px; }
+/* Synthèse pédagogique : possessions − dettes = patrimoine net. */
+.wealth-net-summary {
+  display: grid;
+  grid-template-columns: minmax(230px, .78fr) minmax(0, 1.5fr);
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in oklab, var(--accent) 22%, var(--border));
+  border-radius: 14px;
+  background: var(--bg-elev);
+  box-shadow: var(--shadow-sm);
+}
+.wealth-net-main {
+  padding: 24px 26px;
+  background: linear-gradient(145deg, color-mix(in oklab, var(--accent) 12%, var(--bg-elev)), var(--bg-elev));
+  border-right: 1px solid var(--border);
+}
+.wealth-net-kicker {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--accent);
+  font: 650 10.5px/1 var(--font-mono);
+  letter-spacing: .11em;
+  text-transform: uppercase;
+}
+.wealth-net-value {
+  color: var(--ink);
+  font: 600 clamp(31px, 4vw, 43px)/1.05 var(--font-sans);
+  letter-spacing: -.035em;
+}
+.wealth-net-value.negative { color: var(--negative); }
+.wealth-net-main p {
+  max-width: 410px;
+  margin: 9px 0 0;
+  color: var(--ink-2);
+  font: 400 12px/1.45 var(--font-sans);
+}
+.wealth-net-formula {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) auto minmax(120px, 1fr) auto minmax(120px, 1fr);
+  align-items: stretch;
+  gap: 10px;
+  padding: 18px;
+}
+.wealth-net-term {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  padding: 13px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+}
+.wealth-net-term > span { color: var(--ink-2); font: 600 11.5px var(--font-sans); }
+.wealth-net-term > strong { color: var(--ink); font: 650 16px var(--font-sans); white-space: nowrap; }
+.wealth-net-term > small { color: var(--ink-3); font: 400 10.5px/1.35 var(--font-sans); }
+.wealth-net-term.is-positive { border-color: color-mix(in oklab, var(--positive) 22%, var(--border)); }
+.wealth-net-term.is-negative strong { color: var(--negative); }
+.wealth-net-term.is-result { border-color: color-mix(in oklab, var(--accent) 38%, var(--border)); background: var(--accent-soft); }
+.wealth-net-term.is-result strong { color: var(--accent); }
+.wealth-net-operator { align-self: center; color: var(--ink-3); font: 400 22px var(--font-sans); }
+@media (max-width: 980px) {
+  .wealth-net-summary { grid-template-columns: 1fr; }
+  .wealth-net-main { border-right: 0; border-bottom: 1px solid var(--border); }
+}
+@media (max-width: 700px) {
+  .wealth-net-main { padding: 19px 18px; }
+  .wealth-net-formula { grid-template-columns: 1fr; gap: 7px; padding: 12px; }
+  .wealth-net-operator { line-height: .7; }
+  .wealth-net-term { padding: 10px 12px; }
+}
 /* Allocation mini-card — compact, click pour expand modal */
 .wealth-alloc-mini {
   display: flex;

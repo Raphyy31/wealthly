@@ -128,7 +128,7 @@
     "wealth": {
       "title": "Votre",
       "titleAccent": "patrimoine.",
-      "subtitle": "Actifs, passifs et allocation — par classe d'actif.",
+      "subtitle": "Ce que vous possédez, ce que vous devez et votre patrimoine net.",
       "emptyCategory": "Aucun élément dans",
       "noResults": "Aucun résultat."
     },

@@ -145,6 +145,15 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
       : allItems.filter(i => i.memberIds.includes(activeMemberId))
   ), [allItems, activeMemberId]);
 
+  // Valeur brute des comptes bancaires visibles. On la calcule depuis le flux unifié
+  // pour garder la même convention « valeur complète du bien/compte » que les
+  // lignes de cette page, y compris lorsqu'un membre du foyer est filtré. Les
+  // actifs liquides manuels (Livret, cash…) restent dans totalAssets : ne pas
+  // les reprendre ici, sinon ils seraient comptés deux fois.
+  const visibleLiquidTotal = useMemo(() => visibleItems
+    .filter(i => i.category === 'liquidites' && i.sourceTable === 'account')
+    .reduce((sum, item) => sum + (parseFloat(item.value) || 0), 0), [visibleItems]);
+
   const currentSub = WEALTH_SUBVIEWS.find(s => s.key === subview) || WEALTH_SUBVIEWS[0];
   const isAll = subview === 'all';
   const isLiabilitiesOnly = subview === 'emprunts';
@@ -177,14 +186,15 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
   // Dashboard pour les calculs d'équité d'un membre adulte filtré.
   const totalAssets = visibleAssets.reduce((s, a) => s + (parseFloat(a.currentValue) || 0), 0);
   const totalLiabilities = visibleLiabilities.reduce((s, l) => s + (parseFloat(l.remainingCapital) || 0), 0);
-  const netWealthAssets = totalAssets - totalLiabilities;
+  const grossAssetsTotal = visibleLiquidTotal + totalAssets;
+  const netWealthTotal = grossAssetsTotal - totalLiabilities;
 
   // Patrimoine financier : exclut immobilier + prêts immo
   const realEstateValue = visibleAssets.filter(a => a.type === 'real_estate')
     .reduce((s, a) => s + (parseFloat(a.currentValue) || 0), 0);
   const mortgageDebt = visibleLiabilities.filter(l => l.type === 'mortgage')
     .reduce((s, l) => s + (parseFloat(l.remainingCapital) || 0), 0);
-  const financialWealthLocal = liquidWealth + (totalAssets - realEstateValue) - (totalLiabilities - mortgageDebt);
+  const financialWealthLocal = visibleLiquidTotal + (totalAssets - realEstateValue) - (totalLiabilities - mortgageDebt);
   // Patrimoine immo net = valorisation residence - emprunt residence
   const realEstateNetWealth = realEstateValue - mortgageDebt;
 
@@ -217,6 +227,9 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
   // Asset class allocation for donut chart
   const classAllocation = useMemo(() => {
     const classes = {};
+    if (visibleLiquidTotal > 0) {
+      classes.Liquidités = { value: visibleLiquidTotal, color: 'var(--d2)' };
+    }
     visibleAssets.forEach(a => {
       const cls = ASSET_CLASS_MAP[a.type]?.class || 'Divers';
       const color = ASSET_CLASS_MAP[a.type]?.color || '#6b7280';
@@ -225,16 +238,17 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
       classes[cls].value += val;
     });
     return Object.entries(classes).filter(([, d]) => d.value > 0)
-      .map(([name, d]) => ({ name, value: d.value, color: d.color, pct: totalAssets > 0 ? (d.value / totalAssets) * 100 : 0 }))
+      .map(([name, d]) => ({ name, value: d.value, color: d.color, pct: grossAssetsTotal > 0 ? (d.value / grossAssetsTotal) * 100 : 0 }))
       .sort((a, b) => b.value - a.value);
-  }, [visibleAssets, totalAssets]);
+  }, [visibleAssets, visibleLiquidTotal, grossAssetsTotal]);
 
   // Private wealth KPIs
-  const debtRatioWealth = totalAssets > 0 ? (totalLiabilities / totalAssets) * 100 : null;
+  const debtRatioWealth = grossAssetsTotal > 0 ? (totalLiabilities / grossAssetsTotal) * 100 : null;
   const totalMonthlyDebt = visibleLiabilities.reduce((s, l) => s + (parseFloat(l.monthlyPayment) || 0), 0);
   const iliquidAssets = visibleAssets.filter(a => ['real_estate'].includes(a.type))
     .reduce((s, a) => s + (parseFloat(a.currentValue) || 0), 0);
-  const illiquidRatio = totalAssets > 0 ? (iliquidAssets / totalAssets) * 100 : null;
+  const illiquidRatio = grossAssetsTotal > 0 ? (iliquidAssets / grossAssetsTotal) * 100 : null;
+  const activeMemberName = activeMemberId !== 'all' ? members.find(m => m.id === activeMemberId)?.name : null;
 
   return (
     <div className="wealth-view" ref={wealthRef}>
@@ -243,8 +257,39 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
           <h1>{t('views.wealth.title')} <em>{t('views.wealth.titleAccent')}</em></h1>
           <p>{t('views.wealth.subtitle')}</p>
         </div>
-        <button className="ds-btn primary" onClick={() => (onOpenAddWizard ? onOpenAddWizard() : setShowAddPicker(true))}><Plus size={14}/> {t('actions.add')}</button>
+        <button className="ds-btn primary" onClick={() => (onOpenAddWizard ? onOpenAddWizard() : setShowAddPicker(true))}><Plus size={14}/> Ajouter au patrimoine</button>
       </div>
+
+      {isAll && (
+        <section className="wealth-net-summary" aria-label="Calcul du patrimoine net">
+          <div className="wealth-net-main">
+            <span className="wealth-net-kicker">{activeMemberName ? `Patrimoine lié à ${activeMemberName}` : 'Patrimoine net du foyer'}</span>
+            <div className={`wealth-net-value num ${netWealthTotal < 0 ? 'negative' : ''}`}>
+              <AnimatedNumber value={netWealthTotal} format={(v) => wideThousands(fmt(v))}/>
+            </div>
+            <p>La valeur de tout ce que vous possédez, après déduction des emprunts restants.</p>
+          </div>
+          <div className="wealth-net-formula">
+            <div className="wealth-net-term is-positive">
+              <span>Ce que vous possédez</span>
+              <strong className="num">{fmt(grossAssetsTotal)}</strong>
+              <small>Comptes, placements et biens</small>
+            </div>
+            <span className="wealth-net-operator" aria-hidden="true">−</span>
+            <div className="wealth-net-term is-negative">
+              <span>Ce que vous devez</span>
+              <strong className="num">{fmt(totalLiabilities)}</strong>
+              <small>Capital restant des emprunts</small>
+            </div>
+            <span className="wealth-net-operator" aria-hidden="true">=</span>
+            <div className="wealth-net-term is-result">
+              <span>Patrimoine net</span>
+              <strong className="num">{fmt(netWealthTotal)}</strong>
+              <small>Votre valeur patrimoniale réelle</small>
+            </div>
+          </div>
+        </section>
+      )}
 
 
       {/* HERO 2 cards + grid de categories — placement TOP pour visibilite immediate */}
@@ -287,7 +332,7 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
               )}
             </div>
             <div className="wealth-hero-breakdown">
-              <span><span className="wh-dot" style={{ background: 'var(--d2)' }}/> Liquidités <strong className="num">{fmt(liquidWealth)}</strong></span>
+              <span><span className="wh-dot" style={{ background: 'var(--d2)' }}/> Liquidités <strong className="num">{fmt(visibleLiquidTotal)}</strong></span>
               {(totalAssets - realEstateValue) > 0 && (
                 <span><span className="wh-dot" style={{ background: 'var(--d1)' }}/> Invest. + crypto <strong className="num">{fmt(totalAssets - realEstateValue)}</strong></span>
               )}
@@ -423,7 +468,7 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
                   category={catKey}
                   items={items}
                   total={total}
-                  totalWealth={totalAssets + totalLiabilities}
+                  grossAssetsTotal={grossAssetsTotal}
                   fmt={fmt}
                   onItemClick={handleItemClick}
                   onItemDelete={handleItemDelete}

@@ -128,7 +128,7 @@
     "wealth": {
       "title": "Your",
       "titleAccent": "wealth.",
-      "subtitle": "Assets, liabilities and allocation — by asset class.",
+      "subtitle": "What you own, what you owe, and your net worth.",
       "emptyCategory": "No items in",
       "noResults": "No results."
     },

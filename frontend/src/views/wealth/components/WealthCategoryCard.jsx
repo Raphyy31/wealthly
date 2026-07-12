@@ -42,7 +42,7 @@ function writeOpenMap(map) {
   try { localStorage.setItem(OPEN_LS_KEY, JSON.stringify(map)); } catch { /* ignore */ }
 }
 
-export function WealthCategoryCard({ category, items, total, totalWealth, fmt, onItemClick, onItemDelete, onAdd, onHeaderClick }) {
+export function WealthCategoryCard({ category, items, total, grossAssetsTotal, fmt, onItemClick, onItemDelete, onAdd, onHeaderClick }) {
   const visual = CATEGORY_VISUAL[category] || CATEGORY_VISUAL.autres;
   const Icon = visual.Icon;
   // « expanded » = afficher tous les items (au lieu de top 3)
@@ -64,7 +64,7 @@ export function WealthCategoryCard({ category, items, total, totalWealth, fmt, o
   const displayed = showAll ? sorted : sorted.slice(0, TOP_N_BY_DEFAULT);
   const hidden = sorted.length - TOP_N_BY_DEFAULT;
 
-  const pct = totalWealth > 0 ? (Math.abs(total) / Math.abs(totalWealth)) * 100 : 0;
+  const pct = grossAssetsTotal > 0 ? (Math.abs(total) / grossAssetsTotal) * 100 : 0;
 
   // Animation accordion via GSAP — anime à 0 (replié) ou scrollHeight (déplié)
   useLayoutEffect(() => {
@@ -113,7 +113,9 @@ export function WealthCategoryCard({ category, items, total, totalWealth, fmt, o
           <div className="wc-card-name">{visual.label}</div>
           <div className="wc-card-meta">
             {sorted.length === 0 ? 'Aucun élément' : `${sorted.length} ${category === 'emprunts' ? (sorted.length > 1 ? 'prêts' : 'prêt') : sorted.length > 1 ? 'actifs' : 'actif'}`}
-            {totalWealth > 0 && !isEmpty && ` · ${pct.toFixed(1)}% du patrimoine`}
+            {grossAssetsTotal > 0 && !isEmpty && (category === 'emprunts'
+              ? ` · ${pct.toFixed(1)}% de vos actifs à rembourser`
+              : ` · ${pct.toFixed(1)}% de vos actifs`)}
           </div>
         </div>
         <div className="wc-card-total-wrap">
