@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ChevronDown, Layers3, Lock, Pencil, Plus, Search, Sparkles, Trash2, X } from 'lucide-react';
+import { ChevronDown, Layers3, Lock, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 import * as api from '../../../api.js';
 import { DEFAULT_CATEGORIES } from '../../../constants.js';
 import { CategoryCreateModal } from '../modals/CategoryCreateModal.jsx';
@@ -151,9 +151,9 @@ export function MyCategoriesSection({
       </div>
 
       <div className="settings-category-summary">
-        <span><strong>{topCategories.length}</strong> catégories affichées</span>
-        <span><strong>{categories.filter((category) => category.parent).length}</strong> sous-catégories au total</span>
-        <span><Sparkles size={12}/> Les éléments « Inclus » sont modifiables, mais protégés contre la suppression.</span>
+        <span><strong>{topCategories.length}</strong> catégories</span>
+        <span><strong>{categories.filter((category) => category.parent).length}</strong> détails disponibles</span>
+        <span>Ouvrez une catégorie pour organiser ses détails.</span>
       </div>
 
       {topCategories.length === 0 ? (
@@ -182,33 +182,48 @@ export function MyCategoriesSection({
                   </button>
                   <div className="settings-category-actions">
                     <button className="icon-btn-sm" onClick={() => setEditing(category)} title="Modifier"><Pencil size={13}/></button>
-                    <button className="ds-btn sm" onClick={() => setCreating({ parent: category.id, parentName: category.name, type: category.type })}><Plus size={12}/> Sous-catégorie</button>
                     {!isDefault && <BusyButton className="icon-btn-sm" iconOnly title="Supprimer" onClick={() => onDelete(category)}><Trash2 size={13}/></BusyButton>}
                   </div>
                 </div>
 
                 {isOpen && (
                   <div className="settings-subcategory-list">
+                    <div className="settings-subcategory-head">
+                      <div>
+                        <strong>Détails de « {category.name} »</strong>
+                        <small>Pour affiner le classement sans multiplier les catégories principales.</small>
+                      </div>
+                      <button className="ds-btn sm" onClick={() => setCreating({ parent: category.id, parentName: category.name, type: category.type })}>
+                        <Plus size={12}/> Ajouter un détail
+                      </button>
+                    </div>
                     {children.length === 0 ? (
                       <button className="settings-subcategory-empty" onClick={() => setCreating({ parent: category.id, parentName: category.name, type: category.type })}>
                         <Plus size={13}/> Ajouter un premier détail à « {category.name} »
                       </button>
-                    ) : children.map((child) => {
+                    ) : <div className="settings-subcategory-grid">{children.map((child) => {
                       const childDefault = DEFAULT_IDS.has(child.id);
                       return (
                         <div className="settings-subcategory-row" key={child.id}>
-                          <span className="settings-subcategory-icon">{child.icon}</span>
-                          <span className="settings-subcategory-name">{child.name}</span>
-                          <span className={`settings-category-kind is-${child.kind}`}>{KIND_LABELS[child.kind] || child.type}</span>
-                          <span className="settings-category-usage">{transactionCount(child)} opération{transactionCount(child) > 1 ? 's' : ''}</span>
-                          {childDefault && <span className="settings-category-protected"><Lock size={11}/> Inclus</span>}
+                          <span className="settings-subcategory-icon" style={{ background: `${child.color || category.color}18`, color: child.color || category.color }}>{child.icon}</span>
+                          <span className="settings-subcategory-copy">
+                            <strong>{child.name}</strong>
+                            <small>
+                              {transactionCount(child)} opération{transactionCount(child) > 1 ? 's' : ''}
+                              {childDefault ? ' · détail inclus' : ' · personnalisé'}
+                            </small>
+                          </span>
+                          {child.kind !== category.kind && child.type === 'expense' && (
+                            <span className={`settings-category-kind is-${child.kind}`}>{KIND_LABELS[child.kind] || child.type}</span>
+                          )}
                           <div className="settings-subcategory-actions">
                             <button className="icon-btn-sm" onClick={() => setEditing(child)} title="Modifier"><Pencil size={12}/></button>
                             {!childDefault && <BusyButton className="icon-btn-sm" iconOnly title="Supprimer" onClick={() => onDelete(child)}><Trash2 size={12}/></BusyButton>}
+                            {childDefault && <span className="settings-category-protected" title="Détail inclus, modifiable mais non supprimable"><Lock size={11}/></span>}
                           </div>
                         </div>
                       );
-                    })}
+                    })}</div>}
                   </div>
                 )}
               </article>

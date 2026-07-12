@@ -11,9 +11,9 @@ import { ResponsiveModal } from '../../../components/ui/ResponsiveModal.jsx';
 import { AiPlannerChat } from '../../../components/AiPlannerChat.jsx';
 
 const LIABILITY_STEPS = [
-  { key: 'main',     label: 'L’essentiel' },
-  { key: 'schedule', label: 'Durée & taux' },
-  { key: 'linked',   label: 'Bien lié & notes' },
+  { key: 'main',     label: 'L’essentiel', description: 'Emprunt, mensualité et emprunteurs' },
+  { key: 'schedule', label: 'Calendrier', description: 'Durée, taux et dates de remboursement' },
+  { key: 'linked',   label: 'Rattachement', description: 'Bien financé et informations complémentaires' },
 ];
 
 export function LiabilityEditor({ liability, members, assets = [], onSave, onCancel }) {
@@ -84,7 +84,10 @@ export function LiabilityEditor({ liability, members, assets = [], onSave, onCan
       title={liability.id ? 'Modifier l’emprunt' : 'Ajouter un emprunt'}
     >
         <div className="modal-header">
-          <h2>{liability.id ? 'Modifier l\'emprunt' : 'Ajouter un emprunt'}</h2>
+          <div className="wealth-editor-heading">
+            <span className="wealth-editor-eyebrow">Emprunt · étape {stepIdx + 1} sur {LIABILITY_STEPS.length}</span>
+            <h2>{liability.id ? 'Modifier l\'emprunt' : 'Ajouter un emprunt'}</h2>
+          </div>
           <button className="icon-btn-sm" onClick={onCancel}><X size={16}/></button>
         </div>
         <div className="wizard-body">
@@ -101,9 +104,18 @@ export function LiabilityEditor({ liability, members, assets = [], onSave, onCan
             ))}
           </nav>
           <div className="wizard-pane">
+            <div className="wizard-pane-intro">
+              <strong>{LIABILITY_STEPS[stepIdx].label}</strong>
+              <span>{LIABILITY_STEPS[stepIdx].description}</span>
+            </div>
             {step === 'main' && (
               <>
-                {!liability.id && <AiPlannerChat mode="loan" onConfirmLoan={applyAiLoan}/>}
+                {!liability.id && (
+                  <details className="wealth-ai-helper">
+                    <summary>Remplir avec l’assistant <span>optionnel</span></summary>
+                    <div className="wealth-ai-helper-body"><AiPlannerChat mode="loan" onConfirmLoan={applyAiLoan}/></div>
+                  </details>
+                )}
                 <label><span>Nom</span>
                   <input value={draft.name} onChange={(e) => set('name', e.target.value)} placeholder="Emprunt RP, Auto, …" autoFocus/>
                 </label>
@@ -230,7 +242,7 @@ export function LiabilityEditor({ liability, members, assets = [], onSave, onCan
           <div style={{ flex: 1 }}/>
           {stepIdx > 0 && <button className="ds-btn" onClick={() => setStepIdx(stepIdx - 1)} disabled={saving}><ChevronLeft size={14}/> Retour</button>}
           {stepIdx < LIABILITY_STEPS.length - 1 ? (
-            <button className="ds-btn primary" onClick={() => setStepIdx(stepIdx + 1)}>Suivant <ChevronRight size={14}/></button>
+            <button className="ds-btn primary" onClick={() => setStepIdx(stepIdx + 1)} disabled={stepIdx === 0 && !canSave} title={stepIdx === 0 && !canSave ? 'Ajoutez un nom et au moins un emprunteur' : ''}>Suivant <ChevronRight size={14}/></button>
           ) : (
             <button className="ds-btn primary" onClick={submit} disabled={!canSave || saving}>
               {saving ? <><Loader2 size={14} className="spin"/> Enregistrement…</> : <><Check size={14}/> Enregistrer</>}

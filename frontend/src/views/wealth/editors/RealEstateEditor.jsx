@@ -17,10 +17,10 @@ const RE_SUBTYPES = [
 ];
 
 const RE_STEPS = [
-  { key: 'desc',   label: 'Description' },
-  { key: 'specs',  label: 'Caractéristiques' },
-  { key: 'detail', label: 'Détails' },
-  { key: 'loans',  label: 'Emprunts rattachés' },
+  { key: 'desc',   label: 'Le bien', description: 'Nom, catégorie et propriétaires' },
+  { key: 'specs',  label: 'Acquisition', description: 'Prix et caractéristiques principales' },
+  { key: 'detail', label: 'Valeur actuelle', description: 'Estimation et informations utiles' },
+  { key: 'loans',  label: 'Financement', description: 'Emprunts rattachés au bien' },
 ];
 
 export function RealEstateEditor({ asset, members, liabilities, onSave, onCancel }) {
@@ -99,7 +99,10 @@ export function RealEstateEditor({ asset, members, liabilities, onSave, onCancel
   return (
     <ResponsiveModal open={true} onClose={onCancel} className="modal--wizard real-estate-editor-modal" title={asset.id ? 'Modifier mon immobilier' : 'Ajouter mon immobilier'}>
         <div className="modal-header">
-          <h2>{asset.id ? 'Modifier mon immobilier' : 'Ajouter mon immobilier'}</h2>
+          <div className="wealth-editor-heading">
+            <span className="wealth-editor-eyebrow">Immobilier · étape {stepIdx + 1} sur {RE_STEPS.length}</span>
+            <h2>{asset.id ? 'Modifier mon immobilier' : 'Ajouter mon immobilier'}</h2>
+          </div>
           <button className="icon-btn-sm" onClick={onCancel}><X size={16}/></button>
         </div>
         <div className="wizard-body">
@@ -116,6 +119,10 @@ export function RealEstateEditor({ asset, members, liabilities, onSave, onCancel
             ))}
           </nav>
           <div className="wizard-pane">
+            <div className="wizard-pane-intro">
+              <strong>{RE_STEPS[stepIdx].label}</strong>
+              <span>{RE_STEPS[stepIdx].description}</span>
+            </div>
             {step === 'desc' && (
               <>
                 <label><span>Nom du bien</span>
@@ -265,7 +272,7 @@ export function RealEstateEditor({ asset, members, liabilities, onSave, onCancel
           <div style={{ flex: 1 }}/>
           {stepIdx > 0 && <button className="ds-btn" onClick={() => setStepIdx(stepIdx - 1)} disabled={saving}><ChevronLeft size={14}/> Retour</button>}
           {stepIdx < RE_STEPS.length - 1 ? (
-            <button className="ds-btn primary" onClick={() => setStepIdx(stepIdx + 1)}>Suivant <ChevronRight size={14}/></button>
+            <button className="ds-btn primary" onClick={() => setStepIdx(stepIdx + 1)} disabled={stepIdx === 0 && !canSave} title={stepIdx === 0 && !canSave ? 'Ajoutez un nom et au moins un propriétaire' : ''}>Suivant <ChevronRight size={14}/></button>
           ) : (
             <button className="ds-btn primary" onClick={submit} disabled={!canSave || saving}>
               {saving ? <><Loader2 size={14} className="spin"/> Enregistrement…</> : <><Check size={14}/> Enregistrer</>}

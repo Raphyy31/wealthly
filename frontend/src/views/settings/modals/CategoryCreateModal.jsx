@@ -23,53 +23,60 @@ export function CategoryCreateModal({ parent, parentName, forcedType, initial = 
   const canSave = draft.name.trim().length >= 2;
 
   return (
-    <ResponsiveModal open={true} onClose={onCancel}>
+    <ResponsiveModal open={true} onClose={onCancel} className="category-editor-modal">
         <div className="modal-header">
-          <h2>{isEditing ? <>Modifier <em>{initial.name}</em></> : parent ? <>Nouveau <em>détail</em></> : <>Nouvelle <em>catégorie</em></>}</h2>
+          <div>
+            <span className="category-editor-eyebrow">{parent ? `Dans ${parentName}` : 'Organisation des opérations'}</span>
+            <h2>{isEditing ? <>Modifier <em>{initial.name}</em></> : parent ? <>Nouveau <em>détail</em></> : <>Nouvelle <em>catégorie</em></>}</h2>
+          </div>
           <button className="icon-btn" onClick={onCancel}><X size={18}/></button>
         </div>
-        <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {parent && (
-            <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>Rattaché à <strong style={{ color: 'var(--ink)' }}>{parentName}</strong></div>
-          )}
-          <label>
-            <span style={{ fontSize: 11, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Nom</span>
+        <div className="modal-body category-editor-body">
+          <div className="category-editor-preview">
+            <span className="category-editor-preview-icon" style={{ background: `${draft.color}1f`, color: draft.color }}>{draft.icon}</span>
+            <span>
+              <strong>{draft.name.trim() || (parent ? 'Nom du détail' : 'Nom de la catégorie')}</strong>
+              <small>{parent ? `Détail de ${parentName}` : draft.type === 'income' ? 'Revenu' : draft.type === 'transfer' ? 'Virement' : 'Dépense'}</small>
+            </span>
+          </div>
+
+          <label className="category-editor-field">
+            <span>Nom</span>
             <input
               type="text"
               value={draft.name}
               onChange={e => setDraft({ ...draft, name: e.target.value })}
               placeholder={parent ? 'ex : Vacances été' : 'ex : Mes loisirs'}
               autoFocus
-              style={{ width: '100%' }}
             />
           </label>
 
-          <div>
-            <div style={{ fontSize: 11, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>Icône</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          <div className="category-editor-appearance">
+          <div className="category-editor-choice">
+            <span>Icône</span>
+            <div className="category-icon-grid">
               {COMMON_ICONS.map(ic => (
-                <button key={ic} type="button" onClick={() => setDraft({ ...draft, icon: ic })}
-                  style={{ width: 30, height: 30, fontSize: 16, borderRadius: 6, border: '1px solid ' + (draft.icon === ic ? 'var(--accent)' : 'var(--border)'), background: draft.icon === ic ? 'var(--accent-soft)' : 'var(--bg-elev)', cursor: 'pointer' }}>
+                <button key={ic} type="button" className={draft.icon === ic ? 'is-active' : ''} onClick={() => setDraft({ ...draft, icon: ic })} aria-label={`Icône ${ic}`}>
                   {ic}
                 </button>
               ))}
             </div>
           </div>
 
-          <div>
-            <div style={{ fontSize: 11, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>Couleur</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          <div className="category-editor-choice">
+            <span>Couleur</span>
+            <div className="category-color-grid">
               {CATEGORY_PALETTE.map(co => (
-                <button key={co} type="button" onClick={() => setDraft({ ...draft, color: co })}
-                  style={{ width: 26, height: 26, borderRadius: '50%', border: draft.color === co ? '3px solid var(--ink)' : '1px solid var(--border)', background: co, cursor: 'pointer' }}/>
+                <button key={co} type="button" className={draft.color === co ? 'is-active' : ''} onClick={() => setDraft({ ...draft, color: co })} style={{ '--category-swatch': co }} aria-label={`Couleur ${co}`}/>
               ))}
             </div>
           </div>
+          </div>
 
           {!parent && !forcedType && (
-            <label>
-              <span style={{ fontSize: 11, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Type</span>
-              <select value={draft.type} onChange={e => setDraft({ ...draft, type: e.target.value })} style={{ width: '100%' }}>
+            <label className="category-editor-field">
+              <span>Type d’opération</span>
+              <select value={draft.type} onChange={e => setDraft({ ...draft, type: e.target.value })}>
                 <option value="expense">Dépense</option>
                 <option value="income">Revenu</option>
                 <option value="transfer">Virement</option>
@@ -78,15 +85,20 @@ export function CategoryCreateModal({ parent, parentName, forcedType, initial = 
           )}
 
           {draft.type === 'expense' && (
-            <label>
-              <span style={{ fontSize: 11, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Rôle dans le budget</span>
-              <select value={draft.kind} onChange={e => setDraft({ ...draft, kind: e.target.value })} style={{ width: '100%' }}>
-                <option value="needs">Besoin essentiel</option>
-                <option value="wants">Envie</option>
-                <option value="savings">Épargne</option>
-              </select>
-              <small style={{ color: 'var(--ink-3)' }}>Utilisé dans l’analyse 50 / 30 / 20.</small>
-            </label>
+            <div className="category-budget-role">
+              <span>Rôle dans le budget <small>pour la répartition 50 / 30 / 20</small></span>
+              <div className="category-budget-options">
+                {[
+                  ['needs', 'Besoin', 'Dépense essentielle'],
+                  ['wants', 'Envie', 'Dépense plaisir'],
+                  ['savings', 'Épargne', 'Argent mis de côté'],
+                ].map(([value, label, description]) => (
+                  <button key={value} type="button" className={draft.kind === value ? 'is-active' : ''} onClick={() => setDraft({ ...draft, kind: value })}>
+                    <strong>{label}</strong><small>{description}</small>
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
         </div>
         <div className="modal-footer">

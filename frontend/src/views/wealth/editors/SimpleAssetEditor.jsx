@@ -30,13 +30,26 @@ export function SimpleAssetEditor({ asset, members, onSave, onCancel }) {
   const type = ASSET_TYPES.find(t => t.id === draft.type);
   const isPortfolio = ['stocks', 'pea', 'life_insurance', 'per'].includes(draft.type);
   const portfolioLabel = ({ pea: 'PEA', stocks: 'CTO', life_insurance: 'assurance-vie', per: 'PER' })[draft.type] || 'portefeuille';
+  const canSave = Boolean(draft.name?.trim() && (draft.memberIds || []).length > 0);
+  const namePlaceholder = draft.type === 'crypto'
+    ? 'ex : Bitcoin, Ethereum'
+    : isPortfolio
+      ? `ex : ${portfolioLabel} Boursorama`
+      : 'ex : Livret A, Or 50 g, œuvre…';
   return (
-    <ResponsiveModal open={true} onClose={onCancel} title={asset.id ? 'Modifier un actif' : 'Ajouter un actif'}>
+    <ResponsiveModal open={true} onClose={onCancel} className="simple-asset-editor-modal" title={asset.id ? 'Modifier un actif' : 'Ajouter un actif'}>
         <div className="modal-header">
-          <h2>{asset.id ? 'Modifier' : 'Nouvel actif'}</h2>
+          <div className="wealth-editor-heading">
+            <span className="wealth-editor-eyebrow">Patrimoine financier</span>
+            <h2>{asset.id ? 'Modifier l’actif' : 'Ajouter un actif'}</h2>
+          </div>
           <button className="icon-btn-sm" onClick={onCancel}><X size={16}/></button>
         </div>
-        <div className="modal-body">
+        <div className="modal-body wealth-simple-editor">
+          <div className="wizard-pane-intro">
+            <strong>Informations essentielles</strong>
+            <span>Vous pourrez compléter le suivi détaillé plus tard.</span>
+          </div>
           <div className="field-row">
             <label><span>Type</span>
               <Combobox
@@ -66,7 +79,7 @@ export function SimpleAssetEditor({ asset, members, onSave, onCancel }) {
             </div>
           )}
           <label><span>Nom</span>
-            <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="ex: Appartement Paris 11e, AV Linxea Spirit"/>
+            <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder={namePlaceholder}/>
           </label>
           <label><span>Valeur actuelle ({draft.currency || 'EUR'})</span>
             <input
@@ -84,46 +97,6 @@ export function SimpleAssetEditor({ asset, members, onSave, onCancel }) {
             ) : null}
           </label>
 
-          {/* Le ticker décrit un actif unique, jamais une enveloppe PEA/CTO. */}
-          {draft.type === 'crypto' && (
-            <div style={{ padding: 12, background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: 10, marginBottom: 8 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
-                ⚡ Suivi en temps réel <span style={{ fontWeight: 400, color: 'var(--text-tertiary)', fontSize: 11 }}>(optionnel)</span>
-              </div>
-              <div className="field-row">
-                <label><span>Ticker / symbole</span>
-                  <input
-                    value={draft.ticker || ''}
-                    onChange={(e) => setDraft({ ...draft, ticker: e.target.value.toUpperCase() })}
-                    placeholder="ex: AAPL, CW8.PA, BTC-EUR"
-                    style={{ fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.02em' }}
-                  />
-                </label>
-                <label><span>Quantité (parts/actions)</span>
-                  <input
-                    type="number"
-                    value={draft.quantity ?? ''}
-                    onChange={(e) => setDraft({ ...draft, quantity: e.target.value })}
-                    placeholder="ex: 124"
-                    step="any"
-                  />
-                </label>
-              </div>
-              <div className="field-help" style={{ marginTop: 6 }}>
-                Si renseignés, la valeur actuelle sera <strong>recalculée automatiquement</strong> à partir du cours en direct (Yahoo Finance). Format : ticker US (AAPL), Euronext Paris (CW8.PA), crypto (BTC-EUR).
-              </div>
-            </div>
-          )}
-
-          <div className="field-row">
-            <label><span>{isPortfolio ? 'Total versé' : 'Prix de revient'} ({draft.currency || 'EUR'}) <span className="hint">optionnel</span></span>
-              <input type="number" value={draft.purchasePrice ?? ''} onChange={(e) => setDraft({ ...draft, purchasePrice: e.target.value })} step="any" placeholder="ex: 12 500"/>
-            </label>
-            <label><span>Date d'acquisition <span className="hint">optionnel</span></span>
-              <input type="date" value={draft.purchaseDate || ''} onChange={(e) => setDraft({ ...draft, purchaseDate: e.target.value })}/>
-            </label>
-          </div>
-          <div className="field-help">Si renseigné, l'app calcule automatiquement la plus-value latente (€ et %) sur la fiche du patrimoine.</div>
           <label><span>Propriétaires</span>
             <div className="member-checks">
               {members.map(m => (
@@ -135,14 +108,48 @@ export function SimpleAssetEditor({ asset, members, onSave, onCancel }) {
               ))}
             </div>
           </label>
-          <label><span>Notes (optionnel)</span>
-            <textarea value={draft.notes || ''} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} rows="2" placeholder="Allocation, support, etc."/>
-          </label>
+
+          <details className="wizard-advanced wealth-asset-advanced">
+            <summary>Suivi et informations complémentaires <span>optionnel</span></summary>
+            <div className="wizard-advanced-body">
+              {/* Le ticker décrit un actif unique, jamais une enveloppe PEA/CTO. */}
+              {draft.type === 'crypto' && (
+                <div className="wealth-live-tracking">
+                  <strong>⚡ Suivi automatique du cours</strong>
+                  <div className="field-row">
+                    <label><span>Ticker / symbole</span>
+                      <input
+                        value={draft.ticker || ''}
+                        onChange={(e) => setDraft({ ...draft, ticker: e.target.value.toUpperCase() })}
+                        placeholder="ex : BTC-EUR"
+                      />
+                    </label>
+                    <label><span>Quantité</span>
+                      <input type="number" value={draft.quantity ?? ''} onChange={(e) => setDraft({ ...draft, quantity: e.target.value })} placeholder="ex : 0,25" step="any"/>
+                    </label>
+                  </div>
+                  <small>Si les deux champs sont renseignés, la valeur est recalculée depuis le cours disponible.</small>
+                </div>
+              )}
+              <div className="field-row">
+                <label><span>{isPortfolio ? 'Total versé' : 'Prix de revient'} ({draft.currency || 'EUR'})</span>
+                  <input type="number" value={draft.purchasePrice ?? ''} onChange={(e) => setDraft({ ...draft, purchasePrice: e.target.value })} step="any" placeholder="ex : 12 500"/>
+                </label>
+                <label><span>Date d'acquisition</span>
+                  <input type="date" value={draft.purchaseDate || ''} onChange={(e) => setDraft({ ...draft, purchaseDate: e.target.value })}/>
+                </label>
+              </div>
+              <div className="field-help">Ces informations permettent de calculer la plus-value latente.</div>
+              <label><span>Notes</span>
+                <textarea value={draft.notes || ''} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} rows="2" placeholder="Allocation, support, conditions…"/>
+              </label>
+            </div>
+          </details>
         </div>
         <div className="modal-footer">
           {error && <span className="modal-inline-error">{error}</span>}
           <button className="ds-btn" onClick={onCancel} disabled={saving}>Annuler</button>
-          <button className="ds-btn primary" onClick={handleSave} disabled={saving}>
+          <button className="ds-btn primary" onClick={handleSave} disabled={!canSave || saving} title={!canSave ? 'Ajoutez un nom et au moins un propriétaire' : ''}>
             {saving ? <><Loader2 size={14} className="spin"/> Enregistrement…</> : <><Check size={14}/> Enregistrer</>}
           </button>
         </div>

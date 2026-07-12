@@ -3755,16 +3755,60 @@ html, body {
 .settings-category-kind.is-savings { background: var(--accent-soft); color: var(--accent); }
 .settings-category-usage { min-width: 75px; color: var(--ink-3); font-size: 10.5px; text-align: right; white-space: nowrap; }
 .settings-category-actions, .settings-subcategory-actions { display: flex; align-items: center; gap: 4px; }
+.settings-category-actions { opacity: .42; transition: opacity .15s ease; }
+.settings-category-parent:hover .settings-category-actions,
+.settings-category-parent:focus-within .settings-category-actions { opacity: 1; }
 .settings-category-actions .ds-btn.sm { padding: 6px 9px; font-size: 10.5px; }
-.settings-subcategory-list { padding: 4px 10px 9px 54px; border-top: 1px solid var(--border); background: var(--bg-sunk); }
-.settings-subcategory-row { min-height: 38px; display: flex; align-items: center; gap: 8px; padding: 5px 7px; border-bottom: 1px dashed var(--border); }
-.settings-subcategory-row:last-child { border-bottom: 0; }
-.settings-subcategory-icon { width: 22px; text-align: center; }
-.settings-subcategory-name { flex: 1; min-width: 120px; color: var(--ink-2); font-size: 12.5px; }
-.settings-category-protected { display: inline-flex; align-items: center; gap: 4px; min-width: 58px; color: var(--ink-3); font-size: 9.5px; text-transform: uppercase; letter-spacing: .04em; }
+.settings-subcategory-list { padding: 14px 14px 16px 54px; border-top: 1px solid var(--border); background: var(--bg-sunk); }
+.settings-subcategory-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0 0 11px; }
+.settings-subcategory-head > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.settings-subcategory-head strong { color: var(--ink-2); font-size: 11.5px; }
+.settings-subcategory-head small { color: var(--ink-3); font-size: 10.5px; }
+.settings-subcategory-head .ds-btn.sm { padding: 6px 9px; font-size: 10.5px; white-space: nowrap; }
+.settings-subcategory-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.settings-subcategory-row { min-height: 52px; display: flex; align-items: center; gap: 9px; padding: 7px 8px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg-elev); transition: border-color .15s ease, background .15s ease; }
+.settings-subcategory-row:hover { border-color: var(--border-strong); background: var(--bg); }
+.settings-subcategory-icon { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; flex-shrink: 0; font-size: 15px; }
+.settings-subcategory-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.settings-subcategory-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-2); font-size: 12px; }
+.settings-subcategory-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-3); font-size: 9.5px; }
+.settings-category-protected { width: 25px; height: 25px; display: inline-flex; align-items: center; justify-content: center; color: var(--ink-3); }
+.settings-subcategory-actions { flex-shrink: 0; opacity: 0; transition: opacity .15s ease; }
+.settings-subcategory-row:hover .settings-subcategory-actions,
+.settings-subcategory-row:focus-within .settings-subcategory-actions { opacity: 1; }
 .settings-subcategory-empty { width: 100%; padding: 9px; display: flex; align-items: center; justify-content: center; gap: 6px; border: 1px dashed var(--border-strong); border-radius: 8px; background: transparent; color: var(--accent); font: 500 11.5px var(--font-sans); cursor: pointer; }
 .settings-categories-empty { min-height: 130px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; border: 1px dashed var(--border); border-radius: 11px; color: var(--ink-3); font-size: 12px; }
 .settings-categories-empty strong { color: var(--ink); font-size: 13px; }
+
+/* Éditeur de catégorie : aperçu d'abord, choix visuels compacts ensuite. */
+.category-editor-modal { max-width: 620px; }
+.category-editor-modal .modal-header > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.category-editor-eyebrow { color: var(--ink-3); font: 600 9.5px var(--font-mono); letter-spacing: .1em; text-transform: uppercase; }
+.category-editor-body { display: flex; flex-direction: column; gap: 16px; }
+.category-editor-preview { display: flex; align-items: center; gap: 11px; padding: 11px 12px; border: 1px solid var(--border); border-radius: 11px; background: var(--bg-sunk); }
+.category-editor-preview-icon { width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; font-size: 19px; flex-shrink: 0; }
+.category-editor-preview > span:last-child { display: flex; min-width: 0; flex-direction: column; gap: 2px; }
+.category-editor-preview strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); font-size: 13.5px; }
+.category-editor-preview small { color: var(--ink-3); font-size: 10.5px; }
+.category-editor-field, .category-editor-choice, .category-budget-role { display: flex; flex-direction: column; gap: 7px; }
+.category-editor-field > span, .category-editor-choice > span, .category-budget-role > span { color: var(--ink-2); font: 600 10.5px var(--font-sans); letter-spacing: .02em; }
+.category-editor-field input, .category-editor-field select { width: 100%; }
+.category-editor-appearance { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(170px, .75fr); gap: 16px; }
+.category-icon-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; }
+.category-icon-grid button { aspect-ratio: 1; min-width: 0; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--border); border-radius: 7px; background: var(--bg-elev); cursor: pointer; font-size: 15px; }
+.category-icon-grid button:hover { border-color: var(--border-strong); background: var(--bg); }
+.category-icon-grid button.is-active { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 10%, transparent); }
+.category-color-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 7px; padding: 3px; }
+.category-color-grid button { aspect-ratio: 1; min-width: 20px; max-width: 28px; border: 3px solid var(--bg-elev); border-radius: 50%; background: var(--category-swatch); box-shadow: 0 0 0 1px var(--border); cursor: pointer; }
+.category-color-grid button.is-active { box-shadow: 0 0 0 2px var(--ink); }
+.category-budget-role > span { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.category-budget-role > span small { color: var(--ink-3); font-weight: 400; }
+.category-budget-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+.category-budget-options button { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg-elev); color: var(--ink-2); cursor: pointer; text-align: left; }
+.category-budget-options button strong { font-size: 11.5px; }
+.category-budget-options button small { color: var(--ink-3); font-size: 9.5px; }
+.category-budget-options button:hover { border-color: var(--border-strong); }
+.category-budget-options button.is-active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
 @media (max-width: 760px) {
   .settings-categories-header { flex-direction: column; }
   .settings-categories-header .ds-btn { width: 100%; justify-content: center; }
@@ -3775,8 +3819,13 @@ html, body {
   .settings-category-expand .settings-category-kind, .settings-category-expand .settings-category-usage { display: none; }
   .settings-category-actions { width: 100%; justify-content: flex-end; }
   .settings-subcategory-list { padding-left: 12px; }
+  .settings-subcategory-grid { grid-template-columns: 1fr; }
   .settings-subcategory-row { flex-wrap: wrap; }
+  .settings-subcategory-actions { opacity: 1; }
   .settings-subcategory-row .settings-category-usage { display: none; }
+  .category-editor-appearance { grid-template-columns: 1fr; }
+  .category-icon-grid { grid-template-columns: repeat(10, 1fr); }
+  .category-budget-options { grid-template-columns: 1fr; }
 }
 
 /* Month picker (replaces the long carousel) */
