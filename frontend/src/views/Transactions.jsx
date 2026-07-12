@@ -607,10 +607,10 @@ export function Transactions({ transactions, accounts, categories, members = [],
         )}
       </div>
 
-      {(uncategorizedCount > 0 || aiCatSummary) && (
+      {(uncategorizedCount > 0 || reviewCounts.confirm > 0 || aiCatSummary) && (
         <section className={`ai-review-card ${aiCatSummary?.status || 'idle'}`} aria-live="polite">
           <div className="ai-review-icon">
-            {uncategorizedCount === 0
+            {uncategorizedCount === 0 && reviewCounts.confirm === 0
               ? <CheckCircle2 size={20}/>
               : <CircleHelp size={20}/>
             }
@@ -622,6 +622,8 @@ export function Transactions({ transactions, accounts, categories, members = [],
                   ? aiCatSummary?.phase || 'Analyse en cours'
                   : uncategorizedCount > 0
                     ? `${uncategorizedCount} opération${uncategorizedCount > 1 ? 's' : ''} à éclaircir`
+                    : reviewCounts.confirm > 0
+                      ? `${reviewCounts.confirm} proposition${reviewCounts.confirm > 1 ? 's' : ''} à confirmer`
                     : 'Toutes les opérations sont classées'}
               </strong>
               {aiCatSummary?.status === 'done' && aiCatSummary.categorized > 0 && (
@@ -642,10 +644,12 @@ export function Transactions({ transactions, accounts, categories, members = [],
             <p>
               {aiCatRunning
                 ? `Passe ${aiCatSummary?.phaseIndex || 1}/${aiCatSummary?.phaseCount || 2} · lot ${aiCatSummary?.currentBatch || 1}/${aiCatSummary?.batchCount || 1} · ${aiCatSummary?.phaseProcessed || 0}/${aiCatSummary?.phaseTotal || uncategorizedCount} examinées dans cette passe.`
-                : uncategorizedCount > 0
+                  : uncategorizedCount > 0
                   ? aiCatSummary?.status === 'done'
                     ? `Les restantes ont résisté aux règles et aux deux passes IA : libellé trop générique, marchand inconnu ou virement ambigu. Elles restent visibles et modifiables — rien n'est masqué.`
                     : `Une première passe classe les marchands connus. Une seconde passe plus minutieuse reprend automatiquement les cas ambigus. Les derniers cas restent dans une file à vérifier.`
+                  : reviewCounts.confirm > 0
+                    ? `Les catégories sont déjà appliquées. Confirme toutes les propositions en une seule fois, ou corrige uniquement celles qui te semblent douteuses.`
                   : `La boîte « À vérifier » est vide. Les corrections manuelles continueront d'améliorer les règles du foyer.`}
             </p>
             {aiCatSummary?.diagnostic && (
@@ -658,8 +662,13 @@ export function Transactions({ transactions, accounts, categories, members = [],
             )}
           </div>
           <div className="ai-review-actions">
+            {reviewCounts.confirm > 0 && onMarkReviewed && (
+              <button className="ds-btn primary" onClick={() => onMarkReviewed(reviewableIds)} disabled={aiCatRunning}>
+                <CheckCircle2 size={14}/> Valider les {reviewCounts.confirm} proposition{reviewCounts.confirm > 1 ? 's' : ''}
+              </button>
+            )}
             {uncategorizedCount > 0 && onCategorizeAI && (
-              <button className="ds-btn primary" onClick={onCategorizeAI} disabled={aiCatRunning}>
+              <button className={`ds-btn ${reviewCounts.confirm > 0 ? 'ghost' : 'primary'}`} onClick={onCategorizeAI} disabled={aiCatRunning}>
                 <Sparkles size={14}/>
                 {aiCatRunning ? 'Analyse en cours…' : aiCatSummary?.status === 'done' ? `Retenter les ${uncategorizedCount}` : `Analyser les ${uncategorizedCount}`}
               </button>
