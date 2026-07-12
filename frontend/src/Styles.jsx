@@ -3491,8 +3491,10 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 }
 .settings-rail {
   position: sticky; top: 24px;
-  display: flex; flex-direction: column; gap: 2px;
+  display: flex; flex-direction: column; gap: 14px;
 }
+.settings-rail-group { display: flex; flex-direction: column; gap: 2px; }
+.settings-rail-group-label { padding: 0 12px 5px; color: var(--ink-3); font: 600 9.5px/1 var(--font-mono); letter-spacing: .11em; text-transform: uppercase; }
 .settings-rail-item {
   display: flex; align-items: center; gap: 10px;
   padding: 9px 12px; border-radius: 6px;
@@ -3509,6 +3511,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
   content: ''; position: absolute; left: 0; top: 8px; bottom: 8px;
   width: 3px; background: var(--accent); border-radius: 2px;
 }
+.settings-content,
 .settings-panel { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
 .settings-panel h2 {
   font-family: 'Geist', sans-serif; font-weight: 500; font-size: 22px;
@@ -3550,6 +3553,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
   background: var(--bg-sunk); color: var(--ink-3);
   border: 1px solid var(--border);
 }
+.settings-managed-badge { display: inline-flex; padding: 5px 8px; border-radius: 999px; background: var(--bg-sunk); border: 1px solid var(--border); color: var(--ink-3); font-size: 10.5px; }
 .settings-danger-zone {
   border: 1px solid var(--negative); border-radius: 12px;
   padding: 18px; background: rgba(176, 57, 43, .04);
@@ -3573,6 +3577,33 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 }
 .settings-auth-event-kind { font-weight: 500; color: var(--ink); }
 .settings-auth-event-time { color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
+/* Accueil Réglages */
+.settings-health-card { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 22px; align-items: center; padding: 22px; border: 1px solid var(--border); border-radius: 16px; background: var(--bg-elev); }
+.settings-health-score { position: relative; width: 112px; height: 112px; border-radius: 50%; background: conic-gradient(var(--accent) var(--score), var(--bg-sunk) 0); display: flex; flex-direction: column; align-items: center; justify-content: center; isolation: isolate; }
+.settings-health-score::before { content: ''; position: absolute; inset: 8px; border-radius: inherit; background: var(--bg-elev); z-index: -1; }
+.settings-health-score strong { color: var(--ink); font-size: 25px; letter-spacing: -.03em; }
+.settings-health-score span { color: var(--ink-3); font-size: 10.5px; }
+.settings-health-title { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.settings-health-title span { color: var(--ink); font-size: 14px; font-weight: 600; }
+.settings-health-title small { color: var(--ink-3); font-size: 10.5px; }
+.settings-checklist { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.settings-checklist button { min-width: 0; display: flex; align-items: center; gap: 7px; padding: 8px 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-sunk); color: var(--ink-2); font: 500 11.5px/1.25 var(--font-sans); text-align: left; cursor: pointer; }
+.settings-checklist button span { flex: 1; min-width: 0; }
+.settings-checklist button.is-done { color: var(--positive); background: color-mix(in srgb, var(--positive) 7%, transparent); border-color: color-mix(in srgb, var(--positive) 20%, var(--border)); }
+.settings-attention { display: flex; align-items: center; gap: 12px; padding: 13px 14px; border: 1px solid color-mix(in srgb, var(--warning) 28%, var(--border)); border-radius: 11px; background: color-mix(in srgb, var(--warning) 7%, transparent); color: var(--warning); }
+.settings-attention > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.settings-attention strong { color: var(--ink); font-size: 12.5px; }
+.settings-attention span { color: var(--ink-2); font-size: 11.5px; }
+.settings-overview-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.settings-overview-card { min-width: 0; display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 11px; padding: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-elev); color: var(--ink); text-align: left; cursor: pointer; font-family: inherit; transition: border-color .15s, box-shadow .15s, transform .15s; }
+.settings-overview-card:hover { border-color: var(--accent); box-shadow: var(--shadow-sm); transform: translateY(-1px); }
+.settings-overview-icon { width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; background: var(--accent-soft); color: var(--accent); }
+.settings-overview-copy { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.settings-overview-copy small { color: var(--ink-3); font: 600 9.5px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
+.settings-overview-copy strong { color: var(--ink); font-size: 14px; }
+.settings-overview-copy em { color: var(--ink-3); font-size: 11px; font-style: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.settings-overview-arrow { color: var(--ink-3); }
 @media (max-width: 900px) {
   .settings-layout { grid-template-columns: 1fr; gap: 16px; }
 
@@ -3588,6 +3619,8 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
     -webkit-mask-image: linear-gradient(to right, black calc(100% - 40px), transparent 100%);
     mask-image: linear-gradient(to right, black calc(100% - 40px), transparent 100%);
   }
+  .settings-rail-group { display: contents; }
+  .settings-rail-group-label { display: none; }
   .settings-rail::-webkit-scrollbar { display: none; }
   .settings-rail-item {
     flex-shrink: 0;
@@ -3603,6 +3636,13 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
     color: var(--accent);
   }
   .settings-rail-item.active::before { display: none; }
+}
+@media (max-width: 640px) {
+  .settings-health-card { grid-template-columns: 1fr; justify-items: center; padding: 18px; }
+  .settings-health-body { width: 100%; }
+  .settings-checklist, .settings-overview-grid { grid-template-columns: 1fr; }
+  .settings-attention { align-items: flex-start; flex-wrap: wrap; }
+  .settings-attention .ds-btn { margin-left: 28px; }
 }
 
 /* ── ChipSelect (Lydia-style pill toggle) ── */

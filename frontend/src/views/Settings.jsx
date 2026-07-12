@@ -6,7 +6,7 @@
 // This file owns only: SETTINGS_SECTIONS, hash-sync, SettingsView shell.
 // ============================================================================
 import { useState, useEffect, useRef } from 'react';
-import { User, Users, Wallet, Shield, Sparkles, Globe, Database, Wand2, ArrowLeftRight, Tag, Store, Settings2 } from 'lucide-react';
+import { User, Users, Wallet, Shield, Sparkles, Globe, Database, Wand2, ArrowLeftRight, Tag, Store, Settings2, CheckCircle2, Circle, ChevronRight, Landmark, BrainCircuit, KeyRound, AlertTriangle } from 'lucide-react';
 import { gsap } from '../utils/gsapSetup.js';
 import { usePageEnter } from '../hooks/usePageEnter.js';
 import { useTranslation } from 'react-i18next';
@@ -30,14 +30,16 @@ import { MemberEditor }         from './settings/modals/MemberEditor.jsx';
 // SETTINGS
 // ============================================================================
 const SETTINGS_SECTIONS = [
-  { id: 'profil',     icon: User,     labelKey: 'settings.sections.profile' },
-  { id: 'foyer',      icon: Users,    labelKey: 'settings.sections.household' },
-  { id: 'comptes',    icon: Wallet,   labelKey: 'settings.sections.accounts' },
-  { id: 'securite',   icon: Shield,   labelKey: 'settings.sections.security' },
-  { id: 'regles',     icon: Sparkles, labelKey: 'settings.sections.rules' },
-  { id: 'devises',    icon: Globe,    labelKey: 'settings.sections.currency' },
-  { id: 'donnees',    icon: Database, labelKey: 'settings.sections.data' },
+  { id: 'overview',   icon: Settings2, label: 'Vue d’ensemble', group: 'Essentiel' },
+  { id: 'profil',     icon: User,      labelKey: 'settings.sections.profile', group: 'Essentiel' },
+  { id: 'foyer',      icon: Users,     labelKey: 'settings.sections.household', group: 'Organisation' },
+  { id: 'comptes',    icon: Wallet,    labelKey: 'settings.sections.accounts', group: 'Organisation' },
+  { id: 'regles',     icon: Sparkles,  labelKey: 'settings.sections.rules', group: 'Automatisation' },
+  { id: 'securite',   icon: Shield,    labelKey: 'settings.sections.security', group: 'Protection' },
+  { id: 'devises',    icon: Globe,     labelKey: 'settings.sections.currency', group: 'Préférences' },
+  { id: 'donnees',    icon: Database,  labelKey: 'settings.sections.data', group: 'Préférences' },
 ];
+const SETTINGS_GROUPS = ['Essentiel', 'Organisation', 'Automatisation', 'Protection', 'Préférences'];
 
 function readHashSection() {
   if (typeof window === 'undefined') return null;
@@ -49,7 +51,7 @@ function readHashSection() {
 export function SettingsView({ members, accounts, accountBalances, saveMember, deleteMember, deleteAccount, updateAccount, mergeAccounts, transactions = [], transferIds, updateTags, setTransferOverride, exportData, importData, resetAllData, categories = [], reloadCategories, onCategoryCreated, onCategoryDeleted, showToast, fmt, baseCurrency = 'EUR', setBaseCurrency, rates, ratesDate, currentUser, onImport, recategorizeUncategorized, recategorizeTransfers, bankConnections = [], initialFocus, onConsumeInitialFocus }) {
   const { t } = useTranslation();
   const [editingMember, setEditingMember] = useState(null);
-  const [activeSection, setActiveSection] = useState(() => readHashSection() || 'profil');
+  const [activeSection, setActiveSection] = useState(() => readHashSection() || 'overview');
   const [accountsInitialTab, setAccountsInitialTab] = useState(null);
   const COLORS = MEMBER_PALETTE;
 
@@ -93,22 +95,33 @@ export function SettingsView({ members, accounts, accountBalances, saveMember, d
 
       <div className="settings-layout" data-reveal>
         <nav className="settings-rail" aria-label={t('settings.sections.aria')}>
-          {SETTINGS_SECTIONS.map(s => {
-            const Icon = s.icon;
-            return (
-              <button
-                key={s.id}
-                type="button"
-                className={`settings-rail-item${activeSection === s.id ? ' active' : ''}`}
-                onClick={() => goTo(s.id)}
-              >
-                <Icon size={15}/> <span>{t(s.labelKey)}</span>
-              </button>
-            );
-          })}
+          {SETTINGS_GROUPS.map(group => (
+            <div className="settings-rail-group" key={group}>
+              <span className="settings-rail-group-label">{group}</span>
+              {SETTINGS_SECTIONS.filter(s => s.group === group).map(s => {
+                const Icon = s.icon;
+                return (
+                  <button key={s.id} type="button" className={`settings-rail-item${activeSection === s.id ? ' active' : ''}`} onClick={() => goTo(s.id)}>
+                    <Icon size={15}/> <span>{s.label || t(s.labelKey)}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
-        <div className="settings-panel">
+        <div className="settings-content">
+          {activeSection === 'overview' && (
+            <SettingsOverview
+              currentUser={currentUser}
+              members={members}
+              accounts={accounts}
+              bankConnections={bankConnections}
+              categories={categories}
+              transactions={transactions}
+              goTo={goTo}
+            />
+          )}
           {activeSection === 'profil' && (
             <>
               <ProfilSection
@@ -188,6 +201,69 @@ export function SettingsView({ members, accounts, accountBalances, saveMember, d
 
       {editingMember && <MemberEditor member={editingMember} onSave={(m) => { saveMember(m); setEditingMember(null); }} onCancel={() => setEditingMember(null)}/>}
     </div>
+  );
+}
+
+function SettingsOverview({ currentUser, members = [], accounts = [], bankConnections = [], categories = [], transactions = [], goTo }) {
+  const jointCount = accounts.filter(a => a.isJoint).length;
+  const connectedCount = bankConnections.filter(c => c.status === 'authorized').length;
+  const bankIssues = bankConnections.filter(c => ['error', 'expired', 'suspended', 'pending'].includes(c.status)).length;
+  const uncategorized = transactions.filter(tx => !tx.categoryId).length;
+  const checks = [
+    { label: 'Profil identifié', done: !!currentUser?.email, section: 'profil' },
+    { label: 'Foyer renseigné', done: members.length > 0, section: 'foyer' },
+    { label: 'Au moins un compte', done: accounts.length > 0, section: 'comptes' },
+    { label: 'Compte commun identifié', done: jointCount > 0 || members.length < 2, section: 'comptes' },
+    { label: 'Double authentification', done: !!currentUser?.totp_enabled, section: 'securite' },
+  ];
+  const doneCount = checks.filter(c => c.done).length;
+  const score = Math.round((doneCount / checks.length) * 100);
+  const cards = [
+    { section: 'foyer', Icon: Users, label: 'Foyer', value: `${members.length} membre${members.length > 1 ? 's' : ''}`, detail: jointCount ? `${jointCount} compte commun` : 'Compte commun à vérifier' },
+    { section: 'comptes', Icon: Landmark, label: 'Comptes & banques', value: `${accounts.length} compte${accounts.length > 1 ? 's' : ''}`, detail: bankIssues ? `${bankIssues} connexion à vérifier` : `${connectedCount} connexion${connectedCount > 1 ? 's' : ''} active${connectedCount > 1 ? 's' : ''}` },
+    { section: 'regles', Icon: BrainCircuit, label: 'Automatisation', value: `${categories.length} catégories`, detail: uncategorized ? `${uncategorized} opération${uncategorized > 1 ? 's' : ''} à classer` : 'Transactions bien rangées' },
+    { section: 'securite', Icon: KeyRound, label: 'Protection', value: currentUser?.totp_enabled ? '2FA activée' : '2FA à activer', detail: currentUser?.totp_enabled ? 'Compte renforcé' : 'Recommandé pour vos données financières' },
+  ];
+
+  return (
+    <section className="settings-panel settings-overview">
+      <header>
+        <h2>Réglages <em>en un coup d’œil.</em></h2>
+        <p className="settings-panel-intro">Commencez par ce qui demande votre attention. Les options techniques restent accessibles dans les sections dédiées.</p>
+      </header>
+
+      <div className="settings-health-card">
+        <div className="settings-health-score" style={{ '--score': `${score}%` }}><strong>{score}%</strong><span>configuré</span></div>
+        <div className="settings-health-body">
+          <div className="settings-health-title"><span>Configuration de Yotori</span><small>{doneCount}/{checks.length} étapes terminées</small></div>
+          <div className="settings-checklist">
+            {checks.map(item => (
+              <button key={item.label} type="button" className={item.done ? 'is-done' : ''} onClick={() => goTo(item.section)}>
+                {item.done ? <CheckCircle2 size={15}/> : <Circle size={15}/>}<span>{item.label}</span>{!item.done && <ChevronRight size={13}/>}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {(bankIssues > 0 || uncategorized > 0 || !currentUser?.totp_enabled) && (
+        <div className="settings-attention">
+          <AlertTriangle size={16}/>
+          <div><strong>À faire en priorité</strong><span>{bankIssues > 0 ? 'Une connexion bancaire demande votre attention.' : uncategorized > 0 ? `${uncategorized} transactions restent à classer.` : 'Activez la double authentification pour protéger le compte.'}</span></div>
+          <button className="ds-btn" onClick={() => goTo(bankIssues > 0 ? 'comptes' : uncategorized > 0 ? 'regles' : 'securite')}>Ouvrir</button>
+        </div>
+      )}
+
+      <div className="settings-overview-grid">
+        {cards.map(({ section, Icon, label, value, detail }) => (
+          <button key={section} type="button" className="settings-overview-card" onClick={() => goTo(section)}>
+            <span className="settings-overview-icon"><Icon size={18}/></span>
+            <span className="settings-overview-copy"><small>{label}</small><strong>{value}</strong><em>{detail}</em></span>
+            <ChevronRight size={15} className="settings-overview-arrow"/>
+          </button>
+        ))}
+      </div>
+    </section>
   );
 }
 

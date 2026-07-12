@@ -52,13 +52,13 @@ export function ComptesSection({ accounts, accountBalances, members, transaction
       id: 'comptes',
       icon: Wallet,
       label: 'Mes comptes',
-      desc: 'Tes comptes connectés ou importés. Renomme, attribue un rôle (courant / épargne / Revolut…), gère les titulaires.',
+      desc: 'Retrouvez les comptes visibles dans Yotori. Ouvrez un compte uniquement pour modifier son nom, ses titulaires ou son usage.',
     },
     {
       id: 'connexions',
       icon: Link2,
       label: 'Connexions bancaires',
-      desc: 'Tes banques liées via DSP2/GoCardless. Vérifie l\'état de la synchro, reconnecte ou supprime un accès.',
+      desc: 'Vérifiez ici si une banque est à jour, en attente ou doit être reconnectée.',
     },
   ];
   const activeTabConfig = tabs.find(t => t.id === activeTab) || tabs[0];

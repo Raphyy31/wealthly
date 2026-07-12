@@ -3,7 +3,7 @@
 // Refondu 2026-05-21 : card header avec icone cobalt + meta, micro-icons
 // dans les labels de champs, badge currency a cote du label.
 import { useTranslation } from 'react-i18next';
-import { Edit3, UserCircle, Globe, Coins } from 'lucide-react';
+import { UserCircle, Globe, Coins } from 'lucide-react';
 import { ChipSelect } from '../../../components/ChipSelect.jsx';
 import { Combobox } from '../../../components/Combobox.jsx';
 import { SUPPORTED_CURRENCIES } from '../../../utils.js';
@@ -57,9 +57,7 @@ export function ProfilSection({ currentUser, baseCurrency, setBaseCurrency }) {
               <div className="settings-field-hint">{t('settings.profile.fullNameHint')}</div>
             </div>
             <div className="settings-field-control">
-              <button className="ds-btn" disabled>
-                <Edit3 size={13}/> {t('settings.profile.changeName')}
-              </button>
+              <span className="settings-managed-badge">Géré depuis votre compte</span>
             </div>
           </div>
 
