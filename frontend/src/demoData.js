@@ -31,10 +31,10 @@ const members = [
 ];
 
 const accounts = [
-  { id: A.bnpAlice, name: 'Compte courant', bank: 'BNP Paribas',     type: 'checking', currency: 'EUR', initialBalance: 1500,  memberIds: [M.alice], currentBalance: 3450, source: 'gocardless', externalId: 'demo-gc-bnp-alice', lastSyncedAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString(), connectionId: 'demo-conn-bnp' },
-  { id: A.liva,     name: 'Livret A',       bank: 'Boursorama',      type: 'savings',  currency: 'EUR', initialBalance: 11200, memberIds: [M.alice], currentBalance: 12300 },
-  { id: A.caBob,    name: 'Compte courant', bank: 'Crédit Agricole', type: 'checking', currency: 'EUR', initialBalance: 1800,  memberIds: [M.bob],   currentBalance: 2860, source: 'gocardless', externalId: 'demo-gc-ca-bob', lastSyncedAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString(), connectionId: 'demo-conn-ca' },
-  { id: A.jointLcl, name: 'Compte joint',   bank: 'LCL',             type: 'checking', currency: 'EUR', initialBalance: 4200,  memberIds: [M.alice, M.bob], currentBalance: 5180, source: 'gocardless', externalId: 'demo-gc-joint-lcl', lastSyncedAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString(), connectionId: 'demo-conn-lcl' },
+  { id: A.bnpAlice, name: 'Compte courant', bank: 'BNP Paribas',     type: 'checking', role: 'principal', currency: 'EUR', initialBalance: 1500,  memberIds: [M.alice], currentBalance: 3450, source: 'gocardless', externalId: 'demo-gc-bnp-alice', lastSyncedAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString(), connectionId: 'demo-conn-bnp' },
+  { id: A.liva,     name: 'Livret A',       bank: 'Boursorama',      type: 'savings',  role: 'epargne',   currency: 'EUR', initialBalance: 11200, memberIds: [M.alice], currentBalance: 12300 },
+  { id: A.caBob,    name: 'Compte courant', bank: 'Crédit Agricole', type: 'checking', role: 'principal', currency: 'EUR', initialBalance: 1800,  memberIds: [M.bob],   currentBalance: 2860, source: 'gocardless', externalId: 'demo-gc-ca-bob', lastSyncedAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString(), connectionId: 'demo-conn-ca' },
+  { id: A.jointLcl, name: 'Compte joint',   bank: 'LCL',             type: 'checking', role: 'principal', currency: 'EUR', initialBalance: 4200,  memberIds: [M.alice, M.bob], currentBalance: 5180, source: 'gocardless', externalId: 'demo-gc-joint-lcl', lastSyncedAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString(), connectionId: 'demo-conn-lcl' },
 ];
 
 // ── Helpers de dates calendaires ─────────────────────────────────────────

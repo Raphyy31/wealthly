@@ -13,6 +13,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { RefreshCw, AlertCircle, CheckCircle2, Unlink } from 'lucide-react';
 import * as api from '../api.js';
 import { gsap } from '../utils/gsapSetup.js';
+import { formatBankName } from '../utils.js';
 
 // Réutilisé de BankConnectionsSection — duplicaté volontairement pour garder
 // le composant autonome (pas de cross-import depuis views/settings).
@@ -277,7 +278,7 @@ export function SyncButton({ onAfterSync }) {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span style={{ width: 6, height: 6, borderRadius: '50%', background: dotColor, flexShrink: 0 }}/>
                     <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {c.institution_name || c.bank_name || 'Banque'}
+                      {formatBankName(c.bank_name, c.institution_name)}
                     </span>
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--ink-3)', marginLeft: 12, marginTop: 1 }}>

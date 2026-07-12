@@ -463,7 +463,7 @@
       "resetAll": "Réinitialiser toutes mes données"
     },
     "banks": {
-      "title": "Synchro bancaire (GoCardless)",
+      "title": "Connexions bancaires",
       "connect": "Connecter une banque",
       "connectMine": "Connecter ma banque",
       "empty": "Aucune banque connectée. Connectez votre banque pour importer les transactions automatiquement.",
@@ -474,14 +474,14 @@
       "accountsCount_one": "{{count}} compte",
       "accountsCount_other": "{{count}} comptes",
       "fetchAccounts": "Récupérer les comptes",
-      "fetchAccountsTitle": "Récupérer la liste des comptes depuis GoCardless",
+      "fetchAccountsTitle": "Récupérer les comptes autorisés par votre banque",
       "disconnect": "Déconnecter",
       "footnote": "Connexion sécurisée via <strong>GoCardless</strong> (PSD2 open banking). Vos identifiants bancaires ne transitent pas par Yotori Finance.",
       "syncedSummary_one": "✅ {{imported}} nouvelle transaction, {{skipped}} ignorée",
       "syncedSummary_other": "✅ {{imported}} nouvelles transactions, {{skipped}} ignorées",
       "syncedErrors": "{{imported}} importées · {{skipped}} ignorées · erreurs : {{errors}}",
-      "fetchedAccounts": "✅ {{count}} compte(s) récupéré(s). Cliquez sur \"Sync\" pour importer les transactions.",
-      "noAccountsReturned": "Requisition GoCardless : {{status}} — aucun compte retourné.{{debug}} Reconnectez la banque pour relancer le consentement."
+      "fetchedAccounts": "✅ {{count}} compte(s) récupéré(s). Cliquez sur « Mettre à jour » pour importer les opérations.",
+      "noAccountsReturned": "Votre banque n’a encore retourné aucun compte. Attendez une minute puis réessayez ; reconnectez-la si le problème persiste."
     }
   },
   "wealth": {

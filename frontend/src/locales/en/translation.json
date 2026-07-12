@@ -463,7 +463,7 @@
       "resetAll": "Reset all my data"
     },
     "banks": {
-      "title": "Bank sync (GoCardless)",
+      "title": "Bank connections",
       "connect": "Connect a bank",
       "connectMine": "Connect my bank",
       "empty": "No bank connected. Connect your bank to import transactions automatically.",
@@ -474,14 +474,14 @@
       "accountsCount_one": "{{count}} account",
       "accountsCount_other": "{{count}} accounts",
       "fetchAccounts": "Fetch accounts",
-      "fetchAccountsTitle": "Fetch the account list from GoCardless",
+      "fetchAccountsTitle": "Fetch the accounts authorized by your bank",
       "disconnect": "Disconnect",
       "footnote": "Secure connection via <strong>GoCardless</strong> (PSD2 open banking). Your bank credentials never pass through Yotori Finance.",
       "syncedSummary_one": "✅ {{imported}} new transaction, {{skipped}} skipped",
       "syncedSummary_other": "✅ {{imported}} new transactions, {{skipped}} skipped",
       "syncedErrors": "{{imported}} imported · {{skipped}} skipped · errors: {{errors}}",
-      "fetchedAccounts": "✅ {{count}} account(s) retrieved. Click \"Sync\" to import transactions.",
-      "noAccountsReturned": "GoCardless requisition: {{status}} — no accounts returned.{{debug}} Reconnect the bank to restart consent."
+      "fetchedAccounts": "✅ {{count}} account(s) retrieved. Click “Update” to import transactions.",
+      "noAccountsReturned": "Your bank has not returned any account yet. Wait a minute and try again; reconnect it if the issue persists."
     }
   },
   "wealth": {

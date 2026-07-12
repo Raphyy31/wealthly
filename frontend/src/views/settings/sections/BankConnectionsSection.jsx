@@ -6,6 +6,7 @@ import * as api from '../../../api.js';
 import { BankConnectModal } from '../../../components/BankConnectModal.jsx';
 import { BankReconnectModal, reconnectStatus } from '../../../components/BankReconnectModal.jsx';
 import { isDemoMode } from '../../../demoData.js';
+import { formatBankName } from '../../../utils.js';
 
 const DEMO_DISABLED_STYLE = { opacity: 0.5, pointerEvents: 'none', cursor: 'not-allowed' };
 const DEMO_TOOLTIP = 'Indisponible en mode démo';
@@ -271,10 +272,10 @@ export function BankConnectionsSection() {
             <span className="member-avatar large" style={{
               background: c.status === 'authorized' ? '#10b981' : c.status === 'error' ? '#ef4444' : '#f59e0b',
             }}>
-              {c.bank_name.charAt(0)}
+              {formatBankName(c.bank_name, c.institution_name).charAt(0)}
             </span>
             <div className="member-card-info" style={{ flex: 1 }}>
-              <div className="member-card-name">{c.bank_name}</div>
+              <div className="member-card-name">{formatBankName(c.bank_name, c.institution_name)}</div>
               <div className="member-card-role">
                 <span style={{ color: connectionState(c, cooldownSeconds).color, fontWeight: 600 }}>{connectionState(c, cooldownSeconds).label}</span>
                 {c.accounts?.length > 0 && ` · ${t('settings.banks.accountsCount', { count: c.accounts.length })}`}

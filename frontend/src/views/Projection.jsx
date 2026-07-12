@@ -173,7 +173,13 @@ export function Projection({
 
   // Liquid accounts available for the projection.
   const liquidAccounts = useMemo(
-    () => (accounts || []).filter(a => LIQUID_ROLES.includes(a.role)),
+    () => (accounts || []).filter(a => {
+      // Les anciens comptes et les données de démonstration n'ont pas
+      // toujours de rôle persisté. Comme partout ailleurs dans l'app, un
+      // compte sans rôle est un compte principal par défaut.
+      const effectiveRole = a.role || (a.type === 'savings' ? 'epargne' : 'principal');
+      return LIQUID_ROLES.includes(effectiveRole);
+    }),
     [accounts]
   );
 
@@ -244,7 +250,7 @@ export function Projection({
           <p>Anticipez votre trésorerie liquide — soldes futurs, échéances et coups durs.</p>
         </div>
         <button className="ds-btn primary" onClick={() => setEditor({})}>
-          <Plus size={16}/> Événement
+          <Plus size={16}/> Ajouter un événement
         </button>
       </div>
 
@@ -252,7 +258,7 @@ export function Projection({
       <div className="cashflow-period" data-reveal>
         <div className="projection-accounts">
           {liquidAccounts.length === 0 ? (
-            <span className="card-meta">Aucun compte liquide. Ajoutez un compte courant ou une épargne.</span>
+            <span className="card-meta">Aucun compte courant ou d’épargne disponible pour démarrer la projection.</span>
           ) : liquidAccounts.map(a => {
             const on = effectiveSelected.has(a.id);
             return (

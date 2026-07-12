@@ -18,7 +18,7 @@ import {
   categorize, detectRecurring, extractMerchantFromLabel,
   accountIncludeInNetWorth, accountCountsAsIncome, accountCountsAsExpense,
   detectInternalTransfers, convertCurrency, ACCOUNT_ROLES, bankColor,
-  fmtAmount, matchTransferRule, buildTransferDestTag,
+  fmtAmount, matchTransferRule, buildTransferDestTag, formatBankName,
 } from './utils.js';
 import { useRates } from './hooks/useRates.js';
 import { useBaseCurrency } from './hooks/useBaseCurrency.js';
@@ -2311,7 +2311,7 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
 
   const syncBankConnection = async (connectionId) => {
     const conn = bankConnections.find(c => c.id === connectionId);
-    const bankLabel = conn?.bank_name || 'votre banque';
+    const bankLabel = conn ? formatBankName(conn.bank_name, conn.institution_name) : 'votre banque';
     setSyncStage('balance', `Lecture du solde — ${bankLabel}…`, { current: 1, total: 1 });
     try {
       await new Promise(r => setTimeout(r, 400));
@@ -2370,7 +2370,7 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
     if (!silent) {
       setSyncStage('connecting',
         N === 1
-          ? `Connexion à ${bankConnections[0].bank_name || 'votre banque'}…`
+          ? `Connexion à ${formatBankName(bankConnections[0].bank_name, bankConnections[0].institution_name)}…`
           : `Synchronisation de ${N} banques · démarrage…`,
         { current: 1, total: N }
       );
@@ -2389,7 +2389,7 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
     try {
       for (let i = 0; i < N; i++) {
         const conn = bankConnections[i];
-        const bankLabel = conn.bank_name || 'Banque';
+        const bankLabel = formatBankName(conn.bank_name, conn.institution_name);
         // Feedback temps reel : 3 stages mini par banque pour donner
         // l'impression que l'app travaille pas que la barre tourne dans
         // le vide. User feedback "qu'il dise en temps reel ce que ca fait".
@@ -2610,7 +2610,7 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
 
   const deleteBankConnection = async (connectionId) => {
     const conn = bankConnections.find(c => c.id === connectionId);
-    const bankLabel = conn?.bank_name || 'cette banque';
+    const bankLabel = conn ? formatBankName(conn.bank_name, conn.institution_name) : 'cette banque';
     // Confirm dialog clair sur l'effet — le backend cascade-delete les
     // comptes + transactions GoCardless liees (cf delete_connection).
     const ok = window.confirm(

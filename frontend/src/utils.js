@@ -56,6 +56,44 @@ export const ACCOUNT_ROLES = {
 
 export const ACCOUNT_ROLE_KEYS = Object.keys(ACCOUNT_ROLES);
 
+// GoCardless utilise parfois l'identifiant technique de l'institution comme
+// nom de connexion (ex. BNP_PARIBAS_BNPAFRPP). Cette fonction garantit que
+// l'interface affiche un nom bancaire lisible sans modifier l'identifiant
+// canonique envoyé à l'API.
+const KNOWN_BANK_NAMES = [
+  ['LA_BANQUE_POSTALE', 'La Banque Postale'],
+  ['BANQUE_POPULAIRE', 'Banque Populaire'],
+  ['CAISSE_EPARGNE', "Caisse d'Épargne"],
+  ['CREDIT_AGRICOLE', 'Crédit Agricole'],
+  ['CREDIT_MUTUEL', 'Crédit Mutuel'],
+  ['SOCIETE_GENERALE', 'Société Générale'],
+  ['AMERICAN_EXPRESS', 'American Express'],
+  ['BNP_PARIBAS', 'BNP Paribas'],
+  ['BOURSORAMA', 'Boursorama'],
+  ['REVOLUT', 'Revolut'],
+  ['FORTUNEO', 'Fortuneo'],
+  ['HELLO_BANK', 'Hello bank!'],
+  ['N26', 'N26'],
+  ['QONTO', 'Qonto'],
+  ['LCL', 'LCL'],
+  ['CIC', 'CIC'],
+];
+
+export function formatBankName(rawName, preferredName = null) {
+  if (preferredName && !String(preferredName).includes('_')) return String(preferredName).trim();
+  const raw = String(rawName || preferredName || '').trim();
+  if (!raw) return 'Banque';
+  const upper = raw.toUpperCase();
+  const known = KNOWN_BANK_NAMES.find(([prefix]) => upper === prefix || upper.startsWith(`${prefix}_`));
+  if (known) return known[1];
+  const parts = raw.split('_').filter(Boolean);
+  if (parts.length > 1 && /^[A-Z0-9]{8,11}$/.test(parts[parts.length - 1])) parts.pop();
+  return parts
+    .join(' ')
+    .toLowerCase()
+    .replace(/(^|\s)\p{L}/gu, char => char.toUpperCase());
+}
+
 // Deterministic color from a bank name string (used for sidebar dots,
 // Settings account avatars, future drawer headers…). Uses the v3 dataviz
 // palette so bank chips harmonise with charts. Same string → same color.

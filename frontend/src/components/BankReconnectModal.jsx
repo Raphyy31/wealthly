@@ -16,6 +16,7 @@ import { useState } from 'react';
 import { X, RefreshCw, ShieldCheck, AlertCircle, Loader2, Landmark } from 'lucide-react';
 import * as api from '../api.js';
 import { ResponsiveModal } from './ui/ResponsiveModal.jsx';
+import { formatBankName } from '../utils.js';
 
 // Fenêtre de reconnexion proactive : on alerte l'utilisateur ce nombre de jours
 // avant l'expiration du consentement (90 j DSP2).
@@ -85,7 +86,7 @@ export function BankReconnectModal({ connections, onClose }) {
               <div key={c.id} className="brm-row">
                 <span className="brm-row-ic"><Landmark size={16}/></span>
                 <div className="brm-row-info">
-                  <div className="brm-row-name">{c.bank_name}</div>
+                  <div className="brm-row-name">{formatBankName(c.bank_name, c.institution_name)}</div>
                   <div className={`brm-row-meta ${st}`}>
                     {st === 'expired'
                       ? 'Accès expiré — reconnexion nécessaire'
