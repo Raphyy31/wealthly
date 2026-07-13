@@ -19,7 +19,7 @@ import {
   accountIncludeInNetWorth, accountCountsAsIncome, accountCountsAsExpense,
   detectInternalTransfers, convertCurrency, ACCOUNT_ROLES, bankColor,
   fmtAmount, matchTransferRule, buildTransferDestTag, formatBankName,
-  shiftMonthForDate, isJointAccount, isJointAccountFunding,
+  shiftMonthForDate, isJointAccount, isJointAccountFunding, savingsContributionAmount,
 } from './utils.js';
 import { useRates } from './hooks/useRates.js';
 import { useBaseCurrency } from './hooks/useBaseCurrency.js';
@@ -1267,12 +1267,11 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
       const isSavingsTx = isSavingsCategory || isSavingsTransfer;
 
       if (isSavingsTx) {
-        // EPARGNE : pour les transferts -> credit positif sur le compte
-        // source signifie une sortie de cash (sharedAmount negatif). Pour
-        // les tx categorisees savings -> meme principe (la depense quitte
-        // le compte). On prend abs pour avoir un total positif d'epargne.
-        const absShared = Math.abs(sharedAmount);
-        if (absShared > 0) monthly[mCivil].savings += absShared;
+        // ÉPARGNE : uniquement une sortie depuis un compte de budget vers un
+        // support d'épargne. Un retrait depuis un Livret, ou la jambe positive
+        // reçue sur le compte courant, est un arbitrage et vaut donc zéro ici.
+        const contribution = savingsContributionAmount({ sharedAmount }, acc);
+        if (contribution > 0) monthly[mCivil].savings += contribution;
       } else if (!isTransfer) {
         // CASHFLOW NORMAL (income/depense) — uniquement si pas un transfert
         // (les transferts non-epargne sont des arbitrages, exclus du cashflow).

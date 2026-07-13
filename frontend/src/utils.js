@@ -126,6 +126,21 @@ export const accountIncludeInNetWorth = (role) => (ACCOUNT_ROLES[role] || ACCOUN
 export const accountCountsAsIncome = (role) => (ACCOUNT_ROLES[role] || ACCOUNT_ROLES.principal).countsAsIncome;
 export const accountCountsAsExpense = (role) => (ACCOUNT_ROLES[role] || ACCOUNT_ROLES.principal).countsAsExpense;
 
+// Montant réellement mis de côté par une transaction.
+//
+// Une épargne mensuelle est une SORTIE depuis un compte qui participe au
+// budget (principal / dépenses) vers un support d'épargne. L'ancienne logique
+// utilisait Math.abs : un retrait depuis un Livret, ou sa jambe créditrice sur
+// le compte courant, devenait alors artificiellement de l'« épargne ».
+// Les comptes épargne / investissement sont déjà dans le patrimoine : leurs
+// mouvements internes ne créent pas une nouvelle épargne.
+export const savingsContributionAmount = (transaction, sourceAccount, share = 1) => {
+  const amount = Number(transaction?.sharedAmount ?? transaction?.amount ?? 0);
+  if (!Number.isFinite(amount) || amount >= 0) return 0;
+  if (!accountCountsAsExpense(sourceAccount?.role || 'principal')) return 0;
+  return Math.max(0, -amount * share);
+};
+
 // ─── Virements internes typés ───────────────────────────────────────
 // Une transaction marquee comme virement interne peut etre de 2 types :
 //

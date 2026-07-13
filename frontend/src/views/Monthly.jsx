@@ -28,6 +28,7 @@ import {
 import {
   formatCurrency, formatDate, monthKey, effectiveMonth, getTransferType,
   shiftMonthForDate, extractTransferContributor, isJointAccountFunding, buildBudgetAllocation,
+  savingsContributionAmount,
 } from '../utils.js';
 import { useIncomeShift } from '../hooks/useIncomeShift.js';
 import { useIsNarrow } from '../hooks/useIsNarrow.js';
@@ -279,13 +280,18 @@ export function Monthly({
       .map(t => {
         const acc = accounts.find(a => a.id === t.accountId);
         const share = acc ? memberShare(acc) : 1;
-        return { ...t, sharedAmount: (t.amount || 0) * share };
+        const sharedAmount = (t.amount || 0) * share;
+        return {
+          ...t,
+          sharedAmount,
+          savingsContribution: savingsContributionAmount({ sharedAmount }, acc),
+        };
       });
   }, [transactions, accounts, memberShare, transferIds, selectedMonth, incomeShift, categories]);
 
   // Total savings provenant des virements typés (outflows depuis le compte source).
   const savingsFromTransfers = useMemo(() => {
-    return monthSavingsTransfers.reduce((s, t) => s + Math.max(0, -t.sharedAmount), 0);
+    return monthSavingsTransfers.reduce((s, t) => s + (t.savingsContribution || 0), 0);
   }, [monthSavingsTransfers]);
 
   // Per (kind, categoryId) totals for the selected real month.
@@ -298,15 +304,20 @@ export function Monthly({
       const catId = t.budgetCategoryId || t.categoryId || 'uncategorized';
       const cat = catFor(catId);
       const kind = t.budgetKind || (cat?.type === 'income' ? 'income' : isSavingCategory(catId, categories) ? 'saving' : 'expense');
+      const acc = accounts.find(a => a.id === t.accountId);
+      const savingAmount = kind === 'saving' ? savingsContributionAmount(t, acc) : 0;
+      // Retrait depuis un Livret / crédit reçu depuis un Livret : arbitrage
+      // patrimonial, pas nouvelle épargne du mois.
+      if (kind === 'saving' && savingAmount <= 0) continue;
       const k = `${kind}::${catId}`;
       if (!map.has(k)) map.set(k, { kind, category_id: catId, total: 0, count: 0 });
       const v = map.get(k);
       // income: sum amounts as-is (positive = received). expense/saving: negate so expenses are positive.
-      v.total += kind === 'income' ? t.sharedAmount : -t.sharedAmount;
+      v.total += kind === 'income' ? t.sharedAmount : kind === 'saving' ? savingAmount : -t.sharedAmount;
       v.count += 1;
     }
     return map;
-  }, [monthTx, categories]);
+  }, [monthTx, categories, accounts]);
 
   const realTotals = useMemo(() => {
     const t = { income: 0, expense: 0, saving: 0 };
@@ -478,7 +489,10 @@ export function Monthly({
     // pair detectee mais clairement categorisees comme epargne.
     const savingTx = monthTx.filter(t => !t.budgetKind && isSavingCategory(t.categoryId, categories));
     const savingsFromCategorized = savingTx.reduce(
-      (s, t) => s + Math.abs(t.sharedAmount || 0), 0
+      (s, t) => {
+        const acc = accounts.find(a => a.id === t.accountId);
+        return s + savingsContributionAmount(t, acc);
+      }, 0
     );
     const totalSavingsForSankey = savingsFromTransfers + savingsFromCategorized;
     // Bug user 2026-05-21 : avant on retournait vide des qu'UN seul cote
@@ -651,7 +665,7 @@ export function Monthly({
 
     return { nodes, links, fundingTotal: jointFunding.total, fundingBreakdown: jointFunding.breakdown };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [monthTx, categories, savingsFromTransfers, jointFunding]);
+  }, [monthTx, categories, accounts, savingsFromTransfers, jointFunding]);
 
   // UI state — quelles cartes Sankey sont expanded ? Set ('type' et/ou 'real').
   // Vide = 50/50 teaser. Une seule = 60/40. Les deux = 50/50 expanded.

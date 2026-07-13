@@ -3,6 +3,7 @@ import {
   formatBankName, shiftMonthForDate, effectiveMonth,
   isExplicitBankTransfer, extractTransferContributor,
   buildBudgetAllocation, detectInternalTransfers, isJointAccount, isJointAccountFunding,
+  savingsContributionAmount,
 } from './utils.js';
 
 describe('shiftMonthForDate (décalage fin de mois)', () => {
@@ -41,6 +42,20 @@ describe('ventilation budget du mois affiché', () => {
     const result = buildBudgetAllocation([{ sharedAmount: -42, categoryId: 'uncategorized' }], categories);
     expect(result.unclassified).toBe(42);
     expect(result.wants).toBe(0);
+  });
+});
+
+describe('épargne mensuelle', () => {
+  test('compte seulement une sortie depuis le compte courant', () => {
+    expect(savingsContributionAmount({ amount: -3000 }, { role: 'principal' })).toBe(3000);
+  });
+
+  test('un retrait depuis un livret ne devient pas une nouvelle épargne', () => {
+    expect(savingsContributionAmount({ amount: -3000 }, { role: 'epargne' })).toBe(0);
+  });
+
+  test('la jambe créditrice reçue depuis le livret ne compte pas non plus', () => {
+    expect(savingsContributionAmount({ amount: 3000 }, { role: 'principal' })).toBe(0);
   });
 });
 

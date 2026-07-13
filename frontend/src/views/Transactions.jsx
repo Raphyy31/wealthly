@@ -524,6 +524,20 @@ export function Transactions({ transactions, accounts, categories, members = [],
     setSearch('');
   };
 
+  // Les compteurs de la boîte de classement portent sur tout l'historique.
+  // Quand on ouvre « À classer » / « À confirmer », on retire donc les
+  // filtres de période et de recherche : auparavant le badge annonçait 1
+  // opération mais juillet restait sélectionné, ce qui affichait une liste
+  // vide si l'opération se trouvait en avril.
+  const selectReviewMode = (mode) => {
+    setReviewMode(mode);
+    setSearch('');
+    setFilters({
+      ...EMPTY_FILTERS,
+      month: mode === 'all' ? latestTransactionMonth : '',
+    });
+  };
+
   // Active filter count for the badge.
   const activeCount =
     filters.cats.length +
@@ -605,7 +619,7 @@ export function Transactions({ transactions, accounts, categories, members = [],
           ...(reviewMode === 'auto' ? [['auto', 'Automatiques']] : []),
           ...(reviewMode === 'reviewed' ? [['reviewed', 'Validées']] : []),
         ].map(([id, label]) => (
-          <button key={id} role="tab" aria-selected={reviewMode === id} className={reviewMode === id ? 'is-active' : ''} onClick={() => setReviewMode(id)}>
+          <button key={id} role="tab" aria-selected={reviewMode === id} className={reviewMode === id ? 'is-active' : ''} onClick={() => selectReviewMode(id)}>
             <span>{label}</span>{id !== 'all' && <strong>{reviewCounts[id]}</strong>}
           </button>
         ))}
@@ -641,13 +655,13 @@ export function Transactions({ transactions, accounts, categories, members = [],
               )}
             </div>
             <div className="ai-review-breakdown" aria-label="État du classement">
-              <button type="button" onClick={() => setReviewMode('unclassified')}>
+              <button type="button" onClick={() => selectReviewMode('unclassified')}>
                 <strong>{reviewCounts.unclassified}</strong><span>à classer</span>
               </button>
-              <button type="button" onClick={() => setReviewMode('confirm')}>
+              <button type="button" onClick={() => selectReviewMode('confirm')}>
                 <strong>{reviewCounts.confirm}</strong><span>à confirmer</span>
               </button>
-              <button type="button" onClick={() => setReviewMode('reviewed')}>
+              <button type="button" onClick={() => selectReviewMode('reviewed')}>
                 <strong>{reviewCounts.reviewed}</strong><span>validées</span>
               </button>
             </div>
@@ -686,11 +700,7 @@ export function Transactions({ transactions, accounts, categories, members = [],
             {uncategorizedCount > 0 && (
               <button
                 className="ds-btn ghost"
-                onClick={() => {
-                  setReviewMode('unclassified');
-                  setFilters(EMPTY_FILTERS);
-                  setSearch('');
-                }}
+                onClick={() => selectReviewMode('unclassified')}
               >
                 Classer manuellement
               </button>
