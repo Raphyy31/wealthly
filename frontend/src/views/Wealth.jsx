@@ -270,23 +270,31 @@ export function Wealth({ assets, liabilities, members, activeMemberId, visibleAs
             </div>
             <p>La valeur de tout ce que vous possédez, après déduction des emprunts restants.</p>
           </div>
-          <div className="wealth-net-formula">
-            <div className="wealth-net-term is-positive">
-              <span>Ce que vous possédez</span>
-              <strong className="num">{fmt(grossAssetsTotal)}</strong>
-              <small>Comptes, placements et biens</small>
+          <div className="wealth-net-insights">
+            <div className="wealth-net-stats">
+              <div className="wealth-net-stat is-positive">
+                <span>Actifs bruts</span>
+                <strong className="num">{fmt(grossAssetsTotal)}</strong>
+                <small>Comptes, placements et biens</small>
+              </div>
+              <div className="wealth-net-stat is-negative">
+                <span>Dettes restantes</span>
+                <strong className="num">−{fmt(totalLiabilities)}</strong>
+                <small>Capital restant à rembourser</small>
+              </div>
             </div>
-            <span className="wealth-net-operator" aria-hidden="true">−</span>
-            <div className="wealth-net-term is-negative">
-              <span>Ce que vous devez</span>
-              <strong className="num">{fmt(totalLiabilities)}</strong>
-              <small>Capital restant des emprunts</small>
-            </div>
-            <span className="wealth-net-operator" aria-hidden="true">=</span>
-            <div className="wealth-net-term is-result">
-              <span>Patrimoine net</span>
-              <strong className="num">{fmt(netWealthTotal)}</strong>
-              <small>Votre valeur patrimoniale réelle</small>
+            <div className="wealth-net-ratio">
+              <div className="wealth-net-ratio-head">
+                <span>Part des actifs financée par l'emprunt</span>
+                <strong>{debtRatioWealth == null ? '—' : `${debtRatioWealth.toFixed(0)} %`}</strong>
+              </div>
+              <div className="wealth-net-ratio-track" aria-hidden="true">
+                <span style={{ width: `${Math.min(Math.max(debtRatioWealth || 0, 0), 100)}%` }}/>
+              </div>
+              <div className="wealth-net-ratio-foot">
+                <span><strong className="num">{fmt(totalMonthlyDebt)}</strong> / mois de mensualités</span>
+                {illiquidRatio != null && <span><strong>{illiquidRatio.toFixed(0)} %</strong> du patrimoine brut en immobilier</span>}
+              </div>
             </div>
           </div>
         </section>

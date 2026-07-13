@@ -413,10 +413,9 @@ export function Styles({ theme }) {
 
 }
 
-/* Layout Binance/Finary-style — pleine largeur disponible apres la sidebar.
-   Avant : cape a 1280px, laissait ~400px de blanc a droite sur ecran 1920+.
-   Maintenant : pas de cap, padding lateral 40px (48px en QHD+) pour aerer. */
-.content { padding: 28px 40px 60px; max-width: none; margin: 0; min-height: calc(100vh - 140px); width: 100%; }
+/* Layout desktop large, mais capé pour garder des lignes lisibles en QHD.
+   Le contenu utilise toute la place sur laptop puis se recentre au-delà de 1680px. */
+.content { padding: 28px 40px 60px; max-width: 1680px; margin: 0 auto; min-height: calc(100vh - 140px); width: 100%; }
 @media (min-width: 1600px) {
   .content { padding-left: 48px; padding-right: 48px; }
 }
@@ -886,7 +885,8 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .quick-set-btn:hover { background: var(--primary-soft); }
 
 /* WEALTH */
-.wealth-view { display: flex; flex-direction: column; gap: 20px; }
+.wealth-view { display: flex; flex-direction: column; gap: 16px; }
+.wealth-view > .subview-header { margin-bottom: 4px; }
 /* Synthèse pédagogique : possessions − dettes = patrimoine net. */
 .wealth-net-summary {
   display: grid;
@@ -923,41 +923,39 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
   color: var(--ink-2);
   font: 400 12px/1.45 var(--font-sans);
 }
-.wealth-net-formula {
-  display: grid;
-  grid-template-columns: minmax(120px, 1fr) auto minmax(120px, 1fr) auto minmax(120px, 1fr);
-  align-items: stretch;
-  gap: 10px;
-  padding: 18px;
-}
-.wealth-net-term {
+.wealth-net-insights {
   display: flex;
   min-width: 0;
   flex-direction: column;
   justify-content: center;
-  gap: 5px;
-  padding: 13px 14px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--bg);
+  gap: 15px;
+  padding: 18px 20px;
 }
-.wealth-net-term > span { color: var(--ink-2); font: 600 11.5px var(--font-sans); }
-.wealth-net-term > strong { color: var(--ink); font: 650 16px var(--font-sans); white-space: nowrap; }
-.wealth-net-term > small { color: var(--ink-3); font: 400 10.5px/1.35 var(--font-sans); }
-.wealth-net-term.is-positive { border-color: color-mix(in oklab, var(--positive) 22%, var(--border)); }
-.wealth-net-term.is-negative strong { color: var(--negative); }
-.wealth-net-term.is-result { border-color: color-mix(in oklab, var(--accent) 38%, var(--border)); background: var(--accent-soft); }
-.wealth-net-term.is-result strong { color: var(--accent); }
-.wealth-net-operator { align-self: center; color: var(--ink-3); font: 400 22px var(--font-sans); }
+.wealth-net-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+.wealth-net-stat { position: relative; display: flex; min-width: 0; flex-direction: column; gap: 4px; padding-left: 13px; }
+.wealth-net-stat::before { content: ''; position: absolute; inset: 2px auto 2px 0; width: 3px; border-radius: 999px; background: var(--accent); }
+.wealth-net-stat.is-negative::before { background: var(--negative); }
+.wealth-net-stat > span { color: var(--ink-2); font: 600 11.5px var(--font-sans); }
+.wealth-net-stat > strong { color: var(--ink); font: 650 18px/1.2 var(--font-sans); white-space: nowrap; }
+.wealth-net-stat.is-negative > strong { color: var(--negative); }
+.wealth-net-stat > small { color: var(--ink-3); font: 400 10.5px/1.35 var(--font-sans); }
+.wealth-net-ratio { padding-top: 13px; border-top: 1px solid var(--border); }
+.wealth-net-ratio-head, .wealth-net-ratio-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.wealth-net-ratio-head { color: var(--ink-2); font: 500 11.5px/1.3 var(--font-sans); }
+.wealth-net-ratio-head strong { color: var(--ink); font-weight: 650; white-space: nowrap; }
+.wealth-net-ratio-track { height: 6px; margin: 8px 0; overflow: hidden; border-radius: 999px; background: var(--bg-sunk); }
+.wealth-net-ratio-track span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--accent), color-mix(in oklab, var(--accent) 65%, var(--warning))); }
+.wealth-net-ratio-foot { color: var(--ink-3); font: 400 10.5px/1.3 var(--font-sans); }
+.wealth-net-ratio-foot strong { color: var(--ink-2); font-weight: 600; }
 @media (max-width: 980px) {
   .wealth-net-summary { grid-template-columns: 1fr; }
   .wealth-net-main { border-right: 0; border-bottom: 1px solid var(--border); }
 }
 @media (max-width: 700px) {
   .wealth-net-main { padding: 19px 18px; }
-  .wealth-net-formula { grid-template-columns: 1fr; gap: 7px; padding: 12px; }
-  .wealth-net-operator { line-height: .7; }
-  .wealth-net-term { padding: 10px 12px; }
+  .wealth-net-insights { padding: 15px 16px; }
+  .wealth-net-stats { grid-template-columns: 1fr; gap: 12px; }
+  .wealth-net-ratio-foot { align-items: flex-start; flex-direction: column; gap: 4px; }
 }
 /* Allocation mini-card — compact, click pour expand modal */
 .wealth-alloc-mini {
@@ -1060,7 +1058,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .wealth-cards-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 14px;
+  gap: 12px;
 }
 @media (max-width: 900px) {
   .wealth-cards-grid { grid-template-columns: 1fr; }
@@ -1068,17 +1066,17 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .wc-card {
   background: var(--bg-elev);
   border: 1px solid var(--border);
-  border-left: 5px solid var(--wc-accent, var(--accent));
-  border-radius: 12px;
+  border-top: 3px solid var(--wc-accent, var(--accent));
+  border-radius: 13px;
   overflow: hidden;
   transition: border-color 0.22s, box-shadow 0.22s;
 }
 .wc-card:hover {
   border-color: var(--border-strong);
-  border-left-color: var(--wc-accent, var(--accent));
+  border-top-color: var(--wc-accent, var(--accent));
   box-shadow: 0 2px 10px -4px color-mix(in oklab, var(--wc-accent, var(--accent)) 25%, transparent);
 }
-.wc-card.is-empty { opacity: 0.7; border-left-color: var(--border); }
+.wc-card.is-empty { opacity: 0.7; border-top-color: var(--border); }
 
 /* Chevron à droite du header — rotate quand la card est dépliée */
 .wc-card-chev {
@@ -1108,13 +1106,13 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 16px 18px;
+  padding: 14px 16px;
 }
 .wc-card-head-btn {
   width: 100%;
   /* Header teinté à ~8 % de la couleur de la classe — contraste immédiat
      entre blocs sans nuire à la lecture. */
-  background: color-mix(in oklab, var(--wc-accent, var(--accent)) 8%, transparent);
+  background: color-mix(in oklab, var(--wc-accent, var(--accent)) 5%, transparent);
   border: none;
   font-family: inherit;
   text-align: left;
@@ -1122,7 +1120,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
   transition: background 0.18s;
 }
 .wc-card-head-btn:hover:not(:disabled) {
-  background: color-mix(in oklab, var(--wc-accent, var(--accent)) 14%, transparent);
+  background: color-mix(in oklab, var(--wc-accent, var(--accent)) 9%, transparent);
 }
 .wc-card-head-btn:disabled { cursor: default; }
 .wc-card-head-btn:focus-visible {
@@ -1130,7 +1128,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
   background: var(--accent-soft);
 }
 .wc-card-icon {
-  width: 36px; height: 36px;
+  width: 34px; height: 34px;
   border-radius: 9px;
   display: flex;
   align-items: center;
@@ -1290,14 +1288,14 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .wealth-hero {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 12px;
 }
 @media (max-width: 900px) {
   .wealth-hero { grid-template-columns: 1fr; }
 }
 .wealth-hero-card {
   position: relative;
-  padding: 24px 26px 22px;
+  padding: 20px 22px 18px;
   background: var(--bg-elev);
   border: 1px solid var(--border);
   border-radius: 14px;
@@ -1363,7 +1361,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .wealth-hero-eyebrow svg { color: var(--accent); }
 .wealth-hero-card--realestate .wealth-hero-eyebrow svg { color: var(--d3); }
 .wealth-hero-value {
-  font: 500 clamp(34px, 4.5vw, 44px)/1.05 var(--font-sans);
+  font: 550 clamp(31px, 4vw, 39px)/1.05 var(--font-sans);
   letter-spacing: -0.03em;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
@@ -3518,18 +3516,24 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
    Settings — Monarch-style multi-section layout with sticky left rail
    ============================================================================ */
 .settings-layout {
-  display: grid; grid-template-columns: 240px 1fr; gap: 32px;
+  display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 28px;
   align-items: start; padding: 0 0 80px;
 }
 .settings-rail {
   position: sticky; top: 24px;
-  display: flex; flex-direction: column; gap: 14px;
+  display: flex; flex-direction: column; gap: 13px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-elev);
+  box-shadow: var(--shadow-sm);
 }
 .settings-rail-group { display: flex; flex-direction: column; gap: 2px; }
-.settings-rail-group-label { padding: 0 12px 5px; color: var(--ink-3); font: 600 9.5px/1 var(--font-mono); letter-spacing: .11em; text-transform: uppercase; }
+.settings-rail-group + .settings-rail-group { padding-top: 12px; border-top: 1px solid var(--border-light); }
+.settings-rail-group-label { padding: 0 9px 6px; color: var(--ink-3); font: 600 9.5px/1 var(--font-mono); letter-spacing: .11em; text-transform: uppercase; }
 .settings-rail-item {
   display: flex; align-items: center; gap: 10px;
-  padding: 9px 12px; border-radius: 6px;
+  padding: 9px 10px; border-radius: 8px;
   font-size: 13px; color: var(--ink-2); cursor: pointer;
   background: transparent; border: none; font-family: inherit;
   text-align: left; width: 100%; position: relative;
@@ -3540,11 +3544,13 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
   background: var(--accent-soft); color: var(--accent); font-weight: 500;
 }
 .settings-rail-item.active::before {
-  content: ''; position: absolute; left: 0; top: 8px; bottom: 8px;
-  width: 3px; background: var(--accent); border-radius: 2px;
+  content: ''; position: absolute; left: -1px; top: 9px; bottom: 9px;
+  width: 3px; background: var(--accent); border-radius: 0 3px 3px 0;
 }
+.settings-content { width: 100%; max-width: 1120px; }
 .settings-content,
 .settings-panel { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.settings-panel > header { padding-bottom: 14px; border-bottom: 1px solid var(--border-light); }
 .settings-panel h2 {
   font-family: 'Geist', sans-serif; font-weight: 500; font-size: 22px;
   margin: 0 0 4px; color: var(--ink); letter-spacing: -0.01em;
@@ -3611,10 +3617,10 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .settings-auth-event-time { color: var(--ink-3); font-variant-numeric: tabular-nums; }
 
 /* Accueil Réglages */
-.settings-health-card { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 22px; align-items: center; padding: 22px; border: 1px solid var(--border); border-radius: 16px; background: var(--bg-elev); }
-.settings-health-score { position: relative; width: 112px; height: 112px; border-radius: 50%; background: conic-gradient(var(--accent) var(--score), var(--bg-sunk) 0); display: flex; flex-direction: column; align-items: center; justify-content: center; isolation: isolate; }
+.settings-health-card { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 20px; align-items: center; padding: 19px 20px; border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--border)); border-radius: 14px; background: linear-gradient(120deg, color-mix(in srgb, var(--accent-soft) 32%, var(--bg-elev)), var(--bg-elev) 42%); }
+.settings-health-score { position: relative; width: 94px; height: 94px; border-radius: 50%; background: conic-gradient(var(--accent) var(--score), var(--bg-sunk) 0); display: flex; flex-direction: column; align-items: center; justify-content: center; isolation: isolate; }
 .settings-health-score::before { content: ''; position: absolute; inset: 8px; border-radius: inherit; background: var(--bg-elev); z-index: -1; }
-.settings-health-score strong { color: var(--ink); font-size: 25px; letter-spacing: -.03em; }
+.settings-health-score strong { color: var(--ink); font-size: 23px; letter-spacing: -.03em; }
 .settings-health-score span { color: var(--ink-3); font-size: 10.5px; }
 .settings-health-title { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 .settings-health-title span { color: var(--ink); font-size: 14px; font-weight: 600; }
@@ -3628,9 +3634,9 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .settings-attention strong { color: var(--ink); font-size: 12.5px; }
 .settings-attention span { color: var(--ink-2); font-size: 11.5px; }
 .settings-overview-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-.settings-overview-card { min-width: 0; display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 11px; padding: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-elev); color: var(--ink); text-align: left; cursor: pointer; font-family: inherit; transition: border-color .15s, box-shadow .15s, transform .15s; }
-.settings-overview-card:hover { border-color: var(--accent); box-shadow: var(--shadow-sm); transform: translateY(-1px); }
-.settings-overview-icon { width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; background: var(--accent-soft); color: var(--accent); }
+.settings-overview-card { min-width: 0; display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; align-items: center; gap: 11px; padding: 14px 15px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-elev); color: var(--ink); text-align: left; cursor: pointer; font-family: inherit; transition: border-color .15s, box-shadow .15s, background .15s; }
+.settings-overview-card:hover { border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); background: color-mix(in srgb, var(--accent-soft) 22%, var(--bg-elev)); box-shadow: var(--shadow-sm); }
+.settings-overview-icon { width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; background: var(--accent-soft); color: var(--accent); }
 .settings-overview-copy { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .settings-overview-copy small { color: var(--ink-3); font: 600 9.5px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
 .settings-overview-copy strong { color: var(--ink); font-size: 14px; }
@@ -3644,14 +3650,15 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
      horizontal scroll row on mobile. Add scroll fade hint on right. */
   .settings-rail {
     position: static; flex-direction: row; overflow-x: auto; gap: 4px;
-    padding-bottom: 6px;
+    padding-top: 0; padding-bottom: 6px;
     margin: 0 -16px; padding-left: 16px; padding-right: 40px;
+    border: 0; border-radius: 0; background: transparent; box-shadow: none;
     scrollbar-width: none;
     /* Gradient fade on right to hint more tabs */
     -webkit-mask-image: linear-gradient(to right, black calc(100% - 40px), transparent 100%);
     mask-image: linear-gradient(to right, black calc(100% - 40px), transparent 100%);
   }
-  .settings-rail-group { display: contents; }
+  .settings-rail-group { display: contents; padding: 0; border: 0; }
   .settings-rail-group-label { display: none; }
   .settings-rail::-webkit-scrollbar { display: none; }
   .settings-rail-item {

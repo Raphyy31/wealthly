@@ -236,7 +236,7 @@ function SettingsOverview({ currentUser, members = [], accounts = [], bankConnec
       <div className="settings-health-card">
         <div className="settings-health-score" style={{ '--score': `${score}%` }}><strong>{score}%</strong><span>configuré</span></div>
         <div className="settings-health-body">
-          <div className="settings-health-title"><span>Configuration de Yotori</span><small>{doneCount}/{checks.length} étapes terminées</small></div>
+          <div className="settings-health-title"><span>Configuration de Yotori Finance</span><small>{doneCount}/{checks.length} étapes terminées</small></div>
           <div className="settings-checklist">
             {checks.map(item => (
               <button key={item.label} type="button" className={item.done ? 'is-done' : ''} onClick={() => goTo(item.section)}>
@@ -323,7 +323,7 @@ function RegLesPanel({
       id: 'categories',
       icon: Tag,
       label: 'Catégories',
-      desc: 'Les boîtes dans lesquelles vos dépenses sont rangées (Logement, Courses, Restos…).',
+      desc: 'Vos grandes familles de budget. Ouvrez une catégorie pour organiser ses détails sans alourdir la liste principale.',
       example: '',
     },
     {
