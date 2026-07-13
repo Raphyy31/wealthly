@@ -2254,8 +2254,19 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 @media (prefers-reduced-motion: reduce) {
   .modal, .modal-backdrop { animation: none !important; }
 }
-.modal--wizard { max-width: 780px; }
-.simple-asset-editor-modal { max-width: 660px; }
+.modal--wizard {
+  max-width: 780px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.simple-asset-editor-modal {
+  max-width: 660px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.simple-asset-editor-modal .modal-body { min-height: 0; overflow-y: auto; }
 .modal--detail { max-width: 1100px; }
 .transfer-recat-modal { max-width: 640px; width: 92%; }
 .add-account-modal { max-width: 480px; }
@@ -2276,8 +2287,10 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 /* Wizard layout — navigation compacte, contenu principal prioritaire. */
 .wealth-editor-heading { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .wealth-editor-eyebrow { color: var(--text-tertiary); font: 600 9.5px var(--font-mono); letter-spacing: .1em; text-transform: uppercase; }
-.wizard-body { display: grid; grid-template-columns: 190px 1fr; min-height: 390px; }
-.wizard-steps { display: flex; flex-direction: column; gap: 4px; padding: 18px 10px; border-right: 1px solid var(--border); background: var(--bg-subtle); }
+.modal--wizard .modal-header,
+.modal--wizard .modal-footer { flex: 0 0 auto; position: static; }
+.wizard-body { display: grid; grid-template-columns: 190px minmax(0, 1fr); min-height: 390px; flex: 1 1 auto; overflow: hidden; }
+.wizard-steps { display: flex; flex-direction: column; gap: 4px; padding: 18px 10px; border-right: 1px solid var(--border); background: var(--bg-subtle); overflow-y: auto; }
 .wizard-step { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: none; background: transparent; cursor: pointer; border-radius: 8px; font-family: inherit; font-size: 13px; color: var(--text-secondary); text-align: left; transition: background 0.15s, color 0.15s; }
 .wizard-step:hover { background: var(--bg-card-hover); color: var(--text-primary); }
 .wizard-step.active { background: var(--bg-card); color: var(--text-primary); font-weight: 600; box-shadow: var(--shadow-sm); }
@@ -2285,7 +2298,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .wizard-step-num { width: 22px; height: 22px; border-radius: 50%; background: var(--bg-page); border: 1px solid var(--border); color: var(--text-tertiary); font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .wizard-step.active .wizard-step-num { background: var(--primary); color: var(--bg-page); border-color: var(--primary); }
 .wizard-step.done .wizard-step-num { background: var(--primary-soft); color: var(--primary); border-color: var(--primary-soft); }
-.wizard-pane { padding: 22px 26px 26px; display: flex; flex-direction: column; gap: 14px; }
+.wizard-pane { padding: 22px 26px 26px; display: flex; flex-direction: column; gap: 14px; min-height: 0; overflow-y: auto; }
 .wizard-pane-intro { display: flex; flex-direction: column; gap: 3px; padding-bottom: 13px; border-bottom: 1px solid var(--border-light, var(--border)); }
 .wizard-pane-intro strong { color: var(--text-primary); font-size: 15px; letter-spacing: -.01em; }
 .wizard-pane-intro span { color: var(--text-tertiary); font-size: 11.5px; line-height: 1.4; }
@@ -2296,6 +2309,9 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .wizard-advanced summary { cursor: pointer; padding: 12px 14px; color: var(--text-secondary); font-size: 13px; font-weight: 600; }
 .wizard-advanced summary span { color: var(--text-tertiary); font-size: 11px; font-weight: 400; margin-left: 5px; }
 .wizard-advanced-body { padding: 4px 14px 14px; display: flex; flex-direction: column; gap: 14px; }
+.wizard-divider { display: flex; align-items: center; gap: 10px; color: var(--text-tertiary); font: 600 9.5px var(--font-mono); letter-spacing: .1em; text-transform: uppercase; margin-top: 2px; }
+.wizard-divider::before,
+.wizard-divider::after { content: ''; height: 1px; background: var(--border); flex: 1; }
 .wealth-ai-helper { border: 1px solid color-mix(in srgb, var(--primary) 24%, var(--border)); border-radius: 10px; background: color-mix(in srgb, var(--primary-soft) 45%, var(--bg-card)); overflow: hidden; }
 .wealth-ai-helper summary { cursor: pointer; padding: 11px 13px; color: var(--primary); font-size: 12px; font-weight: 600; }
 .wealth-ai-helper summary span { color: var(--text-tertiary); font-size: 10.5px; font-weight: 400; margin-left: 5px; }
@@ -2306,6 +2322,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .wealth-live-tracking > strong { color: var(--text-secondary); font-size: 11.5px; }
 .wealth-live-tracking > small { color: var(--text-tertiary); font-size: 10.5px; line-height: 1.4; }
 @media (max-width: 640px) {
+  .modal--wizard { overflow-y: auto; }
   .wizard-body { display: flex; flex-direction: column; min-height: 0; }
   .wizard-steps { flex-direction: row; border-right: 0; border-bottom: 1px solid var(--border); padding: 8px; overflow-x: auto; flex-shrink: 0; }
   .wizard-step { flex: 1 1 0; min-width: 0; justify-content: center; gap: 5px; padding: 8px 6px; }

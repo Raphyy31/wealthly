@@ -216,7 +216,7 @@ export function TransferRulesSection({ accounts, transactions, transferIds, upda
       )}
 
       <p className="settings-footnote">
-        Les règles sont stockées dans votre compte (Supabase) — retrouvées sur n'importe quel device. Elles s'appliquent <strong>au sync</strong> sur les nouvelles transactions. Pour l'historique, cliquez sur "Appliquer aux tx existantes".
+        Les règles sont enregistrées dans votre espace sécurisé et retrouvées sur tous vos appareils. Elles s'appliquent <strong>à la prochaine synchronisation</strong> sur les nouvelles opérations. Pour l'historique, utilisez « Appliquer aux opérations existantes ».
       </p>
     </section>
   );

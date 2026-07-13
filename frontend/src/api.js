@@ -12,6 +12,37 @@ import { SUBTYPE_TO_CATEGORY } from './types/wealth.js';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
+export class ApiError extends Error {
+  constructor(message, { status = null, code = 'api_error', requestId = null, retryable = false } = {}) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.code = code;
+    this.requestId = requestId;
+    this.retryable = retryable;
+  }
+}
+
+const withReference = (message, requestId) => requestId
+  ? `${message} Référence : ${requestId}.`
+  : message;
+
+function httpErrorMessage(status, detail, requestId) {
+  const safeDetail = typeof detail === 'string' ? detail.trim() : '';
+  const exposesTechnicalDetail = /(?:Programming|Operational|Integrity|Database|SQL|Traceback)Error|erreur interne du serveur/i.test(safeDetail);
+
+  if (status === 429) {
+    return withReference(safeDetail || 'Trop de tentatives rapprochées. Patientez un instant avant de réessayer.', requestId);
+  }
+  if (status >= 500 && (status === 500 || exposesTechnicalDetail || !safeDetail)) {
+    return withReference('Un problème technique a empêché cette action. Rien n’a été perdu : réessayez dans un instant.', requestId);
+  }
+  if (status === 422 && !safeDetail) {
+    return withReference('Certaines informations sont incomplètes ou invalides. Vérifiez les champs signalés.', requestId);
+  }
+  return withReference(safeDetail || `Action impossible (erreur ${status}).`, requestId);
+}
+
 // ============================================================================
 // MUTATION ACTIVITY TRACKER
 // ============================================================================
@@ -208,9 +239,12 @@ async function request(method, path, body = null, { timeoutMs, affectsBackendHea
     // surface their own banking error instead.
     if (affectsBackendHealth) markBackendOffline();
     const timedOut = err?.name === 'AbortError';
-    throw new Error(timedOut
-      ? 'Le serveur ne répond pas pour le moment. Réessayez dans un instant.'
-      : 'Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.');
+    throw new ApiError(timedOut
+      ? 'La réponse prend plus de temps que prévu. Réessayez : l’action n’a peut-être pas encore abouti.'
+      : 'Connexion interrompue. Vérifiez votre accès internet puis réessayez.', {
+      code: timedOut ? 'timeout' : 'network_error',
+      retryable: true,
+    });
   }
 
   // Any HTTP response proves the Wealthly server answered. A 502/503 may be
@@ -226,7 +260,7 @@ async function request(method, path, body = null, { timeoutMs, affectsBackendHea
     // eux-mêmes (login/register/me/reset : un 401 y est attendu, pas une
     // expiration de session en cours d'usage).
     if (!path.startsWith('/auth/')) notifySessionExpired();
-    throw new Error(errMsg);
+    throw new ApiError(errMsg, { status: 401, code: 'unauthorized' });
   }
 
   if (response.status === 204) {
@@ -239,14 +273,28 @@ async function request(method, path, body = null, { timeoutMs, affectsBackendHea
     data = await response.json();
   } catch {
     if (isMutation) endMutation();
-    if (!response.ok) throw new Error(`Erreur ${response.status}`);
+    if (!response.ok) {
+      const requestId = response.headers.get('x-request-id') || null;
+      throw new ApiError(httpErrorMessage(response.status, '', requestId), {
+        status: response.status,
+        code: response.status >= 500 ? 'server_error' : 'request_error',
+        requestId,
+        retryable: response.status === 429 || response.status >= 500,
+      });
+    }
     return null;
   }
 
   if (!response.ok) {
     if (isMutation) endMutation();
     const detail = data?.detail || data?.message || `Erreur ${response.status}`;
-    throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
+    const requestId = response.headers.get('x-request-id') || data?.request_id || null;
+    throw new ApiError(httpErrorMessage(response.status, detail, requestId), {
+      status: response.status,
+      code: response.status >= 500 ? 'server_error' : 'request_error',
+      requestId,
+      retryable: response.status === 429 || response.status >= 500,
+    });
   }
 
   if (isMutation) endMutation();

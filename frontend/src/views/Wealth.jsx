@@ -57,7 +57,7 @@ const SUBTYPE_TO_EDITOR = {
   auto_loan:     { kind: 'liability', type: 'auto_loan' },
   other_loan:    { kind: 'liability', type: 'other_loan' },
   // immobilier → RealEstateEditor (type=real_estate)
-  rp:      { kind: 'asset', type: 'real_estate', subtype: 'RP' },
+  rp:      { kind: 'asset', type: 'real_estate', subtype: 'rp' },
   locatif: { kind: 'asset', type: 'real_estate', subtype: 'locative' },
   scpi:    { kind: 'asset', type: 'real_estate', subtype: 'scpi' },
   // investissements → SimpleAssetEditor avec le bon type

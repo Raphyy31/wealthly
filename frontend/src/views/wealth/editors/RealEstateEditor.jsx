@@ -1,5 +1,5 @@
 // ============================================================================
-// RealEstateEditor — 4-step wizard for real-estate assets.
+// RealEstateEditor — essential information first, optional details afterwards.
 // Extracted from Wealth.jsx lines 762-1025 (RE_SUBTYPES + RE_STEPS consts + component).
 // ============================================================================
 import { useState } from 'react';
@@ -17,16 +17,15 @@ const RE_SUBTYPES = [
 ];
 
 const RE_STEPS = [
-  { key: 'desc',   label: 'Le bien', description: 'Nom, catégorie et propriétaires' },
-  { key: 'specs',  label: 'Acquisition', description: 'Prix et caractéristiques principales' },
-  { key: 'detail', label: 'Valeur actuelle', description: 'Estimation et informations utiles' },
-  { key: 'loans',  label: 'Financement', description: 'Emprunts rattachés au bien' },
+  { key: 'desc',    label: 'L’essentiel', description: 'Identifiez le bien et sa valeur actuelle' },
+  { key: 'details', label: 'Acquisition', description: 'Prix, frais et caractéristiques — facultatif' },
+  { key: 'loans',   label: 'Financement', description: 'Rattachez un emprunt — facultatif' },
 ];
 
 export function RealEstateEditor({ asset, members, liabilities, onSave, onCancel }) {
   const [draft, setDraft] = useState({
     ...asset,
-    subtype: asset.subtype || 'rp',
+    subtype: asset.subtype === 'RP' ? 'rp' : (asset.subtype || 'rp'),
     address: asset.address || '',
     purchasePrice: asset.purchasePrice ?? '',
     surfaceM2: asset.surfaceM2 ?? '',
@@ -68,9 +67,9 @@ export function RealEstateEditor({ asset, members, liabilities, onSave, onCancel
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
-  const canSave = draft.name && (draft.memberIds || []).length > 0;
+  const canSave = Boolean(draft.name?.trim() && (draft.memberIds || []).length > 0);
   const submit = async () => {
-    if (!canSave) { alert('Renseigne un nom et au moins un propriétaire.'); return; }
+    if (!canSave) { setError('Ajoutez un nom et au moins un propriétaire.'); return; }
     if (saving) return;
     setError(null);
     setSaving(true);
@@ -103,7 +102,7 @@ export function RealEstateEditor({ asset, members, liabilities, onSave, onCancel
             <span className="wealth-editor-eyebrow">Immobilier · étape {stepIdx + 1} sur {RE_STEPS.length}</span>
             <h2>{asset.id ? 'Modifier mon immobilier' : 'Ajouter mon immobilier'}</h2>
           </div>
-          <button className="icon-btn-sm" onClick={onCancel}><X size={16}/></button>
+          <button className="icon-btn-sm" onClick={onCancel} aria-label="Fermer" title="Fermer"><X size={16}/></button>
         </div>
         <div className="wizard-body">
           <nav className="wizard-steps">
@@ -127,6 +126,9 @@ export function RealEstateEditor({ asset, members, liabilities, onSave, onCancel
               <>
                 <label><span>Nom du bien</span>
                   <input autoFocus value={draft.name} onChange={(e) => set('name', e.target.value)} placeholder="Appartement Paris 11e"/>
+                </label>
+                <label><span>Valeur actuelle (€) <em>optionnel</em></span>
+                  <input type="number" min="0" value={draft.currentValue} onChange={(e) => set('currentValue', e.target.value)} step="any" placeholder="ex : 380 000"/>
                 </label>
                 <label><span>Adresse <em>optionnel</em></span>
                   <input value={draft.address} onChange={(e) => set('address', e.target.value)} placeholder="58bis Cité Durmar, 75011 Paris"/>
@@ -152,14 +154,19 @@ export function RealEstateEditor({ asset, members, liabilities, onSave, onCancel
               </>
             )}
 
-            {step === 'specs' && (
+            {step === 'details' && (
               <>
-                <label><span>Prix d'achat hors frais (€)</span>
-                  <input type="number" value={draft.purchasePrice} onChange={(e) => set('purchasePrice', e.target.value)} step="any"/>
+                <label><span>Prix d'achat hors frais (€) <em>optionnel</em></span>
+                  <input type="number" min="0" value={draft.purchasePrice} onChange={(e) => set('purchasePrice', e.target.value)} step="any"/>
                 </label>
+                {suggestedValue > 0 && (!draft.currentValue || parseFloat(draft.currentValue) === 0) && (
+                  <button type="button" className="ds-btn" style={{ alignSelf: 'flex-start' }} onClick={() => set('currentValue', String(suggestedValue))}>
+                    Utiliser {Math.round(suggestedValue).toLocaleString('fr-FR')} € comme valeur actuelle
+                  </button>
+                )}
                 <div className="field-row">
                   <label><span>Surface (m²)</span>
-                    <input type="number" value={draft.surfaceM2} onChange={(e) => set('surfaceM2', e.target.value)} step="0.1"/>
+                    <input type="number" min="0" value={draft.surfaceM2} onChange={(e) => set('surfaceM2', e.target.value)} step="0.1"/>
                   </label>
                   <label><span>Détention (%)</span>
                     <input type="number" min={0} max={100} value={draft.ownershipPct} onChange={(e) => set('ownershipPct', e.target.value)} step="0.1"/>
@@ -167,18 +174,18 @@ export function RealEstateEditor({ asset, members, liabilities, onSave, onCancel
                 </div>
                 <div className="field-row">
                   <label><span>Frais d'agence (€) <em>optionnel</em></span>
-                    <input type="number" value={draft.agencyFees} onChange={(e) => set('agencyFees', e.target.value)} step="any"/>
+                    <input type="number" min="0" value={draft.agencyFees} onChange={(e) => set('agencyFees', e.target.value)} step="any"/>
                   </label>
                   <label><span>Frais de notaire (€) <em>optionnel</em></span>
-                    <input type="number" value={draft.notaryFees} onChange={(e) => set('notaryFees', e.target.value)} step="any"/>
+                    <input type="number" min="0" value={draft.notaryFees} onChange={(e) => set('notaryFees', e.target.value)} step="any"/>
                   </label>
                 </div>
                 <div className="field-row">
                   <label><span>Frais de travaux (€) <em>optionnel</em></span>
-                    <input type="number" value={draft.worksFees} onChange={(e) => set('worksFees', e.target.value)} step="any"/>
+                    <input type="number" min="0" value={draft.worksFees} onChange={(e) => set('worksFees', e.target.value)} step="any"/>
                   </label>
                   <label><span>Frais d'ameublement (€) <em>optionnel</em></span>
-                    <input type="number" value={draft.furnitureFees} onChange={(e) => set('furnitureFees', e.target.value)} step="any"/>
+                    <input type="number" min="0" value={draft.furnitureFees} onChange={(e) => set('furnitureFees', e.target.value)} step="any"/>
                   </label>
                 </div>
                 <div className="field-row">
@@ -186,22 +193,9 @@ export function RealEstateEditor({ asset, members, liabilities, onSave, onCancel
                     <input type="date" value={draft.purchaseDate || ''} onChange={(e) => set('purchaseDate', e.target.value)}/>
                   </label>
                   <label><span>Année de construction <em>optionnel</em></span>
-                    <input type="number" value={draft.constructionYear} onChange={(e) => set('constructionYear', e.target.value)} placeholder="1985"/>
+                    <input type="number" min="1000" max="2100" value={draft.constructionYear} onChange={(e) => set('constructionYear', e.target.value)} placeholder="1985"/>
                   </label>
                 </div>
-              </>
-            )}
-
-            {step === 'detail' && (
-              <>
-                <label><span>Valeur actuelle (€)</span>
-                  <input type="number" value={draft.currentValue} onChange={(e) => set('currentValue', e.target.value)} step="any"/>
-                </label>
-                {suggestedValue > 0 && (!draft.currentValue || parseFloat(draft.currentValue) === 0) && (
-                  <button type="button" className="ds-btn" style={{ alignSelf: 'flex-start' }} onClick={() => set('currentValue', String(suggestedValue))}>
-                    Estimer à {Math.round(suggestedValue).toLocaleString('fr-FR')} € (achat + travaux + ameublement)
-                  </button>
-                )}
                 <label><span>Notes <em>optionnel</em></span>
                   <textarea rows={3} value={draft.notes || ''} onChange={(e) => set('notes', e.target.value)} placeholder="DPE, locataire, copro…"/>
                 </label>
@@ -272,12 +266,13 @@ export function RealEstateEditor({ asset, members, liabilities, onSave, onCancel
           <div style={{ flex: 1 }}/>
           {stepIdx > 0 && <button className="ds-btn" onClick={() => setStepIdx(stepIdx - 1)} disabled={saving}><ChevronLeft size={14}/> Retour</button>}
           {stepIdx < RE_STEPS.length - 1 ? (
-            <button className="ds-btn primary" onClick={() => setStepIdx(stepIdx + 1)} disabled={stepIdx === 0 && !canSave} title={stepIdx === 0 && !canSave ? 'Ajoutez un nom et au moins un propriétaire' : ''}>Suivant <ChevronRight size={14}/></button>
-          ) : (
-            <button className="ds-btn primary" onClick={submit} disabled={!canSave || saving}>
-              {saving ? <><Loader2 size={14} className="spin"/> Enregistrement…</> : <><Check size={14}/> Enregistrer</>}
+            <button className="ds-btn" onClick={() => setStepIdx(stepIdx + 1)} disabled={stepIdx === 0 && !canSave} title={stepIdx === 0 && !canSave ? 'Ajoutez un nom et au moins un propriétaire' : ''}>
+              {stepIdx === 0 ? 'Ajouter des détails' : 'Voir le financement'} <ChevronRight size={14}/>
             </button>
-          )}
+          ) : null}
+          <button className="ds-btn primary" onClick={submit} disabled={!canSave || saving}>
+            {saving ? <><Loader2 size={14} className="spin"/> Enregistrement…</> : <><Check size={14}/> {asset.id ? 'Enregistrer' : 'Créer le bien'}</>}
+          </button>
         </div>
       </ResponsiveModal>
   );

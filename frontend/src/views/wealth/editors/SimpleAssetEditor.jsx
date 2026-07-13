@@ -14,8 +14,8 @@ export function SimpleAssetEditor({ asset, members, onSave, onCancel }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const handleSave = async () => {
-    if (!draft.name) { alert('Donnez un nom à cet actif'); return; }
-    if (!draft.memberIds || draft.memberIds.length === 0) { alert('Assignez à au moins un membre'); return; }
+    if (!draft.name?.trim()) { setError('Donnez un nom à cet actif.'); return; }
+    if (!draft.memberIds || draft.memberIds.length === 0) { setError('Sélectionnez au moins un propriétaire.'); return; }
     if (saving) return;
     setError(null);
     setSaving(true);
@@ -43,7 +43,7 @@ export function SimpleAssetEditor({ asset, members, onSave, onCancel }) {
             <span className="wealth-editor-eyebrow">Patrimoine financier</span>
             <h2>{asset.id ? 'Modifier l’actif' : 'Ajouter un actif'}</h2>
           </div>
-          <button className="icon-btn-sm" onClick={onCancel}><X size={16}/></button>
+          <button className="icon-btn-sm" onClick={onCancel} aria-label="Fermer" title="Fermer"><X size={16}/></button>
         </div>
         <div className="modal-body wealth-simple-editor">
           <div className="wizard-pane-intro">
@@ -84,6 +84,7 @@ export function SimpleAssetEditor({ asset, members, onSave, onCancel }) {
           <label><span>Valeur actuelle ({draft.currency || 'EUR'})</span>
             <input
               type="number"
+              min="0"
               value={draft.currentValue}
               onChange={(e) => setDraft({ ...draft, currentValue: e.target.value })}
               step="any"

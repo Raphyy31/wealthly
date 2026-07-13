@@ -58,9 +58,34 @@ describe('backend availability tracking', () => {
     const snapshots = [];
     const unsubscribe = api.subscribeBackendStatus((state) => snapshots.push(state.status));
 
-    await expect(api.accounts.list()).rejects.toThrow('Impossible de joindre le serveur');
+    await expect(api.accounts.list()).rejects.toThrow('Connexion interrompue');
 
     expect(snapshots.at(-1)).toBe('offline');
     unsubscribe();
+  });
+
+  test('a technical 500 is replaced by an actionable message with its reference', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(
+      JSON.stringify({ detail: 'Erreur interne du serveur (ProgrammingError).' }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json', 'X-Request-ID': 'abc123def456' },
+      },
+    )));
+    const api = await import('./api.js');
+
+    await expect(api.accounts.list()).rejects.toThrow(
+      'Un problème technique a empêché cette action. Rien n’a été perdu : réessayez dans un instant. Référence : abc123def456.',
+    );
+  });
+
+  test('a useful upstream banking error stays understandable', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(
+      JSON.stringify({ detail: 'La banque est temporairement débordée.' }),
+      { status: 502, headers: { 'Content-Type': 'application/json' } },
+    )));
+    const api = await import('./api.js');
+
+    await expect(api.accounts.list()).rejects.toThrow('La banque est temporairement débordée.');
   });
 });

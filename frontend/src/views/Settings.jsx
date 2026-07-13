@@ -30,16 +30,16 @@ import { MemberEditor }         from './settings/modals/MemberEditor.jsx';
 // SETTINGS
 // ============================================================================
 const SETTINGS_SECTIONS = [
-  { id: 'overview',   icon: Settings2, label: 'Vue d’ensemble', group: 'Essentiel' },
-  { id: 'profil',     icon: User,      labelKey: 'settings.sections.profile', group: 'Essentiel' },
-  { id: 'foyer',      icon: Users,     labelKey: 'settings.sections.household', group: 'Organisation' },
-  { id: 'comptes',    icon: Wallet,    labelKey: 'settings.sections.accounts', group: 'Organisation' },
-  { id: 'regles',     icon: Sparkles,  labelKey: 'settings.sections.rules', group: 'Automatisation' },
-  { id: 'securite',   icon: Shield,    labelKey: 'settings.sections.security', group: 'Protection' },
-  { id: 'devises',    icon: Globe,     labelKey: 'settings.sections.currency', group: 'Préférences' },
-  { id: 'donnees',    icon: Database,  labelKey: 'settings.sections.data', group: 'Préférences' },
+  { id: 'overview',   icon: Settings2, label: 'Vue d’ensemble', group: 'Mon espace' },
+  { id: 'profil',     icon: User,      labelKey: 'settings.sections.profile', group: 'Mon espace' },
+  { id: 'foyer',      icon: Users,     labelKey: 'settings.sections.household', group: 'Mon espace' },
+  { id: 'comptes',    icon: Wallet,    labelKey: 'settings.sections.accounts', group: 'Mes finances' },
+  { id: 'regles',     icon: Sparkles,  labelKey: 'settings.sections.rules', group: 'Mes finances' },
+  { id: 'securite',   icon: Shield,    labelKey: 'settings.sections.security', group: 'Sécurité & données' },
+  { id: 'devises',    icon: Globe,     labelKey: 'settings.sections.currency', group: 'Sécurité & données' },
+  { id: 'donnees',    icon: Database,  labelKey: 'settings.sections.data', group: 'Sécurité & données' },
 ];
-const SETTINGS_GROUPS = ['Essentiel', 'Organisation', 'Automatisation', 'Protection', 'Préférences'];
+const SETTINGS_GROUPS = ['Mon espace', 'Mes finances', 'Sécurité & données'];
 
 function readHashSection() {
   if (typeof window === 'undefined') return null;

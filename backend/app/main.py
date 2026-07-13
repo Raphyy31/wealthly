@@ -7,6 +7,7 @@ Docs available at http://localhost:8000/docs
 import logging
 import sys
 import traceback
+import uuid
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -453,12 +454,22 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization", "X-CSRF-Token", "X-Cron-Secret"],
-    expose_headers=["X-CSRF-Token"],
+    expose_headers=["X-CSRF-Token", "X-Request-ID"],
 )
 
 
 # Security headers — applied to every response
 from app.security import apply_security_headers
+
+
+@app.middleware("http")
+async def request_id_mw(request, call_next):
+    """Ajoute une référence courte à chaque réponse et à chaque erreur loggée."""
+    request_id = uuid.uuid4().hex[:12]
+    request.state.request_id = request_id
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = request_id
+    return response
 
 
 @app.middleware("http")
@@ -491,14 +502,16 @@ async def _validation_error_handler(request: Request, exc: RequestValidationErro
 @app.exception_handler(Exception)
 async def _unhandled_exception_handler(request: Request, exc: Exception):
     tb = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
-    logger.error("[unhandled] %s %s\n%s", request.method, request.url.path, tb)
-    # On expose UNIQUEMENT la CLASSE de l'exception (jamais le message, qui peut
-    # contenir des données) pour diagnostiquer un incident sans fouiller les logs
-    # Railway. Ex : « Erreur interne du serveur (OperationalError). » indique une
-    # panne DB, « (IntegrityError) » une contrainte violée, etc.
+    request_id = getattr(request.state, "request_id", "unknown")
+    logger.error("[unhandled:%s] %s %s\n%s", request_id, request.method, request.url.path, tb)
+    # La référence relie le message affiché au journal serveur sans exposer la
+    # classe d'exception, la requête SQL ou d'éventuelles données sensibles.
     return JSONResponse(
         status_code=500,
-        content={"detail": f"Erreur interne du serveur ({type(exc).__name__})."},
+        content={
+            "detail": "Une erreur technique a empêché cette action.",
+            "request_id": request_id,
+        },
     )
 
 

@@ -3117,8 +3117,8 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
       {initialSyncing && (
         <div className="init-sync-banner" role="status" aria-live="polite">
           <span className="init-sync-spinner" aria-hidden="true"/>
-          <span className="init-sync-text">Récupération de vos données depuis Supabase…</span>
-          <span className="init-sync-meta">Ne ferme pas l'onglet, tout va apparaître</span>
+          <span className="init-sync-text">Chargement sécurisé de votre espace…</span>
+          <span className="init-sync-meta">Vos comptes vont apparaître dans un instant</span>
         </div>
       )}
       {/* Backend offline banner — Railway tombe, cold start trop long, etc.
@@ -3129,9 +3129,9 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
         <div className="backend-status-banner backend-status-offline" role="alert" aria-live="assertive">
           <span className="backend-status-dot" aria-hidden="true"/>
           <div className="backend-status-body">
-            <span className="backend-status-title">Le serveur ne répond pas</span>
+            <span className="backend-status-title">Connexion temporairement interrompue</span>
             <span className="backend-status-meta">
-              On retente automatiquement… Vos données restent affichées.
+              Vos données restent visibles. Nouvelle tentative automatique{backendStatus.retryAttempt ? ` n°${backendStatus.retryAttempt}` : ''}.
             </span>
           </div>
           <button

@@ -7,7 +7,7 @@
 // ============================================================================
 import { createPortal } from 'react-dom';
 import { useEffect, useRef, useState } from 'react';
-import { X, Mail, Lock, User, Home, Eye, EyeOff, AlertCircle, Check, Sparkles } from 'lucide-react';
+import { X, Mail, Lock, User, Home, Eye, EyeOff, AlertCircle, Check, Sparkles, ShieldCheck, Clock3 } from 'lucide-react';
 import { auth } from './api.js';
 import { enableDemoMode } from './demoData.js';
 import Logo from './components/Logo.jsx';
@@ -25,6 +25,14 @@ export default function AuthModal({ open, initialMode = 'login', onClose, onAuth
   const [totpStep, setTotpStep] = useState(false);
   const [totpCode, setTotpCode] = useState('');
   const shellRef = useRef(null);
+  const passwordChecks = {
+    length: password.length >= 10,
+    mixed: /[A-Za-zÀ-ÿ]/.test(password) && /\d/.test(password),
+  };
+  const registerReady = fullName.trim().length > 0
+    && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+    && passwordChecks.length
+    && passwordChecks.mixed;
 
   // Sync mode when parent changes it (sign-in vs create account)
   useEffect(() => {
@@ -82,14 +90,18 @@ export default function AuthModal({ open, initialMode = 'login', onClose, onAuth
           }
         }
       } else if (mode === 'register') {
-        await auth.register(email, password, fullName, householdName || 'Mon foyer');
+        if (!registerReady) {
+          setError('Complétez les trois champs et choisissez un mot de passe contenant des lettres et des chiffres.');
+          return;
+        }
+        await auth.register(email.trim().toLowerCase(), password, fullName.trim(), householdName.trim() || 'Mon foyer');
         onAuth();
       } else if (mode === 'forgot') {
         await auth.forgotPassword(email);
         setInfo('Si cet email existe dans notre base, un lien de réinitialisation vient d\'être envoyé.');
       }
     } catch (err) {
-      setError(err.message);
+      setError(err?.message || 'Cette action n’a pas pu aboutir. Réessayez dans un instant.');
     } finally {
       setLoading(false);
     }
@@ -130,6 +142,16 @@ export default function AuthModal({ open, initialMode = 'login', onClose, onAuth
           </div>
         )}
 
+        {mode === 'register' && (
+          <div className="amod-intro">
+            <span className="amod-intro-icon"><ShieldCheck size={18}/></span>
+            <div>
+              <strong>Votre espace financier en moins d’une minute</strong>
+              <span>Créez votre accès maintenant. Le foyer et les banques se configurent ensuite, pas à pas.</span>
+            </div>
+          </div>
+        )}
+
         {/* Forgot password back link */}
         {mode === 'forgot' && (
           <div className="amod-forgot-head">
@@ -141,20 +163,14 @@ export default function AuthModal({ open, initialMode = 'login', onClose, onAuth
         {/* Form */}
         <form onSubmit={submit} className="amod-form">
           {mode === 'register' && (
-            <>
-              <Field label="Prénom" icon={<User size={13}/>} type="text" value={fullName}
-                onChange={setFullName} placeholder="Marie" required autoFocus/>
-              <Field
-                label={<>Nom du foyer <em className="amod-optional">facultatif</em></>}
-                icon={<Home size={13}/>} type="text" value={householdName}
-                onChange={setHouseholdName} placeholder="Foyer Dupont"/>
-            </>
+            <Field label="Prénom" icon={<User size={13}/>} type="text" value={fullName}
+              onChange={setFullName} placeholder="Marie" required autoFocus autoComplete="given-name"/>
           )}
 
           {(mode === 'login' || mode === 'register' || mode === 'forgot') && (
             <Field label="Email" icon={<Mail size={13}/>} type="email" value={email}
               onChange={setEmail} placeholder="vous@exemple.com" required
-              autoFocus={mode === 'login' || mode === 'forgot'}/>
+              autoFocus={mode === 'login' || mode === 'forgot'} autoComplete="email"/>
           )}
 
           {(mode === 'login' || mode === 'register') && (
@@ -165,6 +181,7 @@ export default function AuthModal({ open, initialMode = 'login', onClose, onAuth
               value={password} onChange={setPassword}
               placeholder={mode === 'login' ? '••••••••••' : 'Choisissez un mot de passe fort'}
               minLength={mode === 'register' ? 10 : undefined}
+              autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
               required
               trailing={
                 <button type="button" className="amod-eye" onClick={() => setShowPwd(!showPwd)}>
@@ -172,6 +189,23 @@ export default function AuthModal({ open, initialMode = 'login', onClose, onAuth
                 </button>
               }
             />
+          )}
+
+          {mode === 'register' && (
+            <>
+              <div className="amod-password-checks" aria-live="polite">
+                <span className={passwordChecks.length ? 'ok' : ''}><Check size={11}/> 10 caractères minimum</span>
+                <span className={passwordChecks.mixed ? 'ok' : ''}><Check size={11}/> Lettres et chiffres</span>
+              </div>
+              <details className="amod-household">
+                <summary><Home size={13}/> Personnaliser le nom du foyer <em>facultatif</em></summary>
+                <Field label="Nom du foyer" icon={<Home size={13}/>} type="text" value={householdName}
+                  onChange={setHouseholdName} placeholder="Foyer Dupont" autoComplete="organization"/>
+              </details>
+              <div className="amod-trust">
+                <Clock3 size={13}/><span>Vous pourrez essayer Yotori Finance avant de connecter une banque.</span>
+              </div>
+            </>
           )}
 
           {mode === 'login' && totpStep && (
@@ -193,7 +227,7 @@ export default function AuthModal({ open, initialMode = 'login', onClose, onAuth
           {error && <div className="amod-error"><AlertCircle size={14}/> {error}</div>}
           {info  && <div className="amod-info"><Check size={14}/> {info}</div>}
 
-          <button type="submit" className="amod-submit" disabled={loading}>
+          <button type="submit" className="amod-submit" disabled={loading || (mode === 'register' && !registerReady)}>
             {loading ? 'Chargement…' :
              mode === 'login'    ? 'Se connecter' :
              mode === 'register' ? 'Créer mon compte' :
@@ -284,8 +318,8 @@ const MODAL_CSS = `
   background: var(--bg-elev);
   border: 1px solid var(--border);
   border-radius: 20px;
-  padding: 24px;
-  display: flex; flex-direction: column; gap: 18px;
+  padding: 20px;
+  display: flex; flex-direction: column; gap: 14px;
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--ink) 6%, transparent),
     0 24px 64px -12px color-mix(in srgb, var(--ink) 35%, transparent),
@@ -343,6 +377,24 @@ const MODAL_CSS = `
   box-shadow: 0 1px 0 rgba(20,20,15,.04), 0 1px 3px rgba(20,20,15,.06);
 }
 
+/* ── Register intro ── */
+.amod-intro {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--border));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent-soft) 48%, var(--bg-elev));
+}
+.amod-intro-icon {
+  width: 30px; height: 30px; flex: 0 0 30px;
+  display: grid; place-items: center; border-radius: 8px;
+  color: var(--accent); background: var(--bg-elev);
+  border: 1px solid color-mix(in srgb, var(--accent) 16%, var(--border));
+}
+.amod-intro div { display: flex; flex-direction: column; gap: 3px; }
+.amod-intro strong { font-size: 13px; color: var(--ink); line-height: 1.3; }
+.amod-intro div span { font-size: 11.5px; color: var(--ink-2); line-height: 1.45; }
+
 /* ── Forgot head ── */
 .amod-forgot-head { display: flex; flex-direction: column; gap: 6px; }
 .amod-back {
@@ -355,7 +407,7 @@ const MODAL_CSS = `
 .amod-forgot-head p { font-size: 13px; color: var(--ink-2); line-height: 1.45; }
 
 /* ── Form ── */
-.amod-form { display: flex; flex-direction: column; gap: 12px; }
+.amod-form { display: flex; flex-direction: column; gap: 10px; }
 .amod-field { display: flex; flex-direction: column; gap: 5px; }
 .amod-field-label {
   display: inline-flex; align-items: center; gap: 6px;
@@ -393,6 +445,40 @@ const MODAL_CSS = `
   border-radius: 4px; transition: color 120ms, background 120ms;
 }
 .amod-eye:hover { color: var(--ink); background: var(--bg-elev); }
+
+.amod-password-checks {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  margin-top: -4px;
+}
+.amod-password-checks span {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10.5px; color: var(--ink-3);
+  padding: 4px 7px; border-radius: 999px;
+  background: var(--bg-sunk); border: 1px solid var(--border);
+}
+.amod-password-checks span svg { opacity: .35; }
+.amod-password-checks span.ok {
+  color: var(--positive); border-color: color-mix(in srgb, var(--positive) 22%, var(--border));
+  background: color-mix(in srgb, var(--positive-soft) 55%, transparent);
+}
+.amod-password-checks span.ok svg { opacity: 1; }
+.amod-household {
+  border: 1px solid var(--border); border-radius: 9px;
+  background: var(--bg-sunk); overflow: hidden;
+}
+.amod-household summary {
+  display: flex; align-items: center; gap: 6px;
+  padding: 10px 11px; cursor: pointer; list-style: none;
+  font-size: 11.5px; font-weight: 500; color: var(--ink-2);
+}
+.amod-household summary::-webkit-details-marker { display: none; }
+.amod-household summary em { margin-left: auto; font-size: 10px; font-weight: 400; color: var(--ink-3); }
+.amod-household[open] .amod-field { padding: 2px 11px 11px; }
+.amod-trust {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 10.5px; color: var(--ink-3); line-height: 1.35;
+}
+.amod-trust svg { flex: 0 0 auto; color: var(--accent); }
 
 /* ── TOTP ── */
 .amod-totp {
@@ -433,7 +519,7 @@ const MODAL_CSS = `
   background: var(--accent-2, var(--accent));
   box-shadow: 0 1px 0 rgba(0,0,0,.06), 0 10px 26px -6px color-mix(in srgb, var(--accent) 65%, transparent);
 }
-.amod-submit:disabled { opacity: .55; cursor: wait; box-shadow: none; }
+.amod-submit:disabled { opacity: .55; cursor: not-allowed; box-shadow: none; }
 .amod-submit:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-soft), 0 0 0 4px var(--accent); }
 
 /* ── Footer links ── */

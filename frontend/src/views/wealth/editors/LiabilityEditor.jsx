@@ -1,6 +1,5 @@
 // ============================================================================
-// LiabilityEditor — 5-step wizard for liabilities (loans).
-// Extracted from Wealth.jsx lines 1031-1234 (LIABILITY_STEPS const + component).
+// LiabilityEditor — saisie courte d'un emprunt, détails facultatifs ensuite.
 // ============================================================================
 import { useState } from 'react';
 import { X, Check, ChevronLeft, ChevronRight, Lightbulb, Loader2 } from 'lucide-react';
@@ -11,9 +10,8 @@ import { ResponsiveModal } from '../../../components/ui/ResponsiveModal.jsx';
 import { AiPlannerChat } from '../../../components/AiPlannerChat.jsx';
 
 const LIABILITY_STEPS = [
-  { key: 'main',     label: 'L’essentiel', description: 'Emprunt, mensualité et emprunteurs' },
-  { key: 'schedule', label: 'Calendrier', description: 'Durée, taux et dates de remboursement' },
-  { key: 'linked',   label: 'Rattachement', description: 'Bien financé et informations complémentaires' },
+  { key: 'main',    label: 'L’essentiel', description: 'Nom, montant, mensualité et emprunteurs' },
+  { key: 'details', label: 'Détails facultatifs', description: 'Calendrier, taux, bien financé et informations avancées' },
 ];
 
 export function LiabilityEditor({ liability, members, assets = [], onSave, onCancel }) {
@@ -65,9 +63,9 @@ export function LiabilityEditor({ liability, members, assets = [], onSave, onCan
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
-  const canSave = draft.name && (draft.memberIds || []).length > 0;
+  const canSave = Boolean(draft.name?.trim() && (draft.memberIds || []).length > 0);
   const submit = async () => {
-    if (!canSave) { alert('Renseigne au moins un nom et un emprunteur.'); return; }
+    if (!canSave) { setError('Ajoutez un nom et au moins un emprunteur.'); return; }
     if (saving) return;
     setError(null);
     setSaving(true);
@@ -88,7 +86,7 @@ export function LiabilityEditor({ liability, members, assets = [], onSave, onCan
             <span className="wealth-editor-eyebrow">Emprunt · étape {stepIdx + 1} sur {LIABILITY_STEPS.length}</span>
             <h2>{liability.id ? 'Modifier l\'emprunt' : 'Ajouter un emprunt'}</h2>
           </div>
-          <button className="icon-btn-sm" onClick={onCancel}><X size={16}/></button>
+          <button className="icon-btn-sm" onClick={onCancel} aria-label="Fermer" title="Fermer"><X size={16}/></button>
         </div>
         <div className="wizard-body">
           <nav className="wizard-steps">
@@ -143,10 +141,10 @@ export function LiabilityEditor({ liability, members, assets = [], onSave, onCan
                 </div>
                 <div className="field-row">
                   <label><span>Capital restant à rembourser ({draft.currency || 'EUR'})</span>
-                    <input type="number" value={draft.remainingCapital} onChange={(e) => set('remainingCapital', e.target.value)} step="any" placeholder="218500"/>
+                    <input type="number" min="0" value={draft.remainingCapital} onChange={(e) => set('remainingCapital', e.target.value)} step="any" placeholder="218500"/>
                   </label>
                   <label><span>Mensualité ({draft.currency || 'EUR'})</span>
-                    <input type="number" value={draft.monthlyPayment} onChange={(e) => set('monthlyPayment', e.target.value)} step="any" placeholder="1150"/>
+                    <input type="number" min="0" value={draft.monthlyPayment} onChange={(e) => set('monthlyPayment', e.target.value)} step="any" placeholder="1150"/>
                   </label>
                 </div>
                 <label><span>Emprunteurs</span>
@@ -163,7 +161,7 @@ export function LiabilityEditor({ liability, members, assets = [], onSave, onCan
               </>
             )}
 
-            {step === 'schedule' && (
+            {step === 'details' && (
               <>
                 <div className="field-row">
                   <label><span>Taux d'intérêt (%)</span>
@@ -209,11 +207,7 @@ export function LiabilityEditor({ liability, members, assets = [], onSave, onCan
                     </label>
                   </div>
                 </details>
-              </>
-            )}
-
-            {step === 'linked' && (
-              <>
+                <div className="wizard-divider"><span>Rattachement</span></div>
                 <label><span>Bien ou placement financé <em>optionnel</em></span>
                   <Combobox
                     value={draft.linkedAssetId || ''}
@@ -228,10 +222,7 @@ export function LiabilityEditor({ liability, members, assets = [], onSave, onCan
                 <label><span>Notes <em>optionnel</em></span>
                   <textarea rows={3} value={draft.notes || ''} onChange={(e) => set('notes', e.target.value)} placeholder="Banque, conditions particulières…"/>
                 </label>
-                <div className="settings-info">
-                  <Lightbulb size={14}/>
-                  <span>Le lien permet d’afficher automatiquement la valeur nette d’un bien : sa valeur moins le capital restant de cet emprunt.</span>
-                </div>
+                {draft.linkedAssetId && <div className="settings-info"><Lightbulb size={14}/><span>Yotori calculera la valeur nette du bien après déduction de cet emprunt.</span></div>}
               </>
             )}
           </div>
@@ -240,14 +231,15 @@ export function LiabilityEditor({ liability, members, assets = [], onSave, onCan
           <button className="ds-btn" onClick={onCancel} disabled={saving}>Annuler</button>
           {error && <span className="modal-inline-error">{error}</span>}
           <div style={{ flex: 1 }}/>
-          {stepIdx > 0 && <button className="ds-btn" onClick={() => setStepIdx(stepIdx - 1)} disabled={saving}><ChevronLeft size={14}/> Retour</button>}
-          {stepIdx < LIABILITY_STEPS.length - 1 ? (
-            <button className="ds-btn primary" onClick={() => setStepIdx(stepIdx + 1)} disabled={stepIdx === 0 && !canSave} title={stepIdx === 0 && !canSave ? 'Ajoutez un nom et au moins un emprunteur' : ''}>Suivant <ChevronRight size={14}/></button>
-          ) : (
-            <button className="ds-btn primary" onClick={submit} disabled={!canSave || saving}>
-              {saving ? <><Loader2 size={14} className="spin"/> Enregistrement…</> : <><Check size={14}/> Enregistrer</>}
+          {stepIdx > 0 && <button className="ds-btn" onClick={() => setStepIdx(0)} disabled={saving}><ChevronLeft size={14}/> Retour</button>}
+          {stepIdx === 0 && (
+            <button className="ds-btn" onClick={() => setStepIdx(1)} disabled={!canSave || saving} title={!canSave ? 'Ajoutez un nom et au moins un emprunteur' : ''}>
+              Ajouter des détails <ChevronRight size={14}/>
             </button>
           )}
+          <button className="ds-btn primary" onClick={submit} disabled={!canSave || saving}>
+            {saving ? <><Loader2 size={14} className="spin"/> Enregistrement…</> : <><Check size={14}/> {liability.id ? 'Enregistrer' : 'Créer l’emprunt'}</>}
+          </button>
         </div>
       </ResponsiveModal>
   );
