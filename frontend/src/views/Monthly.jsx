@@ -26,10 +26,14 @@ import {
   ChevronLeft, Coins, Sparkles, Maximize2, CalendarClock, ArrowRight,
 } from 'lucide-react';
 import {
-  formatCurrency, formatDate, monthKey, effectiveMonth, getTransferType,
-  shiftMonthForDate, extractTransferContributor, isJointAccountFunding, buildBudgetAllocation,
-  savingsContributionAmount,
+  formatCurrency, formatDate, monthKey,
+  extractTransferContributor, buildBudgetAllocation,
 } from '../utils.js';
+import {
+  classifyCashflowTransaction,
+  FLOW_KINDS,
+  summarizeCashflowFlows,
+} from '../financeEngine.js';
 import { useIncomeShift } from '../hooks/useIncomeShift.js';
 import { useIsNarrow } from '../hooks/useIsNarrow.js';
 import { RefMonthEditor } from '../components/RefMonthEditor.jsx';
@@ -165,61 +169,66 @@ export function Monthly({
 
   const isHouseholdScope = refMonthScope === 'household';
 
-  const isJointFunding = (tx) => {
-    const acc = accounts.find(a => a.id === tx.accountId);
-    const cat = catFor(tx.categoryId);
-    // Un libellé de virement entrant sur un compte commun reste un financement,
-    // même s'il a été rangé manuellement dans « Revenus ». Pour le forcer en
-    // vrai revenu, l'utilisateur doit aussi indiquer « ce n'est pas un virement ».
-    return isHouseholdScope && isJointAccountFunding(tx, acc, cat, incomeShift.shiftJointContrib);
-  };
-
-  // Real month: aggregate transactions by (kind, categoryId).
-  // Utilise effectiveMonth pour gerer les salaires verses fin du mois precedent :
-  // un salaire date 28/04 finance le budget de mai -> attribue a "2026-05".
-  const monthTx = useMemo(() => {
-    return transactions
-      .filter(t => {
-        if (jointContribIds.has(t.id) && !isHouseholdScope) {
-          return shiftMonthForDate(t.date, incomeShift.pivotDay ?? 25) === selectedMonth;
-        }
-        return effectiveMonth(t, incomeShift, categories) === selectedMonth;
-      })
-      .filter(t => !isJointFunding(t))
-      .filter(t => !transferIds.has(t.id) || (jointContribIds.has(t.id) && !isHouseholdScope))
-      .map(t => {
-        const acc = accounts.find(a => a.id === t.accountId);
-        const share = acc ? memberShare(acc) : 1;
-        const isJointContribution = jointContribIds.has(t.id) && !isHouseholdScope;
-        const budgetMonth = isJointContribution
-          ? shiftMonthForDate(t.date, incomeShift.pivotDay ?? 25)
-          : effectiveMonth(t, incomeShift, categories);
-        return {
-          ...t,
-          sharedAmount: (t.amount || 0) * share,
-          budgetMonth,
-          civilMonth: monthKey(t.date),
-          budgetKind: isJointContribution ? 'expense' : undefined,
-          budgetCategoryId: isJointContribution ? 'joint-contribution' : undefined,
-        };
-      });
-  // isJointFunding is intentionally local: its dependencies are listed here.
+  // Une seule lecture pour toutes les opérations du scope. Le mois est fourni
+  // par le moteur : cela évite notamment qu'un remboursement positif de fin de
+  // mois soit déplacé comme un salaire.
+  const scopedFlows = useMemo(() => transactions.map(transaction => {
+    const account = accounts.find(a => a.id === transaction.accountId);
+    const share = account ? memberShare(account) : 1;
+    const sharedAmount = (transaction.amount || 0) * share;
+    const category = catFor(transaction.categoryId);
+    const flow = classifyCashflowTransaction({
+      transaction: { ...transaction, sharedAmount },
+      account,
+      category,
+      accounts,
+      isTransfer: transferIds.has(transaction.id),
+      isJointContribution: jointContribIds.has(transaction.id),
+      isHouseholdScope,
+      settings: incomeShift,
+    });
+    const budgetCategoryId = flow.reason === 'joint-account-contribution'
+      ? 'joint-contribution'
+      : flow.kind === FLOW_KINDS.FUNDING
+        ? 'joint-funding'
+        : flow.kind === FLOW_KINDS.SAVING && flow.reason === 'savings-transfer'
+          ? 'savings'
+          : transaction.categoryId;
+    return {
+      ...transaction,
+      sharedAmount,
+      civilMonth: monthKey(transaction.date),
+      budgetMonth: flow.month,
+      budgetCategoryId,
+      cashflowKind: flow.kind,
+      cashflowAmount: flow.amount,
+      cashflowReason: flow.reason,
+    };
+  }),
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [transactions, accounts, memberShare, transferIds, jointContribIds, selectedMonth, incomeShift, categories, isHouseholdScope]);
+  [transactions, accounts, memberShare, transferIds, jointContribIds, isHouseholdScope, incomeShift, categories]);
 
-  // Credits which finance a joint account are shown as sources, but never
-  // added to household income. It also works when the source account is not
-  // connected because the contributor is extracted from the bank label.
+  const selectedFlows = useMemo(
+    () => scopedFlows.filter(t => t.budgetMonth === selectedMonth),
+    [scopedFlows, selectedMonth]
+  );
+
+  const monthClassifiedTx = useMemo(
+    () => selectedFlows.filter(t => [FLOW_KINDS.INCOME, FLOW_KINDS.EXPENSE, FLOW_KINDS.SAVING].includes(t.cashflowKind)),
+    [selectedFlows]
+  );
+  const monthTx = monthClassifiedTx;
+  const classifiedBudgetTx = monthClassifiedTx;
+
+  // Les financements du compte commun proviennent du même classement que les
+  // KPI. Le détail par contributeur ne peut donc plus diverger du total.
   const jointFunding = useMemo(() => {
-    if (!isHouseholdScope || !incomeShift.shiftJointContrib) return { total: 0, breakdown: [], transactions: [] };
+    const fundingTransactions = selectedFlows.filter(t => t.cashflowKind === FLOW_KINDS.FUNDING);
     const bySource = new Map();
-    const fundingTransactions = transactions
-      .filter(t => isJointFunding(t))
-      .filter(t => (t.effective_month_override || shiftMonthForDate(t.date, incomeShift.pivotDay ?? 25)) === selectedMonth);
     fundingTransactions.forEach(t => {
-        const source = extractTransferContributor(t, members) || 'Autre contributeur';
-        bySource.set(source, (bySource.get(source) || 0) + Math.max(0, t.amount || 0));
-      });
+      const source = extractTransferContributor(t, members) || 'Autre contributeur';
+      bySource.set(source, (bySource.get(source) || 0) + t.cashflowAmount);
+    });
     const breakdown = [...bySource.entries()]
       .map(([label, amount]) => ({ label, amount }))
       .sort((a, b) => b.amount - a.amount);
@@ -228,71 +237,33 @@ export function Monthly({
       breakdown,
       transactions: fundingTransactions.map(t => ({
         ...t,
-        sharedAmount: t.amount || 0,
-        budgetMonth: t.effective_month_override || shiftMonthForDate(t.date, incomeShift.pivotDay ?? 25),
-        civilMonth: monthKey(t.date),
         budgetKind: 'funding',
-        budgetCategoryId: 'joint-funding',
         fundingSource: extractTransferContributor(t, members) || 'Autre contributeur',
       })),
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [transactions, accounts, categories, members, selectedMonth, incomeShift, isHouseholdScope]);
+  }, [selectedFlows, members]);
 
   const monthAttribution = useMemo(() => {
     const shiftedIn = [];
     const shiftedOut = [];
-    for (const transaction of transactions) {
-      if ((transaction.amount || 0) <= 0) continue;
-      const account = accounts.find(a => a.id === transaction.accountId);
-      const category = catFor(transaction.categoryId);
-      const funding = isHouseholdScope && isJointAccountFunding(transaction, account, category, incomeShift.shiftJointContrib);
-      if (!funding && category?.type !== 'income') continue;
-      const civilMonth = monthKey(transaction.date);
-      const targetMonth = transaction.effective_month_override || (funding
-        ? shiftMonthForDate(transaction.date, incomeShift.pivotDay ?? 25)
-        : effectiveMonth(transaction, incomeShift, categories));
-      if (targetMonth === civilMonth) continue;
+    for (const transaction of scopedFlows) {
+      if (![FLOW_KINDS.INCOME, FLOW_KINDS.FUNDING].includes(transaction.cashflowKind)) continue;
+      if (transaction.budgetMonth === transaction.civilMonth) continue;
       const item = {
         id: transaction.id,
         date: transaction.date,
-        amount: Math.abs(transaction.amount || 0),
-        targetMonth,
-        label: funding ? (extractTransferContributor(transaction, members) || 'Versement') : (category?.name || transaction.label || 'Revenu'),
+        amount: transaction.cashflowAmount,
+        targetMonth: transaction.budgetMonth,
+        label: transaction.cashflowKind === FLOW_KINDS.FUNDING
+          ? (extractTransferContributor(transaction, members) || 'Versement')
+          : (catFor(transaction.categoryId)?.name || transaction.label || 'Revenu'),
       };
-      if (targetMonth === selectedMonth) shiftedIn.push(item);
-      if (civilMonth === selectedMonth) shiftedOut.push(item);
+      if (transaction.budgetMonth === selectedMonth) shiftedIn.push(item);
+      if (transaction.civilMonth === selectedMonth) shiftedOut.push(item);
     }
     return { shiftedIn, shiftedOut };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [transactions, accounts, categories, members, selectedMonth, incomeShift, isHouseholdScope]);
-
-  // Virements internes typés 'savings' du mois sélectionné. On les sort du
-  // bucket "neutralisé" et on les compte comme epargne (cas Livret A pas
-  // synchro : l'utilisateur veut que le 1000 EUR aille en epargne et pas
-  // disparaisse silencieusement). Utilise effectiveMonth pour rester
-  // coherent avec le filtre principal monthTx.
-  const monthSavingsTransfers = useMemo(() => {
-    const monthIds = new Set(transactions.filter(t => effectiveMonth(t, incomeShift, categories) === selectedMonth).map(t => t.id));
-    return transactions
-      .filter(t => transferIds.has(t.id) && monthIds.has(t.id))
-      .filter(t => getTransferType(t, accounts) === 'savings')
-      .map(t => {
-        const acc = accounts.find(a => a.id === t.accountId);
-        const share = acc ? memberShare(acc) : 1;
-        const sharedAmount = (t.amount || 0) * share;
-        return {
-          ...t,
-          sharedAmount,
-          savingsContribution: savingsContributionAmount({ sharedAmount }, acc),
-        };
-      });
-  }, [transactions, accounts, memberShare, transferIds, selectedMonth, incomeShift, categories]);
-
-  // Total savings provenant des virements typés (outflows depuis le compte source).
-  const savingsFromTransfers = useMemo(() => {
-    return monthSavingsTransfers.reduce((s, t) => s + (t.savingsContribution || 0), 0);
-  }, [monthSavingsTransfers]);
+  }, [scopedFlows, members, selectedMonth, categories]);
 
   // Per (kind, categoryId) totals for the selected real month.
   // kind is derived from the category's type field, NOT the sign of the amount.
@@ -300,42 +271,34 @@ export function Monthly({
   // Expense totals are signed: negative tx contributes positively, positive tx (refund) reduces.
   const realByCat = useMemo(() => {
     const map = new Map();
-    for (const t of monthTx) {
+    for (const t of classifiedBudgetTx) {
       const catId = t.budgetCategoryId || t.categoryId || 'uncategorized';
-      const cat = catFor(catId);
-      const kind = t.budgetKind || (cat?.type === 'income' ? 'income' : isSavingCategory(catId, categories) ? 'saving' : 'expense');
-      const acc = accounts.find(a => a.id === t.accountId);
-      const savingAmount = kind === 'saving' ? savingsContributionAmount(t, acc) : 0;
-      // Retrait depuis un Livret / crédit reçu depuis un Livret : arbitrage
-      // patrimonial, pas nouvelle épargne du mois.
-      if (kind === 'saving' && savingAmount <= 0) continue;
+      const kind = t.cashflowKind;
       const k = `${kind}::${catId}`;
       if (!map.has(k)) map.set(k, { kind, category_id: catId, total: 0, count: 0 });
       const v = map.get(k);
-      // income: sum amounts as-is (positive = received). expense/saving: negate so expenses are positive.
-      v.total += kind === 'income' ? t.sharedAmount : kind === 'saving' ? savingAmount : -t.sharedAmount;
+      v.total += t.cashflowAmount;
       v.count += 1;
     }
     return map;
-  }, [monthTx, categories, accounts]);
+  }, [classifiedBudgetTx]);
 
   const realTotals = useMemo(() => {
-    const t = { income: 0, expense: 0, saving: 0 };
-    for (const v of realByCat.values()) {
-      t[v.kind] = (t[v.kind] || 0) + v.total;
-    }
-    // Inclut les virements typés 'savings' dans l'épargne totale (cf monthSavingsTransfers).
-    t.saving += savingsFromTransfers;
-    t.balance = t.income - t.expense - t.saving;
-    return t;
-  }, [realByCat, savingsFromTransfers]);
+    const totals = summarizeCashflowFlows(classifiedBudgetTx);
+    return {
+      income: totals.income,
+      expense: totals.expense,
+      saving: totals.saving,
+      balance: totals.income - totals.expense - totals.saving,
+    };
+  }, [classifiedBudgetTx]);
 
   // Même mois, même scope et mêmes exclusions que les cartes et le Sankey.
   // Avant, cette barre venait de YotoriApp et restait bloquée sur le mois
   // courant même lorsque l'utilisateur consultait mars, avril, etc.
   const fiftyThirtyTwenty = useMemo(
-    () => buildBudgetAllocation(monthTx, categories),
-    [monthTx, categories]
+    () => buildBudgetAllocation(classifiedBudgetTx, categories),
+    [classifiedBudgetTx, categories]
   );
 
   // KPI strip
@@ -467,34 +430,12 @@ export function Monthly({
   // Sankey data — Mois en cours (selectedMonth real transactions). Meme structure
   // 3-niveaux que sankeyData : Income → Parent cats → Leaf subcategories.
   const realSankeyData = useMemo(() => {
-    const incomeTx = monthTx.filter(t => {
-      const cat = catFor(t.categoryId);
-      return (t.budgetKind || cat?.type) === 'income' && (t.sharedAmount || 0) > 0;
-    });
-    // spendTx = vraies dépenses uniquement. Les tx categorisees comme
-    // épargne/virement/transfert sont gerees a part par la branche
-    // savings (ci-dessous) pour ne pas ecraser le Sankey (3900€ de Livret
-    // dwarferaient les autres categories sinon).
-    const spendTx = monthTx.filter(t => {
-      const catId = t.budgetCategoryId || t.categoryId;
-      const cat = catFor(catId);
-      if (!t.budgetKind && isSavingCategory(catId, categories)) return false;
-      const isExpenseTx = (t.budgetKind || cat?.type) !== 'income';
-      return isExpenseTx && -t.sharedAmount > 0;
-    });
-
-    // savingTx = tx classees comme epargne/virement interne par categorie.
-    // Distinct de monthSavingsTransfers qui pioche dans transferIds (paires
-    // detectees automatiquement). Ici on attrape aussi les tx isolees sans
-    // pair detectee mais clairement categorisees comme epargne.
-    const savingTx = monthTx.filter(t => !t.budgetKind && isSavingCategory(t.categoryId, categories));
-    const savingsFromCategorized = savingTx.reduce(
-      (s, t) => {
-        const acc = accounts.find(a => a.id === t.accountId);
-        return s + savingsContributionAmount(t, acc);
-      }, 0
-    );
-    const totalSavingsForSankey = savingsFromTransfers + savingsFromCategorized;
+    const incomeTx = monthClassifiedTx.filter(t => t.cashflowKind === FLOW_KINDS.INCOME && t.cashflowAmount > 0);
+    // Les remboursements portent un cashflowAmount négatif : ils réduisent la
+    // catégorie concernée au lieu d'apparaître comme des revenus.
+    const spendTx = monthClassifiedTx.filter(t => t.cashflowKind === FLOW_KINDS.EXPENSE);
+    const savingTx = monthClassifiedTx.filter(t => t.cashflowKind === FLOW_KINDS.SAVING);
+    const totalSavingsForSankey = savingTx.reduce((s, t) => s + t.cashflowAmount, 0);
     // Bug user 2026-05-21 : avant on retournait vide des qu'UN seul cote
     // manquait (|| au lieu de &&). Cas typique : debut de mois avec
     // depenses mais salaire pas encore arrive, ou seulement des remboursements
@@ -502,7 +443,7 @@ export function Monthly({
     // l'empty state "configure ton mois type" alors qu'il y avait 5000€ de
     // tx visibles ailleurs (Dashboard cashflow). Maintenant on retourne vide
     // seulement si les DEUX sont vides — sinon on rend le cote disponible.
-    if (!incomeTx.length && !spendTx.length) return { nodes: [], links: [] };
+    if (!incomeTx.length && !spendTx.length && totalSavingsForSankey <= 0) return { nodes: [], links: [] };
 
     const parentSlug = (cat) => (cat?.parent || cat?.parent_slug || null);
     const topLevelFor = (cid) => {
@@ -521,10 +462,10 @@ export function Monthly({
     // Sinon 2+ income sources -> double les lignes vers chaque categorie.
     const incomeAgg = new Map();
     incomeTx.forEach(t => {
-      const cat = catFor(t.categoryId);
+      const cat = catFor(t.budgetCategoryId || t.categoryId);
       const key = cat?.id || cat?.slug || 'income';
       if (!incomeAgg.has(key)) incomeAgg.set(key, { name: cat?.name || 'Entrée', amount: 0, icon: cat?.icon });
-      incomeAgg.get(key).amount += t.sharedAmount;
+      incomeAgg.get(key).amount += t.cashflowAmount;
     });
     const incomeBreakdown = [...incomeAgg.values()];
     const actualIncomeTotal = incomeBreakdown.reduce((s, v) => s + v.amount, 0);
@@ -540,7 +481,7 @@ export function Monthly({
     // fausserait le graph (un remboursement 230€ aussi épais qu'un loyer
     // 3514€). On le masque dès que income < 50% spend. Le KPI strip en haut
     // affiche déjà le montant des Entrées, l'info n'est pas perdue.
-    const previewSpendTotal = spendTx.reduce((s, t) => s + Math.max(0, -t.sharedAmount), 0);
+    const previewSpendTotal = Math.max(0, spendTx.reduce((s, t) => s + t.cashflowAmount, 0));
     // incomeShortfall couvre 2 cas : (1) zero income mais des depenses, (2)
     // income trop petit (< 50% spend). Dans les deux cas on cache le node
     // Entrees pour ne pas fausser la lecture du graph.
@@ -559,25 +500,27 @@ export function Monthly({
     }
 
     // Level 2 — top-level parent cats with aggregated totals
-    const topNodeIdx = {};
     const topTotals = {};
-    const topTxByLeaf = new Map(); // for level 3
     spendTx.forEach(t => {
       const top = topLevelFor(t.budgetCategoryId || t.categoryId || 'uncategorized');
       const topId = top?.id || top?.slug || 'uncategorized';
-      if (!(topId in topNodeIdx)) {
-        topNodeIdx[topId] = nodes.length;
-        nodes.push({ name: top?.name || topId, icon: top?.icon || '', level: 1, kind: 'cat', color: top?.color || 'var(--ink)', amount: 0 });
-        topTotals[topId] = 0;
-      }
-      const amt = Math.max(0, -t.sharedAmount); // expense magnitude
-      topTotals[topId] += amt;
+      topTotals[topId] = (topTotals[topId] || 0) + t.cashflowAmount;
     });
     const totalIncomeForPct = incomeAggregatedTotal;
+    const topNodeIdx = {};
     Object.entries(topTotals).forEach(([topId, total]) => {
-      const node = nodes[topNodeIdx[topId]];
-      node.amount = total;
-      node.pctOfIncome = totalIncomeForPct > 0 ? (total / totalIncomeForPct) * 100 : null;
+      if (total <= 0.5) return;
+      const top = topLevelFor(topId);
+      topNodeIdx[topId] = nodes.length;
+      nodes.push({
+        name: top?.name || topId,
+        icon: top?.icon || '',
+        level: 1,
+        kind: 'cat',
+        color: top?.color || 'var(--ink)',
+        amount: total,
+        pctOfIncome: totalIncomeForPct > 0 ? (total / totalIncomeForPct) * 100 : null,
+      });
     });
 
     // Level 3 — leaf per sub-category (group tx by categoryId under their top)
@@ -598,9 +541,10 @@ export function Monthly({
           amount: 0,
         });
       }
-      leafAgg.get(leafKey).amount += Math.max(0, -t.sharedAmount);
+      leafAgg.get(leafKey).amount += t.cashflowAmount;
     });
     [...leafAgg.values()].forEach(leaf => {
+      if (leaf.amount <= 0.5 || topNodeIdx[leaf.topId] == null) return;
       const idx = nodes.length;
       nodes.push({ name: leaf.name, icon: leaf.icon, level: 2, kind: 'expense', color: leaf.color, amount: leaf.amount });
       links.push({ source: topNodeIdx[leaf.topId], target: idx, value: leaf.amount, color: leaf.color });
@@ -609,20 +553,20 @@ export function Monthly({
     // Income unique → top-level links (un seul lien par categorie depuis le
     // node 'Entrées' agrege).
     const totalIncome = totalIncomeForPct;
-    const totalSpend = Object.values(topTotals).reduce((s, v) => s + v, 0);
+    const totalSpend = Object.values(topTotals).reduce((s, v) => s + Math.max(0, v), 0);
     // Skip income→category links quand on a masqué le node Entrées (shortfall).
     // Les catégories restent dessinées via leurs flux sortants vers les leaves.
     if (totalIncome > 0 && totalSpend > 0 && !incomeShortfall) {
       Object.entries(topTotals).forEach(([topId, topTotal]) => {
         if (topTotal > 0.5) {
-          links.push({ source: incomeNodeSingleIdx, target: topNodeIdx[topId], value: topTotal, color: nodes[topNodeIdx[topId]].color });
+          const targetIdx = topNodeIdx[topId];
+          if (targetIdx != null) links.push({ source: incomeNodeSingleIdx, target: targetIdx, value: topTotal, color: nodes[targetIdx].color });
         }
       });
     }
 
     // Branche Épargne — toujours affichée s'il y a des mouvements épargne,
-    // que ce soit via flagged transfers (savingsFromTransfers) ou via tx
-    // categorisees epargne/virement isolees (savingsFromCategorized).
+    // que ce soit via un virement typé ou une catégorie d'épargne.
     // Anciennement gatee sur `totalIncome > 0` -> les savings disparaissaient
     // les mois sans revenus, alors qu'on veut justement les voir.
     if (totalSavingsForSankey > 0.5) {
@@ -665,7 +609,7 @@ export function Monthly({
 
     return { nodes, links, fundingTotal: jointFunding.total, fundingBreakdown: jointFunding.breakdown };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [monthTx, categories, accounts, savingsFromTransfers, jointFunding]);
+  }, [monthClassifiedTx, categories, jointFunding]);
 
   // UI state — quelles cartes Sankey sont expanded ? Set ('type' et/ou 'real').
   // Vide = 50/50 teaser. Une seule = 60/40. Les deux = 50/50 expanded.
@@ -1030,7 +974,7 @@ export function Monthly({
       {!isChildScope && hasRefMonth && (
         <MonthlyCompareTable
           sections={parentGroupedSections}
-          monthTx={[...monthTx, ...(jointFunding.transactions || [])]}
+          monthTx={[...classifiedBudgetTx, ...(jointFunding.transactions || [])]}
           fmt={fmt}
           catFor={catFor}
           expandedRows={expandedRows}

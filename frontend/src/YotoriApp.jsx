@@ -16,11 +16,12 @@ import {
   formatCurrency, formatDate, monthKey, dayOfMonth, generateId, hashTransaction,
   parseCSV, detectBankProfile, autoDetectMapping, applyMapping,
   categorize, detectRecurring, extractMerchantFromLabel,
-  accountIncludeInNetWorth, accountCountsAsIncome, accountCountsAsExpense,
+  accountIncludeInNetWorth,
   detectInternalTransfers, convertCurrency, ACCOUNT_ROLES, bankColor,
   fmtAmount, matchTransferRule, buildTransferDestTag, formatBankName,
-  shiftMonthForDate, isJointAccount, isJointAccountFunding, savingsContributionAmount,
+  shiftMonthForDate, isJointAccount,
 } from './utils.js';
+import { classifyCashflowTransaction, FLOW_KINDS } from './financeEngine.js';
 import { useRates } from './hooks/useRates.js';
 import { useBaseCurrency } from './hooks/useBaseCurrency.js';
 import { useQuotes } from './hooks/useQuotes.js';
@@ -35,7 +36,6 @@ import { BankMark } from './components/ui/BankMark.jsx';
 import { ResponsiveModal } from './components/ui/ResponsiveModal.jsx';
 import { useIncomeShift } from './hooks/useIncomeShift.js';
 import { effectiveMonth } from './utils.js';
-import { getTransferType } from './utils.js';
 import { buildInsightsSnapshot } from './utils.js';
 import { AIInsights } from './components/AIInsights.jsx';
 import { AnimatedNumber } from './components/AnimatedNumber.jsx';
@@ -1238,79 +1238,39 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
     const currentTotalNW = visibleAccounts
       .filter(a => accountIncludeInNetWorth(a.role))
       .reduce((sum, a) => sum + (accountBalances[a.id] || 0) * memberShare(a), 0);
-    sortedMonths.forEach(m => { monthly[m] = { month: m, income: 0, expenses: 0, net: 0, balance: 0, fixed: 0, variable: 0, savings: 0 }; });
+    sortedMonths.forEach(m => { monthly[m] = { month: m, income: 0, funding: 0, resources: 0, expenses: 0, net: 0, balance: 0, fixed: 0, variable: 0, savings: 0 }; });
     sortedTx.forEach(t => {
-      // mCivil = mois civil pour les depenses + le running balance (NW)
-      // mIncome = mois "comptable" pour les revenus, peut etre shifte vers
-      //           mois suivant pour les salaires verses fin de mois (cas FR).
       const mCivil = monthKey(t.date);
-      const mIncome = effectiveMonth(t, incomeShiftSettings, categories);
       const acc = accounts.find(a => a.id === t.accountId);
       const share = acc ? memberShare(acc) : 1;
       const sharedAmount = t.amount * share;
       const cat = categories.find(c => c.id === t.categoryId);
       const role = acc?.role || 'principal';
       const isTransfer = transferIds.has(t.id);
-      // Cashflow attribution depends on (1) whether this tx is an internal
-      // transfer (excluded from income/expense regardless of role), and
-      // (2) the account's role for non-transfer flows.
-      // CHANTIER 2 — Detection epargne (user feedback 2026-05-21) :
-      // Une tx est consideree comme epargne si :
-      //   a) Categorie cat.kind === 'savings' (explicitement Epargne)
-      //   b) OU c'est un virement interne (isTransfer) ET la destination
-      //      est un compte de role epargne/investissement
-      //      (getTransferType === 'savings')
-      // Les tx epargne sont EXCLUES des Depenses du mois ET agregees
-      // dans monthly[].savings comme troisieme indicateur.
-      const isSavingsCategory = cat?.kind === 'savings';
-      const isSavingsTransfer = isTransfer && getTransferType(t, accounts) === 'savings';
-      const isSavingsTx = isSavingsCategory || isSavingsTransfer;
+      const flow = classifyCashflowTransaction({
+        transaction: { ...t, sharedAmount },
+        account: acc,
+        category: cat,
+        accounts,
+        isTransfer,
+        isJointContribution: incomeShiftSettings.shiftJointContrib && jointContribIds.has(t.id),
+        isHouseholdScope: activeMemberId === 'all',
+        settings: incomeShiftSettings,
+      });
+      const bucket = monthly[flow.month] || monthly[mCivil];
 
-      if (isSavingsTx) {
-        // ÉPARGNE : uniquement une sortie depuis un compte de budget vers un
-        // support d'épargne. Un retrait depuis un Livret, ou la jambe positive
-        // reçue sur le compte courant, est un arbitrage et vaut donc zéro ici.
-        const contribution = savingsContributionAmount({ sharedAmount }, acc);
-        if (contribution > 0) monthly[mCivil].savings += contribution;
-      } else if (!isTransfer) {
-        // CASHFLOW NORMAL (income/depense) — uniquement si pas un transfert
-        // (les transferts non-epargne sont des arbitrages, exclus du cashflow).
-        const isManualExpense = t.isManualCategory && cat?.type === 'expense';
-        // Compte COMMUN (option activée) : ses ENTRÉES sont des contributions des
-        // conjoints (toi + ta femme), JAMAIS un revenu — peu importe si le compte
-        // source est connecté ou non (donc robuste même quand le perso du
-        // conjoint n'est pas dans l'app). Une vraie recette peut toujours être
-        // forcée en la marquant explicitement « ce n'est pas un virement ».
-        const jointInflowExcluded = isJointAccountFunding(t, acc, cat, incomeShiftSettings.shiftJointContrib);
-        // Catégoriser un virement en « Revenus » ne suffit pas à en faire un
-        // vrai revenu : c'était la source de l'incohérence Carla/Raphaël.
-        // Il faut également avoir explicitement désactivé le statut virement.
-        const explicitlyRealIncome = cat?.type === 'income' && t.isTransferOverride === false;
-        if (t.amount > 0) {
-          // INCOME : attribue au mois COMPTABLE (effectiveMonth) -> salaire
-          // d'avril verse fin du mois apparait sur mai dans le Dashboard.
-          if (((accountCountsAsIncome(role) && !jointInflowExcluded) || explicitlyRealIncome) && monthly[mIncome]) {
-            monthly[mIncome].income += sharedAmount;
-          }
-        } else {
-          // EXPENSE : reste sur le mois CIVIL — SAUF un virement vers le compte
-          // commun (option shiftJointContrib) qui, fait en fin de mois, finance
-          // le mois suivant → décalé comme le salaire. Le double comptage reste
-          // impossible : en scope Famille ce flux est un transfert interne
-          // (isTransfer=true) donc exclu ; ce décalage ne s'applique qu'au scope
-          // perso, où seule la jambe débit est visible et compte déjà en dépense.
-          if (accountCountsAsExpense(role) || isManualExpense) {
-            const absShared = Math.abs(sharedAmount);
-            const isJointContrib = incomeShiftSettings.shiftJointContrib && jointContribIds.has(t.id);
-            const mExpense = isJointContrib
-              ? shiftMonthForDate(t.date, incomeShiftSettings.pivotDay ?? 25)
-              : mCivil;
-            const bucket = monthly[mExpense] || monthly[mCivil];
-            bucket.expenses += absShared;
-            if (recurringIds.has(t.id)) bucket.fixed += absShared;
-            else bucket.variable += absShared;
-          }
-        }
+      if (flow.kind === FLOW_KINDS.INCOME) {
+        bucket.income += flow.amount;
+      } else if (flow.kind === FLOW_KINDS.FUNDING) {
+        bucket.funding += flow.amount;
+      } else if (flow.kind === FLOW_KINDS.SAVING) {
+        bucket.savings += flow.amount;
+      } else if (flow.kind === FLOW_KINDS.EXPENSE) {
+        // Un remboursement porte un montant négatif et réduit donc aussi le
+        // fixe/variable au lieu d'être transformé en revenu.
+        bucket.expenses += flow.amount;
+        if (recurringIds.has(t.id)) bucket.fixed += flow.amount;
+        else bucket.variable += flow.amount;
       }
       // Running balance still tracks every transaction on a NW-eligible
       // account on its CIVIL month, so the net worth chart stays correct
@@ -1323,18 +1283,19 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
     let cursor = currentTotalNW;
     for (let i = sortedMonths.length - 1; i >= 0; i--) {
       const m = sortedMonths[i];
+      monthly[m].resources = monthly[m].income + monthly[m].funding;
       monthly[m].balance = cursor;
       cursor -= monthly[m].net;
     }
     return Object.values(monthly);
-  }, [visibleTransactions, visibleAccounts, accounts, categories, recurringIds, memberShare, transferIds, jointContribIds, accountBalances, incomeShiftSettings]);
+  }, [visibleTransactions, visibleAccounts, accounts, categories, recurringIds, memberShare, transferIds, jointContribIds, accountBalances, incomeShiftSettings, activeMemberId]);
 
   const currentMonth = useMemo(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   }, []);
 
-  const thisMonthStats = useMemo(() => monthlyEvolution.find(x => x.month === currentMonth) || { income: 0, expenses: 0, net: 0, fixed: 0, variable: 0, savings: 0 }, [monthlyEvolution, currentMonth]);
+  const thisMonthStats = useMemo(() => monthlyEvolution.find(x => x.month === currentMonth) || { income: 0, funding: 0, resources: 0, expenses: 0, net: 0, fixed: 0, variable: 0, savings: 0 }, [monthlyEvolution, currentMonth]);
 
   // Category breakdown for current month, with previous 3-month avg
   const categoryAnalysis = useMemo(() => {
@@ -1345,29 +1306,34 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
       lastMonths.forEach(m => { result[cat.id].history[m] = 0; });
     });
     visibleTransactions.forEach(t => {
-      if (t.amount >= 0) return;
-      if (transferIds.has(t.id)) return; // skip internal transfers
       const acc = accounts.find(a => a.id === t.accountId);
       const cat = categories.find(c => c.id === t.categoryId);
-      // Honor the account's role: epargne / investissement / professionnel
-      // outflows are not real expenses — UNLESS the user explicitly tagged
-      // this transaction with an expense category (manual override).
-      const isManualExpense = t.isManualCategory && cat?.type === 'expense';
-      if (acc && !accountCountsAsExpense(acc.role) && !isManualExpense) return;
       const share = acc ? memberShare(acc) : 1;
-      const m = monthKey(t.date);
-      const abs = Math.abs(t.amount) * share;
-      const catId = t.categoryId || 'uncategorized';
+      const flow = classifyCashflowTransaction({
+        transaction: { ...t, sharedAmount: t.amount * share },
+        account: acc,
+        category: cat,
+        accounts,
+        isTransfer: transferIds.has(t.id),
+        isJointContribution: jointContribIds.has(t.id),
+        isHouseholdScope: activeMemberId === 'all',
+        settings: incomeShiftSettings,
+      });
+      if (flow.kind !== FLOW_KINDS.EXPENSE) return;
+      const m = flow.month;
+      const amount = flow.amount;
+      const catId = jointContribIds.has(t.id) ? 'joint-contribution' : (t.categoryId || 'uncategorized');
       if (!result[catId]) result[catId] = { current: 0, history: {}, avg3m: 0 };
-      if (m === currentMonth) result[catId].current += abs;
-      else if (lastMonths.includes(m)) result[catId].history[m] = (result[catId].history[m] || 0) + abs;
+      if (m === currentMonth) result[catId].current += amount;
+      else if (lastMonths.includes(m)) result[catId].history[m] = (result[catId].history[m] || 0) + amount;
     });
     Object.values(result).forEach(v => {
+      v.current = Math.max(0, v.current);
       const histVals = Object.values(v.history);
-      v.avg3m = histVals.length > 0 ? histVals.reduce((s, x) => s + x, 0) / histVals.length : 0;
+      v.avg3m = histVals.length > 0 ? histVals.reduce((s, x) => s + Math.max(0, x), 0) / histVals.length : 0;
     });
     return result;
-  }, [visibleTransactions, categories, currentMonth, monthlyEvolution, accounts, memberShare, transferIds]);
+  }, [visibleTransactions, categories, currentMonth, monthlyEvolution, accounts, memberShare, transferIds, jointContribIds, activeMemberId, incomeShiftSettings]);
 
   // Number of budget categories the user has overspent this month — drives
   // the red dot on the "Budgets" nav button so the user notices without
@@ -1407,7 +1373,7 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
     const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
     const dayNum = today.getDate();
     const elapsed = dayNum / daysInMonth;
-    const projected = { income: thisMonthStats.income / Math.max(elapsed, 0.05), expenses: thisMonthStats.expenses / Math.max(elapsed, 0.05) };
+    const projected = { income: (thisMonthStats.resources ?? thisMonthStats.income) / Math.max(elapsed, 0.05), expenses: thisMonthStats.expenses / Math.max(elapsed, 0.05) };
     return {
       daysLeft: daysInMonth - dayNum,
       elapsed: Math.round(elapsed * 100),
@@ -3649,6 +3615,24 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
         </>)}
         {['monthly','cashflow'].includes(view) && (
           <div className="monthly-hub">
+            <nav className="hub-tabs" aria-label="Budget et flux">
+              <button
+                type="button"
+                className={view === 'monthly' ? 'active' : ''}
+                aria-current={view === 'monthly' ? 'page' : undefined}
+                onClick={() => setView('monthly')}
+              >
+                <Calendar size={15}/> Budget mensuel
+              </button>
+              <button
+                type="button"
+                className={view === 'cashflow' ? 'active' : ''}
+                aria-current={view === 'cashflow' ? 'page' : undefined}
+                onClick={() => setView('cashflow')}
+              >
+                <Activity size={15}/> Flux d’argent
+              </button>
+            </nav>
             {view === 'monthly' && (
               <Monthly
                 transactions={visibleTransactions} accounts={accounts} categories={categories} members={members}
@@ -3672,6 +3656,8 @@ export default function YotoriApp({ demoMode = false, onExitDemo, onLogout }) {
               <Cashflow
                 transactions={visibleTransactions} categories={categories} accounts={accounts}
                 memberShare={memberShare} fmt={fmt} currentMonth={currentMonth} transferIds={transferIds}
+                jointContribIds={jointContribIds} isHouseholdScope={activeMemberId === 'all'}
+                incomeShiftSettings={incomeShiftSettings}
               />
             )}
           </div>

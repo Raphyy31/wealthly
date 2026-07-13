@@ -2555,7 +2555,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color:
 .cashflow-donut-value { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text-primary); }
 .cashflow-donut-value.positive { color: var(--success); }
 .cashflow-donut-value.negative { color: var(--danger); }
-.cashflow-kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding-top: 12px; border-top: 1px solid var(--border-light); }
+.cashflow-kpi-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; padding-top: 12px; border-top: 1px solid var(--border-light); }
 .cashflow-kpi { display: flex; flex-direction: column; gap: 2px; }
 .cashflow-kpi-label { font-size: 11px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em; display: flex; align-items: center; gap: 6px; }
 .cashflow-kpi-value { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text-primary); }

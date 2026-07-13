@@ -43,6 +43,16 @@ describe('ventilation budget du mois affiché', () => {
     expect(result.unclassified).toBe(42);
     expect(result.wants).toBe(0);
   });
+
+  test('réutilise le montant canonique et déduit les remboursements', () => {
+    const result = buildBudgetAllocation([
+      { cashflowKind: 'expense', cashflowAmount: 500, categoryId: 'loan' },
+      { cashflowKind: 'expense', cashflowAmount: -100, categoryId: 'loan' },
+      { cashflowKind: 'saving', cashflowAmount: 50, categoryId: 'saving' },
+      { cashflowKind: 'ignored', cashflowAmount: 3000, categoryId: 'uncategorized' },
+    ], categories);
+    expect(result).toEqual({ needs: 400, wants: 0, savings: 50, unclassified: 0, total: 450 });
+  });
 });
 
 describe('épargne mensuelle', () => {

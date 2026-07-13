@@ -321,6 +321,17 @@ export const isJointAccountFunding = (transaction, account, category, enabled = 
 export const buildBudgetAllocation = (transactions = [], categories = []) => {
   const result = { needs: 0, wants: 0, savings: 0, unclassified: 0, total: 0 };
   for (const transaction of transactions) {
+    if (transaction.cashflowKind) {
+      if (!['expense', 'saving'].includes(transaction.cashflowKind)) continue;
+      const value = Number(transaction.cashflowAmount || 0);
+      if (!Number.isFinite(value) || value === 0) continue;
+      const categoryId = transaction.budgetCategoryId || transaction.categoryId;
+      const category = categories.find(c => c.id === categoryId || c.slug === categoryId);
+      let bucket = transaction.cashflowKind === 'saving' ? 'savings' : category?.kind;
+      if (categoryId === 'uncategorized' || !['needs', 'wants', 'savings'].includes(bucket)) bucket = 'unclassified';
+      result[bucket] += value;
+      continue;
+    }
     const amount = Number(transaction.sharedAmount ?? transaction.amount ?? 0);
     if (amount >= 0 || transaction.budgetKind === 'funding' || transaction.budgetKind === 'income') continue;
     const value = Math.abs(amount);
@@ -329,8 +340,12 @@ export const buildBudgetAllocation = (transactions = [], categories = []) => {
     let bucket = transaction.budgetKind === 'saving' ? 'savings' : category?.kind;
     if (categoryId === 'uncategorized' || !['needs', 'wants', 'savings'].includes(bucket)) bucket = 'unclassified';
     result[bucket] += value;
-    result.total += value;
   }
+  result.needs = Math.max(0, result.needs);
+  result.wants = Math.max(0, result.wants);
+  result.savings = Math.max(0, result.savings);
+  result.unclassified = Math.max(0, result.unclassified);
+  result.total = result.needs + result.wants + result.savings + result.unclassified;
   return result;
 };
 

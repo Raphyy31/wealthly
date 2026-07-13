@@ -16,6 +16,8 @@ import { gsap } from '../../utils/gsapSetup.js';
 export function MiniCashflowCard({ thisMonthStats, onOpenMonthly, currentMonth, formatEUR, hidden }) {
   const rootRef = useRef(null);
   const income = Math.max(0, thisMonthStats?.income || 0);
+  const funding = Math.max(0, thisMonthStats?.funding || 0);
+  const resources = Math.max(0, thisMonthStats?.resources ?? (income + funding));
   const expenses = Math.max(0, thisMonthStats?.expenses || 0);
   // CHANTIER 2 — saving = vraie epargne (virements savings + cat=savings)
   // remontee par YotoriApp.monthlyEvolution. Avant : saving = income -
@@ -23,13 +25,13 @@ export function MiniCashflowCard({ thisMonthStats, onOpenMonthly, currentMonth, 
   // dans expenses ET produisait un deficit affiche en rouge alors que le
   // user avait justement epargne.
   const saving = thisMonthStats?.savings || 0;
-  const maxVal = Math.max(income, expenses, Math.abs(saving), 1);
+  const maxVal = Math.max(resources, expenses, Math.abs(saving), 1);
 
   const rows = useMemo(() => [
-    { key: 'income',   label: 'Entrées',  value: income,   tone: 'positive', icon: ArrowDown },
+    { key: 'income',   label: funding > 0 && income === 0 ? 'Financement' : 'Entrées', value: resources, tone: 'positive', icon: ArrowDown },
     { key: 'expenses', label: 'Sorties',  value: expenses, tone: 'negative', icon: ArrowRight },
     { key: 'saving',   label: 'Épargne',  value: saving,   tone: saving >= 0 ? 'accent' : 'negative', icon: PiggyBank },
-  ], [income, expenses, saving]);
+  ], [income, funding, resources, expenses, saving]);
 
   // GSAP : entree en stagger des 3 barres, width tween 0 → final
   useEffect(() => {
@@ -46,7 +48,7 @@ export function MiniCashflowCard({ thisMonthStats, onOpenMonthly, currentMonth, 
     }, rootRef);
     return () => ctx.revert();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [income, expenses, saving]);
+  }, [resources, expenses, saving]);
 
   // Label mois lisible "Mai 2026"
   const monthLabel = useMemo(() => {
@@ -65,11 +67,11 @@ export function MiniCashflowCard({ thisMonthStats, onOpenMonthly, currentMonth, 
           </div>
           <h3 className="mcc-title">
             {(() => {
-              const deficit = expenses - income;
+              const deficit = expenses - resources;
               // Pourcentage retire (user feedback 2026-05-21) : avec un income
               // tres faible (refunds only) le ratio donne des chiffres absurdes
               // type "13004 %". L'epargne brute parle deja toute seule.
-              if (income === 0 && expenses === 0 && saving === 0) {
+              if (resources === 0 && expenses === 0 && saving === 0) {
                 return <>Pas encore de mouvements ce mois-ci.</>;
               }
               if (saving > 0) {
@@ -78,8 +80,8 @@ export function MiniCashflowCard({ thisMonthStats, onOpenMonthly, currentMonth, 
               if (deficit > 0) {
                 return <>Solde provisoire de <em>−{formatEUR(deficit, { abbr: false })}</em>.</>;
               }
-              if (income - expenses > 0) {
-                return <>Excédent de <em>{formatEUR(income - expenses, { abbr: false })}</em> ce mois-ci.</>;
+              if (resources - expenses > 0) {
+                return <>Excédent de <em>{formatEUR(resources - expenses, { abbr: false })}</em> ce mois-ci.</>;
               }
               return <>Mois équilibré.</>;
             })()}

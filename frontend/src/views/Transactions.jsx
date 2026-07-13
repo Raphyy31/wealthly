@@ -328,16 +328,24 @@ export function Transactions({ transactions, accounts, categories, members = [],
     if (!txRef.current) return;
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
     const ctx = gsapTx.context(() => {
-      gsapTx.fromTo(
-        ['.subview-header', '.filters-bar', '.tx-sort-bar'],
-        { opacity: 0, y: 8 },
-        { opacity: 1, y: 0, duration: 0.32, ease: 'expo.out', stagger: 0.05, clearProps: 'transform' }
-      );
-      gsapTx.fromTo(
-        '.tx-row',
-        { opacity: 0, y: 6 },
-        { opacity: 1, y: 0, duration: 0.26, ease: 'power2.out', stagger: 0.018, delay: 0.18, clearProps: 'transform' }
-      );
+      const introTargets = ['.subview-header', '.filters-bar', '.tx-sort-bar']
+        .map(selector => txRef.current.querySelector(selector))
+        .filter(Boolean);
+      const rowTargets = txRef.current.querySelectorAll('.tx-card');
+      if (introTargets.length) {
+        gsapTx.fromTo(
+          introTargets,
+          { opacity: 0, y: 8 },
+          { opacity: 1, y: 0, duration: 0.32, ease: 'expo.out', stagger: 0.05, clearProps: 'transform' }
+        );
+      }
+      if (rowTargets.length) {
+        gsapTx.fromTo(
+          rowTargets,
+          { opacity: 0, y: 6 },
+          { opacity: 1, y: 0, duration: 0.26, ease: 'power2.out', stagger: 0.018, delay: 0.18, clearProps: 'transform' }
+        );
+      }
     }, txRef);
     return () => ctx.revert();
   }, []);

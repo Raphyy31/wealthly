@@ -6,11 +6,20 @@ import {
   ResponsiveContainer, Sankey, Layer, Rectangle, Tooltip,
 } from 'recharts';
 import { Activity, ChevronLeft, ChevronRight } from 'lucide-react';
-import { formatDate, monthKey, formatCurrency, accountCountsAsIncome, accountCountsAsExpense, getTransferType } from '../utils.js';
+import { formatDate, formatCurrency } from '../utils.js';
+import {
+  classifyCashflowTransaction,
+  FLOW_KINDS,
+  summarizeCashflowFlows,
+} from '../financeEngine.js';
 import { useIsNarrow } from '../hooks/useIsNarrow.js';
 import { usePageEnter } from '../hooks/usePageEnter.js';
 
-export function Cashflow({ transactions, categories, accounts, memberShare, fmt, currentMonth, transferIds = new Set() }) {
+export function Cashflow({
+  transactions, categories, accounts, memberShare, fmt, currentMonth,
+  transferIds = new Set(), jointContribIds = new Set(),
+  isHouseholdScope = false, incomeShiftSettings = {},
+}) {
   const [period, setPeriod] = useState('1M'); // 1M | 3M | 1A
   const [anchor, setAnchor] = useState(currentMonth); // YYYY-MM the period ends on (inclusive)
   const isNarrow = useIsNarrow(760);
@@ -27,61 +36,63 @@ export function Cashflow({ transactions, categories, accounts, memberShare, fmt,
     return { startKey: sk, endKey: anchor };
   }, [anchor, monthsInPeriod]);
 
-  // Filter and aggregate
+  // Filtre sur le mois BUDGÉTAIRE produit par le moteur commun. Un salaire du
+  // 30 juin apparaît donc bien en juillet ici comme sur Accueil et Budget.
   const filtered = useMemo(() => {
-    return transactions.filter(t => {
-      const k = monthKey(t.date);
-      return k >= startKey && k <= endKey;
-    }).map(t => {
+    return transactions.map(t => {
       const acc = accounts.find(a => a.id === t.accountId);
       const share = acc ? memberShare(acc) : 1;
-      return { ...t, sharedAmount: t.amount * share };
-    });
-  }, [transactions, startKey, endKey, accounts, memberShare]);
+      const sharedAmount = t.amount * share;
+      const cat = categories.find(c => c.slug === t.categoryId || c.id === t.categoryId);
+      const flow = classifyCashflowTransaction({
+        transaction: { ...t, sharedAmount },
+        account: acc,
+        category: cat,
+        accounts,
+        isTransfer: transferIds.has(t.id),
+        isJointContribution: jointContribIds.has(t.id),
+        isHouseholdScope,
+        settings: incomeShiftSettings,
+      });
+      return { ...t, sharedAmount, cashflowKind: flow.kind, cashflowAmount: flow.amount, cashflowMonth: flow.month };
+    }).filter(t =>
+      t.cashflowMonth >= startKey && t.cashflowMonth <= endKey
+      && [FLOW_KINDS.INCOME, FLOW_KINDS.EXPENSE, FLOW_KINDS.SAVING, FLOW_KINDS.FUNDING].includes(t.cashflowKind)
+    );
+  }, [transactions, startKey, endKey, accounts, categories, memberShare, transferIds, jointContribIds, isHouseholdScope, incomeShiftSettings]);
 
-  // Group by category — on REPRODUIT exactement la logique de monthlyEvolution
-  // (YotoriApp) pour que Cashflow donne les MÊMES Entrées/Sorties que le
-  // Dashboard et le Mensuel. Avant, Cashflow bucketait par simple signe sans
-  // connaître les virements internes : un virement courant→Livret comptait
-  // +1000 en entrée ET 1000 en sortie (double-comptage), gonflant les deux
-  // totaux et faussant le « disponible ».
   const incomeByCat = {};
   const expenseByCat = {};
+  let totalSaving = 0;
   filtered.forEach(t => {
-    const slug = t.categoryId || 'uncategorized';
-    const acc = accounts.find(a => a.id === t.accountId);
-    const role = acc?.role || 'principal';
-    const cat = categories.find(c => c.slug === slug || c.id === slug);
-    const isTransfer = transferIds.has(t.id);
-    // Épargne (catégorie kind=savings OU virement vers un compte épargne) :
-    // exclue de income/expense (sinon la jambe positive comptait en revenu).
-    const isSavingsTx = cat?.kind === 'savings' || (isTransfer && getTransferType(t, accounts) === 'savings');
-    if (isSavingsTx) return;
-    // Virement interne (arbitrage non-épargne) : on exclut les DEUX jambes.
-    if (isTransfer) return;
-    const isManualIncome = t.isManualCategory && cat?.type === 'income';
-    const isManualExpense = t.isManualCategory && cat?.type === 'expense';
-    if (t.amount >= 0) {
-      if (accountCountsAsIncome(role) || isManualIncome) {
-        incomeByCat[slug] = (incomeByCat[slug] || 0) + t.sharedAmount;
-      }
-    } else if (accountCountsAsExpense(role) || isManualExpense) {
-      expenseByCat[slug] = (expenseByCat[slug] || 0) + Math.abs(t.sharedAmount);
+    if (t.cashflowKind === FLOW_KINDS.SAVING) {
+      totalSaving += t.cashflowAmount;
+      return;
+    }
+    const slug = t.cashflowKind === FLOW_KINDS.FUNDING ? 'joint-funding' : (t.categoryId || 'uncategorized');
+    if ([FLOW_KINDS.INCOME, FLOW_KINDS.FUNDING].includes(t.cashflowKind)) {
+      incomeByCat[slug] = (incomeByCat[slug] || 0) + t.cashflowAmount;
+    } else if (t.cashflowKind === FLOW_KINDS.EXPENSE) {
+      expenseByCat[slug] = (expenseByCat[slug] || 0) + t.cashflowAmount;
     }
   });
-  const totalIncome = Object.values(incomeByCat).reduce((s, v) => s + v, 0);
-  const totalExpense = Object.values(expenseByCat).reduce((s, v) => s + v, 0);
-  const available = totalIncome - totalExpense;
+  const flowTotals = summarizeCashflowFlows(filtered);
+  const totalIncome = flowTotals.resources;
+  const totalExpense = flowTotals.expense;
+  totalSaving = flowTotals.saving;
+  const available = flowTotals.balance;
 
   // Sort categories by amount descending
   const incomeEntries = Object.entries(incomeByCat).sort((a, b) => b[1] - a[1]);
-  const expenseEntries = Object.entries(expenseByCat).sort((a, b) => b[1] - a[1]);
+  const expenseEntries = Object.entries(expenseByCat).filter(([, value]) => value > 0.5).sort((a, b) => b[1] - a[1]);
 
-  const catFor = (slug) => categories.find(c => c.slug === slug || c.id === slug);
+  const catFor = (slug) => slug === 'joint-funding'
+    ? { id: slug, name: 'Financement du compte commun', icon: '👥', color: 'var(--positive)' }
+    : categories.find(c => c.slug === slug || c.id === slug);
 
   // Build Sankey data
   const sankeyData = useMemo(() => {
-    if (totalIncome === 0 && totalExpense === 0) return null;
+    if (totalIncome === 0 && totalExpense === 0 && totalSaving === 0) return null;
     const nodes = [];
     const links = [];
     // Income nodes (left)
@@ -97,11 +108,16 @@ export function Cashflow({ transactions, categories, accounts, memberShare, fmt,
       const cat = catFor(slug);
       nodes.push({ name: cat?.name || slug, kind: 'expense', value, color: cat?.color || 'var(--danger)' });
     });
-    // Surplus (épargne) node if income > expense
+    let savingIdx = null;
+    if (totalSaving > 0) {
+      savingIdx = nodes.length;
+      nodes.push({ name: 'Épargne réellement versée', kind: 'savings', value: totalSaving, color: 'var(--primary)' });
+    }
+    // Le reliquat n'est pas encore de l'épargne : il reste disponible.
     let surplusIdx = null;
     if (available > 0) {
       surplusIdx = nodes.length;
-      nodes.push({ name: 'Épargne', kind: 'savings', value: available, color: 'var(--primary)' });
+      nodes.push({ name: 'Reste disponible', kind: 'available', value: available, color: 'var(--ink-3)' });
     }
     // Links: income → hub, hub → expense / savings
     incomeEntries.forEach((_, i) => {
@@ -111,12 +127,13 @@ export function Cashflow({ transactions, categories, accounts, memberShare, fmt,
       const idx = hubIdx + 1 + i;
       links.push({ source: hubIdx, target: idx, value: expenseEntries[i][1] });
     });
+    if (savingIdx !== null) links.push({ source: hubIdx, target: savingIdx, value: totalSaving });
     if (surplusIdx !== null) {
       links.push({ source: hubIdx, target: surplusIdx, value: available });
     }
     return { nodes, links };
   // eslint-disable-next-line
-  }, [incomeByCat, expenseByCat, available, totalIncome, totalExpense, categories]);
+  }, [incomeByCat, expenseByCat, available, totalIncome, totalExpense, totalSaving, categories]);
 
   // Distribution donut data — expense categories
   const donutData = expenseEntries.map(([slug, value]) => {
@@ -198,7 +215,11 @@ export function Cashflow({ transactions, categories, accounts, memberShare, fmt,
               <div className="cashflow-kpi-value negative">−{fmt(totalExpense)}</div>
             </div>
             <div className="cashflow-kpi">
-              <div className="cashflow-kpi-label">Disponible</div>
+              <div className="cashflow-kpi-label">Épargne versée</div>
+              <div className="cashflow-kpi-value positive">{fmt(totalSaving)}</div>
+            </div>
+            <div className="cashflow-kpi">
+              <div className="cashflow-kpi-label">Reste disponible</div>
               <div className={`cashflow-kpi-value ${available >= 0 ? 'positive' : 'negative'}`}>{available >= 0 ? '+' : ''}{fmt(available)}</div>
             </div>
           </div>

@@ -857,7 +857,7 @@ export function Dashboard({
 
       {cashflowProjection && (() => {
         const cashNow = (visibleAccounts || []).reduce((sum, account) => sum + (accountBalances?.[account.id] || 0), 0);
-        const actualNet = (thisMonthStats?.income || 0) - (thisMonthStats?.expenses || 0);
+        const actualNet = (thisMonthStats?.resources ?? thisMonthStats?.income ?? 0) - (thisMonthStats?.expenses || 0);
         const remainingNet = (cashflowProjection.projectedNet || 0) - actualNet;
         const endBalance = cashNow + remainingNet;
         const today = new Date().getDate();
